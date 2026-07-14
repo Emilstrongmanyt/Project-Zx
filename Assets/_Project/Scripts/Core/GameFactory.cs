@@ -72,9 +72,11 @@ namespace ProjectZx.Core
             go.tag = "Player";
 
             var rb = go.AddComponent<Rigidbody2D>();
+            rb.bodyType = RigidbodyType2D.Dynamic;
             rb.gravityScale = 0f;
             rb.freezeRotation = true;
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            rb.interpolation = RigidbodyInterpolation2D.Interpolate;
 
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 0.45f;
