@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ProjectZx.Core;
 using ProjectZx.Player;
 using ProjectZx.Waves;
@@ -19,6 +20,7 @@ namespace ProjectZx.Enemies
         Transform _player;
         Rigidbody2D _rb;
         float _contactCooldown;
+        readonly List<RaycastHit2D> _castHits = new();
 
         public void Initialize(int round, bool isBoss)
         {
@@ -34,10 +36,40 @@ namespace ProjectZx.Enemies
         void FixedUpdate()
         {
             if (!IsAlive || _player == null) return;
+
             var dir = ((Vector2)_player.position - (Vector2)transform.position).normalized;
-            _rb.linearVelocity = dir * _speed;
+            MoveByDelta(dir * (_speed * Time.fixedDeltaTime));
+
             var renderer = GetComponent<SpriteRenderer>();
             if (renderer != null && dir.x != 0f) renderer.flipX = dir.x < 0f;
+        }
+
+        void MoveByDelta(Vector2 delta)
+        {
+            if (delta.sqrMagnitude < 0.00001f)
+            {
+                _rb.linearVelocity = Vector2.zero;
+                return;
+            }
+
+            var distance = delta.magnitude;
+            var direction = delta / distance;
+            var filter = new ContactFilter2D();
+            filter.useTriggers = false;
+            filter.useLayerMask = false;
+
+            _castHits.Clear();
+            var hitCount = _rb.Cast(direction, filter, _castHits, distance);
+            var allowed = hitCount > 0 ? Mathf.Max(0f, _castHits[0].distance - 0.02f) : distance;
+
+            if (allowed <= 0.0001f)
+            {
+                _rb.linearVelocity = Vector2.zero;
+                return;
+            }
+
+            _rb.MovePosition(_rb.position + direction * allowed);
+            _rb.linearVelocity = direction * (_speed);
         }
 
         void Update()

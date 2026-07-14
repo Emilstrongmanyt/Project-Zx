@@ -29,6 +29,7 @@ namespace ProjectZx.Player
         Sprite _walk;
         int _lastHandledTouchId = -1;
         int _lastHandledFrame = -1;
+        readonly List<RaycastHit2D> _castHits = new();
 
         public void Configure(bool npcInteraction) => allowNpcInteraction = npcInteraction;
 
@@ -56,6 +57,7 @@ namespace ProjectZx.Player
             _rb.freezeRotation = true;
             _rb.interpolation = RigidbodyInterpolation2D.Interpolate;
             _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            _rb.useFullKinematicContacts = true;
         }
 
         void Update()
@@ -66,6 +68,17 @@ namespace ProjectZx.Player
 
         void FixedUpdate()
         {
+            var joystick = MovementJoystick.Instance;
+            var joyDir = joystick != null ? joystick.Direction : Vector2.zero;
+
+            if (joyDir.sqrMagnitude > 0.01f)
+            {
+                _moveTarget = null;
+                _pendingNpc = null;
+                MoveByDelta(GetSpeedVector(joyDir.normalized) * Time.fixedDeltaTime);
+                return;
+            }
+
             if (_moveTarget == null)
             {
                 _rb.linearVelocity = Vector2.zero;
@@ -73,27 +86,60 @@ namespace ProjectZx.Player
                 return;
             }
 
-            var stats = GetComponent<PlayerStats>();
-            var runSpeed = stats != null ? stats.RunSpeedMultiplier : 1f;
-            var speed = baseSpeed * GameSave.SpeedMultiplier * runSpeed;
             var target = _moveTarget.Value;
             var delta = target - _rb.position;
 
             if (delta.magnitude < ArrivalDistance)
             {
-                _rb.MovePosition(target);
                 _rb.linearVelocity = Vector2.zero;
                 _moveTarget = null;
                 TryCompletePendingNpcInteract();
                 return;
             }
 
-            var step = speed * Time.fixedDeltaTime;
-            var current = _rb.position;
-            var next = Vector2.MoveTowards(current, target, step);
-            _rb.MovePosition(next);
-            _rb.linearVelocity = (next - current) / Time.fixedDeltaTime;
+            var step = GetSpeed() * Time.fixedDeltaTime;
+            MoveByDelta(Vector2.ClampMagnitude(delta, step));
             TryCompletePendingNpcInteract();
+        }
+
+        float GetSpeed()
+        {
+            var stats = GetComponent<PlayerStats>();
+            var runSpeed = stats != null ? stats.RunSpeedMultiplier : 1f;
+            return baseSpeed * GameSave.SpeedMultiplier * runSpeed;
+        }
+
+        Vector2 GetSpeedVector(Vector2 direction) => direction * GetSpeed();
+
+        void MoveByDelta(Vector2 delta)
+        {
+            if (delta.sqrMagnitude < 0.00001f)
+            {
+                _rb.linearVelocity = Vector2.zero;
+                return;
+            }
+
+            var distance = delta.magnitude;
+            var direction = delta / distance;
+            var filter = new ContactFilter2D();
+            filter.useTriggers = false;
+            filter.useLayerMask = false;
+
+            _castHits.Clear();
+            var hitCount = _rb.Cast(direction, filter, _castHits, distance);
+            var allowed = distance;
+            if (hitCount > 0)
+                allowed = Mathf.Max(0f, _castHits[0].distance - 0.02f);
+
+            if (allowed <= 0.0001f)
+            {
+                _rb.linearVelocity = Vector2.zero;
+                return;
+            }
+
+            var next = _rb.position + direction * allowed;
+            _rb.MovePosition(next);
+            _rb.linearVelocity = direction * (allowed / Time.fixedDeltaTime);
         }
 
         void OnFingerDown(Finger finger)
@@ -121,6 +167,7 @@ namespace ProjectZx.Player
             if (_camera == null) _camera = Camera.main;
             if (_camera == null) return;
             if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade) return;
+            if (MovementJoystick.Instance != null && MovementJoystick.Instance.IsPointerOver(screenPos)) return;
             if (IsPointerOverBlockingUi(screenPos)) return;
 
             var world = ScreenToWorld(screenPos);
@@ -220,10 +267,13 @@ namespace ProjectZx.Player
             var combat = GetComponent<PlayerCombat>();
             if (combat != null && combat.IsSwinging) return;
 
-            var moving = _moveTarget != null || _rb.linearVelocity.sqrMagnitude > 0.01f;
+            var joyDir = MovementJoystick.Instance != null ? MovementJoystick.Instance.Direction : Vector2.zero;
+            var moving = joyDir.sqrMagnitude > 0.01f || _moveTarget != null || _rb.linearVelocity.sqrMagnitude > 0.01f;
             _renderer.sprite = moving ? _walk : _idle;
-            if (moving && _rb.linearVelocity.x != 0f)
-                _renderer.flipX = _rb.linearVelocity.x < 0f;
+
+            var faceX = joyDir.sqrMagnitude > 0.01f ? joyDir.x : _rb.linearVelocity.x;
+            if (moving && faceX != 0f)
+                _renderer.flipX = faceX < 0f;
         }
     }
 }
