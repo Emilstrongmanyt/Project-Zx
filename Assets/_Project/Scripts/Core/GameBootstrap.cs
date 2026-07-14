@@ -20,22 +20,22 @@ namespace ProjectZx.Core
 
         static void BuildMainMenu()
         {
-            SetupCamera();
-            GameFactory.CreateGround("CampGround", new Color(0.18f, 0.28f, 0.16f, 1f), 40f, 30f);
+            SetupCamera(new Color(0.12f, 0.2f, 0.14f));
+            GameFactory.CreateGrassField("CampGrass", 44f, 34f, 1f);
+            GameFactory.CreateCampfire(Vector3.zero);
 
-            var player = GameFactory.CreatePlayer(Vector3.zero, false);
             var hub = new GameObject("HubUi").AddComponent<HubUi>();
+            var player = GameFactory.CreatePlayer(new Vector3(0f, -4.2f), false);
 
-            GameFactory.CreateNpc("WizardShop", ArtLibrary.Wizard, new Vector3(-5f, 0f), "Wizard — Tap to open upgrades", () => hub.OpenShop());
-            GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(5f, 0f), "Knight — Tap to choose a map", () => hub.OpenMapSelect());
-
-            CreateLabel("Upgrade Shop", new Vector3(-5f, 2.2f));
-            CreateLabel("Challenge Board", new Vector3(5f, 2.2f));
+            GameFactory.CreateNpc("WizardShop", ArtLibrary.Wizard, new Vector3(-2.1f, 1.1f),
+                "Wizard — upgrades shop", () => hub.OpenShop());
+            GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(2.1f, 1.1f),
+                "Knight — start a survival run", () => hub.OpenMapSelect());
         }
 
         static void BuildSurvival()
         {
-            SetupCamera();
+            SetupCamera(new Color(0.08f, 0.1f, 0.14f));
             GameFactory.CreateGround("ArenaGround", new Color(0.22f, 0.16f, 0.12f, 1f), 50f, 50f);
 
             var player = GameFactory.CreatePlayer(Vector3.zero, true);
@@ -46,28 +46,16 @@ namespace ProjectZx.Core
             session.Begin(player.transform, hud);
         }
 
-        static void SetupCamera()
+        static void SetupCamera(Color background)
         {
             var cam = Camera.main;
             if (cam == null) return;
             cam.orthographic = true;
             cam.orthographicSize = 6f;
-            cam.backgroundColor = new Color(0.08f, 0.1f, 0.14f);
+            cam.backgroundColor = background;
             cam.transform.position = new Vector3(0f, 0f, -10f);
             var follow = cam.gameObject.AddComponent<CenterCamera>();
             follow.BindWhenReady();
-        }
-
-        static void CreateLabel(string text, Vector3 worldPos)
-        {
-            var go = new GameObject(text);
-            go.transform.position = worldPos;
-            var mesh = go.AddComponent<TextMesh>();
-            mesh.text = text;
-            mesh.fontSize = 28;
-            mesh.characterSize = 0.08f;
-            mesh.anchor = TextAnchor.MiddleCenter;
-            mesh.color = new Color(0.95f, 0.95f, 0.8f);
         }
     }
 }

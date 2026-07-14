@@ -33,6 +33,39 @@ namespace ProjectZx.Core
             return go;
         }
 
+        public static GameObject CreateGrassField(string name, float width, float height, float tileSize = 1f)
+        {
+            var root = new GameObject(name);
+            var cols = Mathf.CeilToInt(width / tileSize);
+            var rows = Mathf.CeilToInt(height / tileSize);
+            var originX = -(cols * tileSize) * 0.5f + tileSize * 0.5f;
+            var originY = -(rows * tileSize) * 0.5f + tileSize * 0.5f;
+
+            for (var row = 0; row < rows; row++)
+            for (var col = 0; col < cols; col++)
+            {
+                var pos = new Vector3(originX + col * tileSize, originY + row * tileSize, 0f);
+                var tile = CreateSprite($"Grass_{col}_{row}", ArtLibrary.GetGrassVariant(col + row * 3), pos, 0.25f, -10);
+                tile.transform.SetParent(root.transform, true);
+            }
+
+            return root;
+        }
+
+        public static GameObject CreateCampfire(Vector3 position)
+        {
+            var fire = CreateSprite("Campfire", ArtLibrary.Campfire, position, 0.45f, 2);
+            var glow = new GameObject("CampfireGlow");
+            glow.transform.SetParent(fire.transform, false);
+            glow.transform.localPosition = Vector3.zero;
+            var glowRenderer = glow.AddComponent<SpriteRenderer>();
+            glowRenderer.sprite = ArtLibrary.Campfire;
+            glowRenderer.color = new Color(1f, 0.55f, 0.15f, 0.35f);
+            glowRenderer.sortingOrder = 1;
+            glow.transform.localScale = Vector3.one * 1.6f;
+            return fire;
+        }
+
         public static GameObject CreatePlayer(Vector3 position, bool survivalMode)
         {
             var go = CreateSprite("Player", ArtLibrary.PlayerIdle, position, 0.35f, 10);
@@ -79,11 +112,10 @@ namespace ProjectZx.Core
         public static GameObject CreateNpc(string name, Sprite sprite, Vector3 position, string prompt, System.Action onInteract)
         {
             var go = CreateSprite(name, sprite, position, 0.38f, 6);
-            var trigger = go.AddComponent<CircleCollider2D>();
-            trigger.isTrigger = true;
-            trigger.radius = 1.2f;
-            var hub = go.AddComponent<NpcInteractable>();
-            hub.Initialize(prompt, onInteract);
+            var proximity = go.AddComponent<CircleCollider2D>();
+            proximity.isTrigger = true;
+            proximity.radius = 2.8f;
+            go.AddComponent<NpcInteractable>().Initialize(prompt, onInteract);
             return go;
         }
 
