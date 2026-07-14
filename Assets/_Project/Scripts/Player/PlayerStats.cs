@@ -1,8 +1,16 @@
+using System;
 using ProjectZx.Core;
 using UnityEngine;
 
 namespace ProjectZx.Player
 {
+    public enum RunLevelChoice
+    {
+        Speed,
+        Hp,
+        Attack
+    }
+
     public class PlayerStats : MonoBehaviour
     {
         public int MaxHp { get; private set; }
@@ -13,6 +21,11 @@ namespace ProjectZx.Player
         public int XpToNext { get; private set; } = 30;
         public bool IsDead { get; private set; }
         public bool SurvivalMode { get; private set; }
+        public int PendingLevelUpChoices { get; private set; }
+        public float RunSpeedMultiplier { get; private set; } = 1f;
+        public float RunDamageMultiplier { get; private set; } = 1f;
+
+        public event Action<int> LevelUpChoiceRequired;
 
         bool _goldBanked;
 
@@ -27,6 +40,9 @@ namespace ProjectZx.Player
             IsDead = false;
             _goldBanked = false;
             XpToNext = 30;
+            PendingLevelUpChoices = 0;
+            RunSpeedMultiplier = 1f;
+            RunDamageMultiplier = 1f;
         }
 
         public void TakeDamage(int amount)
@@ -41,14 +57,42 @@ namespace ProjectZx.Player
         {
             if (!SurvivalMode || IsDead || amount <= 0) return;
             RunXp += amount;
+
+            var leveled = false;
             while (RunXp >= XpToNext)
             {
                 RunXp -= XpToNext;
                 Level++;
                 XpToNext = 30 + Level * 12;
-                MaxHp += 5;
-                CurrentHp = Mathf.Min(CurrentHp + 8, MaxHp);
+                PendingLevelUpChoices++;
+                leveled = true;
             }
+
+            if (leveled)
+                LevelUpChoiceRequired?.Invoke(PendingLevelUpChoices);
+        }
+
+        public void ApplyRunLevelChoice(RunLevelChoice choice)
+        {
+            if (PendingLevelUpChoices <= 0) return;
+
+            switch (choice)
+            {
+                case RunLevelChoice.Speed:
+                    RunSpeedMultiplier *= 1.1f;
+                    break;
+                case RunLevelChoice.Hp:
+                    MaxHp += 15;
+                    CurrentHp += 15;
+                    break;
+                case RunLevelChoice.Attack:
+                    RunDamageMultiplier *= 1.12f;
+                    break;
+            }
+
+            PendingLevelUpChoices--;
+            if (PendingLevelUpChoices > 0)
+                LevelUpChoiceRequired?.Invoke(PendingLevelUpChoices);
         }
 
         /// <summary>Gold earned this run. Banked to camp savings on death or run end.</summary>
@@ -73,6 +117,6 @@ namespace ProjectZx.Player
             BankRunGoldToSave();
         }
 
-        public float Damage => 10f * GameSave.DamageMultiplier * (1f + (Level - 1) * 0.05f);
+        public float Damage => 10f * GameSave.DamageMultiplier * RunDamageMultiplier;
     }
 }

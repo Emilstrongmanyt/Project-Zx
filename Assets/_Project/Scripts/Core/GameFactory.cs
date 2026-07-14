@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ProjectZx.Combat;
 using ProjectZx.Enemies;
 using ProjectZx.Player;
@@ -55,6 +56,54 @@ namespace ProjectZx.Core
                 var variant = (col + row) % 3;
                 renderer.color = isEdge ? edgeDirt : variant == 0 ? baseDirt : darkDirt;
                 tile.transform.SetParent(root.transform, true);
+            }
+
+            return root;
+        }
+
+        public static GameObject CreateStoneObstacle(Vector3 position, float scale)
+        {
+            var go = CreateSprite("Stone", ArtLibrary.Stone, position, scale, 2);
+            var col = go.AddComponent<CircleCollider2D>();
+            col.radius = 0.42f;
+            return go;
+        }
+
+        public static GameObject ScatterArenaObstacles(float arenaWidth, float arenaHeight, int count)
+        {
+            var root = new GameObject("ArenaObstacles");
+            var rng = new System.Random(90210);
+            var placed = new List<Vector2>();
+            var margin = 2.5f;
+            var halfW = arenaWidth * 0.5f - margin;
+            var halfH = arenaHeight * 0.5f - margin;
+
+            for (var i = 0; i < count; i++)
+            {
+                for (var attempt = 0; attempt < 24; attempt++)
+                {
+                    var pos = new Vector2(
+                        ((float)rng.NextDouble() * 2f - 1f) * halfW,
+                        ((float)rng.NextDouble() * 2f - 1f) * halfH);
+
+                    if (pos.magnitude < 6f) continue;
+
+                    var tooClose = false;
+                    foreach (var other in placed)
+                    {
+                        if (Vector2.Distance(other, pos) >= 2.4f) continue;
+                        tooClose = true;
+                        break;
+                    }
+
+                    if (tooClose) continue;
+
+                    placed.Add(pos);
+                    var scale = 0.38f + (float)rng.NextDouble() * 0.42f;
+                    var stone = CreateStoneObstacle(new Vector3(pos.x, pos.y, 0f), scale);
+                    stone.transform.SetParent(root.transform, true);
+                    break;
+                }
             }
 
             return root;
@@ -154,7 +203,7 @@ namespace ProjectZx.Core
             go.transform.position = position;
             var col = go.AddComponent<CircleCollider2D>();
             col.isTrigger = true;
-            col.radius = 0.3f;
+            col.radius = 0.55f;
             go.AddComponent<LootPickup>().Initialize(type, amount);
             return go;
         }

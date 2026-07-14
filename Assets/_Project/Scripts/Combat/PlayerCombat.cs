@@ -8,10 +8,10 @@ namespace ProjectZx.Combat
     [RequireComponent(typeof(PlayerStats))]
     public class PlayerCombat : MonoBehaviour
     {
-        const float RestAngle = -40f;
-        const float SwingAngle = 95f;
+        const float RestAngle = -65f;
+        const float SwingAngle = 75f;
 
-        [SerializeField] float attackRange = 1.45f;
+        [SerializeField] float attackRange = 2.15f;
         [SerializeField] float attackInterval = 0.5f;
         [SerializeField] float swingDuration = 0.22f;
 
@@ -34,13 +34,13 @@ namespace ProjectZx.Combat
         {
             var pivotGo = new GameObject("BatPivot");
             pivotGo.transform.SetParent(transform, false);
-            pivotGo.transform.localPosition = new Vector3(0.12f, 0.02f, 0f);
+            pivotGo.transform.localPosition = new Vector3(0.1f, -0.34f, 0f);
             _batPivot = pivotGo.transform;
 
             var batGo = new GameObject("BaseballBat");
             batGo.transform.SetParent(_batPivot, false);
-            batGo.transform.localPosition = new Vector3(0.18f, 0f, 0f);
-            batGo.transform.localScale = Vector3.one * 0.9f;
+            batGo.transform.localPosition = new Vector3(0.12f, -0.02f, 0f);
+            batGo.transform.localScale = Vector3.one * 0.75f;
 
             var batRenderer = batGo.AddComponent<SpriteRenderer>();
             batRenderer.sprite = ArtLibrary.BaseballBat;

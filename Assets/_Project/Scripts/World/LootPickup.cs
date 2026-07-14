@@ -7,6 +7,8 @@ namespace ProjectZx.World
 
     public class LootPickup : MonoBehaviour
     {
+        const float CollectRange = 1.45f;
+
         PickupType _type;
         int _amount;
         SpriteRenderer _renderer;
@@ -24,10 +26,36 @@ namespace ProjectZx.World
             transform.localScale = Vector3.one * 0.4f;
         }
 
+        void Update()
+        {
+            TryCollect();
+        }
+
         void OnTriggerEnter2D(Collider2D other)
         {
-            if (!other.CompareTag("Player")) return;
-            var stats = other.GetComponent<PlayerStats>();
+            TryCollect(other);
+        }
+
+        void TryCollect(Collider2D other = null)
+        {
+            Transform playerTransform;
+            PlayerStats stats;
+
+            if (other != null)
+            {
+                if (!other.CompareTag("Player")) return;
+                playerTransform = other.transform;
+                stats = other.GetComponent<PlayerStats>();
+            }
+            else
+            {
+                var player = GameObject.FindGameObjectWithTag("Player");
+                if (player == null) return;
+                playerTransform = player.transform;
+                stats = player.GetComponent<PlayerStats>();
+                if (Vector2.Distance(transform.position, playerTransform.position) > CollectRange) return;
+            }
+
             if (stats == null) return;
 
             if (_type == PickupType.Xp) stats.AddXp(_amount);
