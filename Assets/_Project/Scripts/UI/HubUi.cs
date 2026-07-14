@@ -10,8 +10,6 @@ namespace ProjectZx.UI
         public static HubUi Instance { get; private set; }
 
         Text _goldText;
-        Text _titleText;
-        Text _hintText;
 
         GameObject _shopPanel;
         GameObject _mapPanel;
@@ -21,7 +19,6 @@ namespace ProjectZx.UI
             Instance = this;
             Build();
             RefreshGold();
-            ShowBankedGoldNotice();
         }
 
         void Build()
@@ -35,13 +32,8 @@ namespace ProjectZx.UI
             canvasGo.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            _titleText = CreateText(canvasGo.transform, "Project Zx — Main Camp", 42, TextAnchor.UpperCenter, new Vector2(0, -30), new Vector2(900, 60));
-            _goldText = CreateText(canvasGo.transform, "Saved Gold: 0", 28, TextAnchor.UpperRight, new Vector2(-30, -30), new Vector2(360, 50));
+            _goldText = CreateText(canvasGo.transform, "0", 28, TextAnchor.UpperRight, new Vector2(-30, -30), new Vector2(200, 50));
             _goldText.alignment = TextAnchor.UpperRight;
-
-            _hintText = CreateText(canvasGo.transform, "", 22, TextAnchor.LowerCenter, new Vector2(0, 40), new Vector2(700, 44));
-            _hintText.color = new Color(0.95f, 0.92f, 0.7f, 0.9f);
-            _hintText.gameObject.SetActive(false);
 
             _shopPanel = BuildShopPanel(canvasGo.transform);
             _mapPanel = BuildMapPanel(canvasGo.transform);
@@ -49,37 +41,33 @@ namespace ProjectZx.UI
 
         GameObject BuildShopPanel(Transform parent)
         {
-            var panel = CreatePanel(parent, "ShopPanel", Vector2.zero, new Vector2(700, 520), new Color(0.05f, 0.08f, 0.12f, 0.92f));
-            CreateText(panel.transform, "Permanent Upgrades", 34, TextAnchor.UpperCenter, new Vector2(0, -24), new Vector2(640, 50));
-            CreateText(panel.transform, "Spend saved gold from survival runs. Run XP does not carry over.", 20, TextAnchor.UpperCenter, new Vector2(0, -70), new Vector2(640, 40));
+            var panel = CreatePanel(parent, "ShopPanel", Vector2.zero, new Vector2(700, 420), new Color(0.05f, 0.08f, 0.12f, 0.92f));
 
-            CreateUpgradeRow(panel.transform, "Max HP +15", 50, 0, () => BuyHp());
-            CreateUpgradeRow(panel.transform, "Damage +8%", 75, -90, () => BuyDamage());
-            CreateUpgradeRow(panel.transform, "Move Speed +6%", 60, -180, () => BuySpeed());
+            CreateUpgradeRow(panel.transform, "Max HP +15", 50, 40, () => BuyHp());
+            CreateUpgradeRow(panel.transform, "Damage +8%", 75, -50, () => BuyDamage());
+            CreateUpgradeRow(panel.transform, "Move Speed +6%", 60, -140, () => BuySpeed());
 
-            CreateButton(panel.transform, "Close", new Vector2(0, -220), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Close", new Vector2(0, -200), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
 
         GameObject BuildMapPanel(Transform parent)
         {
-            var panel = CreatePanel(parent, "MapPanel", Vector2.zero, new Vector2(620, 420), new Color(0.08f, 0.05f, 0.1f, 0.92f));
-            CreateText(panel.transform, "Challenge Board", 34, TextAnchor.UpperCenter, new Vector2(0, -24), new Vector2(580, 50));
-            CreateText(panel.transform, "Earn run XP and gold in the arena. Gold is saved to camp; XP resets each run.", 20, TextAnchor.UpperCenter, new Vector2(0, -80), new Vector2(560, 60));
-            CreateButton(panel.transform, "Enter Survival Arena", new Vector2(0, -40), () =>
+            var panel = CreatePanel(parent, "MapPanel", Vector2.zero, new Vector2(620, 220), new Color(0.08f, 0.05f, 0.1f, 0.92f));
+            CreateButton(panel.transform, "Enter Survival Arena", new Vector2(0, 20), () =>
             {
                 panel.SetActive(false);
                 GameFactory.LoadScene(GameScenes.SurvivalArena);
             });
-            CreateButton(panel.transform, "Close", new Vector2(0, -140), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Close", new Vector2(0, -80), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
 
         void CreateUpgradeRow(Transform parent, string label, int cost, float y, Action onBuy)
         {
-            CreateText(parent, $"{label} — {cost} gold", 24, TextAnchor.MiddleLeft, new Vector2(-220, y), new Vector2(360, 40));
+            CreateText(parent, $"{label} — {cost}g", 24, TextAnchor.MiddleLeft, new Vector2(-220, y), new Vector2(360, 40));
             CreateButton(parent, "Buy", new Vector2(220, y), onBuy);
         }
 
@@ -104,32 +92,9 @@ namespace ProjectZx.UI
         public void OpenShop() { RefreshGold(); _shopPanel.SetActive(true); }
         public void OpenMapSelect() { _mapPanel.SetActive(true); }
 
-        public void ShowNearbyHint(string text)
-        {
-            if (_hintText == null) return;
-            _hintText.text = $"Tap NPC — {text}";
-            _hintText.gameObject.SetActive(true);
-        }
-
-        public void HideNearbyHint()
-        {
-            if (_hintText == null) return;
-            _hintText.gameObject.SetActive(false);
-        }
-
         public void RefreshGold()
         {
-            if (_goldText != null) _goldText.text = $"Saved Gold: {GameSave.Gold}";
-        }
-
-        void ShowBankedGoldNotice()
-        {
-            var banked = GameSave.LastRunGoldBanked;
-            if (banked <= 0) return;
-            GameSave.LastRunGoldBanked = 0;
-            if (_hintText == null) return;
-            _hintText.text = $"+{banked} gold saved from your last run";
-            _hintText.gameObject.SetActive(true);
+            if (_goldText != null) _goldText.text = GameSave.Gold.ToString();
         }
 
         static Text CreateText(Transform parent, string text, int size, TextAnchor anchor, Vector2 pos, Vector2 sizeDelta)
@@ -137,9 +102,19 @@ namespace ProjectZx.UI
             var go = new GameObject("Text");
             go.transform.SetParent(parent, false);
             var rect = go.AddComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0.5f, 1f);
-            rect.anchorMax = new Vector2(0.5f, 1f);
-            rect.pivot = new Vector2(0.5f, 1f);
+            var topAnchored = anchor == TextAnchor.UpperLeft || anchor == TextAnchor.UpperCenter || anchor == TextAnchor.UpperRight;
+            if (topAnchored)
+            {
+                rect.anchorMin = new Vector2(anchor == TextAnchor.UpperRight ? 1f : anchor == TextAnchor.UpperCenter ? 0.5f : 0f, 1f);
+                rect.anchorMax = rect.anchorMin;
+                rect.pivot = new Vector2(anchor == TextAnchor.UpperRight ? 1f : anchor == TextAnchor.UpperCenter ? 0.5f : 0f, 1f);
+            }
+            else
+            {
+                rect.anchorMin = new Vector2(0.5f, 0.5f);
+                rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+            }
             rect.anchoredPosition = pos;
             rect.sizeDelta = sizeDelta;
             var label = go.AddComponent<Text>();

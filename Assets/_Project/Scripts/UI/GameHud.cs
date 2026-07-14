@@ -52,7 +52,7 @@ namespace ProjectZx.UI
 
             _hpText.text = $"HP {stats.CurrentHp}/{stats.MaxHp}";
             _xpText.text = $"Run XP {stats.RunXp}/{stats.XpToNext}  Lv {stats.Level}";
-            _goldText.text = $"Run Gold {stats.RunGold} (saved to camp)";
+            _goldText.text = $"Gold {stats.RunGold}";
 
             if (_bannerTimer > 0f)
             {
@@ -62,7 +62,7 @@ namespace ProjectZx.UI
 
             if (stats.IsDead && _bannerTimer <= 0f)
             {
-                _bannerText.text = "You fell. Run gold saved. XP lost. Returning to camp...";
+                _bannerText.text = "You fell";
                 _bannerTimer = 999f;
             }
         }

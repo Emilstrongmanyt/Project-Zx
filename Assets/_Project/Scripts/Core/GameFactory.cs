@@ -111,13 +111,13 @@ namespace ProjectZx.Core
             return go;
         }
 
-        public static GameObject CreateNpc(string name, Sprite sprite, Vector3 position, string prompt, System.Action onInteract)
+        public static GameObject CreateNpc(string name, Sprite sprite, Vector3 position, System.Action onInteract)
         {
             var go = CreateSprite(name, sprite, position, 0.38f, 6);
             var proximity = go.AddComponent<CircleCollider2D>();
             proximity.isTrigger = true;
             proximity.radius = 2.8f;
-            go.AddComponent<NpcInteractable>().Initialize(prompt, onInteract);
+            go.AddComponent<NpcInteractable>().Initialize(onInteract);
             return go;
         }
 

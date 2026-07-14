@@ -27,10 +27,8 @@ namespace ProjectZx.Core
             var hub = new GameObject("HubUi").AddComponent<HubUi>();
             var player = GameFactory.CreatePlayer(new Vector3(0f, -4.2f), false);
 
-            GameFactory.CreateNpc("WizardShop", ArtLibrary.Wizard, new Vector3(-2.1f, 1.1f),
-                "Wizard — upgrades shop", () => hub.OpenShop());
-            GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(2.1f, 1.1f),
-                "Knight — start a survival run", () => hub.OpenMapSelect());
+            GameFactory.CreateNpc("WizardShop", ArtLibrary.Wizard, new Vector3(-2.1f, 1.1f), () => hub.OpenShop());
+            GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(2.1f, 1.1f), () => hub.OpenMapSelect());
         }
 
         static void BuildSurvival()
