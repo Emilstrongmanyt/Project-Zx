@@ -1,5 +1,6 @@
 using ProjectZx.Core;
 using ProjectZx.Player;
+using ProjectZx.Waves;
 using ProjectZx.World;
 using UnityEngine;
 
@@ -69,11 +70,11 @@ namespace ProjectZx.Enemies
 
             var xp = 4 + _round + (IsBoss ? 25 : 0);
             var gold = 2 + _round / 2 + (IsBoss ? 15 : 0);
-            var pos = transform.position;
+            var pos = (Vector2)transform.position;
             GameFactory.CreatePickup(pos + Vector2.left * 0.2f, PickupType.Xp, xp);
             GameFactory.CreatePickup(pos + Vector2.right * 0.2f, PickupType.Gold, gold);
 
-            var session = Object.FindFirstObjectByType<SurvivalSession>();
+            var session = Object.FindAnyObjectByType<SurvivalSession>();
             session?.NotifyEnemyKilled(this);
             Destroy(gameObject);
         }

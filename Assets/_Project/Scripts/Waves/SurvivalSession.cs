@@ -37,9 +37,9 @@ namespace ProjectZx.Waves
             yield return new WaitForSeconds(1f);
             while (true)
             {
-                if (_player == null) yield break;
+                if (_player == null) break;
                 var stats = _player.GetComponent<PlayerStats>();
-                if (stats != null && stats.IsDead) yield break;
+                if (stats != null && stats.IsDead) break;
 
                 CurrentRound++;
                 _roundActive = true;
@@ -47,9 +47,9 @@ namespace ProjectZx.Waves
 
                 while (_roundActive)
                 {
-                    if (_player == null) yield break;
+                    if (_player == null) break;
                     stats = _player.GetComponent<PlayerStats>();
-                    if (stats != null && stats.IsDead) yield break;
+                    if (stats != null && stats.IsDead) break;
                     if (EnemiesRemaining <= 0 && !_spawning)
                     {
                         _roundActive = false;
@@ -59,6 +59,10 @@ namespace ProjectZx.Waves
                     }
                     yield return null;
                 }
+
+                if (_player == null) break;
+                stats = _player.GetComponent<PlayerStats>();
+                if (stats != null && stats.IsDead) break;
             }
 
             yield return new WaitForSeconds(2f);

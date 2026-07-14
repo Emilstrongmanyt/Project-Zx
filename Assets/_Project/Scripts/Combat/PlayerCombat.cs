@@ -55,7 +55,7 @@ namespace ProjectZx.Combat
         {
             EnemyActor best = null;
             var bestDist = float.MaxValue;
-            var enemies = Object.FindObjectsByType<EnemyActor>(FindObjectsSortMode.None);
+            var enemies = Object.FindObjectsByType<EnemyActor>();
             foreach (var enemy in enemies)
             {
                 if (enemy == null || !enemy.IsAlive) continue;
