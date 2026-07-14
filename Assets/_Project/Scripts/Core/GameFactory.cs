@@ -72,7 +72,7 @@ namespace ProjectZx.Core
             go.tag = "Player";
 
             var rb = go.AddComponent<Rigidbody2D>();
-            rb.bodyType = RigidbodyType2D.Dynamic;
+            rb.bodyType = RigidbodyType2D.Kinematic;
             rb.gravityScale = 0f;
             rb.freezeRotation = true;
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
@@ -81,7 +81,7 @@ namespace ProjectZx.Core
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 0.45f;
 
-            go.AddComponent<TapMovement>();
+            go.AddComponent<TapMovement>().Configure(!survivalMode);
             var stats = go.AddComponent<PlayerStats>();
             stats.ConfigureForRun(survivalMode);
             if (survivalMode)

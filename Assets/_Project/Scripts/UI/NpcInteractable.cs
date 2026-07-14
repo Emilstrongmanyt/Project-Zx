@@ -5,7 +5,7 @@ namespace ProjectZx.UI
 {
     public class NpcInteractable : MonoBehaviour
     {
-        const float InteractRange = 2.6f;
+        const float InteractRange = 3f;
 
         Action _onInteract;
 
