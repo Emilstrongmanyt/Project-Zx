@@ -14,18 +14,12 @@ namespace ProjectZx.Player
     [RequireComponent(typeof(Rigidbody2D))]
     public class TapMovement : MonoBehaviour
     {
-        const float DragThresholdPixels = 28f;
         const float ArrivalDistance = 0.08f;
 
         [SerializeField] float baseSpeed = 4.5f;
         [SerializeField] bool allowNpcInteraction = true;
 
-        enum InputMode { None, MoveToPoint, HoldDirection }
-
-        InputMode _mode = InputMode.None;
         Vector2? _moveTarget;
-        Vector2 _holdDirection;
-        Vector2 _touchStartScreen;
         Camera _camera;
         Rigidbody2D _rb;
         SpriteRenderer _renderer;
@@ -54,30 +48,29 @@ namespace ProjectZx.Player
 
         void FixedUpdate()
         {
-            var speed = baseSpeed * GameSave.SpeedMultiplier;
-
-            if (_mode == InputMode.HoldDirection)
-            {
-                _rb.linearVelocity = _holdDirection * speed;
-                return;
-            }
-
-            if (_mode != InputMode.MoveToPoint || _moveTarget == null)
+            if (_moveTarget == null)
             {
                 _rb.linearVelocity = Vector2.zero;
                 return;
             }
 
-            var delta = _moveTarget.Value - (Vector2)transform.position;
+            var speed = baseSpeed * GameSave.SpeedMultiplier;
+            var target = _moveTarget.Value;
+            var delta = target - _rb.position;
+
             if (delta.magnitude < ArrivalDistance)
             {
-                _moveTarget = null;
-                _mode = InputMode.None;
+                _rb.MovePosition(target);
                 _rb.linearVelocity = Vector2.zero;
+                _moveTarget = null;
                 return;
             }
 
-            _rb.linearVelocity = delta.normalized * speed;
+            var step = speed * Time.fixedDeltaTime;
+            var current = _rb.position;
+            var next = Vector2.MoveTowards(current, target, step);
+            _rb.MovePosition(next);
+            _rb.linearVelocity = (next - current) / Time.fixedDeltaTime;
         }
 
         void ReadPointer()
@@ -87,83 +80,27 @@ namespace ProjectZx.Player
 
             if (Touch.activeTouches.Count > 0)
             {
-                var touch = Touch.activeTouches[0];
-                HandlePointer(ToLegacyPhase(touch.phase), touch.screenPosition, touch.touchId);
-                return;
-            }
-
-            var mouse = Mouse.current;
-            if (mouse == null) return;
-
-            var pos = mouse.position.ReadValue();
-            if (mouse.leftButton.wasPressedThisFrame)
-                HandlePointer(UnityEngine.TouchPhase.Began, pos, -1);
-            else if (mouse.leftButton.wasReleasedThisFrame)
-                HandlePointer(UnityEngine.TouchPhase.Ended, pos, -1);
-            else if (mouse.leftButton.isPressed)
-                HandlePointer(UnityEngine.TouchPhase.Moved, pos, -1);
-        }
-
-        static UnityEngine.TouchPhase ToLegacyPhase(UnityEngine.InputSystem.TouchPhase phase)
-        {
-            return phase switch
-            {
-                UnityEngine.InputSystem.TouchPhase.Began => UnityEngine.TouchPhase.Began,
-                UnityEngine.InputSystem.TouchPhase.Moved => UnityEngine.TouchPhase.Moved,
-                UnityEngine.InputSystem.TouchPhase.Stationary => UnityEngine.TouchPhase.Stationary,
-                UnityEngine.InputSystem.TouchPhase.Ended => UnityEngine.TouchPhase.Ended,
-                UnityEngine.InputSystem.TouchPhase.Canceled => UnityEngine.TouchPhase.Canceled,
-                _ => UnityEngine.TouchPhase.Canceled
-            };
-        }
-
-        void HandlePointer(UnityEngine.TouchPhase phase, Vector2 screenPos, int fingerId)
-        {
-            if (IsPointerOverBlockingUi(screenPos)) return;
-
-            var world = ScreenToWorld(screenPos);
-
-            if (phase == UnityEngine.TouchPhase.Began)
-            {
-                _touchStartScreen = screenPos;
-                if (allowNpcInteraction && TryInteractWithNpc(world))
-                    return;
-
-                _mode = InputMode.MoveToPoint;
-                _moveTarget = world;
-                _holdDirection = Vector2.zero;
-                return;
-            }
-
-            if (phase == UnityEngine.TouchPhase.Ended || phase == UnityEngine.TouchPhase.Canceled)
-            {
-                if (_mode == InputMode.HoldDirection)
+                foreach (var touch in Touch.activeTouches)
                 {
-                    _mode = InputMode.None;
-                    _holdDirection = Vector2.zero;
+                    if (touch.phase != UnityEngine.InputSystem.TouchPhase.Began) continue;
+                    TryTapToMove(touch.screenPosition);
                 }
                 return;
             }
 
-            if (_mode != InputMode.MoveToPoint && _mode != InputMode.HoldDirection)
-                return;
+            var mouse = Mouse.current;
+            if (mouse?.leftButton.wasPressedThisFrame == true)
+                TryTapToMove(mouse.position.ReadValue());
+        }
 
-            var drag = Vector2.Distance(screenPos, _touchStartScreen);
-            if (drag >= DragThresholdPixels)
-            {
-                _mode = InputMode.HoldDirection;
-                _moveTarget = null;
-            }
+        void TryTapToMove(Vector2 screenPos)
+        {
+            if (IsPointerOverBlockingUi(screenPos)) return;
 
-            if (_mode == InputMode.HoldDirection)
-            {
-                var dir = world - (Vector2)transform.position;
-                _holdDirection = dir.sqrMagnitude > 0.01f ? dir.normalized : Vector2.zero;
-            }
-            else if (_mode == InputMode.MoveToPoint)
-            {
-                _moveTarget = world;
-            }
+            var world = ScreenToWorld(screenPos);
+            if (allowNpcInteraction && TryInteractWithNpc(world)) return;
+
+            _moveTarget = world;
         }
 
         bool TryInteractWithNpc(Vector2 worldPos)
@@ -184,9 +121,7 @@ namespace ProjectZx.Player
 
             if (best == null || !best.TryInteract(transform)) return false;
 
-            _mode = InputMode.None;
             _moveTarget = null;
-            _holdDirection = Vector2.zero;
             _rb.linearVelocity = Vector2.zero;
             return true;
         }
@@ -215,7 +150,7 @@ namespace ProjectZx.Player
 
         Vector2 ScreenToWorld(Vector2 screen)
         {
-            var z = -_camera.transform.position.z;
+            var z = Mathf.Abs(_camera.transform.position.z);
             return _camera.ScreenToWorldPoint(new Vector3(screen.x, screen.y, z));
         }
 
@@ -225,7 +160,7 @@ namespace ProjectZx.Player
             var combat = GetComponent<PlayerCombat>();
             if (combat != null && combat.IsSwinging) return;
 
-            var moving = _rb.linearVelocity.sqrMagnitude > 0.01f;
+            var moving = _moveTarget != null || _rb.linearVelocity.sqrMagnitude > 0.01f;
             _renderer.sprite = moving ? _walk : _idle;
             if (moving && _rb.linearVelocity.x != 0f)
                 _renderer.flipX = _rb.linearVelocity.x < 0f;
