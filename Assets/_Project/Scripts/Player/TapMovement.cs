@@ -142,7 +142,7 @@ namespace ProjectZx.Player
         bool TryInteractWithNpc(Vector2 worldPos)
         {
             const float tapRadius = 1.1f;
-            var npcs = Object.FindObjectsByType<NpcInteractable>();
+            var npcs = UnityEngine.Object.FindObjectsByType<NpcInteractable>();
             NpcInteractable best = null;
             var bestTapDist = float.MaxValue;
 

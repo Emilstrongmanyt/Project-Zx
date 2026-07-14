@@ -74,7 +74,7 @@ namespace ProjectZx.Enemies
             GameFactory.CreatePickup(pos + Vector2.left * 0.2f, PickupType.Xp, xp);
             GameFactory.CreatePickup(pos + Vector2.right * 0.2f, PickupType.Gold, gold);
 
-            var session = Object.FindAnyObjectByType<SurvivalSession>();
+            var session = UnityEngine.Object.FindAnyObjectByType<SurvivalSession>();
             session?.NotifyEnemyKilled(this);
             Destroy(gameObject);
         }
