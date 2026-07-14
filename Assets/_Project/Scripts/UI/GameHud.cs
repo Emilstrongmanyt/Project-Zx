@@ -25,7 +25,7 @@ namespace ProjectZx.UI
 
         void Build()
         {
-            if (Object.FindAnyObjectByType<EventSystem>() == null)
+            if (UnityEngine.Object.FindAnyObjectByType<EventSystem>() == null)
             {
                 var es = new GameObject("EventSystem");
                 es.AddComponent<EventSystem>();
