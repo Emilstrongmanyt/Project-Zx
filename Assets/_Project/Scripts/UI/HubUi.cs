@@ -1,7 +1,6 @@
 using System;
 using ProjectZx.Core;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace ProjectZx.UI
@@ -27,12 +26,7 @@ namespace ProjectZx.UI
 
         void Build()
         {
-            if (UnityEngine.Object.FindAnyObjectByType<EventSystem>() == null)
-            {
-                var es = new GameObject("EventSystem");
-                es.AddComponent<EventSystem>();
-                es.AddComponent<StandaloneInputModule>();
-            }
+            EventSystemSetup.EnsureExists();
 
             var canvasGo = new GameObject("HubCanvas");
             var canvas = canvasGo.AddComponent<Canvas>();
@@ -154,6 +148,7 @@ namespace ProjectZx.UI
             label.fontSize = size;
             label.color = Color.white;
             label.alignment = anchor;
+            label.raycastTarget = false;
             return label;
         }
 
