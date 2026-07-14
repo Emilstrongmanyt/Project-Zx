@@ -1,3 +1,4 @@
+using ProjectZx.Combat;
 using ProjectZx.Core;
 using ProjectZx.UI;
 using UnityEngine;
@@ -180,6 +181,9 @@ namespace ProjectZx.Player
         void UpdateSprite()
         {
             if (_renderer == null) return;
+            var combat = GetComponent<PlayerCombat>();
+            if (combat != null && combat.IsSwinging) return;
+
             var moving = _rb.linearVelocity.sqrMagnitude > 0.01f;
             _renderer.sprite = moving ? _walk : _idle;
             if (moving && _rb.linearVelocity.x != 0f)
