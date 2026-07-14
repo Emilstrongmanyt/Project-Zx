@@ -1,6 +1,7 @@
 using System;
 using ProjectZx.Core;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace ProjectZx.UI
@@ -11,10 +12,7 @@ namespace ProjectZx.UI
 
         Text _goldText;
         Text _titleText;
-        GameObject _promptPanel;
-        Text _promptText;
-        Button _promptButton;
-        Action _promptAction;
+        Text _hintText;
 
         GameObject _shopPanel;
         GameObject _mapPanel;
@@ -28,6 +26,13 @@ namespace ProjectZx.UI
 
         void Build()
         {
+            if (Object.FindAnyObjectByType<EventSystem>() == null)
+            {
+                var es = new GameObject("EventSystem");
+                es.AddComponent<EventSystem>();
+                es.AddComponent<StandaloneInputModule>();
+            }
+
             var canvasGo = new GameObject("HubCanvas");
             var canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -39,18 +44,9 @@ namespace ProjectZx.UI
             _goldText = CreateText(canvasGo.transform, "Gold: 0", 28, TextAnchor.UpperRight, new Vector2(-30, -30), new Vector2(320, 50));
             _goldText.alignment = TextAnchor.UpperRight;
 
-            _promptPanel = CreatePanel(canvasGo.transform, "PromptPanel", new Vector2(0, 120), new Vector2(520, 120), new Color(0, 0, 0, 0.65f));
-            _promptText = CreateText(_promptPanel.transform, "Talk", 26, TextAnchor.MiddleCenter, Vector2.zero, new Vector2(500, 50));
-            var buttonGo = new GameObject("PromptButton");
-            buttonGo.transform.SetParent(_promptPanel.transform, false);
-            var rect = buttonGo.AddComponent<RectTransform>();
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-            _promptButton = buttonGo.AddComponent<Button>();
-            _promptButton.onClick.AddListener(OnPromptClicked);
-            _promptPanel.SetActive(false);
+            _hintText = CreateText(canvasGo.transform, "", 22, TextAnchor.LowerCenter, new Vector2(0, 40), new Vector2(700, 44));
+            _hintText.color = new Color(0.95f, 0.92f, 0.7f, 0.9f);
+            _hintText.gameObject.SetActive(false);
 
             _shopPanel = BuildShopPanel(canvasGo.transform);
             _mapPanel = BuildMapPanel(canvasGo.transform);
@@ -113,23 +109,17 @@ namespace ProjectZx.UI
         public void OpenShop() { RefreshGold(); _shopPanel.SetActive(true); }
         public void OpenMapSelect() { _mapPanel.SetActive(true); }
 
-        public void ShowPrompt(string text, Action onInteract)
+        public void ShowNearbyHint(string text)
         {
-            _promptAction = onInteract;
-            _promptText.text = text;
-            _promptPanel.SetActive(true);
+            if (_hintText == null) return;
+            _hintText.text = $"Tap NPC — {text}";
+            _hintText.gameObject.SetActive(true);
         }
 
-        public void HidePrompt()
+        public void HideNearbyHint()
         {
-            _promptPanel.SetActive(false);
-            _promptAction = null;
-        }
-
-        void OnPromptClicked()
-        {
-            _promptAction?.Invoke();
-            HidePrompt();
+            if (_hintText == null) return;
+            _hintText.gameObject.SetActive(false);
         }
 
         public void RefreshGold()

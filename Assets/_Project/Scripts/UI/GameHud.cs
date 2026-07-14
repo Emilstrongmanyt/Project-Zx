@@ -1,5 +1,6 @@
 using ProjectZx.Player;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace ProjectZx.UI
@@ -24,6 +25,13 @@ namespace ProjectZx.UI
 
         void Build()
         {
+            if (Object.FindAnyObjectByType<EventSystem>() == null)
+            {
+                var es = new GameObject("EventSystem");
+                es.AddComponent<EventSystem>();
+                es.AddComponent<StandaloneInputModule>();
+            }
+
             var canvasGo = new GameObject("HudCanvas");
             var canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;

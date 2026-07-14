@@ -34,7 +34,7 @@ namespace ProjectZx.Waves
 
         IEnumerator RunLoop()
         {
-            yield return new WaitForSeconds(1f);
+            yield return new WaitForSeconds(0.5f);
             while (true)
             {
                 if (_player == null) break;
