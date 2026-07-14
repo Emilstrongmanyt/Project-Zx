@@ -19,6 +19,7 @@ namespace ProjectZx.Core
         static Sprite _grassTile;
         static Sprite[] _grassVariants;
         static Sprite _campfire;
+        static Sprite _baseballBat;
 
         public static Sprite PlayerIdle => _playerIdle ??= Load("Placeholders/player_idle");
         public static Sprite PlayerWalk => _playerWalk ??= Load("Placeholders/player_walk");
@@ -30,6 +31,7 @@ namespace ProjectZx.Core
         public static Sprite Ground => _ground ??= Load("Placeholders/ground");
         public static Sprite GrassTile => _grassTile ??= LoadOrCreateGrass();
         public static Sprite Campfire => _campfire ??= CreateCampfireSprite();
+        public static Sprite BaseballBat => _baseballBat ??= LoadOrCreateBat();
 
         public static Sprite GetGrassVariant(int index)
         {
@@ -76,6 +78,51 @@ namespace ProjectZx.Core
 
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 4f);
+        }
+
+        static Sprite LoadOrCreateBat()
+        {
+            var sprite = Resources.Load<Sprite>("Placeholders/baseball_bat");
+            return sprite != null ? sprite : CreateBaseballBatSprite();
+        }
+
+        static Sprite CreateBaseballBatSprite()
+        {
+            const int w = 20;
+            const int h = 6;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+
+            void Set(int x, int y, Color c)
+            {
+                if (x >= 0 && x < w && y >= 0 && y < h) tex.SetPixel(x, y, c);
+            }
+
+            var clear = new Color(0, 0, 0, 0);
+            var wood = new Color(0.55f, 0.34f, 0.18f);
+            var woodDark = new Color(0.42f, 0.26f, 0.12f);
+            var tape = new Color(0.2f, 0.2f, 0.22f);
+            var knob = new Color(0.35f, 0.22f, 0.1f);
+
+            for (var y = 0; y < h; y++)
+            for (var x = 0; x < w; x++)
+                Set(x, y, clear);
+
+            Set(0, 2, knob); Set(0, 3, knob);
+            Set(1, 2, tape); Set(1, 3, tape);
+            Set(2, 2, tape); Set(2, 3, tape);
+            for (var x = 3; x < 16; x++)
+            {
+                Set(x, 2, woodDark);
+                Set(x, 3, wood);
+            }
+            Set(16, 1, wood); Set(17, 1, wood); Set(18, 0, wood);
+            Set(16, 2, wood); Set(17, 2, wood); Set(18, 1, wood); Set(19, 1, wood);
+            Set(16, 3, wood); Set(17, 3, wood); Set(18, 2, wood); Set(19, 2, wood);
+            Set(17, 4, woodDark); Set(18, 3, woodDark); Set(19, 3, woodDark);
+
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.12f, 0.5f), 4f);
         }
 
         static Sprite CreateCampfireSprite()
