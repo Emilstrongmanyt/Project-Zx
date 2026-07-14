@@ -97,33 +97,33 @@ namespace ProjectZx.Player
 
             var pos = mouse.position.ReadValue();
             if (mouse.leftButton.wasPressedThisFrame)
-                HandlePointer(TouchPhase.Began, pos, -1);
+                HandlePointer(UnityEngine.TouchPhase.Began, pos, -1);
             else if (mouse.leftButton.wasReleasedThisFrame)
-                HandlePointer(TouchPhase.Ended, pos, -1);
+                HandlePointer(UnityEngine.TouchPhase.Ended, pos, -1);
             else if (mouse.leftButton.isPressed)
-                HandlePointer(TouchPhase.Moved, pos, -1);
+                HandlePointer(UnityEngine.TouchPhase.Moved, pos, -1);
         }
 
-        static TouchPhase ToLegacyPhase(UnityEngine.InputSystem.TouchPhase phase)
+        static UnityEngine.TouchPhase ToLegacyPhase(UnityEngine.InputSystem.TouchPhase phase)
         {
             return phase switch
             {
-                UnityEngine.InputSystem.TouchPhase.Began => TouchPhase.Began,
-                UnityEngine.InputSystem.TouchPhase.Moved => TouchPhase.Moved,
-                UnityEngine.InputSystem.TouchPhase.Stationary => TouchPhase.Stationary,
-                UnityEngine.InputSystem.TouchPhase.Ended => TouchPhase.Ended,
-                UnityEngine.InputSystem.TouchPhase.Canceled => TouchPhase.Canceled,
-                _ => TouchPhase.Canceled
+                UnityEngine.InputSystem.TouchPhase.Began => UnityEngine.TouchPhase.Began,
+                UnityEngine.InputSystem.TouchPhase.Moved => UnityEngine.TouchPhase.Moved,
+                UnityEngine.InputSystem.TouchPhase.Stationary => UnityEngine.TouchPhase.Stationary,
+                UnityEngine.InputSystem.TouchPhase.Ended => UnityEngine.TouchPhase.Ended,
+                UnityEngine.InputSystem.TouchPhase.Canceled => UnityEngine.TouchPhase.Canceled,
+                _ => UnityEngine.TouchPhase.Canceled
             };
         }
 
-        void HandlePointer(TouchPhase phase, Vector2 screenPos, int fingerId)
+        void HandlePointer(UnityEngine.TouchPhase phase, Vector2 screenPos, int fingerId)
         {
             if (IsPointerOverBlockingUi(screenPos)) return;
 
             var world = ScreenToWorld(screenPos);
 
-            if (phase == TouchPhase.Began)
+            if (phase == UnityEngine.TouchPhase.Began)
             {
                 _touchStartScreen = screenPos;
                 if (allowNpcInteraction && TryInteractWithNpc(world))
@@ -135,7 +135,7 @@ namespace ProjectZx.Player
                 return;
             }
 
-            if (phase == TouchPhase.Ended || phase == TouchPhase.Canceled)
+            if (phase == UnityEngine.TouchPhase.Ended || phase == UnityEngine.TouchPhase.Canceled)
             {
                 if (_mode == InputMode.HoldDirection)
                 {
