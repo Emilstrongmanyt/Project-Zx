@@ -14,21 +14,33 @@ namespace ProjectZx.Player
     [RequireComponent(typeof(Rigidbody2D))]
     public class TapMovement : MonoBehaviour
     {
-        const float ArrivalDistance = 0.08f;
+        const float ArrivalDistance = 0.12f;
+        const float NpcTapRadius = 1.8f;
 
         [SerializeField] float baseSpeed = 4.5f;
         [SerializeField] bool allowNpcInteraction = true;
 
         Vector2? _moveTarget;
+        NpcInteractable _pendingNpc;
         Camera _camera;
         Rigidbody2D _rb;
         SpriteRenderer _renderer;
         Sprite _idle;
         Sprite _walk;
+        int _lastHandledTouchId = -1;
+        int _lastHandledFrame = -1;
+
+        public void Configure(bool npcInteraction) => allowNpcInteraction = npcInteraction;
 
         void OnEnable()
         {
             EnhancedTouchSupport.Enable();
+            Touch.onFingerDown += OnFingerDown;
+        }
+
+        void OnDisable()
+        {
+            Touch.onFingerDown -= OnFingerDown;
         }
 
         void Awake()
@@ -38,11 +50,17 @@ namespace ProjectZx.Player
             _camera = Camera.main;
             _idle = ArtLibrary.PlayerIdle;
             _walk = ArtLibrary.PlayerWalk;
+
+            _rb.bodyType = RigidbodyType2D.Kinematic;
+            _rb.gravityScale = 0f;
+            _rb.freezeRotation = true;
+            _rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         }
 
         void Update()
         {
-            ReadPointer();
+            ReadMouse();
             UpdateSprite();
         }
 
@@ -51,6 +69,7 @@ namespace ProjectZx.Player
             if (_moveTarget == null)
             {
                 _rb.linearVelocity = Vector2.zero;
+                TryCompletePendingNpcInteract();
                 return;
             }
 
@@ -63,6 +82,7 @@ namespace ProjectZx.Player
                 _rb.MovePosition(target);
                 _rb.linearVelocity = Vector2.zero;
                 _moveTarget = null;
+                TryCompletePendingNpcInteract();
                 return;
             }
 
@@ -71,59 +91,96 @@ namespace ProjectZx.Player
             var next = Vector2.MoveTowards(current, target, step);
             _rb.MovePosition(next);
             _rb.linearVelocity = (next - current) / Time.fixedDeltaTime;
+            TryCompletePendingNpcInteract();
         }
 
-        void ReadPointer()
+        void OnFingerDown(Finger finger)
+        {
+            if (finger == null) return;
+            TryTapToMove(finger.screenPosition, finger.index);
+        }
+
+        void ReadMouse()
         {
             if (_camera == null) _camera = Camera.main;
             if (_camera == null) return;
 
-            if (Touch.activeTouches.Count > 0)
-            {
-                foreach (var touch in Touch.activeTouches)
-                {
-                    if (touch.phase != UnityEngine.InputSystem.TouchPhase.Began) continue;
-                    TryTapToMove(touch.screenPosition);
-                }
-                return;
-            }
-
             var mouse = Mouse.current;
-            if (mouse?.leftButton.wasPressedThisFrame == true)
-                TryTapToMove(mouse.position.ReadValue());
+            if (mouse?.leftButton.wasPressedThisFrame != true) return;
+            TryTapToMove(mouse.position.ReadValue(), -1);
         }
 
-        void TryTapToMove(Vector2 screenPos)
+        void TryTapToMove(Vector2 screenPos, int touchId)
         {
+            if (_lastHandledFrame == Time.frameCount && _lastHandledTouchId == touchId) return;
+            _lastHandledFrame = Time.frameCount;
+            _lastHandledTouchId = touchId;
+
+            if (_camera == null) _camera = Camera.main;
+            if (_camera == null) return;
             if (IsPointerOverBlockingUi(screenPos)) return;
 
             var world = ScreenToWorld(screenPos);
-            if (allowNpcInteraction && TryInteractWithNpc(world)) return;
 
+            if (allowNpcInteraction)
+            {
+                var npc = FindNpcAtTap(world);
+                if (npc != null)
+                {
+                    if (npc.TryInteract(transform))
+                    {
+                        ClearMovement();
+                        return;
+                    }
+
+                    _pendingNpc = npc;
+                    _moveTarget = npc.transform.position;
+                    return;
+                }
+            }
+
+            _pendingNpc = null;
             _moveTarget = world;
         }
 
-        bool TryInteractWithNpc(Vector2 worldPos)
+        void TryCompletePendingNpcInteract()
         {
-            const float tapRadius = 1.1f;
+            if (_pendingNpc == null) return;
+            if (!NpcInRange(_pendingNpc)) return;
+
+            if (_pendingNpc.TryInteract(transform))
+                ClearMovement();
+        }
+
+        bool NpcInRange(NpcInteractable npc)
+        {
+            if (npc == null) return false;
+            return Vector2.Distance(transform.position, npc.transform.position) <= npc.InteractRangeWorld;
+        }
+
+        static NpcInteractable FindNpcAtTap(Vector2 worldPos)
+        {
             var npcs = UnityEngine.Object.FindObjectsByType<NpcInteractable>();
             NpcInteractable best = null;
-            var bestTapDist = float.MaxValue;
+            var bestDist = float.MaxValue;
 
             foreach (var npc in npcs)
             {
                 if (npc == null) continue;
-                var tapDist = Vector2.Distance(worldPos, npc.transform.position);
-                if (tapDist > tapRadius || tapDist >= bestTapDist) continue;
-                bestTapDist = tapDist;
+                var dist = Vector2.Distance(worldPos, npc.transform.position);
+                if (dist > NpcTapRadius || dist >= bestDist) continue;
+                bestDist = dist;
                 best = npc;
             }
 
-            if (best == null || !best.TryInteract(transform)) return false;
+            return best;
+        }
 
+        void ClearMovement()
+        {
             _moveTarget = null;
+            _pendingNpc = null;
             _rb.linearVelocity = Vector2.zero;
-            return true;
         }
 
         bool IsPointerOverBlockingUi(Vector2 screenPos)
