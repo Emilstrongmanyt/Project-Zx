@@ -37,6 +37,8 @@ namespace ProjectZx.Core
 
             GameFactory.CreateNpc("WizardShop", ArtLibrary.Wizard, new Vector3(-2.1f, 1.1f), () => hub.OpenShop());
             GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(2.1f, 1.1f), () => hub.OpenMapSelect());
+
+            MovementJoystick.EnsureExists();
         }
 
         static void BuildSurvival()
@@ -53,6 +55,8 @@ namespace ProjectZx.Core
 
             var session = new GameObject("SurvivalSession").AddComponent<SurvivalSession>();
             session.Begin(player.transform, hud);
+
+            MovementJoystick.EnsureExists();
         }
 
         static void SetupCamera(Color background)

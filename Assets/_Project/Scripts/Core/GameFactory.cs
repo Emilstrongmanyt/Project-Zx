@@ -153,6 +153,7 @@ namespace ProjectZx.Core
             rb.freezeRotation = true;
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            rb.useFullKinematicContacts = true;
 
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 0.45f;
@@ -176,8 +177,11 @@ namespace ProjectZx.Core
             go.tag = "Enemy";
 
             var rb = go.AddComponent<Rigidbody2D>();
+            rb.bodyType = RigidbodyType2D.Kinematic;
             rb.gravityScale = 0f;
             rb.freezeRotation = true;
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            rb.useFullKinematicContacts = true;
 
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = isBoss ? 0.7f : 0.4f;
