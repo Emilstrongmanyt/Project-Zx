@@ -2,12 +2,18 @@ using UnityEngine;
 
 namespace ProjectZx.Core
 {
+    /// <summary>
+    /// Persistent camp progression. Only gold and permanent upgrades are saved between runs.
+    /// Run XP never touches this class.
+    /// </summary>
     public static class GameSave
     {
         const string GoldKey = "zx_gold";
         const string HpLevelKey = "zx_up_hp";
         const string DmgLevelKey = "zx_up_dmg";
         const string SpdLevelKey = "zx_up_spd";
+
+        public static int LastRunGoldBanked { get; set; }
 
         public static int Gold
         {
@@ -41,9 +47,11 @@ namespace ProjectZx.Core
         public static float DamageMultiplier => 1f + DamageUpgradeLevel * 0.08f;
         public static float SpeedMultiplier => 1f + SpeedUpgradeLevel * 0.06f;
 
-        public static void AddGold(int amount)
+        public static void BankFromRun(int amount)
         {
-            if (amount > 0) Gold += amount;
+            if (amount <= 0) return;
+            Gold += amount;
+            LastRunGoldBanked = amount;
         }
 
         public static bool TrySpendGold(int cost)

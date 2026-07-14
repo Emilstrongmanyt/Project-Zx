@@ -10,10 +10,11 @@ namespace ProjectZx.Player
         public int RunXp { get; private set; }
         public int RunGold { get; private set; }
         public int Level { get; private set; } = 1;
+        public int XpToNext { get; private set; } = 30;
         public bool IsDead { get; private set; }
         public bool SurvivalMode { get; private set; }
 
-        int _xpToNext = 30;
+        bool _goldBanked;
 
         public void ConfigureForRun(bool survivalMode)
         {
@@ -24,7 +25,8 @@ namespace ProjectZx.Player
             RunGold = 0;
             Level = 1;
             IsDead = false;
-            _xpToNext = 30;
+            _goldBanked = false;
+            XpToNext = 30;
         }
 
         public void TakeDamage(int amount)
@@ -34,30 +36,41 @@ namespace ProjectZx.Player
             if (CurrentHp <= 0) Die();
         }
 
+        /// <summary>Run-only XP. Never written to persistent save.</summary>
         public void AddXp(int amount)
         {
-            if (!SurvivalMode || amount <= 0) return;
+            if (!SurvivalMode || IsDead || amount <= 0) return;
             RunXp += amount;
-            while (RunXp >= _xpToNext)
+            while (RunXp >= XpToNext)
             {
-                RunXp -= _xpToNext;
+                RunXp -= XpToNext;
                 Level++;
-                _xpToNext = 30 + Level * 12;
+                XpToNext = 30 + Level * 12;
                 MaxHp += 5;
                 CurrentHp = Mathf.Min(CurrentHp + 8, MaxHp);
             }
         }
 
+        /// <summary>Gold earned this run. Banked to camp savings on death or run end.</summary>
         public void AddRunGold(int amount)
         {
-            if (!SurvivalMode || amount <= 0) return;
+            if (!SurvivalMode || IsDead || amount <= 0 || _goldBanked) return;
             RunGold += amount;
+        }
+
+        public void BankRunGoldToSave()
+        {
+            if (_goldBanked || RunGold <= 0) return;
+            GameSave.BankFromRun(RunGold);
+            RunGold = 0;
+            _goldBanked = true;
         }
 
         void Die()
         {
+            if (IsDead) return;
             IsDead = true;
-            GameSave.AddGold(RunGold);
+            BankRunGoldToSave();
         }
 
         public float Damage => 10f * GameSave.DamageMultiplier * (1f + (Level - 1) * 0.05f);

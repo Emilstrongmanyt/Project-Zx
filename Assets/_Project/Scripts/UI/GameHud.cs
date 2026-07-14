@@ -41,7 +41,7 @@ namespace ProjectZx.UI
 
             _roundText = CreateText(canvasGo.transform, "Round 1", 30, new Vector2(-30, -30), TextAnchor.UpperLeft);
             _hpText = CreateText(canvasGo.transform, "HP 100/100", 26, new Vector2(-30, -70), TextAnchor.UpperLeft);
-            _xpText = CreateText(canvasGo.transform, "XP 0", 26, new Vector2(-30, -110), TextAnchor.UpperLeft);
+            _xpText = CreateText(canvasGo.transform, "Run XP 0/30", 26, new Vector2(-30, -110), TextAnchor.UpperLeft);
             _goldText = CreateText(canvasGo.transform, "Run Gold 0", 26, new Vector2(-30, -150), TextAnchor.UpperLeft);
             _bannerText = CreateText(canvasGo.transform, "", 36, Vector2.zero, TextAnchor.MiddleCenter);
             _bannerText.color = new Color(1f, 0.85f, 0.3f);
@@ -56,8 +56,8 @@ namespace ProjectZx.UI
             if (stats == null) return;
 
             _hpText.text = $"HP {stats.CurrentHp}/{stats.MaxHp}";
-            _xpText.text = $"XP {stats.RunXp}  Lv {stats.Level}";
-            _goldText.text = $"Run Gold {stats.RunGold}";
+            _xpText.text = $"Run XP {stats.RunXp}/{stats.XpToNext}  Lv {stats.Level}";
+            _goldText.text = $"Run Gold {stats.RunGold} (saved to camp)";
 
             if (_bannerTimer > 0f)
             {
@@ -67,7 +67,7 @@ namespace ProjectZx.UI
 
             if (stats.IsDead && _bannerTimer <= 0f)
             {
-                _bannerText.text = "You fell. Gold banked. Returning to camp...";
+                _bannerText.text = "You fell. Run gold saved. XP lost. Returning to camp...";
                 _bannerTimer = 999f;
             }
         }
