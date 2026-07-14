@@ -42,7 +42,10 @@ namespace ProjectZx.Core
         static void BuildSurvival()
         {
             SetupCamera(new Color(0.1f, 0.08f, 0.12f));
-            GameFactory.CreateArenaField("ArenaFloor", 40f, 30f, 1f);
+            const float arenaW = 64f;
+            const float arenaH = 48f;
+            GameFactory.CreateArenaField("ArenaFloor", arenaW, arenaH, 1f);
+            GameFactory.ScatterArenaObstacles(arenaW, arenaH, 22);
 
             var player = GameFactory.CreatePlayer(Vector3.zero, true);
             var hud = new GameObject("GameHud").AddComponent<GameHud>();

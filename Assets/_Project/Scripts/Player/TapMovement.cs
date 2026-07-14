@@ -73,7 +73,9 @@ namespace ProjectZx.Player
                 return;
             }
 
-            var speed = baseSpeed * GameSave.SpeedMultiplier;
+            var stats = GetComponent<PlayerStats>();
+            var runSpeed = stats != null ? stats.RunSpeedMultiplier : 1f;
+            var speed = baseSpeed * GameSave.SpeedMultiplier * runSpeed;
             var target = _moveTarget.Value;
             var delta = target - _rb.position;
 
@@ -118,6 +120,7 @@ namespace ProjectZx.Player
 
             if (_camera == null) _camera = Camera.main;
             if (_camera == null) return;
+            if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade) return;
             if (IsPointerOverBlockingUi(screenPos)) return;
 
             var world = ScreenToWorld(screenPos);
@@ -199,7 +202,7 @@ namespace ProjectZx.Player
                 var image = result.gameObject.GetComponent<Image>();
                 if (image == null || !image.raycastTarget) continue;
                 var name = result.gameObject.name;
-                if (name == "ShopPanel" || name == "MapPanel") return true;
+                if (name == "ShopPanel" || name == "MapPanel" || name == "LevelUpPanel") return true;
             }
 
             return false;

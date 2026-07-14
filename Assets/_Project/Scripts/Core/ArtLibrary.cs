@@ -20,6 +20,7 @@ namespace ProjectZx.Core
         static Sprite[] _grassVariants;
         static Sprite _campfire;
         static Sprite _baseballBat;
+        static Sprite _stone;
 
         public static Sprite PlayerIdle => _playerIdle ??= Load("Placeholders/player_idle");
         public static Sprite PlayerWalk => _playerWalk ??= Load("Placeholders/player_walk");
@@ -32,6 +33,7 @@ namespace ProjectZx.Core
         public static Sprite GrassTile => _grassTile ??= LoadOrCreateGrass();
         public static Sprite Campfire => _campfire ??= CreateCampfireSprite();
         public static Sprite BaseballBat => _baseballBat ??= LoadOrCreateBat();
+        public static Sprite Stone => _stone ??= CreateStoneSprite();
 
         public static Sprite GetGrassVariant(int index)
         {
@@ -123,6 +125,36 @@ namespace ProjectZx.Core
 
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.12f, 0.5f), 4f);
+        }
+
+        static Sprite CreateStoneSprite()
+        {
+            const int size = 14;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+
+            void Set(int x, int y, Color c)
+            {
+                if (x >= 0 && x < size && y >= 0 && y < size) tex.SetPixel(x, y, c);
+            }
+
+            var clear = new Color(0, 0, 0, 0);
+            var rock = new Color(0.45f, 0.43f, 0.4f);
+            var dark = new Color(0.32f, 0.3f, 0.28f);
+            var light = new Color(0.58f, 0.55f, 0.5f);
+
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+                Set(x, y, clear);
+
+            Set(4, 3, dark); Set(5, 3, rock); Set(6, 3, rock); Set(7, 3, rock); Set(8, 3, dark);
+            Set(3, 4, dark); Set(4, 4, rock); Set(5, 4, light); Set(6, 4, rock); Set(7, 4, rock); Set(8, 4, dark); Set(9, 4, dark);
+            Set(3, 5, rock); Set(4, 5, rock); Set(5, 5, rock); Set(6, 5, light); Set(7, 5, rock); Set(8, 5, dark); Set(9, 5, dark);
+            Set(4, 6, dark); Set(5, 6, rock); Set(6, 6, rock); Set(7, 6, rock); Set(8, 6, dark);
+            Set(5, 7, dark); Set(6, 7, dark); Set(7, 7, dark);
+
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.4f), 4f);
         }
 
         static Sprite CreateCampfireSprite()

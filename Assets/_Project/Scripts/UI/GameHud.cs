@@ -12,10 +12,14 @@ namespace ProjectZx.UI
         Text _xpText;
         Text _goldText;
         Text _bannerText;
+        Text _levelUpTitle;
+        GameObject _levelUpPanel;
         float _bannerTimer;
         Transform _player;
+        PlayerStats _stats;
 
         public static GameHud Instance { get; private set; }
+        public bool IsChoosingUpgrade { get; private set; }
 
         void Awake()
         {
@@ -25,7 +29,10 @@ namespace ProjectZx.UI
 
         void OnDestroy()
         {
+            if (_stats != null)
+                _stats.LevelUpChoiceRequired -= OnLevelUpChoiceRequired;
             if (Instance == this) Instance = null;
+            if (IsChoosingUpgrade) Time.timeScale = 1f;
         }
 
         void Build()
@@ -45,9 +52,62 @@ namespace ProjectZx.UI
             _goldText = CreateText(canvasGo.transform, "Run Gold 0", 26, new Vector2(-30, -150), TextAnchor.UpperLeft);
             _bannerText = CreateText(canvasGo.transform, "", 36, Vector2.zero, TextAnchor.MiddleCenter);
             _bannerText.color = new Color(1f, 0.85f, 0.3f);
+
+            _levelUpPanel = BuildLevelUpPanel(canvasGo.transform);
         }
 
-        public void BindPlayer(Transform player) => _player = player;
+        GameObject BuildLevelUpPanel(Transform parent)
+        {
+            var panel = CreatePanel(parent, "LevelUpPanel", Vector2.zero, new Vector2(560, 360), new Color(0.04f, 0.06f, 0.1f, 0.94f));
+            _levelUpTitle = CreatePanelText(panel.transform, "Level Up!", 34, new Vector2(0, 120), new Vector2(500, 50));
+            CreatePanelText(panel.transform, "Pick a run boost", 22, new Vector2(0, 70), new Vector2(500, 40));
+
+            CreateChoiceButton(panel.transform, "+10% Speed", new Vector2(0, 10), () => ChooseUpgrade(RunLevelChoice.Speed));
+            CreateChoiceButton(panel.transform, "+15 Max HP", new Vector2(0, -70), () => ChooseUpgrade(RunLevelChoice.Hp));
+            CreateChoiceButton(panel.transform, "+12% Attack", new Vector2(0, -150), () => ChooseUpgrade(RunLevelChoice.Attack));
+
+            panel.SetActive(false);
+            return panel;
+        }
+
+        public void BindPlayer(Transform player)
+        {
+            if (_stats != null)
+                _stats.LevelUpChoiceRequired -= OnLevelUpChoiceRequired;
+
+            _player = player;
+            _stats = player != null ? player.GetComponent<PlayerStats>() : null;
+
+            if (_stats != null)
+                _stats.LevelUpChoiceRequired += OnLevelUpChoiceRequired;
+        }
+
+        void OnLevelUpChoiceRequired(int remaining)
+        {
+            if (_levelUpPanel == null || _stats == null) return;
+
+            IsChoosingUpgrade = true;
+            Time.timeScale = 0f;
+            _levelUpTitle.text = remaining > 1 ? $"Level Up! ({remaining} picks)" : "Level Up!";
+            _levelUpPanel.SetActive(true);
+        }
+
+        void ChooseUpgrade(RunLevelChoice choice)
+        {
+            if (_stats == null) return;
+
+            _stats.ApplyRunLevelChoice(choice);
+
+            if (_stats.PendingLevelUpChoices > 0)
+            {
+                _levelUpTitle.text = $"Level Up! ({_stats.PendingLevelUpChoices} picks)";
+                return;
+            }
+
+            _levelUpPanel.SetActive(false);
+            IsChoosingUpgrade = false;
+            Time.timeScale = 1f;
+        }
 
         void Update()
         {
@@ -58,6 +118,8 @@ namespace ProjectZx.UI
             _hpText.text = $"HP {stats.CurrentHp}/{stats.MaxHp}";
             _xpText.text = $"Run XP {stats.RunXp}/{stats.XpToNext}  Lv {stats.Level}";
             _goldText.text = $"Gold {stats.RunGold}";
+
+            if (IsChoosingUpgrade) return;
 
             if (_bannerTimer > 0f)
             {
@@ -110,6 +172,72 @@ namespace ProjectZx.UI
             label.alignment = anchor;
             label.raycastTarget = false;
             return label;
+        }
+
+        static Text CreatePanelText(Transform parent, string text, int size, Vector2 pos, Vector2 sizeDelta)
+        {
+            var go = new GameObject("Text");
+            go.transform.SetParent(parent, false);
+            var rect = go.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = pos;
+            rect.sizeDelta = sizeDelta;
+            var label = go.AddComponent<Text>();
+            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            label.text = text;
+            label.fontSize = size;
+            label.color = Color.white;
+            label.alignment = TextAnchor.MiddleCenter;
+            label.raycastTarget = false;
+            return label;
+        }
+
+        static GameObject CreatePanel(Transform parent, string name, Vector2 pos, Vector2 size, Color color)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            var rect = go.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = pos;
+            rect.sizeDelta = size;
+            var image = go.AddComponent<Image>();
+            image.color = color;
+            return go;
+        }
+
+        static void CreateChoiceButton(Transform parent, string label, Vector2 pos, System.Action onClick)
+        {
+            var go = new GameObject(label + "Button");
+            go.transform.SetParent(parent, false);
+            var rect = go.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = pos;
+            rect.sizeDelta = new Vector2(360, 56);
+            var image = go.AddComponent<Image>();
+            image.color = new Color(0.18f, 0.32f, 0.5f, 0.96f);
+            var button = go.AddComponent<Button>();
+            button.onClick.AddListener(() => onClick());
+
+            var textGo = new GameObject("Text");
+            textGo.transform.SetParent(go.transform, false);
+            var textRect = textGo.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+            var text = textGo.AddComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.text = label;
+            text.fontSize = 24;
+            text.color = Color.white;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.raycastTarget = false;
         }
     }
 }
