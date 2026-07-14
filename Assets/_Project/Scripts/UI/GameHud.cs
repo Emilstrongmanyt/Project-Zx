@@ -23,6 +23,11 @@ namespace ProjectZx.UI
             Build();
         }
 
+        void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+        }
+
         void Build()
         {
             EventSystemSetup.EnsureExists();
@@ -73,6 +78,12 @@ namespace ProjectZx.UI
         {
             _bannerText.text = $"Round {round} cleared!";
             _bannerTimer = 2f;
+        }
+
+        public void ShowWaveIncoming()
+        {
+            _bannerText.text = "Zombies incoming!";
+            _bannerTimer = 1.5f;
         }
 
         public void ShowBossWarning()
