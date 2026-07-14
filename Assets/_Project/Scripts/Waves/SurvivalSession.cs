@@ -24,6 +24,11 @@ namespace ProjectZx.Waves
             Instance = this;
         }
 
+        void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+        }
+
         public void Begin(Transform player, GameHud hud)
         {
             _player = player;
@@ -34,7 +39,8 @@ namespace ProjectZx.Waves
 
         IEnumerator RunLoop()
         {
-            yield return new WaitForSeconds(0.5f);
+            yield return null;
+
             while (true)
             {
                 if (_player == null) break;
@@ -76,20 +82,21 @@ namespace ProjectZx.Waves
             _spawning = true;
             EnemiesRemaining = 0;
             _hud?.SetRound(round);
+            _hud?.ShowWaveIncoming();
 
-            var total = 25 * round;
+            var total = 6 + round * 5;
             var bossRound = round % 10 == 0;
             if (bossRound) total = Mathf.Max(total - 1, 1);
 
             for (var i = 0; i < total; i++)
             {
                 SpawnEnemy(round, false);
-                if (i % 4 == 0) yield return null;
+                if (i % 3 == 0) yield return null;
             }
 
             if (bossRound)
             {
-                yield return new WaitForSeconds(0.5f);
+                yield return new WaitForSeconds(0.35f);
                 SpawnEnemy(round, true);
                 _hud?.ShowBossWarning();
             }
@@ -99,7 +106,9 @@ namespace ProjectZx.Waves
 
         void SpawnEnemy(int round, bool boss)
         {
-            var offset = Random.insideUnitCircle.normalized * Random.Range(8f, 14f);
+            var angle = Random.Range(0f, Mathf.PI * 2f);
+            var distance = Random.Range(7f, 12f);
+            var offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
             var origin = _player != null ? (Vector2)_player.position : Vector2.zero;
             GameFactory.CreateEnemy(origin + offset, round, boss);
             EnemiesRemaining++;

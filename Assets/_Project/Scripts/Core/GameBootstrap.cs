@@ -8,13 +8,21 @@ namespace ProjectZx.Core
 {
     public static class GameBootstrap
     {
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        static void Initialize()
+        static bool _registered;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void RegisterSceneHook()
         {
-            var scene = SceneManager.GetActiveScene().name;
-            if (scene == GameScenes.MainMenuMap)
+            if (_registered) return;
+            _registered = true;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (scene.name == GameScenes.MainMenuMap)
                 BuildMainMenu();
-            else if (scene == GameScenes.SurvivalArena)
+            else if (scene.name == GameScenes.SurvivalArena)
                 BuildSurvival();
         }
 
@@ -25,7 +33,7 @@ namespace ProjectZx.Core
             GameFactory.CreateCampfire(Vector3.zero);
 
             var hub = new GameObject("HubUi").AddComponent<HubUi>();
-            var player = GameFactory.CreatePlayer(new Vector3(0f, -4.2f), false);
+            GameFactory.CreatePlayer(new Vector3(0f, -4.2f), false);
 
             GameFactory.CreateNpc("WizardShop", ArtLibrary.Wizard, new Vector3(-2.1f, 1.1f), () => hub.OpenShop());
             GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(2.1f, 1.1f), () => hub.OpenMapSelect());
@@ -33,8 +41,8 @@ namespace ProjectZx.Core
 
         static void BuildSurvival()
         {
-            SetupCamera(new Color(0.08f, 0.1f, 0.14f));
-            GameFactory.CreateGround("ArenaGround", new Color(0.22f, 0.16f, 0.12f, 1f), 50f, 50f);
+            SetupCamera(new Color(0.1f, 0.08f, 0.12f));
+            GameFactory.CreateArenaField("ArenaFloor", 40f, 30f, 1f);
 
             var player = GameFactory.CreatePlayer(Vector3.zero, true);
             var hud = new GameObject("GameHud").AddComponent<GameHud>();
@@ -48,12 +56,16 @@ namespace ProjectZx.Core
         {
             var cam = Camera.main;
             if (cam == null) return;
+
             cam.orthographic = true;
             cam.orthographicSize = 6f;
             cam.backgroundColor = background;
             cam.transform.position = new Vector3(0f, 0f, -10f);
-            var follow = cam.gameObject.AddComponent<CenterCamera>();
-            follow.BindWhenReady();
+
+            if (cam.GetComponent<CenterCamera>() == null)
+                cam.gameObject.AddComponent<CenterCamera>().BindWhenReady();
+            else
+                cam.GetComponent<CenterCamera>().BindWhenReady();
         }
     }
 }

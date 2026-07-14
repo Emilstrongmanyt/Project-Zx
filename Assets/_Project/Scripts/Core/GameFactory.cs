@@ -33,6 +33,33 @@ namespace ProjectZx.Core
             return go;
         }
 
+        public static GameObject CreateArenaField(string name, float width, float height, float tileSize = 1f)
+        {
+            var root = new GameObject(name);
+            var cols = Mathf.CeilToInt(width / tileSize);
+            var rows = Mathf.CeilToInt(height / tileSize);
+            var originX = -(cols * tileSize) * 0.5f + tileSize * 0.5f;
+            var originY = -(rows * tileSize) * 0.5f + tileSize * 0.5f;
+
+            var baseDirt = new Color(0.3f, 0.22f, 0.15f);
+            var darkDirt = new Color(0.24f, 0.17f, 0.11f);
+            var edgeDirt = new Color(0.16f, 0.11f, 0.08f);
+
+            for (var row = 0; row < rows; row++)
+            for (var col = 0; col < cols; col++)
+            {
+                var pos = new Vector3(originX + col * tileSize, originY + row * tileSize, 0f);
+                var tile = CreateSprite($"Arena_{col}_{row}", ArtLibrary.Ground, pos, 0.22f, -10);
+                var renderer = tile.GetComponent<SpriteRenderer>();
+                var isEdge = row == 0 || row == rows - 1 || col == 0 || col == cols - 1;
+                var variant = (col + row) % 3;
+                renderer.color = isEdge ? edgeDirt : variant == 0 ? baseDirt : darkDirt;
+                tile.transform.SetParent(root.transform, true);
+            }
+
+            return root;
+        }
+
         public static GameObject CreateGrassField(string name, float width, float height, float tileSize = 1f)
         {
             var root = new GameObject(name);
