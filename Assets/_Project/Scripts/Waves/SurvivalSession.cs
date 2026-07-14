@@ -66,6 +66,8 @@ namespace ProjectZx.Waves
             }
 
             yield return new WaitForSeconds(2f);
+            var finalStats = _player != null ? _player.GetComponent<PlayerStats>() : null;
+            finalStats?.BankRunGoldToSave();
             GameFactory.LoadScene(GameScenes.MainMenuMap);
         }
 

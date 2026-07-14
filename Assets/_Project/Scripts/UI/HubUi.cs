@@ -22,6 +22,7 @@ namespace ProjectZx.UI
             Instance = this;
             Build();
             RefreshGold();
+            ShowBankedGoldNotice();
         }
 
         void Build()
@@ -41,7 +42,7 @@ namespace ProjectZx.UI
             canvasGo.AddComponent<GraphicRaycaster>();
 
             _titleText = CreateText(canvasGo.transform, "Project Zx — Main Camp", 42, TextAnchor.UpperCenter, new Vector2(0, -30), new Vector2(900, 60));
-            _goldText = CreateText(canvasGo.transform, "Gold: 0", 28, TextAnchor.UpperRight, new Vector2(-30, -30), new Vector2(320, 50));
+            _goldText = CreateText(canvasGo.transform, "Saved Gold: 0", 28, TextAnchor.UpperRight, new Vector2(-30, -30), new Vector2(360, 50));
             _goldText.alignment = TextAnchor.UpperRight;
 
             _hintText = CreateText(canvasGo.transform, "", 22, TextAnchor.LowerCenter, new Vector2(0, 40), new Vector2(700, 44));
@@ -56,7 +57,7 @@ namespace ProjectZx.UI
         {
             var panel = CreatePanel(parent, "ShopPanel", Vector2.zero, new Vector2(700, 520), new Color(0.05f, 0.08f, 0.12f, 0.92f));
             CreateText(panel.transform, "Permanent Upgrades", 34, TextAnchor.UpperCenter, new Vector2(0, -24), new Vector2(640, 50));
-            CreateText(panel.transform, "Spend gold earned from survival runs.", 20, TextAnchor.UpperCenter, new Vector2(0, -70), new Vector2(640, 40));
+            CreateText(panel.transform, "Spend saved gold from survival runs. Run XP does not carry over.", 20, TextAnchor.UpperCenter, new Vector2(0, -70), new Vector2(640, 40));
 
             CreateUpgradeRow(panel.transform, "Max HP +15", 50, 0, () => BuyHp());
             CreateUpgradeRow(panel.transform, "Damage +8%", 75, -90, () => BuyDamage());
@@ -71,7 +72,7 @@ namespace ProjectZx.UI
         {
             var panel = CreatePanel(parent, "MapPanel", Vector2.zero, new Vector2(620, 420), new Color(0.08f, 0.05f, 0.1f, 0.92f));
             CreateText(panel.transform, "Challenge Board", 34, TextAnchor.UpperCenter, new Vector2(0, -24), new Vector2(580, 50));
-            CreateText(panel.transform, "Round 1: 25 zombies. Round 2: 50. Boss every 10 rounds.", 20, TextAnchor.UpperCenter, new Vector2(0, -80), new Vector2(560, 60));
+            CreateText(panel.transform, "Earn run XP and gold in the arena. Gold is saved to camp; XP resets each run.", 20, TextAnchor.UpperCenter, new Vector2(0, -80), new Vector2(560, 60));
             CreateButton(panel.transform, "Enter Survival Arena", new Vector2(0, -40), () =>
             {
                 panel.SetActive(false);
@@ -124,7 +125,17 @@ namespace ProjectZx.UI
 
         public void RefreshGold()
         {
-            if (_goldText != null) _goldText.text = $"Gold: {GameSave.Gold}";
+            if (_goldText != null) _goldText.text = $"Saved Gold: {GameSave.Gold}";
+        }
+
+        void ShowBankedGoldNotice()
+        {
+            var banked = GameSave.LastRunGoldBanked;
+            if (banked <= 0) return;
+            GameSave.LastRunGoldBanked = 0;
+            if (_hintText == null) return;
+            _hintText.text = $"+{banked} gold saved from your last run";
+            _hintText.gameObject.SetActive(true);
         }
 
         static Text CreateText(Transform parent, string text, int size, TextAnchor anchor, Vector2 pos, Vector2 sizeDelta)
