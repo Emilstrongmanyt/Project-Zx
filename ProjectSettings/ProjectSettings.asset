@@ -169,8 +169,8 @@ PlayerSettings:
   androidMaxAspectRatio: 2.4
   androidMinAspectRatio: 1
   applicationIdentifier:
-    Standalone: com.solodreams.projectzx
-    iPhone: com.solodreams.projectzx
+    Standalone: com.solodreams.ProjectZx
+    iPhone: com.solodreams.ProjectZx
   buildNumber:
     Standalone: 0
     VisionOS: 0

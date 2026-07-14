@@ -26,7 +26,7 @@ env:
   UNITY_VERSION: 6000.5.2f1
   PROJECT_PATH: .
   BUILD_NAME: ProjectZx
-  BUNDLE_ID: com.solodreams.projectzx
+  BUNDLE_ID: com.solodreams.ProjectZx
 
 jobs:
   build-unity-ios:
