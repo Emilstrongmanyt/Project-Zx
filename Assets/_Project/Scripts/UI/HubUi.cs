@@ -27,6 +27,16 @@ namespace ProjectZx.UI
         ClassPickerRefs _mapClassPicker;
         ClassPickerRefs _campClassPicker;
 
+        struct UpgradeRowRefs
+        {
+            public Text Label;
+            public Button BuyButton;
+        }
+
+        UpgradeRowRefs _hpRow;
+        UpgradeRowRefs _damageRow;
+        UpgradeRowRefs _speedRow;
+
         void Awake()
         {
             Instance = this;
@@ -58,9 +68,9 @@ namespace ProjectZx.UI
         {
             var panel = CreateDialogPanel(parent, "ShopPanel", Vector2.zero, new Vector2(700, 500), ArtLibrary.ShopUi);
 
-            CreateUpgradeRow(panel.transform, "Max HP +15", 50, 70, () => BuyHp());
-            CreateUpgradeRow(panel.transform, "Damage +8%", 75, -10, () => BuyDamage());
-            CreateUpgradeRow(panel.transform, "Move Speed +6%", 60, -90, () => BuySpeed());
+            _hpRow = CreateUpgradeRow(panel.transform, "Max HP +15", 50, 70, () => BuyHp());
+            _damageRow = CreateUpgradeRow(panel.transform, "Damage +8%", 75, -10, () => BuyDamage());
+            _speedRow = CreateUpgradeRow(panel.transform, "Move Speed +6%", 60, -90, () => BuySpeed());
             CreateWhirlwindRow(panel.transform);
 
             CreateButton(panel.transform, "Character Stats", new Vector2(-130, -230), () => OpenStats());
@@ -182,28 +192,58 @@ namespace ProjectZx.UI
             GameFactory.LoadScene(GameScenes.SurvivalArena);
         }
 
-        void CreateUpgradeRow(Transform parent, string label, int cost, float y, Action onBuy)
+        UpgradeRowRefs CreateUpgradeRow(Transform parent, string label, int cost, float y, Action onBuy)
         {
-            CreateText(parent, $"{label} — {cost}g", 24, TextAnchor.MiddleLeft, new Vector2(-220, y), new Vector2(360, 40));
-            CreateButton(parent, "Buy", new Vector2(220, y), onBuy);
+            return new UpgradeRowRefs
+            {
+                Label = CreateText(parent, $"{label} — {cost}g", 24, TextAnchor.MiddleLeft, new Vector2(-220, y), new Vector2(360, 40)),
+                BuyButton = CreateButton(parent, "Buy", new Vector2(220, y), onBuy)
+            };
         }
 
         void BuyHp()
         {
+            if (GameSave.IsHpUpgradeMaxed) return;
             if (GameSave.TrySpendGold(50)) GameSave.HpUpgradeLevel++;
             RefreshGold();
+            RefreshShopRows();
         }
 
         void BuyDamage()
         {
+            if (GameSave.IsDamageUpgradeMaxed) return;
             if (GameSave.TrySpendGold(75)) GameSave.DamageUpgradeLevel++;
             RefreshGold();
+            RefreshShopRows();
         }
 
         void BuySpeed()
         {
+            if (GameSave.IsSpeedUpgradeMaxed) return;
             if (GameSave.TrySpendGold(60)) GameSave.SpeedUpgradeLevel++;
             RefreshGold();
+            RefreshShopRows();
+        }
+
+        void RefreshShopRows()
+        {
+            SetUpgradeRow(_hpRow, "Max HP +15", 50, GameSave.IsHpUpgradeMaxed, $"Max HP {GameSave.MaxHp}/{StatCaps.PermanentMaxHp}");
+            SetUpgradeRow(_damageRow, "Damage +8%", 75, GameSave.IsDamageUpgradeMaxed, $"Damage x{GameSave.DamageMultiplier:0.##} (max x{StatCaps.PermanentMaxDamageMultiplier:0.#})");
+            SetUpgradeRow(_speedRow, "Move Speed +6%", 60, GameSave.IsSpeedUpgradeMaxed, $"Speed x{GameSave.SpeedMultiplier:0.##} (max x{StatCaps.PermanentMaxSpeedMultiplier:0.#})");
+        }
+
+        static void SetUpgradeRow(UpgradeRowRefs row, string label, int cost, bool maxed, string maxLabel)
+        {
+            if (row.Label != null)
+                row.Label.text = maxed ? maxLabel : $"{label} — {cost}g";
+
+            if (row.BuyButton != null)
+            {
+                row.BuyButton.interactable = !maxed;
+                var buyLabel = row.BuyButton.GetComponentInChildren<Text>();
+                if (buyLabel != null)
+                    buyLabel.text = maxed ? "MAX" : "Buy";
+            }
         }
 
         void CreateWhirlwindRow(Transform parent)
@@ -229,7 +269,13 @@ namespace ProjectZx.UI
             }
         }
 
-        public void OpenShop() { RefreshGold(); _statsPanel.SetActive(false); _shopPanel.SetActive(true); }
+        public void OpenShop()
+        {
+            RefreshGold();
+            RefreshShopRows();
+            _statsPanel.SetActive(false);
+            _shopPanel.SetActive(true);
+        }
 
         public void OpenStats()
         {

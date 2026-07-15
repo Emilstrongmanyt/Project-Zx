@@ -82,17 +82,34 @@ namespace ProjectZx.Player
                 LevelUpChoiceRequired?.Invoke(PendingLevelUpChoices);
         }
 
-        public static List<RunLevelChoice> RollLevelUpChoices(int count = 4)
+        public bool CanOfferSpeedTalent => RunSpeedMultiplier * 1.1f <= StatCaps.RunMaxSpeedMultiplier + 0.001f;
+        public bool CanOfferAttackTalent => RunDamageMultiplier * 1.12f <= StatCaps.RunMaxDamageMultiplier + 0.001f;
+        public bool CanOfferHpTalent => MaxHp + 15 <= StatCaps.RunMaxHp;
+
+        public static List<RunLevelChoice> RollLevelUpChoices(PlayerStats stats, int count = 4)
         {
-            var pool = new List<RunLevelChoice>
+            var pool = new List<RunLevelChoice>();
+            if (stats == null)
             {
-                RunLevelChoice.Speed,
-                RunLevelChoice.Hp,
-                RunLevelChoice.Attack,
-                RunLevelChoice.AttackSpeed,
-                RunLevelChoice.AttackRange,
-                RunLevelChoice.LootRange
-            };
+                pool.AddRange(new[]
+                {
+                    RunLevelChoice.Speed,
+                    RunLevelChoice.Hp,
+                    RunLevelChoice.Attack,
+                    RunLevelChoice.AttackSpeed,
+                    RunLevelChoice.AttackRange,
+                    RunLevelChoice.LootRange
+                });
+            }
+            else
+            {
+                if (stats.CanOfferSpeedTalent) pool.Add(RunLevelChoice.Speed);
+                if (stats.CanOfferHpTalent) pool.Add(RunLevelChoice.Hp);
+                if (stats.CanOfferAttackTalent) pool.Add(RunLevelChoice.Attack);
+                pool.Add(RunLevelChoice.AttackSpeed);
+                pool.Add(RunLevelChoice.AttackRange);
+                pool.Add(RunLevelChoice.LootRange);
+            }
 
             for (var i = pool.Count - 1; i > 0; i--)
             {
@@ -124,14 +141,17 @@ namespace ProjectZx.Player
             switch (choice)
             {
                 case RunLevelChoice.Speed:
-                    RunSpeedMultiplier *= 1.1f;
+                    if (!CanOfferSpeedTalent) break;
+                    RunSpeedMultiplier = Mathf.Min(StatCaps.RunMaxSpeedMultiplier, RunSpeedMultiplier * 1.1f);
                     break;
                 case RunLevelChoice.Hp:
-                    MaxHp += 15;
-                    CurrentHp += 15;
+                    if (!CanOfferHpTalent) break;
+                    MaxHp = Mathf.Min(StatCaps.RunMaxHp, MaxHp + 15);
+                    CurrentHp = Mathf.Min(MaxHp, CurrentHp + 15);
                     break;
                 case RunLevelChoice.Attack:
-                    RunDamageMultiplier *= 1.12f;
+                    if (!CanOfferAttackTalent) break;
+                    RunDamageMultiplier = Mathf.Min(StatCaps.RunMaxDamageMultiplier, RunDamageMultiplier * 1.12f);
                     break;
                 case RunLevelChoice.AttackSpeed:
                     RunAttackSpeedMultiplier *= 1.12f;
