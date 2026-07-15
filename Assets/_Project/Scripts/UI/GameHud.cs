@@ -105,7 +105,7 @@ namespace ProjectZx.UI
         void PopulateChoiceButtons()
         {
             ClearChoiceButtons();
-            var choices = PlayerStats.RollLevelUpChoices(4);
+            var choices = PlayerStats.RollLevelUpChoices(_stats, 4);
             var yStart = 90f;
             const float yStep = -80f;
 

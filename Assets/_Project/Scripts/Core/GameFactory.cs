@@ -227,6 +227,7 @@ namespace ProjectZx.Core
         {
             var sprite = isBoss ? ArtLibrary.Boss : ArtLibrary.Zombie;
             var scale = (isBoss ? 0.55f : 0.32f * 2.5f) * 1.5f;
+            if (isRoundTwentyBoss) scale *= 2.5f;
             var go = CreateSprite(isBoss ? "Boss" : "Zombie", sprite, position, scale, 5);
             go.tag = "Enemy";
 
@@ -238,7 +239,7 @@ namespace ProjectZx.Core
             rb.useFullKinematicContacts = true;
 
             var col = go.AddComponent<CircleCollider2D>();
-            col.radius = isBoss ? 0.7f : 0.4f;
+            col.radius = isRoundTwentyBoss ? 1.1f : isBoss ? 0.7f : 0.4f;
 
             go.AddComponent<HitFlash>();
             var enemy = go.AddComponent<EnemyActor>();

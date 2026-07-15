@@ -100,9 +100,13 @@ namespace ProjectZx.Core
             }
         }
 
-        public static int MaxHp => 100 + HpUpgradeLevel * 15;
-        public static float DamageMultiplier => 1f + DamageUpgradeLevel * 0.08f;
-        public static float SpeedMultiplier => 1f + SpeedUpgradeLevel * 0.06f;
+        public static int MaxHp => Mathf.Min(StatCaps.PermanentMaxHp, 100 + HpUpgradeLevel * 15);
+        public static float DamageMultiplier => Mathf.Min(StatCaps.PermanentMaxDamageMultiplier, 1f + DamageUpgradeLevel * 0.08f);
+        public static float SpeedMultiplier => Mathf.Min(StatCaps.PermanentMaxSpeedMultiplier, 1f + SpeedUpgradeLevel * 0.06f);
+
+        public static bool IsHpUpgradeMaxed => MaxHp >= StatCaps.PermanentMaxHp;
+        public static bool IsDamageUpgradeMaxed => DamageMultiplier >= StatCaps.PermanentMaxDamageMultiplier - 0.001f;
+        public static bool IsSpeedUpgradeMaxed => SpeedMultiplier >= StatCaps.PermanentMaxSpeedMultiplier - 0.001f;
 
         public static int LifetimeZombieKills
         {

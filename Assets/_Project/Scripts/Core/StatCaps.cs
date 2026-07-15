@@ -1,0 +1,13 @@
+namespace ProjectZx.Core
+{
+    public static class StatCaps
+    {
+        public const int PermanentMaxHp = 600;
+        public const float PermanentMaxSpeedMultiplier = 2f;
+        public const float PermanentMaxDamageMultiplier = 3f;
+
+        public const int RunMaxHp = PermanentMaxHp * 2;
+        public const float RunMaxSpeedMultiplier = PermanentMaxSpeedMultiplier * 2f;
+        public const float RunMaxDamageMultiplier = PermanentMaxDamageMultiplier * 2f;
+    }
+}

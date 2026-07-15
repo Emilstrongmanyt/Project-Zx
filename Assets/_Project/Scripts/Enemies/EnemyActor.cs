@@ -10,10 +10,12 @@ namespace ProjectZx.Enemies
     [RequireComponent(typeof(Rigidbody2D))]
     public class EnemyActor : MonoBehaviour
     {
-        const float FireBreathRange = 3.8f;
+        const float FireBreathRange = 4.5f;
         const float FireBreathDuration = 3f;
-        const float FireBreathCooldown = 15f;
+        const float FireBreathCooldown = 12f;
         const float FireBreathTick = 0.45f;
+        const float EnemySeparationRadius = 0.9f;
+        const float EnemySeparationPush = 0.14f;
 
         public bool IsAlive { get; private set; } = true;
         public bool IsBoss { get; private set; }
@@ -39,6 +41,7 @@ namespace ProjectZx.Enemies
         SpriteRenderer _fireBreathRenderer;
         float _blockedTimer;
         readonly List<RaycastHit2D> _castHits = new();
+        readonly Collider2D[] _overlapBuffer = new Collider2D[12];
 
         public void Initialize(int round, bool isBoss, bool isRoundTwentyBoss = false)
         {
@@ -48,12 +51,30 @@ namespace ProjectZx.Enemies
             _hp = isBoss ? 220 + round * 30 : 18 + round * 6;
             _attack = isBoss ? 18 + round : 6 + Mathf.FloorToInt(round * 0.6f);
             _speed = isBoss ? 1.5f + round * 0.03f : 1.2f + round * 0.07f;
+
+            if (!isBoss)
+            {
+                var roundScale = Mathf.Pow(1.02f, Mathf.Max(0, round - 1));
+                _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * roundScale));
+                _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * roundScale));
+                _speed *= roundScale;
+            }
+
             _rb = GetComponent<Rigidbody2D>();
             _renderer = GetComponent<SpriteRenderer>();
             _player = GameObject.FindGameObjectWithTag("Player")?.transform;
 
-            _idleSprite = isBoss ? ArtLibrary.Boss : ArtLibrary.Zombie;
-            _attackSprite = isBoss ? ArtLibrary.BossAttacking : ArtLibrary.Zombie;
+            if (isRoundTwentyBoss)
+            {
+                _idleSprite = ArtLibrary.Boss;
+                _attackSprite = ArtLibrary.BossAttacking;
+            }
+            else
+            {
+                _idleSprite = isBoss ? ArtLibrary.Boss : ArtLibrary.Zombie;
+                _attackSprite = isBoss ? ArtLibrary.BossAttacking : ArtLibrary.Zombie;
+            }
+
             if (_renderer != null) _renderer.sprite = _idleSprite;
 
             if (isBoss && isRoundTwentyBoss)
@@ -64,9 +85,11 @@ namespace ProjectZx.Enemies
         {
             _fireBreathFx = new GameObject("FireBreath");
             _fireBreathFx.transform.SetParent(transform, false);
-            _fireBreathFx.transform.localPosition = new Vector3(0.75f, 0.1f, 0f);
+            _fireBreathFx.transform.localPosition = new Vector3(1.1f, 0.15f, 0f);
+            _fireBreathFx.transform.localScale = Vector3.one * 2f;
             _fireBreathRenderer = _fireBreathFx.AddComponent<SpriteRenderer>();
-            _fireBreathRenderer.sortingOrder = 6;
+            _fireBreathRenderer.sprite = ArtLibrary.GetFireBreathFrame(0);
+            _fireBreathRenderer.sortingOrder = 8;
             _fireBreathFx.SetActive(false);
         }
 
@@ -81,8 +104,8 @@ namespace ProjectZx.Enemies
 
             var dir = ((Vector2)_player.position - (Vector2)transform.position).normalized;
             MoveByDelta(dir * (_speed * Time.fixedDeltaTime));
-
-            if (_renderer != null && dir.x != 0f) _renderer.flipX = dir.x < 0f;
+            UpdateFacingToward(_player.position);
+            ApplyEnemySeparation();
         }
 
         void MoveByDelta(Vector2 delta)
@@ -110,7 +133,7 @@ namespace ProjectZx.Enemies
                 return;
             }
 
-            if (_blockedTimer > 0.35f)
+            if (_blockedTimer > 0.25f)
             {
                 var rng = Random.insideUnitCircle.normalized * distance;
                 if (TryMoveDelta(rng))
@@ -132,13 +155,50 @@ namespace ProjectZx.Enemies
 
             _castHits.Clear();
             var hitCount = _rb.Cast(direction, filter, _castHits, distance);
-            var allowed = hitCount > 0 ? Mathf.Max(0f, _castHits[0].distance - 0.04f) : distance;
+            var allowed = distance;
+
+            if (hitCount > 0)
+            {
+                var hit = _castHits[0];
+                var otherEnemy = hit.collider != null ? hit.collider.GetComponent<EnemyActor>() : null;
+                if (otherEnemy != null && otherEnemy.IsAlive)
+                {
+                    var perp = new Vector2(-direction.y, direction.x) * distance * 0.65f;
+                    if (TryMoveDelta(perp) || TryMoveDelta(-perp))
+                        return true;
+                }
+
+                allowed = Mathf.Max(0f, hit.distance - 0.04f);
+            }
 
             if (allowed <= 0.0001f) return false;
 
             _rb.MovePosition(_rb.position + direction * allowed);
             _rb.linearVelocity = direction * _speed;
             return true;
+        }
+
+        void ApplyEnemySeparation()
+        {
+            var count = Physics2D.OverlapCircleNonAlloc(_rb.position, EnemySeparationRadius, _overlapBuffer);
+            for (var i = 0; i < count; i++)
+            {
+                var col = _overlapBuffer[i];
+                if (col == null) continue;
+
+                var otherEnemy = col.GetComponent<EnemyActor>();
+                if (otherEnemy == null || otherEnemy == this || !otherEnemy.IsAlive) continue;
+
+                var away = _rb.position - otherEnemy._rb.position;
+                if (away.sqrMagnitude < 0.0001f)
+                    away = Random.insideUnitCircle * 0.1f;
+
+                var overlap = EnemySeparationRadius - away.magnitude;
+                if (overlap <= 0f) continue;
+
+                var push = away.normalized * Mathf.Min(overlap * 0.5f, EnemySeparationPush);
+                TryMoveDelta(push);
+            }
         }
 
         void Update()
@@ -149,9 +209,10 @@ namespace ProjectZx.Enemies
             _fireBreathCooldown -= Time.deltaTime;
 
             if (IsBoss && IsRoundTwentyBoss)
+            {
                 UpdateFireBreath();
-
-            if (_fireBreathing) return;
+                if (_fireBreathing) return;
+            }
 
             if (_contactCooldown > 0f) return;
             if (Vector2.Distance(transform.position, _player.position) > 0.75f) return;
@@ -165,11 +226,19 @@ namespace ProjectZx.Enemies
             _contactCooldown = 0.8f;
         }
 
+        void UpdateFacingToward(Vector3 target)
+        {
+            if (_renderer == null) return;
+            var dx = target.x - transform.position.x;
+            if (Mathf.Abs(dx) < 0.02f) return;
+            _renderer.flipX = dx < 0f;
+        }
+
         void UpdateFireBreath()
         {
             var dist = Vector2.Distance(transform.position, _player.position);
-            var facing = _player.position.x >= transform.position.x;
-            if (_renderer != null) _renderer.flipX = !facing;
+            var facingRight = _player.position.x >= transform.position.x;
+            UpdateFacingToward(_player.position);
 
             if (_fireBreathing)
             {
@@ -181,10 +250,13 @@ namespace ProjectZx.Enemies
                     _fireAnimFrame++;
                 }
 
-                if (_fireBreathRenderer != null)
+                if (_renderer != null) _renderer.sprite = _attackSprite;
+
+                if (_fireBreathRenderer != null && _fireBreathFx != null)
                 {
                     _fireBreathRenderer.sprite = ArtLibrary.GetFireBreathFrame(_fireAnimFrame);
-                    _fireBreathFx.transform.localScale = new Vector3(facing ? 1f : -1f, 1f, 1f);
+                    _fireBreathFx.transform.localScale = new Vector3(facingRight ? 2f : -2f, 2f, 1f);
+                    _fireBreathFx.transform.localPosition = new Vector3(facingRight ? 1.1f : -1.1f, 0.15f, 0f);
                 }
 
                 _fireBreathDamageTimer -= Time.deltaTime;
@@ -192,7 +264,7 @@ namespace ProjectZx.Enemies
                 {
                     _fireBreathDamageTimer = FireBreathTick;
                     var stats = _player.GetComponent<PlayerStats>();
-                    if (stats != null && !stats.IsDead && dist <= FireBreathRange + 0.5f)
+                    if (stats != null && !stats.IsDead && dist <= FireBreathRange + 0.6f)
                     {
                         stats.TakeDamage(Mathf.RoundToInt(_attack * 0.55f));
                         HitFlash.FlashSprite(_player.gameObject);
@@ -205,8 +277,17 @@ namespace ProjectZx.Enemies
                 return;
             }
 
-            if (_fireBreathCooldown > 0f || dist > FireBreathRange) return;
-            BeginFireBreath(facing);
+            if (dist > FireBreathRange)
+            {
+                if (_renderer != null) _renderer.sprite = _idleSprite;
+                return;
+            }
+
+            if (_renderer != null) _renderer.sprite = _attackSprite;
+
+            if (_fireBreathCooldown > 0f) return;
+
+            BeginFireBreath(facingRight);
         }
 
         void BeginFireBreath(bool facingRight)
@@ -220,7 +301,10 @@ namespace ProjectZx.Enemies
             if (_fireBreathFx != null)
             {
                 _fireBreathFx.SetActive(true);
-                _fireBreathFx.transform.localScale = new Vector3(facingRight ? 1f : -1f, 1f, 1f);
+                _fireBreathFx.transform.localScale = new Vector3(facingRight ? 2f : -2f, 2f, 1f);
+                _fireBreathFx.transform.localPosition = new Vector3(facingRight ? 1.1f : -1.1f, 0.15f, 0f);
+                if (_fireBreathRenderer != null)
+                    _fireBreathRenderer.sprite = ArtLibrary.GetFireBreathFrame(0);
             }
         }
 
