@@ -29,8 +29,8 @@ namespace ProjectZx.Player
         SpriteRenderer _renderer;
         Sprite _idle;
         Sprite _walk;
-        int _lastHandledTouchId = -1;
-        int _lastHandledFrame = -1;
+        int _chaseTouchId = -1;
+        bool _chaseMouse;
         readonly List<RaycastHit2D> _castHits = new();
 
         public void Configure(bool npcInteraction) => allowNpcInteraction = npcInteraction;
@@ -39,11 +39,15 @@ namespace ProjectZx.Player
         {
             EnhancedTouchSupport.Enable();
             Touch.onFingerDown += OnFingerDown;
+            Touch.onFingerMove += OnFingerMove;
+            Touch.onFingerUp += OnFingerUp;
         }
 
         void OnDisable()
         {
             Touch.onFingerDown -= OnFingerDown;
+            Touch.onFingerMove -= OnFingerMove;
+            Touch.onFingerUp -= OnFingerUp;
         }
 
         void Awake()
@@ -70,18 +74,6 @@ namespace ProjectZx.Player
 
         void FixedUpdate()
         {
-            var joystick = MovementJoystick.Instance;
-            var joyDir = joystick != null ? joystick.Direction : Vector2.zero;
-
-            if (joyDir.sqrMagnitude > 0.01f)
-            {
-                _moveTarget = null;
-                _pendingNpc = null;
-                _pendingDoor = null;
-                MoveByDelta(GetSpeedVector(joyDir.normalized) * Time.fixedDeltaTime);
-                return;
-            }
-
             if (_moveTarget == null)
             {
                 _rb.linearVelocity = Vector2.zero;
@@ -96,7 +88,8 @@ namespace ProjectZx.Player
             if (delta.magnitude < ArrivalDistance)
             {
                 _rb.linearVelocity = Vector2.zero;
-                _moveTarget = null;
+                if (_chaseTouchId < 0 && !_chaseMouse)
+                    _moveTarget = null;
                 TryCompletePendingNpcInteract();
                 TryCompletePendingDoor();
                 return;
@@ -114,8 +107,6 @@ namespace ProjectZx.Player
             var runSpeed = stats != null ? stats.RunSpeedMultiplier : 1f;
             return baseSpeed * GameSave.SpeedMultiplier * runSpeed;
         }
-
-        Vector2 GetSpeedVector(Vector2 direction) => direction * GetSpeed();
 
         void MoveByDelta(Vector2 delta)
         {
@@ -151,7 +142,19 @@ namespace ProjectZx.Player
         void OnFingerDown(Finger finger)
         {
             if (finger == null) return;
-            TryTapToMove(finger.screenPosition, finger.index);
+            BeginPointer(finger.screenPosition, finger.index);
+        }
+
+        void OnFingerMove(Finger finger)
+        {
+            if (finger == null || finger.index != _chaseTouchId) return;
+            UpdateChaseTarget(finger.screenPosition);
+        }
+
+        void OnFingerUp(Finger finger)
+        {
+            if (finger == null || finger.index != _chaseTouchId) return;
+            EndChase();
         }
 
         void ReadMouse()
@@ -160,25 +163,49 @@ namespace ProjectZx.Player
             if (_camera == null) return;
 
             var mouse = Mouse.current;
-            if (mouse?.leftButton.wasPressedThisFrame != true) return;
-            TryTapToMove(mouse.position.ReadValue(), -1);
+            if (mouse == null) return;
+
+            if (mouse.leftButton.wasPressedThisFrame)
+                BeginPointer(mouse.position.ReadValue(), -1);
+
+            if (_chaseMouse && mouse.leftButton.isPressed)
+                UpdateChaseTarget(mouse.position.ReadValue());
+
+            if (_chaseMouse && mouse.leftButton.wasReleasedThisFrame)
+                EndChase();
         }
 
-        void TryTapToMove(Vector2 screenPos, int touchId)
+        void BeginPointer(Vector2 screenPos, int touchId)
         {
-            if (_lastHandledFrame == Time.frameCount && _lastHandledTouchId == touchId) return;
-            _lastHandledFrame = Time.frameCount;
-            _lastHandledTouchId = touchId;
+            if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade) return;
+            if (IsPointerOverBlockingUi(screenPos)) return;
 
+            _chaseTouchId = touchId;
+            _chaseMouse = touchId < 0;
+            TrySetMoveTarget(screenPos, touchId >= 0);
+        }
+
+        void UpdateChaseTarget(Vector2 screenPos)
+        {
+            if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade) return;
+            if (IsPointerOverBlockingUi(screenPos)) return;
+            TrySetMoveTarget(screenPos, true);
+        }
+
+        void EndChase()
+        {
+            _chaseTouchId = -1;
+            _chaseMouse = false;
+        }
+
+        void TrySetMoveTarget(Vector2 screenPos, bool isChase)
+        {
             if (_camera == null) _camera = Camera.main;
             if (_camera == null) return;
-            if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade) return;
-            if (MovementJoystick.Instance != null && MovementJoystick.Instance.IsPointerOver(screenPos)) return;
-            if (IsPointerOverBlockingUi(screenPos)) return;
 
             var world = ScreenToWorld(screenPos);
 
-            if (allowNpcInteraction)
+            if (!isChase && allowNpcInteraction)
             {
                 var npc = FindNpcAtTap(world);
                 if (npc != null)
@@ -196,19 +223,22 @@ namespace ProjectZx.Player
                 }
             }
 
-            var door = FindDoorAtTap(world);
-            if (door != null)
+            if (!isChase)
             {
-                if (door.TryEnter(transform))
+                var door = FindDoorAtTap(world);
+                if (door != null)
                 {
-                    ClearMovement();
+                    if (door.TryEnter(transform))
+                    {
+                        ClearMovement();
+                        return;
+                    }
+
+                    _pendingDoor = door;
+                    _pendingNpc = null;
+                    _moveTarget = door.transform.position;
                     return;
                 }
-
-                _pendingDoor = door;
-                _pendingNpc = null;
-                _moveTarget = door.transform.position;
-                return;
             }
 
             _pendingNpc = null;
@@ -280,6 +310,8 @@ namespace ProjectZx.Player
             _moveTarget = null;
             _pendingNpc = null;
             _pendingDoor = null;
+            _chaseTouchId = -1;
+            _chaseMouse = false;
             _rb.linearVelocity = Vector2.zero;
         }
 
@@ -299,7 +331,8 @@ namespace ProjectZx.Player
                 var image = result.gameObject.GetComponent<Image>();
                 if (image == null || !image.raycastTarget) continue;
                 var name = result.gameObject.name;
-                if (name == "ShopPanel" || name == "MapPanel" || name == "LevelUpPanel") return true;
+                if (name == "ShopPanel" || name == "MapPanel" || name == "LevelUpPanel" || name == "CampfirePanel")
+                    return true;
             }
 
             return false;
@@ -314,17 +347,22 @@ namespace ProjectZx.Player
         void UpdateSprite()
         {
             if (_renderer == null) return;
-            var combat = GetComponent<PlayerCombat>();
-            if (combat != null && combat.IsSwinging) return;
+
+            var batter = GetComponent<PlayerCombat>();
+            if (batter != null && batter.IsSwinging) return;
             var spearman = GetComponent<SpearmanCombat>();
             if (spearman != null && spearman.IsThrusting) return;
 
-            var joyDir = MovementJoystick.Instance != null ? MovementJoystick.Instance.Direction : Vector2.zero;
-            var moving = joyDir.sqrMagnitude > 0.01f || _moveTarget != null || _rb.linearVelocity.sqrMagnitude > 0.01f;
+            var moving = _moveTarget != null || _rb.linearVelocity.sqrMagnitude > 0.01f;
             _renderer.sprite = moving ? _walk : _idle;
 
-            var faceX = joyDir.sqrMagnitude > 0.01f ? joyDir.x : _rb.linearVelocity.x;
-            if (moving && faceX != 0f)
+            if (!moving) return;
+
+            var faceX = _moveTarget.HasValue
+                ? _moveTarget.Value.x - transform.position.x
+                : _rb.linearVelocity.x;
+
+            if (faceX != 0f)
                 _renderer.flipX = faceX < 0f;
         }
     }

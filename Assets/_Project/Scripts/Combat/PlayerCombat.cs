@@ -29,8 +29,16 @@ namespace ProjectZx.Combat
 
         public bool IsSwinging => _swinging;
 
-        float EffectiveAttackRange =>
-            GameSave.WhirlwindUnlocked ? attackRange * WhirlwindRangeMultiplier : attackRange;
+        float EffectiveAttackRange
+        {
+            get
+            {
+                var stats = GetComponent<PlayerStats>();
+                var rangeMul = stats != null ? stats.RunAttackRangeMultiplier : 1f;
+                var baseRange = attackRange * rangeMul;
+                return GameSave.WhirlwindUnlocked ? baseRange * WhirlwindRangeMultiplier : baseRange;
+            }
+        }
 
         void Awake()
         {
@@ -80,7 +88,7 @@ namespace ProjectZx.Combat
             if (enemy == null) return;
 
             var dist = Vector2.Distance(transform.position, enemy.transform.position);
-            if (dist > attackRange) return;
+            if (dist > EffectiveAttackRange) return;
 
             PerformAttack(enemy);
         }

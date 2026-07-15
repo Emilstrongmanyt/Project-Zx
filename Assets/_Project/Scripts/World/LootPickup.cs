@@ -7,7 +7,7 @@ namespace ProjectZx.World
 
     public class LootPickup : MonoBehaviour
     {
-        const float CollectRange = 1.45f;
+        const float BaseCollectRange = 1.45f;
 
         PickupType _type;
         int _amount;
@@ -53,7 +53,8 @@ namespace ProjectZx.World
                 if (player == null) return;
                 playerTransform = player.transform;
                 stats = player.GetComponent<PlayerStats>();
-                if (Vector2.Distance(transform.position, playerTransform.position) > CollectRange) return;
+                var lootRange = stats != null ? BaseCollectRange * stats.RunLootRangeMultiplier : BaseCollectRange;
+                if (Vector2.Distance(transform.position, playerTransform.position) > lootRange) return;
             }
 
             if (stats == null) return;

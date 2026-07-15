@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ProjectZx.Core;
 using ProjectZx.Player;
 using UnityEngine;
@@ -14,9 +15,11 @@ namespace ProjectZx.UI
         Text _bannerText;
         Text _levelUpTitle;
         GameObject _levelUpPanel;
+        Transform _choiceButtonRoot;
         float _bannerTimer;
         Transform _player;
         PlayerStats _stats;
+        readonly List<GameObject> _choiceButtons = new();
 
         public static GameHud Instance { get; private set; }
         public bool IsChoosingUpgrade { get; private set; }
@@ -58,14 +61,19 @@ namespace ProjectZx.UI
 
         GameObject BuildLevelUpPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "LevelUpPanel", Vector2.zero, new Vector2(560, 460), ArtLibrary.LevelUpUi);
-            _levelUpTitle = CreatePanelText(panel.transform, "Level Up!", 34, new Vector2(0, 170), new Vector2(500, 50));
-            CreatePanelText(panel.transform, "Pick a run boost", 22, new Vector2(0, 120), new Vector2(500, 40));
+            var panel = CreateDialogPanel(parent, "LevelUpPanel", Vector2.zero, new Vector2(560, 520), ArtLibrary.LevelUpUi);
+            _levelUpTitle = CreatePanelText(panel.transform, "Level Up!", 34, new Vector2(0, 200), new Vector2(500, 50));
+            CreatePanelText(panel.transform, "Pick one of four random boosts", 22, new Vector2(0, 155), new Vector2(500, 40));
 
-            CreateChoiceButton(panel.transform, "+10% Speed", new Vector2(0, 55), () => ChooseUpgrade(RunLevelChoice.Speed));
-            CreateChoiceButton(panel.transform, "+15 Max HP", new Vector2(0, -25), () => ChooseUpgrade(RunLevelChoice.Hp));
-            CreateChoiceButton(panel.transform, "+12% Attack", new Vector2(0, -105), () => ChooseUpgrade(RunLevelChoice.Attack));
-            CreateChoiceButton(panel.transform, "+12% Attack Speed", new Vector2(0, -185), () => ChooseUpgrade(RunLevelChoice.AttackSpeed));
+            var rootGo = new GameObject("ChoiceButtons");
+            rootGo.transform.SetParent(panel.transform, false);
+            var rootRect = rootGo.AddComponent<RectTransform>();
+            rootRect.anchorMin = new Vector2(0.5f, 0.5f);
+            rootRect.anchorMax = new Vector2(0.5f, 0.5f);
+            rootRect.pivot = new Vector2(0.5f, 0.5f);
+            rootRect.anchoredPosition = new Vector2(0f, -20f);
+            rootRect.sizeDelta = new Vector2(420f, 320f);
+            _choiceButtonRoot = rootGo.transform;
 
             panel.SetActive(false);
             return panel;
@@ -90,7 +98,33 @@ namespace ProjectZx.UI
             IsChoosingUpgrade = true;
             Time.timeScale = 0f;
             _levelUpTitle.text = remaining > 1 ? $"Level Up! ({remaining} picks)" : "Level Up!";
+            PopulateChoiceButtons();
             _levelUpPanel.SetActive(true);
+        }
+
+        void PopulateChoiceButtons()
+        {
+            ClearChoiceButtons();
+            var choices = PlayerStats.RollLevelUpChoices(4);
+            var yStart = 90f;
+            const float yStep = -80f;
+
+            for (var i = 0; i < choices.Count; i++)
+            {
+                var choice = choices[i];
+                var label = PlayerStats.GetChoiceLabel(choice);
+                var y = yStart + yStep * i;
+                CreateChoiceButton(_choiceButtonRoot, label, new Vector2(0f, y), () => ChooseUpgrade(choice));
+            }
+        }
+
+        void ClearChoiceButtons()
+        {
+            foreach (var button in _choiceButtons)
+            {
+                if (button != null) Destroy(button);
+            }
+            _choiceButtons.Clear();
         }
 
         void ChooseUpgrade(RunLevelChoice choice)
@@ -102,9 +136,11 @@ namespace ProjectZx.UI
             if (_stats.PendingLevelUpChoices > 0)
             {
                 _levelUpTitle.text = $"Level Up! ({_stats.PendingLevelUpChoices} picks)";
+                PopulateChoiceButtons();
                 return;
             }
 
+            ClearChoiceButtons();
             _levelUpPanel.SetActive(false);
             IsChoosingUpgrade = false;
             Time.timeScale = 1f;
@@ -223,7 +259,7 @@ namespace ProjectZx.UI
             return go;
         }
 
-        static void CreateChoiceButton(Transform parent, string label, Vector2 pos, System.Action onClick)
+        void CreateChoiceButton(Transform parent, string label, Vector2 pos, System.Action onClick)
         {
             var go = new GameObject(label + "Button");
             go.transform.SetParent(parent, false);
@@ -252,6 +288,8 @@ namespace ProjectZx.UI
             text.color = Color.white;
             text.alignment = TextAnchor.MiddleCenter;
             text.raycastTarget = false;
+
+            _choiceButtons.Add(go);
         }
     }
 }

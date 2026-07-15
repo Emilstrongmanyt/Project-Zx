@@ -25,7 +25,15 @@ namespace ProjectZx.Combat
         SpriteRenderer _bodyRenderer;
 
         public bool IsThrusting => _thrusting;
-        public float AttackRange => attackRange;
+        public float AttackRange
+        {
+            get
+            {
+                var stats = GetComponent<PlayerStats>();
+                var rangeMul = stats != null ? stats.RunAttackRangeMultiplier : 1f;
+                return attackRange * rangeMul;
+            }
+        }
 
         void Awake()
         {
@@ -69,7 +77,7 @@ namespace ProjectZx.Combat
             if (enemy == null) return;
 
             var dist = Vector2.Distance(transform.position, enemy.transform.position);
-            if (dist > attackRange) return;
+            if (dist > AttackRange) return;
 
             PerformThrust(enemy);
         }

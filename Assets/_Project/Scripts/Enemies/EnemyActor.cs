@@ -37,6 +37,7 @@ namespace ProjectZx.Enemies
         Sprite _attackSprite;
         GameObject _fireBreathFx;
         SpriteRenderer _fireBreathRenderer;
+        float _blockedTimer;
         readonly List<RaycastHit2D> _castHits = new();
 
         public void Initialize(int round, bool isBoss, bool isRoundTwentyBoss = false)
@@ -92,6 +93,37 @@ namespace ProjectZx.Enemies
                 return;
             }
 
+            if (TryMoveDelta(delta))
+            {
+                _blockedTimer = 0f;
+                return;
+            }
+
+            _blockedTimer += Time.fixedDeltaTime;
+            var direction = delta.normalized;
+            var distance = delta.magnitude;
+            var perp = new Vector2(-direction.y, direction.x) * distance;
+
+            if (TryMoveDelta(perp) || TryMoveDelta(-perp))
+            {
+                _blockedTimer = 0f;
+                return;
+            }
+
+            if (_blockedTimer > 0.35f)
+            {
+                var rng = Random.insideUnitCircle.normalized * distance;
+                if (TryMoveDelta(rng))
+                    _blockedTimer = 0f;
+            }
+
+            _rb.linearVelocity = Vector2.zero;
+        }
+
+        bool TryMoveDelta(Vector2 delta)
+        {
+            if (delta.sqrMagnitude < 0.00001f) return false;
+
             var distance = delta.magnitude;
             var direction = delta / distance;
             var filter = new ContactFilter2D();
@@ -100,16 +132,13 @@ namespace ProjectZx.Enemies
 
             _castHits.Clear();
             var hitCount = _rb.Cast(direction, filter, _castHits, distance);
-            var allowed = hitCount > 0 ? Mathf.Max(0f, _castHits[0].distance - 0.02f) : distance;
+            var allowed = hitCount > 0 ? Mathf.Max(0f, _castHits[0].distance - 0.04f) : distance;
 
-            if (allowed <= 0.0001f)
-            {
-                _rb.linearVelocity = Vector2.zero;
-                return;
-            }
+            if (allowed <= 0.0001f) return false;
 
             _rb.MovePosition(_rb.position + direction * allowed);
             _rb.linearVelocity = direction * _speed;
+            return true;
         }
 
         void Update()
