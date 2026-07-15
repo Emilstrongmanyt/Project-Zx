@@ -89,11 +89,18 @@ namespace ProjectZx.Core
             return _fireBreathFrames[Mathf.Abs(frame) % _fireBreathFrames.Length];
         }
 
-        static Sprite Load(string path, string fallbackPath = null)
+        static Sprite Load(string path, params string[] fallbackPaths)
         {
             var sprite = Resources.Load<Sprite>(path);
             if (sprite != null) return sprite;
-            if (!string.IsNullOrEmpty(fallbackPath)) return Load(fallbackPath);
+
+            foreach (var fallback in fallbackPaths)
+            {
+                if (string.IsNullOrEmpty(fallback)) continue;
+                sprite = Resources.Load<Sprite>(fallback);
+                if (sprite != null) return sprite;
+            }
+
             return CreateFallback(path);
         }
 
