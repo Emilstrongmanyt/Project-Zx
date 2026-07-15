@@ -21,6 +21,7 @@ namespace ProjectZx.World
             if (Vector2.Distance(player.position, transform.position) > 2.2f) return false;
 
             _used = true;
+            Achievements.UnlockDungeonDelver();
             GameSave.InsideMapUnlocked = true;
             GameSessionContext.SurvivalMap = SurvivalMapKind.Inside;
             GameSessionContext.FreshSurvivalRun = false;

@@ -11,9 +11,11 @@ namespace ProjectZx.UI
 
         Text _goldText;
         Text _statsBodyText;
+        Text _achievementsBodyText;
 
         GameObject _shopPanel;
         GameObject _statsPanel;
+        GameObject _achievementsPanel;
         GameObject _mapPanel;
         GameObject _campfirePanel;
 
@@ -60,6 +62,7 @@ namespace ProjectZx.UI
 
             _shopPanel = BuildShopPanel(canvasGo.transform);
             _statsPanel = BuildStatsPanel(canvasGo.transform);
+            _achievementsPanel = BuildAchievementsPanel(canvasGo.transform);
             _mapPanel = BuildMapPanel(canvasGo.transform);
             _campfirePanel = BuildCampfirePanel(canvasGo.transform);
         }
@@ -75,6 +78,17 @@ namespace ProjectZx.UI
 
             CreateButton(panel.transform, "Character Stats", new Vector2(-130, -230), () => OpenStats());
             CreateButton(panel.transform, "Close", new Vector2(130, -230), () => panel.SetActive(false));
+            panel.SetActive(false);
+            return panel;
+        }
+
+        GameObject BuildAchievementsPanel(Transform parent)
+        {
+            var panel = CreateDialogPanel(parent, "AchievementsPanel", Vector2.zero, new Vector2(760, 620), ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, "Achievements", 30, TextAnchor.MiddleCenter, new Vector2(0, 260), new Vector2(500, 44));
+            _achievementsBodyText = CreateText(panel.transform, "", 19, TextAnchor.MiddleCenter, new Vector2(0, -20), new Vector2(680, 460));
+            _achievementsBodyText.alignment = TextAnchor.UpperLeft;
+            CreateButton(panel.transform, "Close", new Vector2(0, -270), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
@@ -187,6 +201,7 @@ namespace ProjectZx.UI
             GameSessionContext.RunSnapshot = default;
             _shopPanel.SetActive(false);
             _statsPanel.SetActive(false);
+            _achievementsPanel.SetActive(false);
             _mapPanel.SetActive(false);
             _campfirePanel.SetActive(false);
             GameFactory.LoadScene(GameScenes.SurvivalArena);
@@ -274,6 +289,7 @@ namespace ProjectZx.UI
             RefreshGold();
             RefreshShopRows();
             _statsPanel.SetActive(false);
+            _achievementsPanel.SetActive(false);
             _shopPanel.SetActive(true);
         }
 
@@ -281,7 +297,22 @@ namespace ProjectZx.UI
         {
             RefreshStats();
             _shopPanel.SetActive(false);
+            _achievementsPanel.SetActive(false);
             _statsPanel.SetActive(true);
+        }
+
+        public void OpenAchievements()
+        {
+            RefreshAchievements();
+            _shopPanel.SetActive(false);
+            _statsPanel.SetActive(false);
+            _achievementsPanel.SetActive(true);
+        }
+
+        void RefreshAchievements()
+        {
+            if (_achievementsBodyText != null)
+                _achievementsBodyText.text = Achievements.BuildPanelText();
         }
 
         void RefreshStats()

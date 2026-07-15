@@ -129,5 +129,23 @@ namespace ProjectZx.Waves
                 GameSave.RecordEnemyKill(enemy.IsBoss);
             }
         }
+
+        public void RetreatToCamp()
+        {
+            StopAllCoroutines();
+            _roundActive = false;
+
+            var stats = _player != null ? _player.GetComponent<PlayerStats>() : null;
+            if (stats != null && !stats.IsDead)
+            {
+                GameSave.RecordHighestRound(CurrentRound);
+                stats.BankRunGoldToSave();
+            }
+
+            GameSessionContext.FreshSurvivalRun = true;
+            GameSessionContext.CarryRound = 0;
+            GameSessionContext.RunSnapshot = default;
+            GameFactory.LoadScene(GameScenes.MainMenuMap);
+        }
     }
 }
