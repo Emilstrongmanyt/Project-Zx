@@ -10,8 +10,10 @@ namespace ProjectZx.UI
         public static HubUi Instance { get; private set; }
 
         Text _goldText;
+        Text _statsBodyText;
 
         GameObject _shopPanel;
+        GameObject _statsPanel;
         GameObject _mapPanel;
         GameObject _campfirePanel;
 
@@ -47,6 +49,7 @@ namespace ProjectZx.UI
             _goldText.alignment = TextAnchor.UpperRight;
 
             _shopPanel = BuildShopPanel(canvasGo.transform);
+            _statsPanel = BuildStatsPanel(canvasGo.transform);
             _mapPanel = BuildMapPanel(canvasGo.transform);
             _campfirePanel = BuildCampfirePanel(canvasGo.transform);
         }
@@ -60,7 +63,25 @@ namespace ProjectZx.UI
             CreateUpgradeRow(panel.transform, "Move Speed +6%", 60, -90, () => BuySpeed());
             CreateWhirlwindRow(panel.transform);
 
-            CreateButton(panel.transform, "Close", new Vector2(0, -230), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Character Stats", new Vector2(-130, -230), () => OpenStats());
+            CreateButton(panel.transform, "Close", new Vector2(130, -230), () => panel.SetActive(false));
+            panel.SetActive(false);
+            return panel;
+        }
+
+        GameObject BuildStatsPanel(Transform parent)
+        {
+            var panel = CreateDialogPanel(parent, "StatsPanel", Vector2.zero, new Vector2(720, 560), ArtLibrary.ShopUi);
+            CreateText(panel.transform, "Character Stats", 30, TextAnchor.MiddleCenter, new Vector2(0, 230), new Vector2(500, 44));
+            _statsBodyText = CreateText(panel.transform, "", 21, TextAnchor.MiddleCenter, new Vector2(0, -10), new Vector2(620, 400));
+            _statsBodyText.alignment = TextAnchor.UpperLeft;
+
+            CreateButton(panel.transform, "Back to Shop", new Vector2(-130, -240), () =>
+            {
+                panel.SetActive(false);
+                OpenShop();
+            });
+            CreateButton(panel.transform, "Close", new Vector2(130, -240), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
@@ -155,6 +176,7 @@ namespace ProjectZx.UI
             GameSessionContext.CarryRound = 0;
             GameSessionContext.RunSnapshot = default;
             _shopPanel.SetActive(false);
+            _statsPanel.SetActive(false);
             _mapPanel.SetActive(false);
             _campfirePanel.SetActive(false);
             GameFactory.LoadScene(GameScenes.SurvivalArena);
@@ -207,7 +229,39 @@ namespace ProjectZx.UI
             }
         }
 
-        public void OpenShop() { RefreshGold(); _shopPanel.SetActive(true); }
+        public void OpenShop() { RefreshGold(); _statsPanel.SetActive(false); _shopPanel.SetActive(true); }
+
+        public void OpenStats()
+        {
+            RefreshStats();
+            _shopPanel.SetActive(false);
+            _statsPanel.SetActive(true);
+        }
+
+        void RefreshStats()
+        {
+            if (_statsBodyText == null) return;
+
+            var className = GameSave.SelectedClass == PlayerClass.Spearman ? "Spearman" : "Batter";
+            var baseDamage = 10f * GameSave.DamageMultiplier;
+            var moveSpeed = 4.5f * GameSave.SpeedMultiplier;
+
+            _statsBodyText.text =
+                "CURRENT BUILD\n" +
+                $"Class: {className}\n" +
+                $"Max HP: {GameSave.MaxHp}\n" +
+                $"Base Damage: {baseDamage:0.#}\n" +
+                $"Move Speed: {moveSpeed:0.##}\n" +
+                $"HP Upgrades: {GameSave.HpUpgradeLevel}   Damage: {GameSave.DamageUpgradeLevel}   Speed: {GameSave.SpeedUpgradeLevel}\n" +
+                $"Whirlwind: {(GameSave.WhirlwindUnlocked ? "Owned" : "Locked")}\n" +
+                $"Spearman: {(GameSave.SpearmanUnlocked ? "Unlocked" : "Locked")}\n\n" +
+                "LIFETIME RECORDS\n" +
+                $"Zombie Kills: {GameSave.LifetimeZombieKills}\n" +
+                $"Boss Kills: {GameSave.LifetimeBossKills}\n" +
+                $"Deaths: {GameSave.LifetimeDeaths}\n" +
+                $"Gold Earned: {GameSave.LifetimeGoldEarned}\n" +
+                $"Highest Round: {GameSave.HighestRoundReached}";
+        }
 
         public void OpenMapSelect()
         {

@@ -16,6 +16,11 @@ namespace ProjectZx.Core
         const string WhirlwindKey = "zx_whirlwind";
         const string SpearmanUnlockedKey = "zx_spearman_unlocked";
         const string SelectedClassKey = "zx_selected_class";
+        const string ZombieKillsKey = "zx_lifetime_zombie_kills";
+        const string BossKillsKey = "zx_lifetime_boss_kills";
+        const string DeathsKey = "zx_lifetime_deaths";
+        const string GoldEarnedKey = "zx_lifetime_gold_earned";
+        const string HighestRoundKey = "zx_highest_round";
 
         public static int LastRunGoldBanked { get; set; }
 
@@ -99,10 +104,57 @@ namespace ProjectZx.Core
         public static float DamageMultiplier => 1f + DamageUpgradeLevel * 0.08f;
         public static float SpeedMultiplier => 1f + SpeedUpgradeLevel * 0.06f;
 
+        public static int LifetimeZombieKills
+        {
+            get => PlayerPrefs.GetInt(ZombieKillsKey, 0);
+            set { PlayerPrefs.SetInt(ZombieKillsKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
+        }
+
+        public static int LifetimeBossKills
+        {
+            get => PlayerPrefs.GetInt(BossKillsKey, 0);
+            set { PlayerPrefs.SetInt(BossKillsKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
+        }
+
+        public static int LifetimeDeaths
+        {
+            get => PlayerPrefs.GetInt(DeathsKey, 0);
+            set { PlayerPrefs.SetInt(DeathsKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
+        }
+
+        public static int LifetimeGoldEarned
+        {
+            get => PlayerPrefs.GetInt(GoldEarnedKey, 0);
+            set { PlayerPrefs.SetInt(GoldEarnedKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
+        }
+
+        public static int HighestRoundReached
+        {
+            get => PlayerPrefs.GetInt(HighestRoundKey, 0);
+            set { PlayerPrefs.SetInt(HighestRoundKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
+        }
+
+        public static void RecordEnemyKill(bool isBoss)
+        {
+            if (isBoss)
+                LifetimeBossKills++;
+            else
+                LifetimeZombieKills++;
+        }
+
+        public static void RecordDeath() => LifetimeDeaths++;
+
+        public static void RecordHighestRound(int round)
+        {
+            if (round > HighestRoundReached)
+                HighestRoundReached = round;
+        }
+
         public static void BankFromRun(int amount)
         {
             if (amount <= 0) return;
             Gold += amount;
+            LifetimeGoldEarned += amount;
             LastRunGoldBanked = amount;
         }
 
