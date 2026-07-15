@@ -62,6 +62,7 @@ namespace ProjectZx.Waves
                     {
                         _roundActive = false;
                         _hud?.SetRoundComplete(CurrentRound);
+                        GameSave.RecordHighestRound(CurrentRound);
                         yield return new WaitForSeconds(2f);
                         break;
                     }
@@ -122,7 +123,11 @@ namespace ProjectZx.Waves
 
         public void NotifyEnemyKilled(EnemyActor enemy)
         {
-            if (!enemy.IsAlive) EnemiesRemaining = Mathf.Max(0, EnemiesRemaining - 1);
+            if (!enemy.IsAlive)
+            {
+                EnemiesRemaining = Mathf.Max(0, EnemiesRemaining - 1);
+                GameSave.RecordEnemyKill(enemy.IsBoss);
+            }
         }
     }
 }

@@ -113,7 +113,7 @@ namespace ProjectZx.Core
             var halfW = arenaWidth * 0.5f - margin;
             var halfH = arenaHeight * 0.5f - margin;
 
-            void TryPlace(System.Func<Vector2, GameObject> create, float minSpacing, float minCenterDist)
+            void TryPlace(System.Func<Vector2, GameObject> create, float minSpacing, float minCenterDist, float scaleMultiplier = 1f)
             {
                 for (var attempt = 0; attempt < 24; attempt++)
                 {
@@ -134,7 +134,7 @@ namespace ProjectZx.Core
                     if (tooClose) continue;
 
                     placed.Add(pos);
-                    var scale = 0.38f + (float)rng.NextDouble() * 0.42f;
+                    var scale = (0.38f + (float)rng.NextDouble() * 0.42f) * scaleMultiplier;
                     var obstacle = create(pos);
                     obstacle.transform.localScale = Vector3.one * scale;
                     obstacle.transform.SetParent(root.transform, true);
@@ -143,10 +143,10 @@ namespace ProjectZx.Core
             }
 
             for (var i = 0; i < stoneCount; i++)
-                TryPlace(pos => CreateStoneObstacle(new Vector3(pos.x, pos.y, 0f), 1f), 2.4f, 6f);
+                TryPlace(pos => CreateStoneObstacle(new Vector3(pos.x, pos.y, 0f), 1f), 2.4f, 6f, 2f);
 
             for (var i = 0; i < treeCount; i++)
-                TryPlace(pos => CreateTreeObstacle(new Vector3(pos.x, pos.y, 0f), 1f), 3f, 5f);
+                TryPlace(pos => CreateTreeObstacle(new Vector3(pos.x, pos.y, 0f), 1f), 3f, 5f, 2f);
 
             for (var i = 0; i < campfireCount; i++)
                 TryPlace(pos => CreateCampfireObstacle(new Vector3(pos.x, pos.y, 0f), 0.55f), 4f, 8f);
@@ -226,7 +226,7 @@ namespace ProjectZx.Core
         public static GameObject CreateEnemy(Vector3 position, int round, bool isBoss, bool isRoundTwentyBoss = false)
         {
             var sprite = isBoss ? ArtLibrary.Boss : ArtLibrary.Zombie;
-            var scale = isBoss ? 0.55f : 0.32f * 2.5f;
+            var scale = (isBoss ? 0.55f : 0.32f * 2.5f) * 1.5f;
             var go = CreateSprite(isBoss ? "Boss" : "Zombie", sprite, position, scale, 5);
             go.tag = "Enemy";
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ProjectZx.Core;
+using ProjectZx.Waves;
 using UnityEngine;
 
 namespace ProjectZx.Player
@@ -166,6 +167,15 @@ namespace ProjectZx.Player
         {
             if (IsDead) return;
             IsDead = true;
+
+            if (SurvivalMode)
+            {
+                GameSave.RecordDeath();
+                var session = UnityEngine.Object.FindAnyObjectByType<SurvivalSession>();
+                if (session != null)
+                    GameSave.RecordHighestRound(session.CurrentRound);
+            }
+
             BankRunGoldToSave();
         }
 
