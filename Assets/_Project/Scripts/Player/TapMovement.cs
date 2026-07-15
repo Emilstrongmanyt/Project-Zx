@@ -182,7 +182,7 @@ namespace ProjectZx.Player
 
             _chaseTouchId = touchId;
             _chaseMouse = touchId < 0;
-            TrySetMoveTarget(screenPos, touchId >= 0);
+            TrySetMoveTarget(screenPos, isChase: false);
         }
 
         void UpdateChaseTarget(Vector2 screenPos)
@@ -205,23 +205,8 @@ namespace ProjectZx.Player
 
             var world = ScreenToWorld(screenPos);
 
-            if (!isChase && allowNpcInteraction)
-            {
-                var npc = FindNpcAtTap(world);
-                if (npc != null)
-                {
-                    if (npc.TryInteract(transform))
-                    {
-                        ClearMovement();
-                        return;
-                    }
-
-                    _pendingNpc = npc;
-                    _pendingDoor = null;
-                    _moveTarget = npc.transform.position;
-                    return;
-                }
-            }
+            if (allowNpcInteraction && TryHandleNpcTap(world, isChase))
+                return;
 
             if (!isChase)
             {
@@ -241,9 +226,32 @@ namespace ProjectZx.Player
                 }
             }
 
-            _pendingNpc = null;
-            _pendingDoor = null;
+            if (isChase)
+            {
+                _pendingNpc = null;
+                _pendingDoor = null;
+            }
+
             _moveTarget = world;
+        }
+
+        bool TryHandleNpcTap(Vector2 world, bool isChase)
+        {
+            var npc = FindNpcAtTap(world);
+            if (npc == null) return false;
+
+            if (npc.TryInteract(transform))
+            {
+                ClearMovement();
+                return true;
+            }
+
+            if (isChase) return false;
+
+            _pendingNpc = npc;
+            _pendingDoor = null;
+            _moveTarget = npc.transform.position;
+            return true;
         }
 
         void TryCompletePendingNpcInteract()
