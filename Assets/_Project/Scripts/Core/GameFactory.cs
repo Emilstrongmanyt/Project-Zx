@@ -62,7 +62,8 @@ namespace ProjectZx.Core
                 else
                     sprite = ArtLibrary.GetOutsideTile(tileIndex);
 
-                var tile = CreateSprite($"Tile_{col}_{row}", sprite, pos, 1f, -10);
+                var tileScale = ArtLibrary.GetTileScale(sprite, tileSize);
+                var tile = CreateSprite($"Tile_{col}_{row}", sprite, pos, tileScale, -10);
                 ApplyFloorMaterial(tile.GetComponent<SpriteRenderer>());
                 tile.transform.SetParent(root.transform, true);
             }
@@ -186,7 +187,7 @@ namespace ProjectZx.Core
             return CreateCampfireObstacle(position, 0.45f);
         }
 
-        public static GameObject CreatePlayer(Vector3 position, bool survivalMode)
+        public static GameObject CreatePlayer(Vector3 position, bool survivalMode, PlayerClass playerClass = PlayerClass.Batter)
         {
             var go = CreateSprite("Player", ArtLibrary.PlayerIdle, position, 0.35f, 10);
             go.tag = "Player";
@@ -206,8 +207,18 @@ namespace ProjectZx.Core
             go.AddComponent<HitFlash>();
             var stats = go.AddComponent<PlayerStats>();
             stats.ConfigureForRun(survivalMode);
+
             if (survivalMode)
-                go.AddComponent<PlayerCombat>();
+            {
+                var selected = playerClass;
+                if (selected == PlayerClass.Spearman && !GameSave.SpearmanUnlocked)
+                    selected = PlayerClass.Batter;
+
+                if (selected == PlayerClass.Spearman)
+                    go.AddComponent<SpearmanCombat>();
+                else
+                    go.AddComponent<PlayerCombat>();
+            }
 
             return go;
         }

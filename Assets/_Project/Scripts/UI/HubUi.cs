@@ -15,6 +15,16 @@ namespace ProjectZx.UI
         GameObject _mapPanel;
         GameObject _campfirePanel;
 
+        struct ClassPickerRefs
+        {
+            public Text StatusText;
+            public Button BatterButton;
+            public Button SpearmanButton;
+        }
+
+        ClassPickerRefs _mapClassPicker;
+        ClassPickerRefs _campClassPicker;
+
         void Awake()
         {
             Instance = this;
@@ -43,35 +53,96 @@ namespace ProjectZx.UI
 
         GameObject BuildShopPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "ShopPanel", Vector2.zero, new Vector2(700, 420), ArtLibrary.ShopUi);
+            var panel = CreateDialogPanel(parent, "ShopPanel", Vector2.zero, new Vector2(700, 500), ArtLibrary.ShopUi);
 
-            CreateUpgradeRow(panel.transform, "Max HP +15", 50, 40, () => BuyHp());
-            CreateUpgradeRow(panel.transform, "Damage +8%", 75, -50, () => BuyDamage());
-            CreateUpgradeRow(panel.transform, "Move Speed +6%", 60, -140, () => BuySpeed());
+            CreateUpgradeRow(panel.transform, "Max HP +15", 50, 70, () => BuyHp());
+            CreateUpgradeRow(panel.transform, "Damage +8%", 75, -10, () => BuyDamage());
+            CreateUpgradeRow(panel.transform, "Move Speed +6%", 60, -90, () => BuySpeed());
+            CreateWhirlwindRow(panel.transform);
 
-            CreateButton(panel.transform, "Close", new Vector2(0, -200), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Close", new Vector2(0, -230), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
 
         GameObject BuildMapPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, new Vector2(620, 220), ArtLibrary.ChallengeBoardUi);
-            CreateButton(panel.transform, "Outside Survival", new Vector2(0, 30), () => EnterSurvival(SurvivalMapKind.Outside));
-            CreateButton(panel.transform, "Close", new Vector2(0, -80), () => panel.SetActive(false));
+            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, new Vector2(680, 360), ArtLibrary.ChallengeBoardUi);
+            _mapClassPicker = BuildClassPicker(panel.transform, 130f, 95f, 45f);
+            CreateButton(panel.transform, "Outside Survival", new Vector2(0, -35), () => EnterSurvival(SurvivalMapKind.Outside));
+            CreateButton(panel.transform, "Close", new Vector2(0, -120), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
 
         GameObject BuildCampfirePanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, new Vector2(620, 220), ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, "Campfire Travel", 28, TextAnchor.MiddleCenter, new Vector2(0, 60), new Vector2(500, 40));
-            CreateButton(panel.transform, "Outside Survival", new Vector2(0, 10), () => EnterSurvival(SurvivalMapKind.Outside));
-            CreateButton(panel.transform, "Inside Survival", new Vector2(0, -70), () => EnterSurvival(SurvivalMapKind.Inside));
-            CreateButton(panel.transform, "Close", new Vector2(0, -140), () => panel.SetActive(false));
+            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, new Vector2(680, 420), ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, "Campfire Travel", 28, TextAnchor.MiddleCenter, new Vector2(0, 170), new Vector2(500, 40));
+            _campClassPicker = BuildClassPicker(panel.transform, 125f, 90f, 40f);
+            CreateButton(panel.transform, "Outside Survival", new Vector2(0, -35), () => EnterSurvival(SurvivalMapKind.Outside));
+            CreateButton(panel.transform, "Inside Survival", new Vector2(0, -110), () => EnterSurvival(SurvivalMapKind.Inside));
+            CreateButton(panel.transform, "Close", new Vector2(0, -185), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
+        }
+
+        ClassPickerRefs BuildClassPicker(Transform parent, float titleY, float statusY, float buttonY)
+        {
+            CreateText(parent, "Choose Class", 24, TextAnchor.MiddleCenter, new Vector2(0, titleY), new Vector2(500, 36));
+            return new ClassPickerRefs
+            {
+                StatusText = CreateText(parent, "", 20, TextAnchor.MiddleCenter, new Vector2(0, statusY), new Vector2(560, 32)),
+                BatterButton = CreateButton(parent, "Batter", new Vector2(-130, buttonY), () => SelectClass(PlayerClass.Batter)),
+                SpearmanButton = CreateButton(parent, "Spearman", new Vector2(130, buttonY), () => SelectClass(PlayerClass.Spearman))
+            };
+        }
+
+        void SelectClass(PlayerClass playerClass)
+        {
+            if (playerClass == PlayerClass.Spearman && !GameSave.SpearmanUnlocked) return;
+            GameSave.SelectedClass = playerClass;
+            RefreshClassPicker(_mapClassPicker);
+            RefreshClassPicker(_campClassPicker);
+        }
+
+        void RefreshClassPicker(ClassPickerRefs picker)
+        {
+            var selected = GameSave.SelectedClass;
+            if (picker.StatusText != null)
+            {
+                picker.StatusText.text = selected == PlayerClass.Spearman
+                    ? "Spearman — long reach, single target"
+                    : "Batter — melee bat, whirlwind upgrade";
+            }
+
+            if (picker.BatterButton != null)
+            {
+                var image = picker.BatterButton.GetComponent<Image>();
+                if (image != null)
+                    image.color = selected == PlayerClass.Batter
+                        ? new Color(0.28f, 0.5f, 0.32f, 0.98f)
+                        : new Color(0.2f, 0.35f, 0.55f, 0.95f);
+            }
+
+            if (picker.SpearmanButton != null)
+            {
+                var unlocked = GameSave.SpearmanUnlocked;
+                picker.SpearmanButton.interactable = unlocked;
+                var image = picker.SpearmanButton.GetComponent<Image>();
+                if (image != null)
+                {
+                    image.color = !unlocked
+                        ? new Color(0.25f, 0.25f, 0.28f, 0.7f)
+                        : selected == PlayerClass.Spearman
+                            ? new Color(0.28f, 0.5f, 0.32f, 0.98f)
+                            : new Color(0.2f, 0.35f, 0.55f, 0.95f);
+                }
+
+                var label = picker.SpearmanButton.GetComponentInChildren<Text>();
+                if (label != null)
+                    label.text = unlocked ? "Spearman" : "Spearman (Beat R20 Boss)";
+            }
         }
 
         void EnterSurvival(SurvivalMapKind mapKind)
@@ -79,6 +150,7 @@ namespace ProjectZx.UI
             if (mapKind == SurvivalMapKind.Inside && !GameSave.InsideMapUnlocked) return;
 
             GameSessionContext.SurvivalMap = mapKind;
+            GameSessionContext.SelectedClass = GameSave.SelectedClass;
             GameSessionContext.FreshSurvivalRun = true;
             GameSessionContext.CarryRound = 0;
             GameSessionContext.RunSnapshot = default;
@@ -112,8 +184,36 @@ namespace ProjectZx.UI
             RefreshGold();
         }
 
+        void CreateWhirlwindRow(Transform parent)
+        {
+            if (GameSave.WhirlwindUnlocked)
+            {
+                CreateText(parent, "Whirlwind — Owned", 24, TextAnchor.MiddleLeft, new Vector2(-220, -170), new Vector2(360, 40));
+                return;
+            }
+
+            CreateUpgradeRow(parent, "Whirlwind Attack", 500, -170, BuyWhirlwind);
+        }
+
+        void BuyWhirlwind()
+        {
+            if (GameSave.WhirlwindUnlocked) return;
+            if (GameSave.TrySpendGold(500)) GameSave.WhirlwindUnlocked = true;
+            RefreshGold();
+            if (_shopPanel != null)
+            {
+                _shopPanel.SetActive(false);
+                OpenShop();
+            }
+        }
+
         public void OpenShop() { RefreshGold(); _shopPanel.SetActive(true); }
-        public void OpenMapSelect() { _mapPanel.SetActive(true); }
+
+        public void OpenMapSelect()
+        {
+            RefreshClassPicker(_mapClassPicker);
+            _mapPanel.SetActive(true);
+        }
 
         public void OpenCampfireTravel()
         {
@@ -123,6 +223,7 @@ namespace ProjectZx.UI
                 return;
             }
 
+            RefreshClassPicker(_campClassPicker);
             _campfirePanel.SetActive(true);
         }
 
@@ -185,7 +286,7 @@ namespace ProjectZx.UI
             return go;
         }
 
-        static void CreateButton(Transform parent, string label, Vector2 pos, Action onClick)
+        static Button CreateButton(Transform parent, string label, Vector2 pos, Action onClick)
         {
             var go = new GameObject(label + "Button");
             go.transform.SetParent(parent, false);
@@ -200,6 +301,7 @@ namespace ProjectZx.UI
             var button = go.AddComponent<Button>();
             button.onClick.AddListener(() => onClick());
             CreateText(go.transform, label, 22, TextAnchor.MiddleCenter, Vector2.zero, new Vector2(200, 44));
+            return button;
         }
     }
 }

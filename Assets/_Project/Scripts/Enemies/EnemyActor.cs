@@ -227,7 +227,10 @@ namespace ProjectZx.Enemies
             session?.NotifyEnemyKilled(this);
 
             if (IsRoundTwentyBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Outside)
+            {
+                GameSave.SpearmanUnlocked = true;
                 ArenaDoor.Spawn(pos + Vector2.up * 0.5f);
+            }
 
             Destroy(gameObject);
         }

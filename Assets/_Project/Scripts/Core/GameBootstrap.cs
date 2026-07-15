@@ -56,7 +56,7 @@ namespace ProjectZx.Core
             GameFactory.CreateTiledField(isInside ? "InsideFloor" : "OutsideFloor", arenaW, arenaH, mapKind, 1f);
             GameFactory.ScatterArenaObstacles(arenaW, arenaH, 14, isInside ? 6 : 10, isInside ? 2 : 3);
 
-            var player = GameFactory.CreatePlayer(Vector3.zero, true);
+            var player = GameFactory.CreatePlayer(Vector3.zero, true, GameSessionContext.SelectedClass);
             if (!GameSessionContext.FreshSurvivalRun)
             {
                 var stats = player.GetComponent<PlayerStats>();

@@ -9,6 +9,35 @@ namespace ProjectZx.Core
     {
         public const float TilePixelsPerUnit = 64f;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetCaches()
+        {
+            _playerIdle = null;
+            _playerWalk = null;
+            _playerAttack = null;
+            _zombie = null;
+            _boss = null;
+            _bossAttacking = null;
+            _wizard = null;
+            _knight = null;
+            _ground = null;
+            _grassTile = null;
+            _grassVariants = null;
+            _campfire = null;
+            _baseballBat = null;
+            _spear = null;
+            _stone = null;
+            _tree = null;
+            _door = null;
+            _shopUi = null;
+            _levelUpUi = null;
+            _challengeBoardUi = null;
+            _outsideTiles = null;
+            _insideTiles = null;
+            _waterTile = null;
+            _fireBreathFrames = null;
+        }
+
         static Sprite _playerIdle;
         static Sprite _playerWalk;
         static Sprite _playerAttack;
@@ -22,6 +51,7 @@ namespace ProjectZx.Core
         static Sprite[] _grassVariants;
         static Sprite _campfire;
         static Sprite _baseballBat;
+        static Sprite _spear;
         static Sprite _stone;
         static Sprite _tree;
         static Sprite _door;
@@ -36,22 +66,23 @@ namespace ProjectZx.Core
         public static Sprite PlayerIdle => _playerIdle ??= Load("Placeholders/player_idle");
         public static Sprite PlayerWalk => _playerWalk ??= Load("Placeholders/player_walk");
         public static Sprite PlayerAttack => _playerAttack ??= Load("Placeholders/player_attack");
-        public static Sprite Zombie => _zombie ??= Load("Art/zombie_j", "Placeholders/zombie");
-        public static Sprite Boss => _boss ??= Load("Art/boss_j", "Placeholders/boss");
-        public static Sprite BossAttacking => _bossAttacking ??= Load("Art/boss_j_attacking", "Art/boss_j", "Placeholders/boss");
+        public static Sprite Zombie => _zombie ??= Load("Art/zombie_j", "ZombieJ", "Placeholders/zombie");
+        public static Sprite Boss => _boss ??= Load("Art/boss_j", "BossJ", "Placeholders/boss");
+        public static Sprite BossAttacking => _bossAttacking ??= Load("Art/boss_j_attacking", "BossJAttacking", "Art/boss_j", "BossJ", "Placeholders/boss");
         public static Sprite Wizard => _wizard ??= Load("Placeholders/wizard");
         public static Sprite Knight => _knight ??= Load("Placeholders/knight");
         public static Sprite Ground => _ground ??= Load("Placeholders/ground");
         public static Sprite GrassTile => _grassTile ??= LoadOrCreateGrass();
         public static Sprite Campfire => _campfire ??= CreateCampfireSprite();
         public static Sprite BaseballBat => _baseballBat ??= LoadOrCreateBat();
+        public static Sprite Spear => _spear ??= CreateSpearSprite();
         public static Sprite Stone => _stone ??= CreateStoneSprite();
         public static Sprite Tree => _tree ??= CreateTreeSprite();
         public static Sprite Door => _door ??= CreateDoorSprite();
-        public static Sprite ShopUi => _shopUi ??= Load("Art/shop_ui");
-        public static Sprite LevelUpUi => _levelUpUi ??= Load("Art/level_up_ui");
-        public static Sprite ChallengeBoardUi => _challengeBoardUi ??= Load("Art/challenge_board_ui");
-        public static Sprite WaterTile => _waterTile ??= LoadTile("Art/tile1_water", "Art/tile1_outside");
+        public static Sprite ShopUi => _shopUi ??= Load("Art/shop_ui", "ShopUI");
+        public static Sprite LevelUpUi => _levelUpUi ??= Load("Art/level_up_ui", "LevelUpUI");
+        public static Sprite ChallengeBoardUi => _challengeBoardUi ??= Load("Art/challenge_board_ui", "ChallengeBoardUI");
+        public static Sprite WaterTile => _waterTile ??= LoadTile("Art/tile1_water", "tile1Water", "Art/tile1_outside", "tile1Outside");
 
         public static Sprite GetGrassVariant(int index)
         {
@@ -68,9 +99,9 @@ namespace ProjectZx.Core
         {
             _outsideTiles ??= new[]
             {
-                LoadTile("Art/tile1_outside"),
-                LoadTile("Art/tile2_outside"),
-                LoadTile("Art/tile3_outside")
+                LoadTile("Art/tile1_outside", "tile1Outside"),
+                LoadTile("Art/tile2_outside", "tile2Outside"),
+                LoadTile("Art/tile3_outside", "tile3Outside")
             };
             return _outsideTiles[Mathf.Abs(index) % _outsideTiles.Length];
         }
@@ -79,8 +110,8 @@ namespace ProjectZx.Core
         {
             _insideTiles ??= new[]
             {
-                LoadTile("Art/tile1_inside"),
-                LoadTile("Art/tile2_inside")
+                LoadTile("Art/tile1_inside", "tile1Inside"),
+                LoadTile("Art/tile2_inside", "tile2Inside")
             };
             return _insideTiles[Mathf.Abs(index) % _insideTiles.Length];
         }
@@ -123,6 +154,8 @@ namespace ProjectZx.Core
 
         static Sprite TryLoadSprite(string path, float pixelsPerUnit)
         {
+            if (string.IsNullOrEmpty(path)) return null;
+
             var sprite = Resources.Load<Sprite>(path);
             if (sprite != null) return sprite;
 
@@ -130,13 +163,40 @@ namespace ProjectZx.Core
             if (sprites != null && sprites.Length > 0) return sprites[0];
 
             var texture = Resources.Load<Texture2D>(path);
-            if (texture == null) return null;
+            if (texture != null)
+            {
+                return Sprite.Create(
+                    texture,
+                    new Rect(0f, 0f, texture.width, texture.height),
+                    new Vector2(0.5f, 0.5f),
+                    pixelsPerUnit);
+            }
 
-            return Sprite.Create(
-                texture,
-                new Rect(0f, 0f, texture.width, texture.height),
-                new Vector2(0.5f, 0.5f),
-                pixelsPerUnit);
+            var leaf = path.Contains('/') ? path[(path.LastIndexOf('/') + 1)..] : path;
+            if (leaf != path)
+            {
+                sprite = Resources.Load<Sprite>(leaf);
+                if (sprite != null) return sprite;
+
+                texture = Resources.Load<Texture2D>(leaf);
+                if (texture != null)
+                {
+                    return Sprite.Create(
+                        texture,
+                        new Rect(0f, 0f, texture.width, texture.height),
+                        new Vector2(0.5f, 0.5f),
+                        pixelsPerUnit);
+                }
+            }
+
+            return null;
+        }
+
+        public static float GetTileScale(Sprite sprite, float tileSize = 1f)
+        {
+            if (sprite == null) return 1f;
+            var width = sprite.bounds.size.x;
+            return width > 0.001f ? tileSize / width : 1f;
         }
 
         static Sprite LoadOrCreateGrass()
@@ -300,6 +360,44 @@ namespace ProjectZx.Core
 
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 4f);
+        }
+
+        static Sprite CreateSpearSprite()
+        {
+            const int w = 40;
+            const int h = 6;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+
+            void Set(int x, int y, Color c)
+            {
+                if (x >= 0 && x < w && y >= 0 && y < h) tex.SetPixel(x, y, c);
+            }
+
+            var clear = new Color(0, 0, 0, 0);
+            var shaft = new Color(0.48f, 0.32f, 0.16f);
+            var shaftDark = new Color(0.36f, 0.24f, 0.12f);
+            var tip = new Color(0.72f, 0.74f, 0.78f);
+            var binding = new Color(0.28f, 0.2f, 0.14f);
+
+            for (var y = 0; y < h; y++)
+            for (var x = 0; x < w; x++)
+                Set(x, y, clear);
+
+            for (var x = 2; x < 34; x++)
+            {
+                Set(x, 2, shaftDark);
+                Set(x, 3, shaft);
+            }
+
+            Set(0, 2, binding); Set(1, 2, binding); Set(0, 3, binding); Set(1, 3, binding);
+            Set(34, 1, tip); Set(35, 1, tip); Set(36, 0, tip); Set(37, 0, tip); Set(38, 1, tip); Set(39, 1, tip);
+            Set(34, 2, tip); Set(35, 2, tip); Set(36, 1, tip); Set(37, 1, tip); Set(38, 2, tip); Set(39, 2, tip);
+            Set(34, 3, tip); Set(35, 3, tip); Set(36, 2, tip); Set(37, 2, tip); Set(38, 3, tip); Set(39, 3, tip);
+            Set(35, 4, tip); Set(36, 3, tip); Set(37, 3, tip); Set(38, 4, tip);
+
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.08f, 0.5f), 4f);
         }
 
         static Sprite CreateBaseballBatSprite()

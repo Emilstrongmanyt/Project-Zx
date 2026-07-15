@@ -13,6 +13,9 @@ namespace ProjectZx.Core
         const string DmgLevelKey = "zx_up_dmg";
         const string SpdLevelKey = "zx_up_spd";
         const string InsideUnlockedKey = "zx_inside_unlocked";
+        const string WhirlwindKey = "zx_whirlwind";
+        const string SpearmanUnlockedKey = "zx_spearman_unlocked";
+        const string SelectedClassKey = "zx_selected_class";
 
         public static int LastRunGoldBanked { get; set; }
 
@@ -50,6 +53,44 @@ namespace ProjectZx.Core
             set
             {
                 PlayerPrefs.SetInt(InsideUnlockedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool WhirlwindUnlocked
+        {
+            get => PlayerPrefs.GetInt(WhirlwindKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(WhirlwindKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool SpearmanUnlocked
+        {
+            get => PlayerPrefs.GetInt(SpearmanUnlockedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(SpearmanUnlockedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static PlayerClass SelectedClass
+        {
+            get
+            {
+                var stored = (PlayerClass)PlayerPrefs.GetInt(SelectedClassKey, (int)PlayerClass.Batter);
+                if (stored == PlayerClass.Spearman && !SpearmanUnlocked)
+                    return PlayerClass.Batter;
+                return stored;
+            }
+            set
+            {
+                if (value == PlayerClass.Spearman && !SpearmanUnlocked)
+                    value = PlayerClass.Batter;
+                PlayerPrefs.SetInt(SelectedClassKey, (int)value);
                 PlayerPrefs.Save();
             }
         }
