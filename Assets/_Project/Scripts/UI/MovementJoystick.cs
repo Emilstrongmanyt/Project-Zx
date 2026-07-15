@@ -71,7 +71,7 @@ namespace ProjectZx.UI
             _baseRect.anchorMin = new Vector2(1f, 0f);
             _baseRect.anchorMax = new Vector2(1f, 0f);
             _baseRect.pivot = new Vector2(1f, 0f);
-            _baseRect.anchoredPosition = new Vector2(-48f, 48f);
+            _baseRect.anchoredPosition = new Vector2(-220f, 210f);
             _baseRect.sizeDelta = new Vector2(170f, 170f);
 
             var baseImage = baseGo.AddComponent<Image>();

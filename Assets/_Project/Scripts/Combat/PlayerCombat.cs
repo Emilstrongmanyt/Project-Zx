@@ -56,7 +56,9 @@ namespace ProjectZx.Combat
             UpdateSwingAnimation();
             if (_swinging) return;
 
-            _cooldown -= Time.deltaTime;
+            var stats = GetComponent<PlayerStats>();
+            var attackSpeed = stats != null ? stats.RunAttackSpeedMultiplier : 1f;
+            _cooldown -= Time.deltaTime * attackSpeed;
             if (_cooldown > 0f) return;
 
             var enemy = FindClosestEnemy();
@@ -79,7 +81,7 @@ namespace ProjectZx.Combat
                 _bodyRenderer.flipX = !_swingFacingRight;
 
             var stats = GetComponent<PlayerStats>();
-            enemy.TakeDamage(Mathf.RoundToInt(stats.Damage));
+            enemy.TakeDamage(Mathf.RoundToInt(stats != null ? stats.Damage : 10f));
         }
 
         void UpdateSwingAnimation()

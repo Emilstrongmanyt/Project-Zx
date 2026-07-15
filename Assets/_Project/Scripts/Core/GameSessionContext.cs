@@ -18,6 +18,7 @@ namespace ProjectZx.Core
         public int PendingLevelUpChoices;
         public float RunSpeedMultiplier;
         public float RunDamageMultiplier;
+        public float RunAttackSpeedMultiplier;
     }
 
     public static class GameSessionContext

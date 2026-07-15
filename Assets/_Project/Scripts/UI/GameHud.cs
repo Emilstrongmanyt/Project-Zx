@@ -58,13 +58,14 @@ namespace ProjectZx.UI
 
         GameObject BuildLevelUpPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "LevelUpPanel", Vector2.zero, new Vector2(560, 360), ArtLibrary.LevelUpUi);
-            _levelUpTitle = CreatePanelText(panel.transform, "Level Up!", 34, new Vector2(0, 120), new Vector2(500, 50));
-            CreatePanelText(panel.transform, "Pick a run boost", 22, new Vector2(0, 70), new Vector2(500, 40));
+            var panel = CreateDialogPanel(parent, "LevelUpPanel", Vector2.zero, new Vector2(560, 460), ArtLibrary.LevelUpUi);
+            _levelUpTitle = CreatePanelText(panel.transform, "Level Up!", 34, new Vector2(0, 170), new Vector2(500, 50));
+            CreatePanelText(panel.transform, "Pick a run boost", 22, new Vector2(0, 120), new Vector2(500, 40));
 
-            CreateChoiceButton(panel.transform, "+10% Speed", new Vector2(0, 10), () => ChooseUpgrade(RunLevelChoice.Speed));
-            CreateChoiceButton(panel.transform, "+15 Max HP", new Vector2(0, -70), () => ChooseUpgrade(RunLevelChoice.Hp));
-            CreateChoiceButton(panel.transform, "+12% Attack", new Vector2(0, -150), () => ChooseUpgrade(RunLevelChoice.Attack));
+            CreateChoiceButton(panel.transform, "+10% Speed", new Vector2(0, 55), () => ChooseUpgrade(RunLevelChoice.Speed));
+            CreateChoiceButton(panel.transform, "+15 Max HP", new Vector2(0, -25), () => ChooseUpgrade(RunLevelChoice.Hp));
+            CreateChoiceButton(panel.transform, "+12% Attack", new Vector2(0, -105), () => ChooseUpgrade(RunLevelChoice.Attack));
+            CreateChoiceButton(panel.transform, "+12% Attack Speed", new Vector2(0, -185), () => ChooseUpgrade(RunLevelChoice.AttackSpeed));
 
             panel.SetActive(false);
             return panel;

@@ -8,7 +8,8 @@ namespace ProjectZx.Player
     {
         Speed,
         Hp,
-        Attack
+        Attack,
+        AttackSpeed
     }
 
     public class PlayerStats : MonoBehaviour
@@ -24,6 +25,7 @@ namespace ProjectZx.Player
         public int PendingLevelUpChoices { get; private set; }
         public float RunSpeedMultiplier { get; private set; } = 1f;
         public float RunDamageMultiplier { get; private set; } = 1f;
+        public float RunAttackSpeedMultiplier { get; private set; } = 1f;
 
         public event Action<int> LevelUpChoiceRequired;
 
@@ -43,6 +45,7 @@ namespace ProjectZx.Player
             PendingLevelUpChoices = 0;
             RunSpeedMultiplier = 1f;
             RunDamageMultiplier = 1f;
+            RunAttackSpeedMultiplier = 1f;
         }
 
         public void TakeDamage(int amount)
@@ -88,6 +91,9 @@ namespace ProjectZx.Player
                 case RunLevelChoice.Attack:
                     RunDamageMultiplier *= 1.12f;
                     break;
+                case RunLevelChoice.AttackSpeed:
+                    RunAttackSpeedMultiplier *= 1.12f;
+                    break;
             }
 
             PendingLevelUpChoices--;
@@ -132,7 +138,8 @@ namespace ProjectZx.Player
                 XpToNext = XpToNext,
                 PendingLevelUpChoices = PendingLevelUpChoices,
                 RunSpeedMultiplier = RunSpeedMultiplier,
-                RunDamageMultiplier = RunDamageMultiplier
+                RunDamageMultiplier = RunDamageMultiplier,
+                RunAttackSpeedMultiplier = RunAttackSpeedMultiplier
             };
         }
 
@@ -149,6 +156,9 @@ namespace ProjectZx.Player
             PendingLevelUpChoices = snapshot.PendingLevelUpChoices;
             RunSpeedMultiplier = snapshot.RunSpeedMultiplier;
             RunDamageMultiplier = snapshot.RunDamageMultiplier;
+            RunAttackSpeedMultiplier = snapshot.RunAttackSpeedMultiplier > 0f
+                ? snapshot.RunAttackSpeedMultiplier
+                : 1f;
             IsDead = CurrentHp <= 0;
         }
     }
