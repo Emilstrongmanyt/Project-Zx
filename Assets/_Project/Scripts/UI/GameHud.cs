@@ -58,7 +58,7 @@ namespace ProjectZx.UI
 
         GameObject BuildLevelUpPanel(Transform parent)
         {
-            var panel = CreatePanel(parent, "LevelUpPanel", Vector2.zero, new Vector2(560, 360), new Color(0.04f, 0.06f, 0.1f, 0.94f));
+            var panel = CreateDialogPanel(parent, "LevelUpPanel", Vector2.zero, new Vector2(560, 360), ArtLibrary.LevelUpUi);
             _levelUpTitle = CreatePanelText(panel.transform, "Level Up!", 34, new Vector2(0, 120), new Vector2(500, 50));
             CreatePanelText(panel.transform, "Pick a run boost", 22, new Vector2(0, 70), new Vector2(500, 40));
 
@@ -134,7 +134,11 @@ namespace ProjectZx.UI
             }
         }
 
-        public void SetRound(int round) => _roundText.text = $"Round {round}";
+        public void SetRound(int round, SurvivalMapKind mapKind)
+        {
+            var mapLabel = mapKind == SurvivalMapKind.Inside ? "Inside" : "Outside";
+            _roundText.text = $"{mapLabel} — Round {round}";
+        }
 
         public void SetRoundComplete(int round)
         {
@@ -148,9 +152,9 @@ namespace ProjectZx.UI
             _bannerTimer = 1.5f;
         }
 
-        public void ShowBossWarning()
+        public void ShowBossWarning(bool roundTwentyBoss = false)
         {
-            _bannerText.text = "BOSS INCOMING!";
+            _bannerText.text = roundTwentyBoss ? "ROUND 20 BOSS!" : "BOSS INCOMING!";
             _bannerTimer = 2.5f;
         }
 
@@ -194,7 +198,7 @@ namespace ProjectZx.UI
             return label;
         }
 
-        static GameObject CreatePanel(Transform parent, string name, Vector2 pos, Vector2 size, Color color)
+        static GameObject CreateDialogPanel(Transform parent, string name, Vector2 pos, Vector2 size, Sprite background)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
@@ -205,7 +209,16 @@ namespace ProjectZx.UI
             rect.anchoredPosition = pos;
             rect.sizeDelta = size;
             var image = go.AddComponent<Image>();
-            image.color = color;
+            if (background != null)
+            {
+                image.sprite = background;
+                image.type = Image.Type.Sliced;
+                image.color = Color.white;
+            }
+            else
+            {
+                image.color = new Color(0.04f, 0.06f, 0.1f, 0.94f);
+            }
             return go;
         }
 
