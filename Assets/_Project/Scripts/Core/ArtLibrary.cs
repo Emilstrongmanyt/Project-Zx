@@ -7,6 +7,8 @@ namespace ProjectZx.Core
     /// </summary>
     public static class ArtLibrary
     {
+        public const float TilePixelsPerUnit = 64f;
+
         static Sprite _playerIdle;
         static Sprite _playerWalk;
         static Sprite _playerAttack;
@@ -49,7 +51,7 @@ namespace ProjectZx.Core
         public static Sprite ShopUi => _shopUi ??= Load("Art/shop_ui");
         public static Sprite LevelUpUi => _levelUpUi ??= Load("Art/level_up_ui");
         public static Sprite ChallengeBoardUi => _challengeBoardUi ??= Load("Art/challenge_board_ui");
-        public static Sprite WaterTile => _waterTile ??= Load("Art/tile1_water", "Art/tile1_outside");
+        public static Sprite WaterTile => _waterTile ??= LoadTile("Art/tile1_water", "Art/tile1_outside");
 
         public static Sprite GetGrassVariant(int index)
         {
@@ -66,9 +68,9 @@ namespace ProjectZx.Core
         {
             _outsideTiles ??= new[]
             {
-                Load("Art/tile1_outside"),
-                Load("Art/tile2_outside"),
-                Load("Art/tile3_outside")
+                LoadTile("Art/tile1_outside"),
+                LoadTile("Art/tile2_outside"),
+                LoadTile("Art/tile3_outside")
             };
             return _outsideTiles[Mathf.Abs(index) % _outsideTiles.Length];
         }
@@ -77,8 +79,8 @@ namespace ProjectZx.Core
         {
             _insideTiles ??= new[]
             {
-                Load("Art/tile1_inside"),
-                Load("Art/tile2_inside")
+                LoadTile("Art/tile1_inside"),
+                LoadTile("Art/tile2_inside")
             };
             return _insideTiles[Mathf.Abs(index) % _insideTiles.Length];
         }
@@ -91,17 +93,50 @@ namespace ProjectZx.Core
 
         static Sprite Load(string path, params string[] fallbackPaths)
         {
-            var sprite = Resources.Load<Sprite>(path);
+            var sprite = TryLoadSprite(path, TilePixelsPerUnit);
             if (sprite != null) return sprite;
 
             foreach (var fallback in fallbackPaths)
             {
                 if (string.IsNullOrEmpty(fallback)) continue;
-                sprite = Resources.Load<Sprite>(fallback);
+                sprite = TryLoadSprite(fallback, TilePixelsPerUnit);
                 if (sprite != null) return sprite;
             }
 
             return CreateFallback(path);
+        }
+
+        static Sprite LoadTile(string path, params string[] fallbackPaths)
+        {
+            var sprite = TryLoadSprite(path, TilePixelsPerUnit);
+            if (sprite != null) return sprite;
+
+            foreach (var fallback in fallbackPaths)
+            {
+                if (string.IsNullOrEmpty(fallback)) continue;
+                sprite = TryLoadSprite(fallback, TilePixelsPerUnit);
+                if (sprite != null) return sprite;
+            }
+
+            return CreateTileFallback(path);
+        }
+
+        static Sprite TryLoadSprite(string path, float pixelsPerUnit)
+        {
+            var sprite = Resources.Load<Sprite>(path);
+            if (sprite != null) return sprite;
+
+            var sprites = Resources.LoadAll<Sprite>(path);
+            if (sprites != null && sprites.Length > 0) return sprites[0];
+
+            var texture = Resources.Load<Texture2D>(path);
+            if (texture == null) return null;
+
+            return Sprite.Create(
+                texture,
+                new Rect(0f, 0f, texture.width, texture.height),
+                new Vector2(0.5f, 0.5f),
+                pixelsPerUnit);
         }
 
         static Sprite LoadOrCreateGrass()
@@ -370,8 +405,41 @@ namespace ProjectZx.Core
             return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.15f), 4f);
         }
 
+        static Sprite CreateTileFallback(string name)
+        {
+            const int size = 64;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+
+            var isInside = name.Contains("inside");
+            var isWater = name.Contains("water");
+            var baseColor = isWater
+                ? new Color(0.12f, 0.22f, 0.52f)
+                : isInside
+                    ? new Color(0.34f, 0.28f, 0.2f)
+                    : new Color(0.24f, 0.48f, 0.2f);
+            var accent = isWater
+                ? new Color(0.2f, 0.34f, 0.62f)
+                : isInside
+                    ? new Color(0.42f, 0.34f, 0.24f)
+                    : new Color(0.3f, 0.58f, 0.26f);
+
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+            {
+                var checker = ((x / 8) + (y / 8)) % 2 == 0;
+                tex.SetPixel(x, y, checker ? baseColor : accent);
+            }
+
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), TilePixelsPerUnit);
+        }
+
         static Sprite CreateFallback(string name)
         {
+            if (name.Contains("tile") || name.Contains("outside") || name.Contains("inside") || name.Contains("water"))
+                return CreateTileFallback(name);
+
             const int size = 16;
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
             tex.filterMode = FilterMode.Point;
@@ -380,7 +448,7 @@ namespace ProjectZx.Core
                 : name.Contains("wizard") ? new Color(0.55f, 0.25f, 0.85f)
                 : name.Contains("knight") ? new Color(0.65f, 0.65f, 0.75f)
                 : name.Contains("ground") || name.Contains("grass") ? new Color(0.32f, 0.55f, 0.24f)
-                : new Color(0.25f, 0.55f, 0.95f);
+                : new Color(0.32f, 0.55f, 0.24f);
             for (var y = 0; y < size; y++)
             for (var x = 0; x < size; x++)
                 tex.SetPixel(x, y, color);

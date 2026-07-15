@@ -49,7 +49,7 @@ namespace ProjectZx.Core
         static void BuildSurvival(SurvivalMapKind mapKind)
         {
             var isInside = mapKind == SurvivalMapKind.Inside;
-            SetupCamera(isInside ? new Color(0.08f, 0.06f, 0.05f) : new Color(0.1f, 0.14f, 0.08f));
+            SetupCamera(isInside ? new Color(0.2f, 0.16f, 0.12f) : new Color(0.14f, 0.28f, 0.12f));
 
             const float arenaW = 64f;
             const float arenaH = 48f;

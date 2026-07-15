@@ -11,6 +11,8 @@ namespace ProjectZx.Core
 {
     public static class GameFactory
     {
+        static Material _floorMaterial;
+
         public static GameObject CreateSprite(string name, Sprite sprite, Vector3 position, float scale = 1f, int sortingOrder = 0)
         {
             var go = new GameObject(name);
@@ -20,6 +22,22 @@ namespace ProjectZx.Core
             renderer.sprite = sprite;
             renderer.sortingOrder = sortingOrder;
             return go;
+        }
+
+        static void ApplyFloorMaterial(SpriteRenderer renderer)
+        {
+            if (renderer == null) return;
+
+            _floorMaterial ??= CreateFloorMaterial();
+            if (_floorMaterial != null)
+                renderer.sharedMaterial = _floorMaterial;
+        }
+
+        static Material CreateFloorMaterial()
+        {
+            var shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
+            return shader != null ? new Material(shader) : null;
         }
 
         public static GameObject CreateTiledField(string name, float width, float height, SurvivalMapKind mapKind, float tileSize = 1f)
@@ -34,17 +52,18 @@ namespace ProjectZx.Core
             for (var col = 0; col < cols; col++)
             {
                 var pos = new Vector3(originX + col * tileSize, originY + row * tileSize, 0f);
-                var isEdge = row == 0 || row == rows - 1 || col == 0 || col == cols - 1;
-                var tileIndex = col + row * 3;
+                var isBorder = row == 0 || row == rows - 1 || col == 0 || col == cols - 1;
+                var tileIndex = col + row * 7;
                 Sprite sprite;
                 if (mapKind == SurvivalMapKind.Inside)
                     sprite = ArtLibrary.GetInsideTile(tileIndex);
-                else if (isEdge && (col + row) % 5 == 0)
+                else if (isBorder)
                     sprite = ArtLibrary.WaterTile;
                 else
                     sprite = ArtLibrary.GetOutsideTile(tileIndex);
 
                 var tile = CreateSprite($"Tile_{col}_{row}", sprite, pos, 1f, -10);
+                ApplyFloorMaterial(tile.GetComponent<SpriteRenderer>());
                 tile.transform.SetParent(root.transform, true);
             }
 
