@@ -118,5 +118,38 @@ namespace ProjectZx.Player
         }
 
         public float Damage => 10f * GameSave.DamageMultiplier * RunDamageMultiplier;
+
+        public void CaptureSnapshot(out SurvivalRunSnapshot snapshot)
+        {
+            snapshot = new SurvivalRunSnapshot
+            {
+                HasData = true,
+                MaxHp = MaxHp,
+                CurrentHp = CurrentHp,
+                RunXp = RunXp,
+                RunGold = RunGold,
+                Level = Level,
+                XpToNext = XpToNext,
+                PendingLevelUpChoices = PendingLevelUpChoices,
+                RunSpeedMultiplier = RunSpeedMultiplier,
+                RunDamageMultiplier = RunDamageMultiplier
+            };
+        }
+
+        public void RestoreSnapshot(SurvivalRunSnapshot snapshot)
+        {
+            if (!snapshot.HasData) return;
+
+            MaxHp = snapshot.MaxHp;
+            CurrentHp = snapshot.CurrentHp;
+            RunXp = snapshot.RunXp;
+            RunGold = snapshot.RunGold;
+            Level = snapshot.Level;
+            XpToNext = snapshot.XpToNext;
+            PendingLevelUpChoices = snapshot.PendingLevelUpChoices;
+            RunSpeedMultiplier = snapshot.RunSpeedMultiplier;
+            RunDamageMultiplier = snapshot.RunDamageMultiplier;
+            IsDead = CurrentHp <= 0;
+        }
     }
 }

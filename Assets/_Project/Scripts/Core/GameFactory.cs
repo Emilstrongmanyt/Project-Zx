@@ -22,19 +22,7 @@ namespace ProjectZx.Core
             return go;
         }
 
-        public static GameObject CreateGround(string name, Color tint, float width, float height)
-        {
-            var go = new GameObject(name);
-            var renderer = go.AddComponent<SpriteRenderer>();
-            renderer.sprite = ArtLibrary.Ground;
-            renderer.color = tint;
-            renderer.drawMode = SpriteDrawMode.Sliced;
-            renderer.size = new Vector2(width, height);
-            renderer.sortingOrder = -10;
-            return go;
-        }
-
-        public static GameObject CreateArenaField(string name, float width, float height, float tileSize = 1f)
+        public static GameObject CreateTiledField(string name, float width, float height, SurvivalMapKind mapKind, float tileSize = 1f)
         {
             var root = new GameObject(name);
             var cols = Mathf.CeilToInt(width / tileSize);
@@ -42,19 +30,21 @@ namespace ProjectZx.Core
             var originX = -(cols * tileSize) * 0.5f + tileSize * 0.5f;
             var originY = -(rows * tileSize) * 0.5f + tileSize * 0.5f;
 
-            var baseDirt = new Color(0.3f, 0.22f, 0.15f);
-            var darkDirt = new Color(0.24f, 0.17f, 0.11f);
-            var edgeDirt = new Color(0.16f, 0.11f, 0.08f);
-
             for (var row = 0; row < rows; row++)
             for (var col = 0; col < cols; col++)
             {
                 var pos = new Vector3(originX + col * tileSize, originY + row * tileSize, 0f);
-                var tile = CreateSprite($"Arena_{col}_{row}", ArtLibrary.Ground, pos, 0.22f, -10);
-                var renderer = tile.GetComponent<SpriteRenderer>();
                 var isEdge = row == 0 || row == rows - 1 || col == 0 || col == cols - 1;
-                var variant = (col + row) % 3;
-                renderer.color = isEdge ? edgeDirt : variant == 0 ? baseDirt : darkDirt;
+                var tileIndex = col + row * 3;
+                Sprite sprite;
+                if (mapKind == SurvivalMapKind.Inside)
+                    sprite = ArtLibrary.GetInsideTile(tileIndex);
+                else if (isEdge && (col + row) % 5 == 0)
+                    sprite = ArtLibrary.WaterTile;
+                else
+                    sprite = ArtLibrary.GetOutsideTile(tileIndex);
+
+                var tile = CreateSprite($"Tile_{col}_{row}", sprite, pos, 1f, -10);
                 tile.transform.SetParent(root.transform, true);
             }
 
@@ -69,7 +59,32 @@ namespace ProjectZx.Core
             return go;
         }
 
-        public static GameObject ScatterArenaObstacles(float arenaWidth, float arenaHeight, int count)
+        public static GameObject CreateTreeObstacle(Vector3 position, float scale)
+        {
+            var go = CreateSprite("Tree", ArtLibrary.Tree, position, scale, 3);
+            var col = go.AddComponent<CircleCollider2D>();
+            col.radius = 0.38f;
+            return go;
+        }
+
+        public static GameObject CreateCampfireObstacle(Vector3 position, float scale = 0.55f)
+        {
+            var go = CreateSprite("Campfire", ArtLibrary.Campfire, position, scale, 4);
+            var glow = new GameObject("CampfireGlow");
+            glow.transform.SetParent(go.transform, false);
+            glow.transform.localPosition = Vector3.zero;
+            var glowRenderer = glow.AddComponent<SpriteRenderer>();
+            glowRenderer.sprite = ArtLibrary.Campfire;
+            glowRenderer.color = new Color(1f, 0.55f, 0.15f, 0.35f);
+            glowRenderer.sortingOrder = 5;
+            glow.transform.localScale = Vector3.one * 1.6f;
+
+            var col = go.AddComponent<CircleCollider2D>();
+            col.radius = 0.5f;
+            return go;
+        }
+
+        public static GameObject ScatterArenaObstacles(float arenaWidth, float arenaHeight, int stoneCount, int treeCount, int campfireCount)
         {
             var root = new GameObject("ArenaObstacles");
             var rng = new System.Random(90210);
@@ -78,7 +93,7 @@ namespace ProjectZx.Core
             var halfW = arenaWidth * 0.5f - margin;
             var halfH = arenaHeight * 0.5f - margin;
 
-            for (var i = 0; i < count; i++)
+            void TryPlace(System.Func<Vector2, GameObject> create, float minSpacing, float minCenterDist)
             {
                 for (var attempt = 0; attempt < 24; attempt++)
                 {
@@ -86,12 +101,12 @@ namespace ProjectZx.Core
                         ((float)rng.NextDouble() * 2f - 1f) * halfW,
                         ((float)rng.NextDouble() * 2f - 1f) * halfH);
 
-                    if (pos.magnitude < 6f) continue;
+                    if (pos.magnitude < minCenterDist) continue;
 
                     var tooClose = false;
                     foreach (var other in placed)
                     {
-                        if (Vector2.Distance(other, pos) >= 2.4f) continue;
+                        if (Vector2.Distance(other, pos) >= minSpacing) continue;
                         tooClose = true;
                         break;
                     }
@@ -100,13 +115,32 @@ namespace ProjectZx.Core
 
                     placed.Add(pos);
                     var scale = 0.38f + (float)rng.NextDouble() * 0.42f;
-                    var stone = CreateStoneObstacle(new Vector3(pos.x, pos.y, 0f), scale);
-                    stone.transform.SetParent(root.transform, true);
-                    break;
+                    var obstacle = create(pos);
+                    obstacle.transform.localScale = Vector3.one * scale;
+                    obstacle.transform.SetParent(root.transform, true);
+                    return;
                 }
             }
 
+            for (var i = 0; i < stoneCount; i++)
+                TryPlace(pos => CreateStoneObstacle(new Vector3(pos.x, pos.y, 0f), 1f), 2.4f, 6f);
+
+            for (var i = 0; i < treeCount; i++)
+                TryPlace(pos => CreateTreeObstacle(new Vector3(pos.x, pos.y, 0f), 1f), 3f, 5f);
+
+            for (var i = 0; i < campfireCount; i++)
+                TryPlace(pos => CreateCampfireObstacle(new Vector3(pos.x, pos.y, 0f), 0.55f), 4f, 8f);
+
             return root;
+        }
+
+        public static GameObject CreateArenaDoor(Vector3 position)
+        {
+            var go = CreateSprite("ArenaDoor", ArtLibrary.Door, position, 0.9f, 8);
+            var col = go.AddComponent<BoxCollider2D>();
+            col.size = new Vector2(1.1f, 1.8f);
+            col.isTrigger = true;
+            return go;
         }
 
         public static GameObject CreateGrassField(string name, float width, float height, float tileSize = 1f)
@@ -130,16 +164,7 @@ namespace ProjectZx.Core
 
         public static GameObject CreateCampfire(Vector3 position)
         {
-            var fire = CreateSprite("Campfire", ArtLibrary.Campfire, position, 0.45f, 2);
-            var glow = new GameObject("CampfireGlow");
-            glow.transform.SetParent(fire.transform, false);
-            glow.transform.localPosition = Vector3.zero;
-            var glowRenderer = glow.AddComponent<SpriteRenderer>();
-            glowRenderer.sprite = ArtLibrary.Campfire;
-            glowRenderer.color = new Color(1f, 0.55f, 0.15f, 0.35f);
-            glowRenderer.sortingOrder = 1;
-            glow.transform.localScale = Vector3.one * 1.6f;
-            return fire;
+            return CreateCampfireObstacle(position, 0.45f);
         }
 
         public static GameObject CreatePlayer(Vector3 position, bool survivalMode)
@@ -159,17 +184,16 @@ namespace ProjectZx.Core
             col.radius = 0.45f;
 
             go.AddComponent<TapMovement>().Configure(!survivalMode);
+            go.AddComponent<HitFlash>();
             var stats = go.AddComponent<PlayerStats>();
             stats.ConfigureForRun(survivalMode);
             if (survivalMode)
-            {
                 go.AddComponent<PlayerCombat>();
-            }
 
             return go;
         }
 
-        public static GameObject CreateEnemy(Vector3 position, int round, bool isBoss)
+        public static GameObject CreateEnemy(Vector3 position, int round, bool isBoss, bool isRoundTwentyBoss = false)
         {
             var sprite = isBoss ? ArtLibrary.Boss : ArtLibrary.Zombie;
             var scale = isBoss ? 0.55f : 0.32f;
@@ -186,8 +210,9 @@ namespace ProjectZx.Core
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = isBoss ? 0.7f : 0.4f;
 
+            go.AddComponent<HitFlash>();
             var enemy = go.AddComponent<EnemyActor>();
-            enemy.Initialize(round, isBoss);
+            enemy.Initialize(round, isBoss, isRoundTwentyBoss);
             return go;
         }
 

@@ -11,6 +11,7 @@ namespace ProjectZx.Waves
     {
         public int CurrentRound { get; private set; }
         public int EnemiesRemaining { get; private set; }
+        public SurvivalMapKind MapKind { get; private set; }
 
         Transform _player;
         GameHud _hud;
@@ -29,11 +30,12 @@ namespace ProjectZx.Waves
             if (Instance == this) Instance = null;
         }
 
-        public void Begin(Transform player, GameHud hud)
+        public void Begin(Transform player, GameHud hud, SurvivalMapKind mapKind)
         {
             _player = player;
             _hud = hud;
-            CurrentRound = 0;
+            MapKind = mapKind;
+            CurrentRound = GameSessionContext.FreshSurvivalRun ? 0 : GameSessionContext.CarryRound;
             StartCoroutine(RunLoop());
         }
 
@@ -74,6 +76,9 @@ namespace ProjectZx.Waves
             yield return new WaitForSeconds(2f);
             var finalStats = _player != null ? _player.GetComponent<PlayerStats>() : null;
             finalStats?.BankRunGoldToSave();
+            GameSessionContext.FreshSurvivalRun = true;
+            GameSessionContext.CarryRound = 0;
+            GameSessionContext.RunSnapshot = default;
             GameFactory.LoadScene(GameScenes.MainMenuMap);
         }
 
@@ -81,36 +86,37 @@ namespace ProjectZx.Waves
         {
             _spawning = true;
             EnemiesRemaining = 0;
-            _hud?.SetRound(round);
+            _hud?.SetRound(round, MapKind);
             _hud?.ShowWaveIncoming();
 
             var total = 6 + round * 5;
             var bossRound = round % 10 == 0;
+            var roundTwentyBoss = round == 20 && MapKind == SurvivalMapKind.Outside;
             if (bossRound) total = Mathf.Max(total - 1, 1);
 
             for (var i = 0; i < total; i++)
             {
-                SpawnEnemy(round, false);
+                SpawnEnemy(round, false, false);
                 if (i % 3 == 0) yield return null;
             }
 
             if (bossRound)
             {
                 yield return new WaitForSeconds(0.35f);
-                SpawnEnemy(round, true);
-                _hud?.ShowBossWarning();
+                SpawnEnemy(round, true, roundTwentyBoss);
+                _hud?.ShowBossWarning(roundTwentyBoss);
             }
 
             _spawning = false;
         }
 
-        void SpawnEnemy(int round, bool boss)
+        void SpawnEnemy(int round, bool boss, bool roundTwentyBoss)
         {
             var angle = Random.Range(0f, Mathf.PI * 2f);
             var distance = Random.Range(7f, 12f);
             var offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
             var origin = _player != null ? (Vector2)_player.position : Vector2.zero;
-            GameFactory.CreateEnemy(origin + offset, round, boss);
+            GameFactory.CreateEnemy(origin + offset, round, boss, roundTwentyBoss);
             EnemiesRemaining++;
         }
 

@@ -12,6 +12,7 @@ namespace ProjectZx.Core
         const string HpLevelKey = "zx_up_hp";
         const string DmgLevelKey = "zx_up_dmg";
         const string SpdLevelKey = "zx_up_spd";
+        const string InsideUnlockedKey = "zx_inside_unlocked";
 
         public static int LastRunGoldBanked { get; set; }
 
@@ -41,6 +42,16 @@ namespace ProjectZx.Core
         {
             get => PlayerPrefs.GetInt(SpdLevelKey, 0);
             set { PlayerPrefs.SetInt(SpdLevelKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
+        }
+
+        public static bool InsideMapUnlocked
+        {
+            get => PlayerPrefs.GetInt(InsideUnlockedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(InsideUnlockedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
         }
 
         public static int MaxHp => 100 + HpUpgradeLevel * 15;

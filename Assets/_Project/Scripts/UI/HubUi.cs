@@ -13,6 +13,7 @@ namespace ProjectZx.UI
 
         GameObject _shopPanel;
         GameObject _mapPanel;
+        GameObject _campfirePanel;
 
         void Awake()
         {
@@ -37,11 +38,12 @@ namespace ProjectZx.UI
 
             _shopPanel = BuildShopPanel(canvasGo.transform);
             _mapPanel = BuildMapPanel(canvasGo.transform);
+            _campfirePanel = BuildCampfirePanel(canvasGo.transform);
         }
 
         GameObject BuildShopPanel(Transform parent)
         {
-            var panel = CreatePanel(parent, "ShopPanel", Vector2.zero, new Vector2(700, 420), new Color(0.05f, 0.08f, 0.12f, 0.92f));
+            var panel = CreateDialogPanel(parent, "ShopPanel", Vector2.zero, new Vector2(700, 420), ArtLibrary.ShopUi);
 
             CreateUpgradeRow(panel.transform, "Max HP +15", 50, 40, () => BuyHp());
             CreateUpgradeRow(panel.transform, "Damage +8%", 75, -50, () => BuyDamage());
@@ -54,15 +56,36 @@ namespace ProjectZx.UI
 
         GameObject BuildMapPanel(Transform parent)
         {
-            var panel = CreatePanel(parent, "MapPanel", Vector2.zero, new Vector2(620, 220), new Color(0.08f, 0.05f, 0.1f, 0.92f));
-            CreateButton(panel.transform, "Enter Survival Arena", new Vector2(0, 20), () =>
-            {
-                panel.SetActive(false);
-                GameFactory.LoadScene(GameScenes.SurvivalArena);
-            });
+            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, new Vector2(620, 220), ArtLibrary.ChallengeBoardUi);
+            CreateButton(panel.transform, "Outside Survival", new Vector2(0, 30), () => EnterSurvival(SurvivalMapKind.Outside));
             CreateButton(panel.transform, "Close", new Vector2(0, -80), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
+        }
+
+        GameObject BuildCampfirePanel(Transform parent)
+        {
+            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, new Vector2(620, 220), ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, "Campfire Travel", 28, TextAnchor.MiddleCenter, new Vector2(0, 60), new Vector2(500, 40));
+            CreateButton(panel.transform, "Outside Survival", new Vector2(0, 10), () => EnterSurvival(SurvivalMapKind.Outside));
+            CreateButton(panel.transform, "Inside Survival", new Vector2(0, -70), () => EnterSurvival(SurvivalMapKind.Inside));
+            CreateButton(panel.transform, "Close", new Vector2(0, -140), () => panel.SetActive(false));
+            panel.SetActive(false);
+            return panel;
+        }
+
+        void EnterSurvival(SurvivalMapKind mapKind)
+        {
+            if (mapKind == SurvivalMapKind.Inside && !GameSave.InsideMapUnlocked) return;
+
+            GameSessionContext.SurvivalMap = mapKind;
+            GameSessionContext.FreshSurvivalRun = true;
+            GameSessionContext.CarryRound = 0;
+            GameSessionContext.RunSnapshot = default;
+            _shopPanel.SetActive(false);
+            _mapPanel.SetActive(false);
+            _campfirePanel.SetActive(false);
+            GameFactory.LoadScene(GameScenes.SurvivalArena);
         }
 
         void CreateUpgradeRow(Transform parent, string label, int cost, float y, Action onBuy)
@@ -91,6 +114,17 @@ namespace ProjectZx.UI
 
         public void OpenShop() { RefreshGold(); _shopPanel.SetActive(true); }
         public void OpenMapSelect() { _mapPanel.SetActive(true); }
+
+        public void OpenCampfireTravel()
+        {
+            if (!GameSave.InsideMapUnlocked)
+            {
+                OpenMapSelect();
+                return;
+            }
+
+            _campfirePanel.SetActive(true);
+        }
 
         public void RefreshGold()
         {
@@ -127,7 +161,7 @@ namespace ProjectZx.UI
             return label;
         }
 
-        static GameObject CreatePanel(Transform parent, string name, Vector2 pos, Vector2 size, Color color)
+        static GameObject CreateDialogPanel(Transform parent, string name, Vector2 pos, Vector2 size, Sprite background)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
@@ -138,7 +172,16 @@ namespace ProjectZx.UI
             rect.anchoredPosition = pos;
             rect.sizeDelta = size;
             var image = go.AddComponent<Image>();
-            image.color = color;
+            if (background != null)
+            {
+                image.sprite = background;
+                image.type = Image.Type.Sliced;
+                image.color = Color.white;
+            }
+            else
+            {
+                image.color = new Color(0.05f, 0.08f, 0.12f, 0.92f);
+            }
             return go;
         }
 

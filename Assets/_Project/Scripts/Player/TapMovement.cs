@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using ProjectZx.Combat;
 using ProjectZx.Core;
 using ProjectZx.UI;
+using ProjectZx.World;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -22,6 +23,7 @@ namespace ProjectZx.Player
 
         Vector2? _moveTarget;
         NpcInteractable _pendingNpc;
+        ArenaDoor _pendingDoor;
         Camera _camera;
         Rigidbody2D _rb;
         SpriteRenderer _renderer;
@@ -75,6 +77,7 @@ namespace ProjectZx.Player
             {
                 _moveTarget = null;
                 _pendingNpc = null;
+                _pendingDoor = null;
                 MoveByDelta(GetSpeedVector(joyDir.normalized) * Time.fixedDeltaTime);
                 return;
             }
@@ -83,6 +86,7 @@ namespace ProjectZx.Player
             {
                 _rb.linearVelocity = Vector2.zero;
                 TryCompletePendingNpcInteract();
+                TryCompletePendingDoor();
                 return;
             }
 
@@ -94,12 +98,14 @@ namespace ProjectZx.Player
                 _rb.linearVelocity = Vector2.zero;
                 _moveTarget = null;
                 TryCompletePendingNpcInteract();
+                TryCompletePendingDoor();
                 return;
             }
 
             var step = GetSpeed() * Time.fixedDeltaTime;
             MoveByDelta(Vector2.ClampMagnitude(delta, step));
             TryCompletePendingNpcInteract();
+            TryCompletePendingDoor();
         }
 
         float GetSpeed()
@@ -184,12 +190,29 @@ namespace ProjectZx.Player
                     }
 
                     _pendingNpc = npc;
+                    _pendingDoor = null;
                     _moveTarget = npc.transform.position;
                     return;
                 }
             }
 
+            var door = FindDoorAtTap(world);
+            if (door != null)
+            {
+                if (door.TryEnter(transform))
+                {
+                    ClearMovement();
+                    return;
+                }
+
+                _pendingDoor = door;
+                _pendingNpc = null;
+                _moveTarget = door.transform.position;
+                return;
+            }
+
             _pendingNpc = null;
+            _pendingDoor = null;
             _moveTarget = world;
         }
 
@@ -200,6 +223,32 @@ namespace ProjectZx.Player
 
             if (_pendingNpc.TryInteract(transform))
                 ClearMovement();
+        }
+
+        void TryCompletePendingDoor()
+        {
+            if (_pendingDoor == null) return;
+            if (Vector2.Distance(transform.position, _pendingDoor.transform.position) > 2.2f) return;
+            if (_pendingDoor.TryEnter(transform))
+                ClearMovement();
+        }
+
+        static ArenaDoor FindDoorAtTap(Vector2 worldPos)
+        {
+            var doors = UnityEngine.Object.FindObjectsByType<ArenaDoor>();
+            ArenaDoor best = null;
+            var bestDist = float.MaxValue;
+
+            foreach (var door in doors)
+            {
+                if (door == null) continue;
+                var dist = Vector2.Distance(worldPos, door.transform.position);
+                if (dist > NpcTapRadius || dist >= bestDist) continue;
+                bestDist = dist;
+                best = door;
+            }
+
+            return best;
         }
 
         bool NpcInRange(NpcInteractable npc)
@@ -230,6 +279,7 @@ namespace ProjectZx.Player
         {
             _moveTarget = null;
             _pendingNpc = null;
+            _pendingDoor = null;
             _rb.linearVelocity = Vector2.zero;
         }
 
