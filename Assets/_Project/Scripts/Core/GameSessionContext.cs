@@ -19,6 +19,8 @@ namespace ProjectZx.Core
         public float RunSpeedMultiplier;
         public float RunDamageMultiplier;
         public float RunAttackSpeedMultiplier;
+        public float RunAttackRangeMultiplier;
+        public float RunLootRangeMultiplier;
     }
 
     public static class GameSessionContext

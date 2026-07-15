@@ -43,7 +43,6 @@ namespace ProjectZx.Core
             var campfireNpc = campfire.AddComponent<NpcInteractable>();
             campfireNpc.Initialize(() => hub.OpenCampfireTravel());
 
-            MovementJoystick.EnsureExists();
         }
 
         static void BuildSurvival(SurvivalMapKind mapKind)
@@ -69,7 +68,6 @@ namespace ProjectZx.Core
             var session = new GameObject("SurvivalSession").AddComponent<SurvivalSession>();
             session.Begin(player.transform, hud, mapKind);
 
-            MovementJoystick.EnsureExists();
         }
 
         static void SetupCamera(Color background)

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using ProjectZx.Core;
 using UnityEngine;
 
@@ -9,7 +10,9 @@ namespace ProjectZx.Player
         Speed,
         Hp,
         Attack,
-        AttackSpeed
+        AttackSpeed,
+        AttackRange,
+        LootRange
     }
 
     public class PlayerStats : MonoBehaviour
@@ -26,6 +29,8 @@ namespace ProjectZx.Player
         public float RunSpeedMultiplier { get; private set; } = 1f;
         public float RunDamageMultiplier { get; private set; } = 1f;
         public float RunAttackSpeedMultiplier { get; private set; } = 1f;
+        public float RunAttackRangeMultiplier { get; private set; } = 1f;
+        public float RunLootRangeMultiplier { get; private set; } = 1f;
 
         public event Action<int> LevelUpChoiceRequired;
 
@@ -46,6 +51,8 @@ namespace ProjectZx.Player
             RunSpeedMultiplier = 1f;
             RunDamageMultiplier = 1f;
             RunAttackSpeedMultiplier = 1f;
+            RunAttackRangeMultiplier = 1f;
+            RunLootRangeMultiplier = 1f;
         }
 
         public void TakeDamage(int amount)
@@ -55,7 +62,6 @@ namespace ProjectZx.Player
             if (CurrentHp <= 0) Die();
         }
 
-        /// <summary>Run-only XP. Never written to persistent save.</summary>
         public void AddXp(int amount)
         {
             if (!SurvivalMode || IsDead || amount <= 0) return;
@@ -73,6 +79,41 @@ namespace ProjectZx.Player
 
             if (leveled)
                 LevelUpChoiceRequired?.Invoke(PendingLevelUpChoices);
+        }
+
+        public static List<RunLevelChoice> RollLevelUpChoices(int count = 4)
+        {
+            var pool = new List<RunLevelChoice>
+            {
+                RunLevelChoice.Speed,
+                RunLevelChoice.Hp,
+                RunLevelChoice.Attack,
+                RunLevelChoice.AttackSpeed,
+                RunLevelChoice.AttackRange,
+                RunLevelChoice.LootRange
+            };
+
+            for (var i = pool.Count - 1; i > 0; i--)
+            {
+                var j = UnityEngine.Random.Range(0, i + 1);
+                (pool[i], pool[j]) = (pool[j], pool[i]);
+            }
+
+            return pool.GetRange(0, Mathf.Min(count, pool.Count));
+        }
+
+        public static string GetChoiceLabel(RunLevelChoice choice)
+        {
+            return choice switch
+            {
+                RunLevelChoice.Speed => "+10% Move Speed",
+                RunLevelChoice.Hp => "+15 Max HP",
+                RunLevelChoice.Attack => "+12% Attack Damage",
+                RunLevelChoice.AttackSpeed => "+12% Attack Speed",
+                RunLevelChoice.AttackRange => "+10% Attack Range",
+                RunLevelChoice.LootRange => "+15% Loot Range",
+                _ => choice.ToString()
+            };
         }
 
         public void ApplyRunLevelChoice(RunLevelChoice choice)
@@ -94,6 +135,12 @@ namespace ProjectZx.Player
                 case RunLevelChoice.AttackSpeed:
                     RunAttackSpeedMultiplier *= 1.12f;
                     break;
+                case RunLevelChoice.AttackRange:
+                    RunAttackRangeMultiplier *= 1.1f;
+                    break;
+                case RunLevelChoice.LootRange:
+                    RunLootRangeMultiplier *= 1.15f;
+                    break;
             }
 
             PendingLevelUpChoices--;
@@ -101,7 +148,6 @@ namespace ProjectZx.Player
                 LevelUpChoiceRequired?.Invoke(PendingLevelUpChoices);
         }
 
-        /// <summary>Gold earned this run. Banked to camp savings on death or run end.</summary>
         public void AddRunGold(int amount)
         {
             if (!SurvivalMode || IsDead || amount <= 0 || _goldBanked) return;
@@ -139,7 +185,9 @@ namespace ProjectZx.Player
                 PendingLevelUpChoices = PendingLevelUpChoices,
                 RunSpeedMultiplier = RunSpeedMultiplier,
                 RunDamageMultiplier = RunDamageMultiplier,
-                RunAttackSpeedMultiplier = RunAttackSpeedMultiplier
+                RunAttackSpeedMultiplier = RunAttackSpeedMultiplier,
+                RunAttackRangeMultiplier = RunAttackRangeMultiplier,
+                RunLootRangeMultiplier = RunLootRangeMultiplier
             };
         }
 
@@ -158,6 +206,12 @@ namespace ProjectZx.Player
             RunDamageMultiplier = snapshot.RunDamageMultiplier;
             RunAttackSpeedMultiplier = snapshot.RunAttackSpeedMultiplier > 0f
                 ? snapshot.RunAttackSpeedMultiplier
+                : 1f;
+            RunAttackRangeMultiplier = snapshot.RunAttackRangeMultiplier > 0f
+                ? snapshot.RunAttackRangeMultiplier
+                : 1f;
+            RunLootRangeMultiplier = snapshot.RunLootRangeMultiplier > 0f
+                ? snapshot.RunLootRangeMultiplier
                 : 1f;
             IsDead = CurrentHp <= 0;
         }

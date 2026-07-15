@@ -226,7 +226,7 @@ namespace ProjectZx.Core
         public static GameObject CreateEnemy(Vector3 position, int round, bool isBoss, bool isRoundTwentyBoss = false)
         {
             var sprite = isBoss ? ArtLibrary.Boss : ArtLibrary.Zombie;
-            var scale = isBoss ? 0.55f : 0.32f;
+            var scale = isBoss ? 0.55f : 0.32f * 2.5f;
             var go = CreateSprite(isBoss ? "Boss" : "Zombie", sprite, position, scale, 5);
             go.tag = "Enemy";
 
