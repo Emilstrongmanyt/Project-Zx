@@ -144,6 +144,8 @@ namespace ProjectZx.Core
                 LifetimeBossKills++;
             else
                 LifetimeZombieKills++;
+
+            Achievements.EvaluateKillAchievements();
         }
 
         public static void RecordDeath() => LifetimeDeaths++;
@@ -152,6 +154,8 @@ namespace ProjectZx.Core
         {
             if (round > HighestRoundReached)
                 HighestRoundReached = round;
+
+            Achievements.EvaluateRoundAchievements(round);
         }
 
         public static void BankFromRun(int amount)

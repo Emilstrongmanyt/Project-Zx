@@ -39,6 +39,7 @@ namespace ProjectZx.Core
 
             GameFactory.CreateNpc("WizardShop", ArtLibrary.Wizard, new Vector3(-2.1f, 1.1f), () => hub.OpenShop());
             GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(2.1f, 1.1f), () => hub.OpenMapSelect());
+            GameFactory.CreateNpc("AchievementKeeper", ArtLibrary.AchievementKeeper, new Vector3(0f, 2.8f), () => hub.OpenAchievements());
 
             var campfireNpc = campfire.AddComponent<NpcInteractable>();
             campfireNpc.Initialize(() => hub.OpenCampfireTravel());

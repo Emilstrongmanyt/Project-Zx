@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using ProjectZx.Core;
 using ProjectZx.Player;
+using ProjectZx.Waves;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,6 +16,7 @@ namespace ProjectZx.UI
         Text _bannerText;
         Text _levelUpTitle;
         GameObject _levelUpPanel;
+        GameObject _retreatPanel;
         Transform _choiceButtonRoot;
         float _bannerTimer;
         Transform _player;
@@ -57,6 +59,94 @@ namespace ProjectZx.UI
             _bannerText.color = new Color(1f, 0.85f, 0.3f);
 
             _levelUpPanel = BuildLevelUpPanel(canvasGo.transform);
+            _retreatPanel = BuildRetreatPanel(canvasGo.transform);
+            CreateRetreatButton(canvasGo.transform);
+        }
+
+        void CreateRetreatButton(Transform parent)
+        {
+            var go = new GameObject("RetreatButton");
+            go.transform.SetParent(parent, false);
+            var rect = go.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(1f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f);
+            rect.anchoredPosition = new Vector2(-30f, -30f);
+            rect.sizeDelta = new Vector2(220f, 52f);
+            var image = go.AddComponent<Image>();
+            image.color = new Color(0.45f, 0.22f, 0.18f, 0.95f);
+            var button = go.AddComponent<Button>();
+            button.onClick.AddListener(ShowRetreatConfirm);
+
+            var textGo = new GameObject("Text");
+            textGo.transform.SetParent(go.transform, false);
+            var textRect = textGo.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+            var text = textGo.AddComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.text = "Retreat";
+            text.fontSize = 22;
+            text.color = Color.white;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.raycastTarget = false;
+        }
+
+        GameObject BuildRetreatPanel(Transform parent)
+        {
+            var panel = CreateDialogPanel(parent, "RetreatPanel", Vector2.zero, new Vector2(520, 280), ArtLibrary.ChallengeBoardUi);
+            CreatePanelText(panel.transform, "Retreat to Camp?", 30, new Vector2(0, 70), new Vector2(460, 44));
+            CreatePanelText(panel.transform, "Run gold will be saved. Current progress ends.", 20, new Vector2(0, 20), new Vector2(460, 60));
+
+            CreateHudButton(panel.transform, "Yes, Retreat", new Vector2(-120, -70), ConfirmRetreat);
+            CreateHudButton(panel.transform, "Keep Fighting", new Vector2(120, -70), () => _retreatPanel.SetActive(false));
+            panel.SetActive(false);
+            return panel;
+        }
+
+        void ShowRetreatConfirm()
+        {
+            if (IsChoosingUpgrade || _stats == null || _stats.IsDead) return;
+            _retreatPanel.SetActive(true);
+        }
+
+        void ConfirmRetreat()
+        {
+            _retreatPanel.SetActive(false);
+            SurvivalSession.Instance?.RetreatToCamp();
+        }
+
+        static void CreateHudButton(Transform parent, string label, Vector2 pos, System.Action onClick)
+        {
+            var go = new GameObject(label + "Button");
+            go.transform.SetParent(parent, false);
+            var rect = go.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = pos;
+            rect.sizeDelta = new Vector2(200, 52);
+            var image = go.AddComponent<Image>();
+            image.color = new Color(0.2f, 0.35f, 0.55f, 0.95f);
+            var button = go.AddComponent<Button>();
+            button.onClick.AddListener(() => onClick());
+
+            var textGo = new GameObject("Text");
+            textGo.transform.SetParent(go.transform, false);
+            var textRect = textGo.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+            var text = textGo.AddComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.text = label;
+            text.fontSize = 20;
+            text.color = Color.white;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.raycastTarget = false;
         }
 
         GameObject BuildLevelUpPanel(Transform parent)
@@ -156,7 +246,7 @@ namespace ProjectZx.UI
             _xpText.text = $"Run XP {stats.RunXp}/{stats.XpToNext}  Lv {stats.Level}";
             _goldText.text = $"Gold {stats.RunGold}";
 
-            if (IsChoosingUpgrade) return;
+            if (IsChoosingUpgrade || (_retreatPanel != null && _retreatPanel.activeSelf)) return;
 
             if (_bannerTimer > 0f)
             {

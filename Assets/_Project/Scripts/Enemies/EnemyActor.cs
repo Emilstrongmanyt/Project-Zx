@@ -14,8 +14,9 @@ namespace ProjectZx.Enemies
         const float FireBreathDuration = 3f;
         const float FireBreathCooldown = 12f;
         const float FireBreathTick = 0.45f;
-        const float EnemySeparationRadius = 0.9f;
-        const float EnemySeparationPush = 0.14f;
+        const float EnemySeparationRadius = 1.15f;
+        const float EnemySeparationPush = 0.24f;
+        const float CastSkin = 0.1f;
 
         public bool IsAlive { get; private set; } = true;
         public bool IsBoss { get; private set; }
@@ -102,7 +103,8 @@ namespace ProjectZx.Enemies
                 return;
             }
 
-            var dir = ((Vector2)_player.position - (Vector2)transform.position).normalized;
+            var toPlayer = (Vector2)_player.position - (Vector2)transform.position;
+            var dir = GetSteeredDirection(toPlayer).normalized;
             MoveByDelta(dir * (_speed * Time.fixedDeltaTime));
             UpdateFacingToward(_player.position);
             ApplyEnemySeparation();
@@ -159,16 +161,11 @@ namespace ProjectZx.Enemies
 
             if (hitCount > 0)
             {
-                var hit = _castHits[0];
-                var otherEnemy = hit.collider != null ? hit.collider.GetComponent<EnemyActor>() : null;
-                if (otherEnemy != null && otherEnemy.IsAlive)
-                {
-                    var perp = new Vector2(-direction.y, direction.x) * distance * 0.65f;
-                    if (TryMoveDelta(perp) || TryMoveDelta(-perp))
-                        return true;
-                }
-
-                allowed = Mathf.Max(0f, hit.distance - 0.04f);
+                var blockingIndex = FindFirstBlockingHit(hitCount);
+                if (blockingIndex < 0)
+                    allowed = distance;
+                else
+                    allowed = Mathf.Max(0f, _castHits[blockingIndex].distance - CastSkin);
             }
 
             if (allowed <= 0.0001f) return false;
@@ -176,6 +173,49 @@ namespace ProjectZx.Enemies
             _rb.MovePosition(_rb.position + direction * allowed);
             _rb.linearVelocity = direction * _speed;
             return true;
+        }
+
+        Vector2 GetSteeredDirection(Vector2 toPlayer)
+        {
+            if (toPlayer.sqrMagnitude < 0.0001f) return Vector2.zero;
+
+            var desired = toPlayer.normalized;
+            var count = Physics2D.OverlapCircleNonAlloc(_rb.position, EnemySeparationRadius, _overlapBuffer);
+            var avoid = Vector2.zero;
+
+            for (var i = 0; i < count; i++)
+            {
+                var col = _overlapBuffer[i];
+                if (col == null) continue;
+
+                var otherEnemy = col.GetComponent<EnemyActor>();
+                if (otherEnemy == null || otherEnemy == this || !otherEnemy.IsAlive) continue;
+
+                var away = _rb.position - otherEnemy._rb.position;
+                if (away.sqrMagnitude < 0.0001f)
+                    away = Random.insideUnitCircle * 0.1f;
+
+                var overlap = EnemySeparationRadius - away.magnitude;
+                if (overlap <= 0f) continue;
+
+                avoid += away.normalized * (overlap / EnemySeparationRadius);
+            }
+
+            if (avoid.sqrMagnitude < 0.0001f) return desired;
+            return (desired + avoid * 1.8f).normalized;
+        }
+
+        int FindFirstBlockingHit(int hitCount)
+        {
+            for (var i = 0; i < hitCount; i++)
+            {
+                var col = _castHits[i].collider;
+                if (col == null) continue;
+                if (col.GetComponent<EnemyActor>() != null) continue;
+                return i;
+            }
+
+            return -1;
         }
 
         void ApplyEnemySeparation()
@@ -196,7 +236,7 @@ namespace ProjectZx.Enemies
                 var overlap = EnemySeparationRadius - away.magnitude;
                 if (overlap <= 0f) continue;
 
-                var push = away.normalized * Mathf.Min(overlap * 0.5f, EnemySeparationPush);
+                var push = away.normalized * Mathf.Min(overlap * 0.75f, EnemySeparationPush);
                 TryMoveDelta(push);
             }
         }

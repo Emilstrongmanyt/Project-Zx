@@ -20,6 +20,7 @@ namespace ProjectZx.Core
             _bossAttacking = null;
             _wizard = null;
             _knight = null;
+            _achievementKeeper = null;
             _ground = null;
             _grassTile = null;
             _grassVariants = null;
@@ -46,6 +47,7 @@ namespace ProjectZx.Core
         static Sprite _bossAttacking;
         static Sprite _wizard;
         static Sprite _knight;
+        static Sprite _achievementKeeper;
         static Sprite _ground;
         static Sprite _grassTile;
         static Sprite[] _grassVariants;
@@ -71,6 +73,7 @@ namespace ProjectZx.Core
         public static Sprite BossAttacking => _bossAttacking ??= Load("Art/boss_j_attacking", "BossJAttacking", "Art/boss_j", "BossJ", "Placeholders/boss");
         public static Sprite Wizard => _wizard ??= Load("Placeholders/wizard");
         public static Sprite Knight => _knight ??= Load("Placeholders/knight");
+        public static Sprite AchievementKeeper => _achievementKeeper ??= Load("Art/achievement_keeper", "AchievementKeeper", "Placeholders/wizard");
         public static Sprite Ground => _ground ??= Load("Placeholders/ground");
         public static Sprite GrassTile => _grassTile ??= LoadOrCreateGrass();
         public static Sprite Campfire => _campfire ??= CreateCampfireSprite();
