@@ -24,6 +24,7 @@ namespace ProjectZx.Core
     public static class GameSessionContext
     {
         public static SurvivalMapKind SurvivalMap { get; set; } = SurvivalMapKind.Outside;
+        public static PlayerClass SelectedClass { get; set; } = PlayerClass.Batter;
         public static bool FreshSurvivalRun { get; set; } = true;
         public static int CarryRound { get; set; }
         public static SurvivalRunSnapshot RunSnapshot;

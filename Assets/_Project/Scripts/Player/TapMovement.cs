@@ -316,6 +316,8 @@ namespace ProjectZx.Player
             if (_renderer == null) return;
             var combat = GetComponent<PlayerCombat>();
             if (combat != null && combat.IsSwinging) return;
+            var spearman = GetComponent<SpearmanCombat>();
+            if (spearman != null && spearman.IsThrusting) return;
 
             var joyDir = MovementJoystick.Instance != null ? MovementJoystick.Instance.Direction : Vector2.zero;
             var moving = joyDir.sqrMagnitude > 0.01f || _moveTarget != null || _rb.linearVelocity.sqrMagnitude > 0.01f;

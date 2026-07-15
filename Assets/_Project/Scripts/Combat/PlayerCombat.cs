@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ProjectZx.Core;
 using ProjectZx.Enemies;
 using ProjectZx.Player;
@@ -10,19 +11,26 @@ namespace ProjectZx.Combat
     {
         const float RestAngle = -65f;
         const float SwingAngle = 75f;
+        const float WhirlwindRangeMultiplier = 1.2f;
 
         [SerializeField] float attackRange = 2.15f;
         [SerializeField] float attackInterval = 0.5f;
         [SerializeField] float swingDuration = 0.22f;
+        [SerializeField] float whirlwindDuration = 0.34f;
 
         float _cooldown;
         float _swingTimer;
         bool _swinging;
+        bool _whirlwindSwing;
+        bool _whirlwindDamageApplied;
         bool _swingFacingRight = true;
         Transform _batPivot;
         SpriteRenderer _bodyRenderer;
 
         public bool IsSwinging => _swinging;
+
+        float EffectiveAttackRange =>
+            GameSave.WhirlwindUnlocked ? attackRange * WhirlwindRangeMultiplier : attackRange;
 
         void Awake()
         {
@@ -61,6 +69,13 @@ namespace ProjectZx.Combat
             _cooldown -= Time.deltaTime * attackSpeed;
             if (_cooldown > 0f) return;
 
+            if (GameSave.WhirlwindUnlocked)
+            {
+                if (!HasEnemyInRange(EffectiveAttackRange)) return;
+                PerformWhirlwind();
+                return;
+            }
+
             var enemy = FindClosestEnemy();
             if (enemy == null) return;
 
@@ -74,6 +89,8 @@ namespace ProjectZx.Combat
         {
             _cooldown = attackInterval;
             _swinging = true;
+            _whirlwindSwing = false;
+            _whirlwindDamageApplied = false;
             _swingTimer = swingDuration;
             _swingFacingRight = enemy.transform.position.x >= transform.position.x;
 
@@ -81,7 +98,24 @@ namespace ProjectZx.Combat
                 _bodyRenderer.flipX = !_swingFacingRight;
 
             var stats = GetComponent<PlayerStats>();
-            enemy.TakeDamage(Mathf.RoundToInt(stats != null ? stats.Damage : 10f));
+            var damage = Mathf.RoundToInt(stats != null ? stats.Damage : 10f);
+            enemy.TakeDamage(damage);
+        }
+
+        void PerformWhirlwind()
+        {
+            _cooldown = attackInterval;
+            _swinging = true;
+            _whirlwindSwing = true;
+            _whirlwindDamageApplied = false;
+            _swingTimer = whirlwindDuration;
+            _swingFacingRight = true;
+
+            if (_bodyRenderer != null)
+                _bodyRenderer.flipX = false;
+
+            if (_batPivot != null)
+                _batPivot.localScale = Vector3.one;
         }
 
         void UpdateSwingAnimation()
@@ -89,18 +123,71 @@ namespace ProjectZx.Combat
             if (!_swinging || _batPivot == null) return;
 
             _swingTimer -= Time.deltaTime;
-            var progress = 1f - Mathf.Clamp01(_swingTimer / swingDuration);
-            var eased = Mathf.Sin(progress * Mathf.PI);
-            var angle = Mathf.Lerp(RestAngle, SwingAngle, eased);
-            if (!_swingFacingRight) angle = -angle;
 
-            _batPivot.localScale = new Vector3(_swingFacingRight ? 1f : -1f, 1f, 1f);
-            _batPivot.localRotation = Quaternion.Euler(0f, 0f, angle);
+            if (_whirlwindSwing)
+            {
+                var progress = 1f - Mathf.Clamp01(_swingTimer / whirlwindDuration);
+                var angle = Mathf.Lerp(0f, 360f, progress);
+                _batPivot.localRotation = Quaternion.Euler(0f, 0f, angle);
+
+                if (!_whirlwindDamageApplied && progress >= 0.55f)
+                {
+                    _whirlwindDamageApplied = true;
+                    DamageEnemiesInRange(EffectiveAttackRange);
+                }
+            }
+            else
+            {
+                var progress = 1f - Mathf.Clamp01(_swingTimer / swingDuration);
+                var eased = Mathf.Sin(progress * Mathf.PI);
+                var angle = Mathf.Lerp(RestAngle, SwingAngle, eased);
+                if (!_swingFacingRight) angle = -angle;
+
+                _batPivot.localScale = new Vector3(_swingFacingRight ? 1f : -1f, 1f, 1f);
+                _batPivot.localRotation = Quaternion.Euler(0f, 0f, angle);
+            }
 
             if (_swingTimer > 0f) return;
 
             _swinging = false;
+            _whirlwindSwing = false;
             _batPivot.localRotation = Quaternion.Euler(0f, 0f, RestAngle);
+            _batPivot.localScale = Vector3.one;
+        }
+
+        void DamageEnemiesInRange(float range)
+        {
+            var stats = GetComponent<PlayerStats>();
+            var damage = Mathf.RoundToInt(stats != null ? stats.Damage : 10f);
+            foreach (var enemy in FindEnemiesInRange(range))
+                enemy.TakeDamage(damage);
+        }
+
+        bool HasEnemyInRange(float range)
+        {
+            var enemies = UnityEngine.Object.FindObjectsByType<EnemyActor>();
+            foreach (var enemy in enemies)
+            {
+                if (enemy == null || !enemy.IsAlive) continue;
+                if (Vector2.Distance(transform.position, enemy.transform.position) <= range)
+                    return true;
+            }
+
+            return false;
+        }
+
+        List<EnemyActor> FindEnemiesInRange(float range)
+        {
+            var hits = new List<EnemyActor>();
+            var enemies = UnityEngine.Object.FindObjectsByType<EnemyActor>();
+            foreach (var enemy in enemies)
+            {
+                if (enemy == null || !enemy.IsAlive) continue;
+                if (Vector2.Distance(transform.position, enemy.transform.position) <= range)
+                    hits.Add(enemy);
+            }
+
+            return hits;
         }
 
         EnemyActor FindClosestEnemy()
@@ -118,6 +205,7 @@ namespace ProjectZx.Combat
                     best = enemy;
                 }
             }
+
             return best;
         }
     }
