@@ -222,14 +222,22 @@ namespace ProjectZx.Core
 
             if (survivalMode)
             {
-                var selected = playerClass;
-                if (selected == PlayerClass.Spearman && !GameSave.SpearmanUnlocked)
-                    selected = PlayerClass.Batter;
-
-                if (selected == PlayerClass.Spearman)
-                    go.AddComponent<SpearmanCombat>();
-                else
-                    go.AddComponent<PlayerCombat>();
+                var selected = GameSave.SanitizeClass(playerClass);
+                switch (selected)
+                {
+                    case PlayerClass.Spearman:
+                        go.AddComponent<SpearmanCombat>();
+                        break;
+                    case PlayerClass.Bowman:
+                        go.AddComponent<BowmanCombat>();
+                        break;
+                    case PlayerClass.Magician:
+                        go.AddComponent<MagicianCombat>();
+                        break;
+                    default:
+                        go.AddComponent<PlayerCombat>();
+                        break;
+                }
             }
 
             return go;

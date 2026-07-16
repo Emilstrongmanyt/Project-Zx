@@ -38,6 +38,8 @@ namespace ProjectZx.UI
             public Text StatusText;
             public Button BatterButton;
             public Button SpearmanButton;
+            public Button BowmanButton;
+            public Button MagicianButton;
         }
 
         ClassPickerRefs _mapClassPicker;
@@ -53,6 +55,7 @@ namespace ProjectZx.UI
         UpgradeRowRefs _damageRow;
         UpgradeRowRefs _speedRow;
         UpgradeRowRefs _whirlwindRow;
+        UpgradeRowRefs _piercingShotRow;
 
         void Awake()
         {
@@ -85,15 +88,16 @@ namespace ProjectZx.UI
 
         GameObject BuildShopPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "ShopPanel", Vector2.zero, new Vector2(700, 500), ArtLibrary.ShopUi);
+            var panel = CreateDialogPanel(parent, "ShopPanel", Vector2.zero, new Vector2(700, 620), ArtLibrary.ShopUi);
 
-            _hpRow = CreateUpgradeRow(panel.transform, "Max HP +15", 50, 62, () => BuyHp());
-            _damageRow = CreateUpgradeRow(panel.transform, "Damage +8%", 75, 18, () => BuyDamage());
-            _speedRow = CreateUpgradeRow(panel.transform, "Move Speed +6%", 60, -26, () => BuySpeed());
-            _whirlwindRow = CreateUpgradeRow(panel.transform, "Whirlwind Attack", 500, -70, BuyWhirlwind);
+            _hpRow = CreateUpgradeRow(panel.transform, "Max HP +15", 50, 100, () => BuyHp());
+            _damageRow = CreateUpgradeRow(panel.transform, "Damage +8%", 75, 56, () => BuyDamage());
+            _speedRow = CreateUpgradeRow(panel.transform, "Move Speed +6%", 60, 12, () => BuySpeed());
+            _whirlwindRow = CreateUpgradeRow(panel.transform, "Whirlwind (360°/180°)", 500, -32, BuyWhirlwind);
+            _piercingShotRow = CreateUpgradeRow(panel.transform, "Piercing Shot (Bowman)", 2000, -76, BuyPiercingShot);
 
-            CreateButton(panel.transform, "Character Stats", new Vector2(-130, -145), () => OpenStats());
-            CreateButton(panel.transform, "Close", new Vector2(130, -145), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Character Stats", new Vector2(-130, -220), () => OpenStats());
+            CreateButton(panel.transform, "Close", new Vector2(130, -220), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
@@ -204,22 +208,22 @@ namespace ProjectZx.UI
 
         GameObject BuildMapPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, new Vector2(680, 360), ArtLibrary.ChallengeBoardUi);
-            _mapClassPicker = BuildClassPicker(panel.transform, 130f, 95f, 45f);
-            CreateButton(panel.transform, "Outside Survival", new Vector2(0, -35), () => EnterSurvival(SurvivalMapKind.Outside));
-            CreateButton(panel.transform, "Close", new Vector2(0, -120), () => panel.SetActive(false));
+            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, new Vector2(680, 460), ArtLibrary.ChallengeBoardUi);
+            _mapClassPicker = BuildClassPicker(panel.transform, 165f, 120f, 55f);
+            CreateButton(panel.transform, "Outside Survival", new Vector2(0, -95), () => EnterSurvival(SurvivalMapKind.Outside));
+            CreateButton(panel.transform, "Close", new Vector2(0, -175), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
 
         GameObject BuildCampfirePanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, new Vector2(680, 420), ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, "Campfire Travel", 28, TextAnchor.MiddleCenter, new Vector2(0, 170), new Vector2(500, 40));
-            _campClassPicker = BuildClassPicker(panel.transform, 125f, 90f, 40f);
-            CreateButton(panel.transform, "Outside Survival", new Vector2(0, -35), () => EnterSurvival(SurvivalMapKind.Outside));
-            CreateButton(panel.transform, "Inside Survival", new Vector2(0, -110), () => EnterSurvival(SurvivalMapKind.Inside));
-            CreateButton(panel.transform, "Close", new Vector2(0, -185), () => panel.SetActive(false));
+            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, new Vector2(680, 520), ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, "Campfire Travel", 28, TextAnchor.MiddleCenter, new Vector2(0, 210), new Vector2(500, 40));
+            _campClassPicker = BuildClassPicker(panel.transform, 160f, 115f, 50f);
+            CreateButton(panel.transform, "Outside Survival", new Vector2(0, -100), () => EnterSurvival(SurvivalMapKind.Outside));
+            CreateButton(panel.transform, "Inside Survival", new Vector2(0, -165), () => EnterSurvival(SurvivalMapKind.Inside));
+            CreateButton(panel.transform, "Close", new Vector2(0, -230), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
@@ -231,55 +235,75 @@ namespace ProjectZx.UI
             {
                 StatusText = CreateText(parent, "", 20, TextAnchor.MiddleCenter, new Vector2(0, statusY), new Vector2(560, 32)),
                 BatterButton = CreateButton(parent, "Batter", new Vector2(-130, buttonY), () => SelectClass(PlayerClass.Batter)),
-                SpearmanButton = CreateButton(parent, "Spearman", new Vector2(130, buttonY), () => SelectClass(PlayerClass.Spearman))
+                SpearmanButton = CreateButton(parent, "Spearman", new Vector2(130, buttonY), () => SelectClass(PlayerClass.Spearman)),
+                BowmanButton = CreateButton(parent, "Bowman", new Vector2(-130, buttonY - 58f), () => SelectClass(PlayerClass.Bowman)),
+                MagicianButton = CreateButton(parent, "Magician", new Vector2(130, buttonY - 58f), () => SelectClass(PlayerClass.Magician))
             };
         }
 
         void SelectClass(PlayerClass playerClass)
         {
             if (playerClass == PlayerClass.Spearman && !GameSave.SpearmanUnlocked) return;
+            if (playerClass == PlayerClass.Bowman && !GameSave.BowmanUnlocked) return;
+            if (playerClass == PlayerClass.Magician && !GameSave.MagicianUnlocked) return;
             GameSave.SelectedClass = playerClass;
             RefreshClassPicker(_mapClassPicker);
             RefreshClassPicker(_campClassPicker);
+        }
+
+        static string GetClassStatusText(PlayerClass selected)
+        {
+            return selected switch
+            {
+                PlayerClass.Spearman => "Spearman — long reach, 180° whirlwind",
+                PlayerClass.Bowman => "Bowman — ranged arrows, piercing upgrade",
+                PlayerClass.Magician => "Magician — splash spells",
+                _ => "Batter — melee bat, 360° whirlwind"
+            };
+        }
+
+        static string GetClassDisplayName(PlayerClass playerClass)
+        {
+            return playerClass switch
+            {
+                PlayerClass.Spearman => "Spearman",
+                PlayerClass.Bowman => "Bowman",
+                PlayerClass.Magician => "Magician",
+                _ => "Batter"
+            };
         }
 
         void RefreshClassPicker(ClassPickerRefs picker)
         {
             var selected = GameSave.SelectedClass;
             if (picker.StatusText != null)
-            {
-                picker.StatusText.text = selected == PlayerClass.Spearman
-                    ? "Spearman — long reach, single target"
-                    : "Batter — melee bat, whirlwind upgrade";
-            }
+                picker.StatusText.text = GetClassStatusText(selected);
 
-            if (picker.BatterButton != null)
+            RefreshClassButton(picker.BatterButton, PlayerClass.Batter, true, "Batter");
+            RefreshClassButton(picker.SpearmanButton, PlayerClass.Spearman, GameSave.SpearmanUnlocked, "Spearman (Beat R20 Boss)");
+            RefreshClassButton(picker.BowmanButton, PlayerClass.Bowman, GameSave.BowmanUnlocked, "Bowman (Clear R50 Inside)");
+            RefreshClassButton(picker.MagicianButton, PlayerClass.Magician, GameSave.MagicianUnlocked, "Magician (Coming Soon)");
+        }
+
+        static void RefreshClassButton(Button button, PlayerClass playerClass, bool unlocked, string lockedLabel)
+        {
+            if (button == null) return;
+
+            var selected = GameSave.SelectedClass;
+            button.interactable = unlocked;
+            var image = button.GetComponent<Image>();
+            if (image != null)
             {
-                var image = picker.BatterButton.GetComponent<Image>();
-                if (image != null)
-                    image.color = selected == PlayerClass.Batter
+                image.color = !unlocked
+                    ? new Color(0.25f, 0.25f, 0.28f, 0.7f)
+                    : selected == playerClass
                         ? new Color(0.28f, 0.5f, 0.32f, 0.98f)
                         : new Color(0.2f, 0.35f, 0.55f, 0.95f);
             }
 
-            if (picker.SpearmanButton != null)
-            {
-                var unlocked = GameSave.SpearmanUnlocked;
-                picker.SpearmanButton.interactable = unlocked;
-                var image = picker.SpearmanButton.GetComponent<Image>();
-                if (image != null)
-                {
-                    image.color = !unlocked
-                        ? new Color(0.25f, 0.25f, 0.28f, 0.7f)
-                        : selected == PlayerClass.Spearman
-                            ? new Color(0.28f, 0.5f, 0.32f, 0.98f)
-                            : new Color(0.2f, 0.35f, 0.55f, 0.95f);
-                }
-
-                var label = picker.SpearmanButton.GetComponentInChildren<Text>();
-                if (label != null)
-                    label.text = unlocked ? "Spearman" : "Spearman (Beat R20 Boss)";
-            }
+            var label = button.GetComponentInChildren<Text>();
+            if (label != null)
+                label.text = unlocked ? GetClassDisplayName(playerClass) : lockedLabel;
         }
 
         void EnterSurvival(SurvivalMapKind mapKind)
@@ -339,9 +363,40 @@ namespace ProjectZx.UI
             SetUpgradeRow(_speedRow, "Move Speed +6%", 60, GameSave.IsSpeedUpgradeMaxed, $"Speed x{GameSave.SpeedMultiplier:0.##} (max x{StatCaps.PermanentMaxSpeedMultiplier:0.#})");
 
             if (GameSave.WhirlwindUnlocked)
-                SetOwnedRow(_whirlwindRow, "Whirlwind Attack");
+                SetOwnedRow(_whirlwindRow, "Whirlwind (360°/180°)");
             else
-                SetUpgradeRow(_whirlwindRow, "Whirlwind Attack", 500, false, string.Empty);
+                SetUpgradeRow(_whirlwindRow, "Whirlwind (360°/180°)", 500, false, string.Empty);
+
+            if (GameSave.PiercingShotUnlocked)
+                SetOwnedRow(_piercingShotRow, "Piercing Shot (Bowman)");
+            else if (!GameSave.BowmanUnlocked)
+                SetLockedRow(_piercingShotRow, "Piercing Shot (Bowman)", "Unlock Bowman first");
+            else
+                SetUpgradeRow(_piercingShotRow, "Piercing Shot (Bowman)", 2000, false, string.Empty);
+        }
+
+        static void SetLockedRow(UpgradeRowRefs row, string label, string reason)
+        {
+            if (row.Label != null)
+                row.Label.text = $"{label} — {reason}";
+
+            if (row.BuyButton != null)
+            {
+                row.BuyButton.interactable = false;
+                var image = row.BuyButton.GetComponent<Image>();
+                if (image != null)
+                {
+                    UiSprites.ApplyButtonSprite(image, new Vector2(220f, 52f));
+                    image.color = new Color(0.32f, 0.34f, 0.38f, 0.75f);
+                }
+
+                var buyLabel = row.BuyButton.GetComponentInChildren<Text>();
+                if (buyLabel != null)
+                {
+                    buyLabel.text = "Locked";
+                    buyLabel.color = new Color(0.72f, 0.74f, 0.78f);
+                }
+            }
         }
 
         static void SetUpgradeRow(UpgradeRowRefs row, string label, int cost, bool maxed, string maxLabel)
@@ -396,6 +451,14 @@ namespace ProjectZx.UI
         {
             if (GameSave.WhirlwindUnlocked) return;
             if (GameSave.TrySpendGold(500)) GameSave.WhirlwindUnlocked = true;
+            RefreshGold();
+            RefreshShopRows();
+        }
+
+        void BuyPiercingShot()
+        {
+            if (GameSave.PiercingShotUnlocked || !GameSave.BowmanUnlocked) return;
+            if (GameSave.TrySpendGold(2000)) GameSave.PiercingShotUnlocked = true;
             RefreshGold();
             RefreshShopRows();
         }
@@ -462,8 +525,10 @@ namespace ProjectZx.UI
         {
             if (_statsBodyText == null) return;
 
-            var className = GameSave.SelectedClass == PlayerClass.Spearman ? "Spearman" : "Batter";
+            var selected = GameSave.SelectedClass;
+            var className = GetClassDisplayName(selected);
             var baseDamage = 10f * GameSave.DamageMultiplier;
+            if (selected == PlayerClass.Bowman) baseDamage *= 0.9f;
             var moveSpeed = 4.5f * GameSave.SpeedMultiplier;
 
             _statsBodyText.text =
@@ -474,7 +539,10 @@ namespace ProjectZx.UI
                 $"Move Speed: {moveSpeed:0.##}\n" +
                 $"HP Upgrades: {GameSave.HpUpgradeLevel}   Damage: {GameSave.DamageUpgradeLevel}   Speed: {GameSave.SpeedUpgradeLevel}\n" +
                 $"Whirlwind: {(GameSave.WhirlwindUnlocked ? "Owned" : "Locked")}\n" +
-                $"Spearman: {(GameSave.SpearmanUnlocked ? "Unlocked" : "Locked")}\n\n" +
+                $"Piercing Shot: {(GameSave.PiercingShotUnlocked ? "Owned" : "Locked")}\n" +
+                $"Spearman: {(GameSave.SpearmanUnlocked ? "Unlocked" : "Locked")}\n" +
+                $"Bowman: {(GameSave.BowmanUnlocked ? "Unlocked" : "Locked")}\n" +
+                $"Magician: {(GameSave.MagicianUnlocked ? "Unlocked" : "Coming Soon")}\n\n" +
                 "LIFETIME RECORDS\n" +
                 $"Zombie Kills: {GameSave.LifetimeZombieKills}\n" +
                 $"Boss Kills: {GameSave.LifetimeBossKills}\n" +

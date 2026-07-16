@@ -391,6 +391,10 @@ namespace ProjectZx.Player
             if (batter != null && batter.IsSwinging) return;
             var spearman = GetComponent<SpearmanCombat>();
             if (spearman != null && spearman.IsThrusting) return;
+            var bowman = GetComponent<BowmanCombat>();
+            if (bowman != null && bowman.IsDrawing) return;
+            var magician = GetComponent<MagicianCombat>();
+            if (magician != null && magician.IsCasting) return;
 
             var moving = _moveTarget != null || _rb.linearVelocity.sqrMagnitude > 0.01f;
             _renderer.sprite = moving ? _walk : _idle;

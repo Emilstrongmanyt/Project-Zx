@@ -14,7 +14,10 @@ namespace ProjectZx.Core
         const string SpdLevelKey = "zx_up_spd";
         const string InsideUnlockedKey = "zx_inside_unlocked";
         const string WhirlwindKey = "zx_whirlwind";
+        const string PiercingShotKey = "zx_piercing_shot";
         const string SpearmanUnlockedKey = "zx_spearman_unlocked";
+        const string BowmanUnlockedKey = "zx_bowman_unlocked";
+        const string MagicianUnlockedKey = "zx_magician_unlocked";
         const string SelectedClassKey = "zx_selected_class";
         const string ZombieKillsKey = "zx_lifetime_zombie_kills";
         const string BossKillsKey = "zx_lifetime_boss_kills";
@@ -82,22 +85,56 @@ namespace ProjectZx.Core
             }
         }
 
+        public static bool BowmanUnlocked
+        {
+            get => PlayerPrefs.GetInt(BowmanUnlockedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(BowmanUnlockedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool MagicianUnlocked
+        {
+            get => PlayerPrefs.GetInt(MagicianUnlockedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(MagicianUnlockedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool PiercingShotUnlocked
+        {
+            get => PlayerPrefs.GetInt(PiercingShotKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(PiercingShotKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
         public static PlayerClass SelectedClass
         {
             get
             {
                 var stored = (PlayerClass)PlayerPrefs.GetInt(SelectedClassKey, (int)PlayerClass.Batter);
-                if (stored == PlayerClass.Spearman && !SpearmanUnlocked)
-                    return PlayerClass.Batter;
-                return stored;
+                return SanitizeClass(stored);
             }
             set
             {
-                if (value == PlayerClass.Spearman && !SpearmanUnlocked)
-                    value = PlayerClass.Batter;
-                PlayerPrefs.SetInt(SelectedClassKey, (int)value);
+                PlayerPrefs.SetInt(SelectedClassKey, (int)SanitizeClass(value));
                 PlayerPrefs.Save();
             }
+        }
+
+        public static PlayerClass SanitizeClass(PlayerClass playerClass)
+        {
+            if (playerClass == PlayerClass.Spearman && !SpearmanUnlocked) return PlayerClass.Batter;
+            if (playerClass == PlayerClass.Bowman && !BowmanUnlocked) return PlayerClass.Batter;
+            if (playerClass == PlayerClass.Magician && !MagicianUnlocked) return PlayerClass.Batter;
+            return playerClass;
         }
 
         public static int MaxHp => Mathf.Min(StatCaps.PermanentMaxHp, 100 + HpUpgradeLevel * 15);
