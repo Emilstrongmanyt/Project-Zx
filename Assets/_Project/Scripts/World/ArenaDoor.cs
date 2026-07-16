@@ -13,6 +13,9 @@ namespace ProjectZx.World
         {
             var door = GameFactory.CreateArenaDoor(position);
             door.AddComponent<ArenaDoor>();
+
+            if (!GameSave.RowZiUnlocked)
+                GameFactory.CreateRowZiUnlockNpc(position + Vector3.left * 2.2f);
         }
 
         public bool TryEnter(Transform player)

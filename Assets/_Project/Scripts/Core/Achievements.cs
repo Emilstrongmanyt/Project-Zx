@@ -28,7 +28,8 @@ namespace ProjectZx.Core
         RoundPioneer70,
         RoundPioneer80,
         DungeonDelver,
-        InsideArcher
+        InsideArcher,
+        TogetherAgain
     }
 
     public readonly struct AchievementDef
@@ -72,7 +73,8 @@ namespace ProjectZx.Core
             new(AchievementId.RoundPioneer70, "Round Pioneer LXX", "Reach round 70."),
             new(AchievementId.RoundPioneer80, "Round Pioneer LXXX", "Reach round 80."),
             new(AchievementId.DungeonDelver, "Dungeon Delver", "Enter the dungeon door after round 20."),
-            new(AchievementId.InsideArcher, "Inside Archer", "Clear round 50 on Inside survival.")
+            new(AchievementId.InsideArcher, "Inside Archer", "Clear round 50 on Inside survival."),
+            new(AchievementId.TogetherAgain, "Together Again", "Meet RowZi at the dungeon door.")
         };
 
         static readonly int[] ZombieThresholds = { 25, 100, 500, 1000, 5000, 10000 };
@@ -179,6 +181,8 @@ namespace ProjectZx.Core
         public static void UnlockDungeonDelver() => TryUnlock(AchievementId.DungeonDelver);
 
         public static void UnlockInsideArcher() => TryUnlock(AchievementId.InsideArcher);
+
+        public static void UnlockTogetherAgain() => TryUnlock(AchievementId.TogetherAgain);
 
         public static string BuildPanelText()
         {

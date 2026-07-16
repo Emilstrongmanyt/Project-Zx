@@ -312,6 +312,7 @@ namespace ProjectZx.UI
 
             GameSessionContext.SurvivalMap = mapKind;
             GameSessionContext.SelectedClass = GameSave.SelectedClass;
+            GameSessionContext.SelectedHero = GameSave.SelectedHero;
             GameSessionContext.FreshSurvivalRun = true;
             GameSessionContext.CarryRound = 0;
             GameSessionContext.RunSnapshot = default;
@@ -533,6 +534,7 @@ namespace ProjectZx.UI
 
             _statsBodyText.text =
                 "CURRENT BUILD\n" +
+                $"Hero: {GameSave.GetHeroDisplayName(GameSave.SelectedHero)}\n" +
                 $"Class: {className}\n" +
                 $"Max HP: {GameSave.MaxHp}\n" +
                 $"Base Damage: {baseDamage:0.#}\n" +
@@ -542,7 +544,8 @@ namespace ProjectZx.UI
                 $"Piercing Shot: {(GameSave.PiercingShotUnlocked ? "Owned" : "Locked")}\n" +
                 $"Spearman: {(GameSave.SpearmanUnlocked ? "Unlocked" : "Locked")}\n" +
                 $"Bowman: {(GameSave.BowmanUnlocked ? "Unlocked" : "Locked")}\n" +
-                $"Magician: {(GameSave.MagicianUnlocked ? "Unlocked" : "Coming Soon")}\n\n" +
+                $"Magician: {(GameSave.MagicianUnlocked ? "Unlocked" : "Coming Soon")}\n" +
+                $"RowZi: {(GameSave.RowZiUnlocked ? "Unlocked" : "Meet at R20 door")}\n\n" +
                 "LIFETIME RECORDS\n" +
                 $"Zombie Kills: {GameSave.LifetimeZombieKills}\n" +
                 $"Boss Kills: {GameSave.LifetimeBossKills}\n" +

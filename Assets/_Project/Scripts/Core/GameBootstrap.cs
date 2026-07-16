@@ -43,7 +43,7 @@ namespace ProjectZx.Core
 
             var campfire = GameFactory.CreateCampfire(Vector3.zero);
             var hub = new GameObject("HubUi").AddComponent<HubUi>();
-            GameFactory.CreatePlayer(new Vector3(0f, -4.2f), false);
+            new GameObject("CampHeroManager").AddComponent<CampHeroManager>().Setup();
 
             GameFactory.CreateNpc("WizardShop", ArtLibrary.Wizard, new Vector3(-2.1f, 1.1f), () => hub.OpenShop());
             GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(2.1f, 1.1f), () => hub.OpenMapSelect());
@@ -68,9 +68,13 @@ namespace ProjectZx.Core
             const float arenaW = 64f;
             const float arenaH = 48f;
             GameFactory.CreateTiledField(isInside ? "InsideFloor" : "OutsideFloor", arenaW, arenaH, mapKind, 1f);
-            GameFactory.ScatterArenaObstacles(arenaW, arenaH, 14, isInside ? 6 : 10, isInside ? 2 : 3);
+            GameFactory.ScatterArenaObstacles(arenaW, arenaH, isInside ? 0 : 14, isInside ? 0 : 10, isInside ? 2 : 3);
 
-            var player = GameFactory.CreatePlayer(Vector3.zero, true, GameSessionContext.SelectedClass);
+            var player = GameFactory.CreatePlayer(
+                Vector3.zero,
+                true,
+                GameSessionContext.SelectedClass,
+                GameSessionContext.SelectedHero);
             if (!GameSessionContext.FreshSurvivalRun)
             {
                 var stats = player.GetComponent<PlayerStats>();
