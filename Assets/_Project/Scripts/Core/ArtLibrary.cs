@@ -48,6 +48,7 @@ namespace ProjectZx.Core
             _goldCoinDropped = null;
             _hpHeart = null;
             _hpHeartDropped = null;
+            _xpGem = null;
             _btnPrimary = null;
             _btn220x52 = null;
             _btn200x52 = null;
@@ -90,6 +91,7 @@ namespace ProjectZx.Core
         static Sprite _goldCoinDropped;
         static Sprite _hpHeart;
         static Sprite _hpHeartDropped;
+        static Sprite _xpGem;
         static Sprite _btnPrimary;
         static Sprite _btn220x52;
         static Sprite _btn200x52;
@@ -110,8 +112,9 @@ namespace ProjectZx.Core
         public static Sprite BossAttackingHit => _bossAttackingHit ??= Load("BossJAttackingHit", "BossJAttacking");
         public static Sprite GoldCoin => _goldCoin ??= Load("GoldCoin");
         public static Sprite GoldCoinDropped => _goldCoinDropped ??= Load("GoldCoinDropped", "GoldCoin");
-        public static Sprite HpHeart => _hpHeart ??= Load("HPHeart");
-        public static Sprite HpHeartDropped => _hpHeartDropped ??= Load("HPHeartDropped", "HPHeart");
+        public static Sprite HpHeart => _hpHeart ??= Load("HeartHP", "HPHeart");
+        public static Sprite HpHeartDropped => _hpHeartDropped ??= Load("HPHeartDropped", "HeartHP", "HPHeart");
+        public static Sprite XpGem => _xpGem ??= LoadOrCreateXpGem();
         public static Sprite BtnPrimary => _btnPrimary ??= Load("btn_primary");
         public static Sprite Btn220x52 => _btn220x52 ??= Load("btn_220x52", "btn_primary");
         public static Sprite Btn200x52 => _btn200x52 ??= Load("btn_200x52", "btn_primary");
@@ -284,6 +287,52 @@ namespace ProjectZx.Core
         {
             var sprite = Resources.Load<Sprite>("Placeholders/baseball_bat");
             return sprite != null ? sprite : CreateBaseballBatSprite();
+        }
+
+        static Sprite LoadOrCreateXpGem()
+        {
+            var sprite = Resources.Load<Sprite>("Placeholders/xp_gem");
+            return sprite != null ? sprite : CreateXpGemSprite();
+        }
+
+        static Sprite CreateXpGemSprite()
+        {
+            const int size = 14;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+
+            void Set(int x, int y, Color c)
+            {
+                if (x >= 0 && x < size && y >= 0 && y < size) tex.SetPixel(x, y, c);
+            }
+
+            var clear = new Color(0, 0, 0, 0);
+            var core = new Color(0.45f, 0.82f, 1f);
+            var mid = new Color(0.2f, 0.55f, 0.95f);
+            var edge = new Color(0.1f, 0.28f, 0.62f);
+            var shine = new Color(0.78f, 0.95f, 1f);
+
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+                Set(x, y, clear);
+
+            Set(6, 12, mid); Set(7, 12, mid);
+            for (var y = 3; y <= 11; y++)
+            {
+                var width = y < 6 ? y - 2 : y > 9 ? 12 - y : 4;
+                var start = 7 - width / 2;
+                for (var x = start; x < start + width; x++)
+                {
+                    Color c = y >= 8 ? edge : y >= 5 ? mid : core;
+                    if (x == start + width - 1 && y > 4) c = edge;
+                    Set(x, y, c);
+                }
+            }
+
+            Set(6, 8, shine); Set(7, 7, shine);
+
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 16f);
         }
 
         static Sprite[] CreateFireBreathFrames()

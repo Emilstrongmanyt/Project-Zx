@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
@@ -109,6 +110,18 @@ namespace ProjectZx.Core
 
         public static IReadOnlyList<AchievementDef> All => Catalog;
 
+        public static event Action<AchievementDef> OnUnlocked;
+
+        public static AchievementDef GetDef(AchievementId id)
+        {
+            foreach (var def in Catalog)
+            {
+                if (def.Id == id) return def;
+            }
+
+            return Catalog[0];
+        }
+
         public static bool IsUnlocked(AchievementId id) =>
             PlayerPrefs.GetInt(UnlockPrefix + id, 0) == 1;
 
@@ -126,25 +139,29 @@ namespace ProjectZx.Core
             }
         }
 
-        public static void Unlock(AchievementId id)
+        public static bool TryUnlock(AchievementId id)
         {
-            if (IsUnlocked(id)) return;
+            if (IsUnlocked(id)) return false;
             PlayerPrefs.SetInt(UnlockPrefix + id, 1);
             PlayerPrefs.Save();
+            OnUnlocked?.Invoke(GetDef(id));
+            return true;
         }
+
+        public static void Unlock(AchievementId id) => TryUnlock(id);
 
         public static void EvaluateKillAchievements()
         {
             for (var i = 0; i < ZombieThresholds.Length; i++)
             {
                 if (GameSave.LifetimeZombieKills >= ZombieThresholds[i])
-                    Unlock(ZombieTiers[i]);
+                    TryUnlock(ZombieTiers[i]);
             }
 
             for (var i = 0; i < BossThresholds.Length; i++)
             {
                 if (GameSave.LifetimeBossKills >= BossThresholds[i])
-                    Unlock(BossTiers[i]);
+                    TryUnlock(BossTiers[i]);
             }
         }
 
@@ -153,11 +170,11 @@ namespace ProjectZx.Core
             for (var i = 0; i < RoundThresholds.Length; i++)
             {
                 if (round >= RoundThresholds[i])
-                    Unlock(RoundTiers[i]);
+                    TryUnlock(RoundTiers[i]);
             }
         }
 
-        public static void UnlockDungeonDelver() => Unlock(AchievementId.DungeonDelver);
+        public static void UnlockDungeonDelver() => TryUnlock(AchievementId.DungeonDelver);
 
         public static string BuildPanelText()
         {

@@ -9,16 +9,24 @@ namespace ProjectZx.UI
 {
     public class GameHud : MonoBehaviour
     {
+        const float SafeLeft = 88f;
+        const float SafeRight = 140f;
+        const float SafeTop = 36f;
+
         Text _roundText;
         Text _hpText;
         Text _xpText;
         Text _goldText;
         Text _bannerText;
         Text _levelUpTitle;
+        Text _achievementToastTitle;
+        Text _achievementToastBody;
         GameObject _levelUpPanel;
         GameObject _retreatPanel;
+        GameObject _achievementToast;
         Transform _choiceButtonRoot;
         float _bannerTimer;
+        float _achievementToastTimer;
         Transform _player;
         PlayerStats _stats;
         readonly List<GameObject> _choiceButtons = new();
@@ -30,10 +38,12 @@ namespace ProjectZx.UI
         {
             Instance = this;
             Build();
+            Achievements.OnUnlocked += OnAchievementUnlocked;
         }
 
         void OnDestroy()
         {
+            Achievements.OnUnlocked -= OnAchievementUnlocked;
             if (_stats != null)
                 _stats.LevelUpChoiceRequired -= OnLevelUpChoiceRequired;
             if (Instance == this) Instance = null;
@@ -51,18 +61,41 @@ namespace ProjectZx.UI
             canvasGo.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            _roundText = CreateText(canvasGo.transform, "Round 1", 30, new Vector2(-30, -30), TextAnchor.UpperLeft);
-            CreateUiIcon(canvasGo.transform, ArtLibrary.HpHeart, new Vector2(-58, -70), new Vector2(28, 28), TextAnchor.UpperLeft);
-            _hpText = CreateText(canvasGo.transform, "HP 100/100", 24, new Vector2(-24, -70), TextAnchor.UpperLeft);
-            _xpText = CreateText(canvasGo.transform, "Run XP 0/30", 24, new Vector2(-30, -108), TextAnchor.UpperLeft);
-            CreateUiIcon(canvasGo.transform, ArtLibrary.GoldCoin, new Vector2(-58, -146), new Vector2(28, 28), TextAnchor.UpperLeft);
-            _goldText = CreateText(canvasGo.transform, "Run Gold 0", 24, new Vector2(-24, -146), TextAnchor.UpperLeft);
+            _roundText = CreateText(canvasGo.transform, "Round 1", 28, new Vector2(SafeLeft, -SafeTop), TextAnchor.UpperLeft);
+            CreateUiIcon(canvasGo.transform, ArtLibrary.HpHeart, new Vector2(SafeLeft, -SafeTop - 40f), new Vector2(30, 30), TextAnchor.UpperLeft);
+            _hpText = CreateText(canvasGo.transform, "HP 100/100", 22, new Vector2(SafeLeft + 38f, -SafeTop - 40f), TextAnchor.UpperLeft);
+            CreateUiIcon(canvasGo.transform, ArtLibrary.XpGem, new Vector2(SafeLeft, -SafeTop - 78f), new Vector2(28, 28), TextAnchor.UpperLeft);
+            _xpText = CreateText(canvasGo.transform, "Run XP 0/30", 22, new Vector2(SafeLeft + 38f, -SafeTop - 78f), TextAnchor.UpperLeft);
+            CreateUiIcon(canvasGo.transform, ArtLibrary.GoldCoin, new Vector2(SafeLeft, -SafeTop - 116f), new Vector2(28, 28), TextAnchor.UpperLeft);
+            _goldText = CreateText(canvasGo.transform, "Run Gold 0", 22, new Vector2(SafeLeft + 38f, -SafeTop - 116f), TextAnchor.UpperLeft);
             _bannerText = CreateText(canvasGo.transform, "", 36, Vector2.zero, TextAnchor.MiddleCenter);
             _bannerText.color = new Color(1f, 0.85f, 0.3f);
 
             _levelUpPanel = BuildLevelUpPanel(canvasGo.transform);
             _retreatPanel = BuildRetreatPanel(canvasGo.transform);
+            _achievementToast = BuildAchievementToast(canvasGo.transform);
             CreateRetreatButton(canvasGo.transform);
+        }
+
+        GameObject BuildAchievementToast(Transform parent)
+        {
+            var panel = CreateDialogPanel(parent, "AchievementToast", new Vector2(0f, 120f), new Vector2(520f, 150f), ArtLibrary.ChallengeBoardUi);
+            _achievementToastTitle = CreatePanelText(panel.transform, "Achievement Unlocked!", 26, new Vector2(0f, 38f), new Vector2(460f, 36f));
+            _achievementToastTitle.color = new Color(1f, 0.9f, 0.45f);
+            _achievementToastBody = CreatePanelText(panel.transform, "", 20, new Vector2(0f, -18f), new Vector2(460f, 70f));
+            panel.SetActive(false);
+            return panel;
+        }
+
+        void OnAchievementUnlocked(AchievementDef def)
+        {
+            if (_achievementToast == null || def.Title == null) return;
+            if (_achievementToastTitle != null)
+                _achievementToastTitle.text = "Achievement Unlocked!";
+            if (_achievementToastBody != null)
+                _achievementToastBody.text = $"{def.Title}\n{def.Description}";
+            _achievementToast.SetActive(true);
+            _achievementToastTimer = 4f;
         }
 
         void CreateRetreatButton(Transform parent)
@@ -73,7 +106,7 @@ namespace ProjectZx.UI
             rect.anchorMin = new Vector2(1f, 1f);
             rect.anchorMax = new Vector2(1f, 1f);
             rect.pivot = new Vector2(1f, 1f);
-            rect.anchoredPosition = new Vector2(-30f, -30f);
+            rect.anchoredPosition = new Vector2(-SafeRight, -SafeTop);
             var size = new Vector2(220f, 52f);
             rect.sizeDelta = size;
             var image = go.AddComponent<Image>();
@@ -251,6 +284,13 @@ namespace ProjectZx.UI
             _goldText.text = $"Gold {stats.RunGold}";
 
             if (IsChoosingUpgrade || (_retreatPanel != null && _retreatPanel.activeSelf)) return;
+
+            if (_achievementToastTimer > 0f)
+            {
+                _achievementToastTimer -= Time.deltaTime;
+                if (_achievementToastTimer <= 0f && _achievementToast != null)
+                    _achievementToast.SetActive(false);
+            }
 
             if (_bannerTimer > 0f)
             {

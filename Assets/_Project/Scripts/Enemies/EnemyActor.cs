@@ -17,6 +17,11 @@ namespace ProjectZx.Enemies
         const float EnemySeparationRadius = 1.15f;
         const float EnemySeparationPush = 0.24f;
         const float CastSkin = 0.1f;
+        const float SprintDuration = 2f;
+        const float SprintCooldown = 10f;
+        const float SprintSpeedMultiplier = 2.1f;
+        const float HpPotionDropChance = 0.05f;
+        const float BossHpPotionDropChance = 0.12f;
 
         public bool IsAlive { get; private set; } = true;
         public bool IsBoss { get; private set; }
@@ -44,6 +49,10 @@ namespace ProjectZx.Enemies
         GameObject _fireBreathFx;
         SpriteRenderer _fireBreathRenderer;
         float _blockedTimer;
+        bool _canSprint;
+        bool _sprinting;
+        float _sprintTimer;
+        float _sprintCooldown;
         readonly List<RaycastHit2D> _castHits = new();
         readonly Collider2D[] _overlapBuffer = new Collider2D[12];
 
@@ -84,6 +93,9 @@ namespace ProjectZx.Enemies
 
             if (isBoss && isRoundTwentyBoss)
                 SetupFireBreathFx();
+
+            _canSprint = !isBoss && round >= 10;
+            _sprintCooldown = Random.Range(2f, SprintCooldown);
         }
 
         void ApplySprites(bool isBoss, bool isRoundTwentyBoss, EnemyZombieKind zombieKind)
@@ -125,7 +137,7 @@ namespace ProjectZx.Enemies
 
             var toPlayer = (Vector2)_player.position - (Vector2)transform.position;
             var dir = GetSteeredDirection(toPlayer).normalized;
-            MoveByDelta(dir * (_speed * Time.fixedDeltaTime));
+            MoveByDelta(dir * (GetMoveSpeed() * Time.fixedDeltaTime));
             UpdateFacingToward(_player.position);
             ApplyEnemySeparation();
         }
@@ -191,7 +203,7 @@ namespace ProjectZx.Enemies
             if (allowed <= 0.0001f) return false;
 
             _rb.MovePosition(_rb.position + direction * allowed);
-            _rb.linearVelocity = direction * _speed;
+            _rb.linearVelocity = direction * GetMoveSpeed();
             return true;
         }
 
@@ -266,6 +278,7 @@ namespace ProjectZx.Enemies
             if (!IsAlive || _player == null) return;
 
             UpdateHitSpriteTimer();
+            UpdateSprint();
             _contactCooldown -= Time.deltaTime;
             _fireBreathCooldown -= Time.deltaTime;
 
@@ -285,6 +298,34 @@ namespace ProjectZx.Enemies
             HitFlash.FlashSprite(gameObject);
             HitFlash.FlashSprite(_player.gameObject);
             _contactCooldown = 0.8f;
+        }
+
+        float GetMoveSpeed() => _speed * (_sprinting ? SprintSpeedMultiplier : 1f);
+
+        void UpdateSprint()
+        {
+            if (!_canSprint || _fireBreathing || _player == null) return;
+
+            _sprintCooldown -= Time.deltaTime;
+            if (_sprinting)
+            {
+                _sprintTimer -= Time.deltaTime;
+                if (_sprintTimer <= 0f)
+                {
+                    _sprinting = false;
+                    _sprintCooldown = SprintCooldown;
+                }
+
+                return;
+            }
+
+            if (_sprintCooldown > 0f) return;
+
+            var dist = Vector2.Distance(transform.position, _player.position);
+            if (dist < 2f || dist > 8.5f) return;
+
+            _sprinting = true;
+            _sprintTimer = SprintDuration;
         }
 
         void UpdateFacingToward(Vector3 target)
@@ -424,6 +465,12 @@ namespace ProjectZx.Enemies
             _renderer.sprite = _idleSprite;
         }
 
+        int MaxHpForPotionDrop()
+        {
+            var stats = _player != null ? _player.GetComponent<PlayerStats>() : null;
+            return stats != null ? stats.MaxHp : 100;
+        }
+
         void Die()
         {
             if (!IsAlive) return;
@@ -436,6 +483,13 @@ namespace ProjectZx.Enemies
             var pos = (Vector2)transform.position;
             GameFactory.CreatePickup(pos + Vector2.left * 0.2f, PickupType.Xp, xp);
             GameFactory.CreatePickup(pos + Vector2.right * 0.2f, PickupType.Gold, gold);
+
+            var potionChance = IsBoss ? BossHpPotionDropChance : HpPotionDropChance;
+            if (Random.value < potionChance)
+            {
+                var healAmount = Mathf.Max(8, Mathf.RoundToInt(MaxHpForPotionDrop() * 0.25f));
+                GameFactory.CreatePickup(pos + Vector2.up * 0.25f, PickupType.HpPotion, healAmount);
+            }
 
             var session = UnityEngine.Object.FindAnyObjectByType<SurvivalSession>();
             session?.NotifyEnemyKilled(this);

@@ -63,6 +63,12 @@ namespace ProjectZx.Player
             if (CurrentHp <= 0) Die();
         }
 
+        public void Heal(int amount)
+        {
+            if (!SurvivalMode || IsDead || amount <= 0) return;
+            CurrentHp = Mathf.Min(MaxHp, CurrentHp + amount);
+        }
+
         public void AddXp(int amount)
         {
             if (!SurvivalMode || IsDead || amount <= 0) return;
