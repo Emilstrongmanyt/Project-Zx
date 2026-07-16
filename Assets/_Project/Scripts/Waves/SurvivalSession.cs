@@ -89,17 +89,30 @@ namespace ProjectZx.Waves
             _spawning = true;
             EnemiesRemaining = 0;
             _hud?.SetRound(round, MapKind);
-            _hud?.ShowWaveIncoming();
 
             var total = 6 + round * 5;
             var bossRound = round % 10 == 0;
             var roundTwentyBoss = round == 20 && MapKind == SurvivalMapKind.Outside;
             if (bossRound) total = Mathf.Max(total - 1, 1);
 
-            for (var i = 0; i < total; i++)
+            var waveCount = GetWaveCount(round);
+            var waveBonus = round > 10 ? (round - 10) / 4 : 0;
+            var basePerWave = Mathf.Max(1, total / waveCount);
+            var remainder = total % waveCount;
+
+            for (var wave = 0; wave < waveCount; wave++)
             {
-                SpawnEnemy(round, false, false);
-                if (i % 3 == 0) yield return null;
+                var count = basePerWave + (wave < remainder ? 1 : 0) + waveBonus;
+                _hud?.ShowWaveIncoming(wave + 1, waveCount);
+
+                for (var i = 0; i < count; i++)
+                {
+                    SpawnEnemy(round, false, false);
+                    if (i % 3 == 0) yield return null;
+                }
+
+                if (wave < waveCount - 1)
+                    yield return new WaitForSeconds(GetWaveDelay(round));
             }
 
             if (bossRound)
@@ -111,6 +124,14 @@ namespace ProjectZx.Waves
 
             _spawning = false;
         }
+
+        static int GetWaveCount(int round)
+        {
+            if (round <= 5) return 1;
+            return Mathf.Min(8, 2 + (round - 6) / 2);
+        }
+
+        static float GetWaveDelay(int round) => Mathf.Clamp(2.8f - round * 0.03f, 1.2f, 2.8f);
 
         void SpawnEnemy(int round, bool boss, bool roundTwentyBoss)
         {

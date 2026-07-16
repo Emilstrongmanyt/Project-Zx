@@ -280,7 +280,9 @@ namespace ProjectZx.UI
             if (stats == null) return;
 
             _hpText.text = $"HP {stats.CurrentHp}/{stats.MaxHp}";
-            _xpText.text = $"Run XP {stats.RunXp}/{stats.XpToNext}  Lv {stats.Level}";
+            _xpText.text = stats.Level >= StatCaps.MaxRunLevel
+                ? $"Run XP MAX  Lv {stats.Level}/{StatCaps.MaxRunLevel}"
+                : $"Run XP {stats.RunXp}/{stats.XpToNext}  Lv {stats.Level}";
             _goldText.text = $"Gold {stats.RunGold}";
 
             if (IsChoosingUpgrade || (_retreatPanel != null && _retreatPanel.activeSelf)) return;
@@ -317,10 +319,12 @@ namespace ProjectZx.UI
             _bannerTimer = 2f;
         }
 
-        public void ShowWaveIncoming()
+        public void ShowWaveIncoming(int wave = 1, int totalWaves = 1)
         {
-            _bannerText.text = "Zombies incoming!";
-            _bannerTimer = 1.5f;
+            _bannerText.text = totalWaves > 1
+                ? $"Wave {wave}/{totalWaves} — Zombies incoming!"
+                : "Zombies incoming!";
+            _bannerTimer = totalWaves > 1 ? 1.8f : 1.5f;
         }
 
         public void ShowBossWarning(bool roundTwentyBoss = false)

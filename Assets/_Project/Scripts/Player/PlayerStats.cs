@@ -23,7 +23,7 @@ namespace ProjectZx.Player
         public int RunXp { get; private set; }
         public int RunGold { get; private set; }
         public int Level { get; private set; } = 1;
-        public int XpToNext { get; private set; } = 30;
+        public int XpToNext { get; private set; }
         public bool IsDead { get; private set; }
         public bool SurvivalMode { get; private set; }
         public int PendingLevelUpChoices { get; private set; }
@@ -47,7 +47,7 @@ namespace ProjectZx.Player
             Level = 1;
             IsDead = false;
             _goldBanked = false;
-            XpToNext = 30;
+            XpToNext = GetXpRequiredForLevel(1);
             PendingLevelUpChoices = 0;
             RunSpeedMultiplier = 1f;
             RunDamageMultiplier = 1f;
@@ -69,17 +69,31 @@ namespace ProjectZx.Player
             CurrentHp = Mathf.Min(MaxHp, CurrentHp + amount);
         }
 
+        public static int GetXpRequiredForLevel(int level) =>
+            50 + level * 35 + level * level * 8;
+
         public void AddXp(int amount)
         {
             if (!SurvivalMode || IsDead || amount <= 0) return;
+            if (Level >= StatCaps.MaxRunLevel) return;
+
             RunXp += amount;
 
             var leveled = false;
-            while (RunXp >= XpToNext)
+            while (Level < StatCaps.MaxRunLevel && RunXp >= XpToNext)
             {
                 RunXp -= XpToNext;
                 Level++;
-                XpToNext = 30 + Level * 12;
+                if (Level >= StatCaps.MaxRunLevel)
+                {
+                    RunXp = 0;
+                    XpToNext = GetXpRequiredForLevel(StatCaps.MaxRunLevel);
+                    PendingLevelUpChoices++;
+                    leveled = true;
+                    break;
+                }
+
+                XpToNext = GetXpRequiredForLevel(Level);
                 PendingLevelUpChoices++;
                 leveled = true;
             }
@@ -235,8 +249,10 @@ namespace ProjectZx.Player
             CurrentHp = snapshot.CurrentHp;
             RunXp = snapshot.RunXp;
             RunGold = snapshot.RunGold;
-            Level = snapshot.Level;
-            XpToNext = snapshot.XpToNext;
+            Level = Mathf.Min(StatCaps.MaxRunLevel, snapshot.Level);
+            XpToNext = Level >= StatCaps.MaxRunLevel
+                ? GetXpRequiredForLevel(StatCaps.MaxRunLevel)
+                : snapshot.XpToNext > 0 ? snapshot.XpToNext : GetXpRequiredForLevel(Level);
             PendingLevelUpChoices = snapshot.PendingLevelUpChoices;
             RunSpeedMultiplier = snapshot.RunSpeedMultiplier;
             RunDamageMultiplier = snapshot.RunDamageMultiplier;
