@@ -91,8 +91,10 @@ namespace ProjectZx.Enemies
 
             if (_renderer != null) _renderer.sprite = _idleSprite;
 
-            if (isBoss && isRoundTwentyBoss)
+            if (isBoss)
                 SetupFireBreathFx();
+
+            _attack = Mathf.Max(1, _attack * 2);
 
             _canSprint = !isBoss && round >= 10;
             _sprintCooldown = Random.Range(2f, SprintCooldown);
@@ -282,7 +284,7 @@ namespace ProjectZx.Enemies
             _contactCooldown -= Time.deltaTime;
             _fireBreathCooldown -= Time.deltaTime;
 
-            if (IsBoss && IsRoundTwentyBoss)
+            if (IsBoss)
             {
                 UpdateFireBreath();
                 if (_fireBreathing) return;
@@ -333,14 +335,22 @@ namespace ProjectZx.Enemies
             if (_renderer == null) return;
             var dx = target.x - transform.position.x;
             if (Mathf.Abs(dx) < 0.02f) return;
-            _renderer.flipX = dx < 0f;
+            // BossJ art faces left by default; zombies/player sprites face right.
+            _renderer.flipX = IsBoss ? dx > 0f : dx < 0f;
+        }
+
+        bool IsFacingTarget(Vector3 target)
+        {
+            var dx = target.x - transform.position.x;
+            if (Mathf.Abs(dx) < 0.02f) return IsBoss;
+            return IsBoss ? dx > 0f : dx >= 0f;
         }
 
         void UpdateFireBreath()
         {
             var dist = Vector2.Distance(transform.position, _player.position);
-            var facingRight = _player.position.x >= transform.position.x;
             UpdateFacingToward(_player.position);
+            var facingRight = IsFacingTarget(_player.position);
 
             if (_fireBreathing)
             {
@@ -452,7 +462,7 @@ namespace ProjectZx.Enemies
                 return;
             }
 
-            if (IsBoss && IsRoundTwentyBoss && _player != null)
+            if (IsBoss && _player != null)
             {
                 var dist = Vector2.Distance(transform.position, _player.position);
                 if (dist <= FireBreathRange)
