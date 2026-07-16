@@ -252,6 +252,7 @@ namespace ProjectZx.Core
                 ArtLibrary.GetZombieSprites(zombieKind, out sprite, out _);
 
             var scale = (isBoss ? 0.55f : 0.32f * 2.5f) * 1.5f;
+            if (isBoss) scale *= 1.5f;
             if (isRoundTwentyBoss) scale *= 2.5f;
             var go = CreateSprite(isBoss ? "Boss" : "Zombie", sprite, position, scale, 5);
             go.tag = "Enemy";
