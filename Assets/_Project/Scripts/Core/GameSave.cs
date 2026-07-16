@@ -21,6 +21,10 @@ namespace ProjectZx.Core
         const string SelectedClassKey = "zx_selected_class";
         const string SelectedHeroKey = "zx_selected_hero";
         const string RowZiUnlockedKey = "zx_rowzi_unlocked";
+        const string AttackModeBatterKey = "zx_attack_batter";
+        const string AttackModeSpearmanKey = "zx_attack_spearman";
+        const string AttackModeBowmanKey = "zx_attack_bowman";
+        const string AttackModeMagicianKey = "zx_attack_magician";
         const string ZombieKillsKey = "zx_lifetime_zombie_kills";
         const string BossKillsKey = "zx_lifetime_boss_kills";
         const string DeathsKey = "zx_lifetime_deaths";
@@ -178,6 +182,35 @@ namespace ProjectZx.Core
             if (playerClass == PlayerClass.Bowman && !BowmanUnlocked) return PlayerClass.Batter;
             if (playerClass == PlayerClass.Magician && !MagicianUnlocked) return PlayerClass.Batter;
             return playerClass;
+        }
+
+        public static AttackMode GetSelectedAttackMode(PlayerClass playerClass)
+        {
+            return SanitizeAttackMode(playerClass, (AttackMode)PlayerPrefs.GetInt(GetAttackModeKey(playerClass), (int)AttackMode.Standard));
+        }
+
+        public static void SetSelectedAttackMode(PlayerClass playerClass, AttackMode mode)
+        {
+            PlayerPrefs.SetInt(GetAttackModeKey(playerClass), (int)SanitizeAttackMode(playerClass, mode));
+            PlayerPrefs.Save();
+        }
+
+        public static AttackMode SanitizeAttackMode(PlayerClass playerClass, AttackMode mode)
+        {
+            if (!AttackModeCatalog.IsAvailableForClass(playerClass, mode)) return AttackMode.Standard;
+            if (!AttackModeCatalog.IsUnlocked(mode)) return AttackMode.Standard;
+            return mode;
+        }
+
+        static string GetAttackModeKey(PlayerClass playerClass)
+        {
+            return playerClass switch
+            {
+                PlayerClass.Spearman => AttackModeSpearmanKey,
+                PlayerClass.Bowman => AttackModeBowmanKey,
+                PlayerClass.Magician => AttackModeMagicianKey,
+                _ => AttackModeBatterKey
+            };
         }
 
         public static int MaxHp => Mathf.Min(StatCaps.PermanentMaxHp, 100 + HpUpgradeLevel * 15);

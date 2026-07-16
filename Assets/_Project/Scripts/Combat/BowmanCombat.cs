@@ -96,7 +96,8 @@ namespace ProjectZx.Combat
             var damage = Mathf.RoundToInt((stats != null ? stats.Damage : 10f) * DamageMultiplier);
             enemy.TakeDamage(damage);
 
-            if (GameSave.PiercingShotUnlocked)
+            if (GameSave.GetSelectedAttackMode(PlayerClass.Bowman) == AttackMode.PiercingShot
+                && GameSave.PiercingShotUnlocked)
                 DamagePierceTarget(enemy, damage);
         }
 
