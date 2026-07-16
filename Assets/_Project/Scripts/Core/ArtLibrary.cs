@@ -37,6 +37,21 @@ namespace ProjectZx.Core
             _insideTiles = null;
             _waterTile = null;
             _fireBreathFrames = null;
+            _zombieHit = null;
+            _zombieInside = null;
+            _zombieInsideHit = null;
+            _zombieInside2 = null;
+            _zombieInside2Hit = null;
+            _bossHit = null;
+            _bossAttackingHit = null;
+            _goldCoin = null;
+            _goldCoinDropped = null;
+            _hpHeart = null;
+            _hpHeartDropped = null;
+            _btnPrimary = null;
+            _btn220x52 = null;
+            _btn200x52 = null;
+            _btn360x56 = null;
         }
 
         static Sprite _playerIdle;
@@ -64,13 +79,43 @@ namespace ProjectZx.Core
         static Sprite[] _insideTiles;
         static Sprite _waterTile;
         static Sprite[] _fireBreathFrames;
+        static Sprite _zombieHit;
+        static Sprite _zombieInside;
+        static Sprite _zombieInsideHit;
+        static Sprite _zombieInside2;
+        static Sprite _zombieInside2Hit;
+        static Sprite _bossHit;
+        static Sprite _bossAttackingHit;
+        static Sprite _goldCoin;
+        static Sprite _goldCoinDropped;
+        static Sprite _hpHeart;
+        static Sprite _hpHeartDropped;
+        static Sprite _btnPrimary;
+        static Sprite _btn220x52;
+        static Sprite _btn200x52;
+        static Sprite _btn360x56;
 
         public static Sprite PlayerIdle => _playerIdle ??= Load("Placeholders/player_idle");
         public static Sprite PlayerWalk => _playerWalk ??= Load("Placeholders/player_walk");
         public static Sprite PlayerAttack => _playerAttack ??= Load("Placeholders/player_attack");
         public static Sprite Zombie => _zombie ??= Load("Art/zombie_j", "ZombieJ", "Placeholders/zombie");
+        public static Sprite ZombieHit => _zombieHit ??= Load("ZombieJHit", "Art/zombie_j_hit", "ZombieJ");
+        public static Sprite ZombieInside => _zombieInside ??= Load("ZombieJ_Inside");
+        public static Sprite ZombieInsideHit => _zombieInsideHit ??= Load("ZombieJ_InsideHit", "ZombieJ_Inside");
+        public static Sprite ZombieInside2 => _zombieInside2 ??= Load("ZombieJ_Inside2");
+        public static Sprite ZombieInside2Hit => _zombieInside2Hit ??= Load("ZombieJ_Inside2Hit", "ZombieJ_Inside2");
         public static Sprite Boss => _boss ??= Load("Art/boss_j", "BossJ", "Placeholders/boss");
+        public static Sprite BossHit => _bossHit ??= Load("BossJHit", "BossJ");
         public static Sprite BossAttacking => _bossAttacking ??= Load("Art/boss_j_attacking", "BossJAttacking", "Art/boss_j", "BossJ", "Placeholders/boss");
+        public static Sprite BossAttackingHit => _bossAttackingHit ??= Load("BossJAttackingHit", "BossJAttacking");
+        public static Sprite GoldCoin => _goldCoin ??= Load("GoldCoin");
+        public static Sprite GoldCoinDropped => _goldCoinDropped ??= Load("GoldCoinDropped", "GoldCoin");
+        public static Sprite HpHeart => _hpHeart ??= Load("HPHeart");
+        public static Sprite HpHeartDropped => _hpHeartDropped ??= Load("HPHeartDropped", "HPHeart");
+        public static Sprite BtnPrimary => _btnPrimary ??= Load("btn_primary");
+        public static Sprite Btn220x52 => _btn220x52 ??= Load("btn_220x52", "btn_primary");
+        public static Sprite Btn200x52 => _btn200x52 ??= Load("btn_200x52", "btn_primary");
+        public static Sprite Btn360x56 => _btn360x56 ??= Load("btn_360x56", "btn_primary");
         public static Sprite Wizard => _wizard ??= Load("Placeholders/wizard");
         public static Sprite Knight => _knight ??= Load("Placeholders/knight");
         public static Sprite AchievementKeeper => _achievementKeeper ??= Load("Art/achievement_keeper", "AchievementKeeper", "Placeholders/wizard");
@@ -121,8 +166,35 @@ namespace ProjectZx.Core
 
         public static Sprite GetFireBreathFrame(int frame)
         {
-            _fireBreathFrames ??= CreateFireBreathFrames();
-            return _fireBreathFrames[Mathf.Abs(frame) % _fireBreathFrames.Length];
+            _fireBreathFrames ??= new[]
+            {
+                Load("FireBreath1"),
+                Load("FireBreath2"),
+                Load("FireBreath3"),
+                Load("FireBreath4")
+            };
+
+            var index = Mathf.Abs(frame) % _fireBreathFrames.Length;
+            return _fireBreathFrames[index] ?? CreateFireBreathFrames()[index];
+        }
+
+        public static void GetZombieSprites(EnemyZombieKind kind, out Sprite idle, out Sprite hit)
+        {
+            switch (kind)
+            {
+                case EnemyZombieKind.InsideElite:
+                    idle = ZombieInside2;
+                    hit = ZombieInside2Hit;
+                    break;
+                case EnemyZombieKind.Inside:
+                    idle = ZombieInside;
+                    hit = ZombieInsideHit;
+                    break;
+                default:
+                    idle = Zombie;
+                    hit = ZombieHit;
+                    break;
+            }
         }
 
         static Sprite Load(string path, params string[] fallbackPaths)

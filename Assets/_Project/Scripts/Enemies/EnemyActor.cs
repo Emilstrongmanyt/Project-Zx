@@ -38,13 +38,16 @@ namespace ProjectZx.Enemies
         float _fireAnimTimer;
         Sprite _idleSprite;
         Sprite _attackSprite;
+        Sprite _hitSprite;
+        Sprite _hitSpriteAttack;
+        float _hitSpriteTimer;
         GameObject _fireBreathFx;
         SpriteRenderer _fireBreathRenderer;
         float _blockedTimer;
         readonly List<RaycastHit2D> _castHits = new();
         readonly Collider2D[] _overlapBuffer = new Collider2D[12];
 
-        public void Initialize(int round, bool isBoss, bool isRoundTwentyBoss = false)
+        public void Initialize(int round, bool isBoss, bool isRoundTwentyBoss = false, EnemyZombieKind zombieKind = EnemyZombieKind.Outside)
         {
             _round = round;
             IsBoss = isBoss;
@@ -55,6 +58,17 @@ namespace ProjectZx.Enemies
 
             if (!isBoss)
             {
+                var kindScale = zombieKind switch
+                {
+                    EnemyZombieKind.InsideElite => 2f,
+                    EnemyZombieKind.Inside => 1.5f,
+                    _ => 1f
+                };
+
+                _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * kindScale));
+                _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * kindScale));
+                _speed *= kindScale;
+
                 var roundScale = Mathf.Pow(1.02f, Mathf.Max(0, round - 1));
                 _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * roundScale));
                 _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * roundScale));
@@ -64,22 +78,28 @@ namespace ProjectZx.Enemies
             _rb = GetComponent<Rigidbody2D>();
             _renderer = GetComponent<SpriteRenderer>();
             _player = GameObject.FindGameObjectWithTag("Player")?.transform;
-
-            if (isRoundTwentyBoss)
-            {
-                _idleSprite = ArtLibrary.Boss;
-                _attackSprite = ArtLibrary.BossAttacking;
-            }
-            else
-            {
-                _idleSprite = isBoss ? ArtLibrary.Boss : ArtLibrary.Zombie;
-                _attackSprite = isBoss ? ArtLibrary.BossAttacking : ArtLibrary.Zombie;
-            }
+            ApplySprites(isBoss, isRoundTwentyBoss, zombieKind);
 
             if (_renderer != null) _renderer.sprite = _idleSprite;
 
             if (isBoss && isRoundTwentyBoss)
                 SetupFireBreathFx();
+        }
+
+        void ApplySprites(bool isBoss, bool isRoundTwentyBoss, EnemyZombieKind zombieKind)
+        {
+            if (isBoss)
+            {
+                _idleSprite = ArtLibrary.Boss;
+                _attackSprite = ArtLibrary.BossAttacking;
+                _hitSprite = ArtLibrary.BossHit;
+                _hitSpriteAttack = ArtLibrary.BossAttackingHit;
+                return;
+            }
+
+            ArtLibrary.GetZombieSprites(zombieKind, out _idleSprite, out _hitSprite);
+            _attackSprite = _idleSprite;
+            _hitSpriteAttack = _hitSprite;
         }
 
         void SetupFireBreathFx()
@@ -245,6 +265,7 @@ namespace ProjectZx.Enemies
         {
             if (!IsAlive || _player == null) return;
 
+            UpdateHitSpriteTimer();
             _contactCooldown -= Time.deltaTime;
             _fireBreathCooldown -= Time.deltaTime;
 
@@ -359,8 +380,48 @@ namespace ProjectZx.Enemies
         public void TakeDamage(int amount)
         {
             if (!IsAlive || amount <= 0) return;
+            ShowHitSprite();
             _hp -= amount;
             if (_hp <= 0) Die();
+        }
+
+        void ShowHitSprite()
+        {
+            if (_renderer == null || _hitSprite == null) return;
+            var useAttackHit = _fireBreathing || _renderer.sprite == _attackSprite;
+            _renderer.sprite = useAttackHit && _hitSpriteAttack != null ? _hitSpriteAttack : _hitSprite;
+            _hitSpriteTimer = 0.5f;
+        }
+
+        void UpdateHitSpriteTimer()
+        {
+            if (_hitSpriteTimer <= 0f) return;
+            _hitSpriteTimer -= Time.deltaTime;
+            if (_hitSpriteTimer > 0f) return;
+            RestoreSpriteAfterHit();
+        }
+
+        void RestoreSpriteAfterHit()
+        {
+            if (_renderer == null) return;
+
+            if (_fireBreathing)
+            {
+                _renderer.sprite = _attackSprite;
+                return;
+            }
+
+            if (IsBoss && IsRoundTwentyBoss && _player != null)
+            {
+                var dist = Vector2.Distance(transform.position, _player.position);
+                if (dist <= FireBreathRange)
+                {
+                    _renderer.sprite = _attackSprite;
+                    return;
+                }
+            }
+
+            _renderer.sprite = _idleSprite;
         }
 
         void Die()

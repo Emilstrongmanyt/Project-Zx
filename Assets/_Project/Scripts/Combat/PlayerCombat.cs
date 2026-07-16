@@ -95,6 +95,7 @@ namespace ProjectZx.Combat
 
         void PerformAttack(EnemyActor enemy)
         {
+            AudioManager.Instance?.PlaySwingSfx();
             _cooldown = attackInterval;
             _swinging = true;
             _whirlwindSwing = false;
@@ -112,6 +113,7 @@ namespace ProjectZx.Combat
 
         void PerformWhirlwind()
         {
+            AudioManager.Instance?.PlaySwingSfx();
             _cooldown = attackInterval;
             _swinging = true;
             _whirlwindSwing = true;

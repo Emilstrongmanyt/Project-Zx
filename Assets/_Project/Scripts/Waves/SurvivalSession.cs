@@ -117,7 +117,12 @@ namespace ProjectZx.Waves
             var distance = Random.Range(7f, 12f);
             var offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
             var origin = _player != null ? (Vector2)_player.position : Vector2.zero;
-            GameFactory.CreateEnemy(origin + offset, round, boss, roundTwentyBoss);
+
+            var zombieKind = EnemyZombieKind.Outside;
+            if (!boss && MapKind == SurvivalMapKind.Inside)
+                zombieKind = round >= 20 ? EnemyZombieKind.InsideElite : EnemyZombieKind.Inside;
+
+            GameFactory.CreateEnemy(origin + offset, round, boss, roundTwentyBoss, zombieKind);
             EnemiesRemaining++;
         }
 

@@ -57,7 +57,8 @@ namespace ProjectZx.UI
             canvasGo.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            _goldText = CreateText(canvasGo.transform, "0", 28, TextAnchor.UpperRight, new Vector2(-30, -30), new Vector2(200, 50));
+            CreateUiIcon(canvasGo.transform, ArtLibrary.GoldCoin, new Vector2(-58, -30), new Vector2(36, 36), TextAnchor.UpperRight);
+            _goldText = CreateText(canvasGo.transform, "0", 26, TextAnchor.UpperRight, new Vector2(-12, -30), new Vector2(120, 40));
             _goldText.alignment = TextAnchor.UpperRight;
 
             _shopPanel = BuildShopPanel(canvasGo.transform);
@@ -71,13 +72,13 @@ namespace ProjectZx.UI
         {
             var panel = CreateDialogPanel(parent, "ShopPanel", Vector2.zero, new Vector2(700, 500), ArtLibrary.ShopUi);
 
-            _hpRow = CreateUpgradeRow(panel.transform, "Max HP +15", 50, 70, () => BuyHp());
-            _damageRow = CreateUpgradeRow(panel.transform, "Damage +8%", 75, -10, () => BuyDamage());
-            _speedRow = CreateUpgradeRow(panel.transform, "Move Speed +6%", 60, -90, () => BuySpeed());
+            _hpRow = CreateUpgradeRow(panel.transform, "Max HP +15", 50, 62, () => BuyHp());
+            _damageRow = CreateUpgradeRow(panel.transform, "Damage +8%", 75, 18, () => BuyDamage());
+            _speedRow = CreateUpgradeRow(panel.transform, "Move Speed +6%", 60, -26, () => BuySpeed());
             CreateWhirlwindRow(panel.transform);
 
-            CreateButton(panel.transform, "Character Stats", new Vector2(-130, -230), () => OpenStats());
-            CreateButton(panel.transform, "Close", new Vector2(130, -230), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Character Stats", new Vector2(-130, -145), () => OpenStats());
+            CreateButton(panel.transform, "Close", new Vector2(130, -145), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
@@ -211,8 +212,8 @@ namespace ProjectZx.UI
         {
             return new UpgradeRowRefs
             {
-                Label = CreateText(parent, $"{label} — {cost}g", 24, TextAnchor.MiddleLeft, new Vector2(-220, y), new Vector2(360, 40)),
-                BuyButton = CreateButton(parent, "Buy", new Vector2(220, y), onBuy)
+                Label = CreateText(parent, $"{label} — {cost}g", 20, TextAnchor.MiddleLeft, new Vector2(-195, y), new Vector2(280, 32)),
+                BuyButton = CreateButton(parent, "Buy", new Vector2(205, y), onBuy)
             };
         }
 
@@ -265,11 +266,11 @@ namespace ProjectZx.UI
         {
             if (GameSave.WhirlwindUnlocked)
             {
-                CreateText(parent, "Whirlwind — Owned", 24, TextAnchor.MiddleLeft, new Vector2(-220, -170), new Vector2(360, 40));
+                CreateText(parent, "Whirlwind — Owned", 20, TextAnchor.MiddleLeft, new Vector2(-195, -70), new Vector2(280, 32));
                 return;
             }
 
-            CreateUpgradeRow(parent, "Whirlwind Attack", 500, -170, BuyWhirlwind);
+            CreateUpgradeRow(parent, "Whirlwind Attack", 500, -70, BuyWhirlwind);
         }
 
         void BuyWhirlwind()
@@ -417,6 +418,32 @@ namespace ProjectZx.UI
             return go;
         }
 
+        static void CreateUiIcon(Transform parent, Sprite sprite, Vector2 pos, Vector2 size, TextAnchor anchor)
+        {
+            var go = new GameObject(sprite != null ? sprite.name + "Icon" : "Icon");
+            go.transform.SetParent(parent, false);
+            var rect = go.AddComponent<RectTransform>();
+            var topAnchored = anchor == TextAnchor.UpperLeft || anchor == TextAnchor.UpperCenter || anchor == TextAnchor.UpperRight;
+            if (topAnchored)
+            {
+                rect.anchorMin = new Vector2(anchor == TextAnchor.UpperRight ? 1f : anchor == TextAnchor.UpperCenter ? 0.5f : 0f, 1f);
+                rect.anchorMax = rect.anchorMin;
+                rect.pivot = new Vector2(anchor == TextAnchor.UpperRight ? 1f : anchor == TextAnchor.UpperCenter ? 0.5f : 0f, 1f);
+            }
+            else
+            {
+                rect.anchorMin = new Vector2(0.5f, 0.5f);
+                rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+            }
+
+            rect.anchoredPosition = pos;
+            rect.sizeDelta = size;
+            var image = go.AddComponent<Image>();
+            image.sprite = sprite;
+            image.raycastTarget = false;
+        }
+
         static Button CreateButton(Transform parent, string label, Vector2 pos, Action onClick)
         {
             var go = new GameObject(label + "Button");
@@ -426,9 +453,10 @@ namespace ProjectZx.UI
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = pos;
-            rect.sizeDelta = new Vector2(220, 52);
+            var size = new Vector2(220, 52);
+            rect.sizeDelta = size;
             var image = go.AddComponent<Image>();
-            image.color = new Color(0.2f, 0.35f, 0.55f, 0.95f);
+            UiSprites.ApplyButtonSprite(image, size);
             var button = go.AddComponent<Button>();
             button.onClick.AddListener(() => onClick());
             CreateText(go.transform, label, 22, TextAnchor.MiddleCenter, Vector2.zero, new Vector2(200, 44));

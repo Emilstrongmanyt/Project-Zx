@@ -84,6 +84,7 @@ namespace ProjectZx.Combat
 
         void PerformThrust(EnemyActor enemy)
         {
+            AudioManager.Instance?.PlaySwingSfx();
             _cooldown = attackInterval;
             _thrusting = true;
             _thrustTimer = thrustDuration;
