@@ -85,6 +85,7 @@ namespace ProjectZx.Core
             var go = CreateSprite("Stone", ArtLibrary.Stone, position, scale, 2);
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 0.42f;
+            go.AddComponent<ArenaObstacle>();
             return go;
         }
 
@@ -93,6 +94,7 @@ namespace ProjectZx.Core
             var go = CreateSprite("Tree", ArtLibrary.Tree, position, scale, 3);
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 0.38f;
+            go.AddComponent<ArenaObstacle>();
             return go;
         }
 
@@ -110,6 +112,7 @@ namespace ProjectZx.Core
 
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 0.5f;
+            go.AddComponent<ArenaObstacle>();
             return go;
         }
 

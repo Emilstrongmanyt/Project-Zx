@@ -52,6 +52,7 @@ namespace ProjectZx.UI
         UpgradeRowRefs _hpRow;
         UpgradeRowRefs _damageRow;
         UpgradeRowRefs _speedRow;
+        UpgradeRowRefs _whirlwindRow;
 
         void Awake()
         {
@@ -89,7 +90,7 @@ namespace ProjectZx.UI
             _hpRow = CreateUpgradeRow(panel.transform, "Max HP +15", 50, 62, () => BuyHp());
             _damageRow = CreateUpgradeRow(panel.transform, "Damage +8%", 75, 18, () => BuyDamage());
             _speedRow = CreateUpgradeRow(panel.transform, "Move Speed +6%", 60, -26, () => BuySpeed());
-            CreateWhirlwindRow(panel.transform);
+            _whirlwindRow = CreateUpgradeRow(panel.transform, "Whirlwind Attack", 500, -70, BuyWhirlwind);
 
             CreateButton(panel.transform, "Character Stats", new Vector2(-130, -145), () => OpenStats());
             CreateButton(panel.transform, "Close", new Vector2(130, -145), () => panel.SetActive(false));
@@ -336,6 +337,11 @@ namespace ProjectZx.UI
             SetUpgradeRow(_hpRow, "Max HP +15", 50, GameSave.IsHpUpgradeMaxed, $"Max HP {GameSave.MaxHp}/{StatCaps.PermanentMaxHp}");
             SetUpgradeRow(_damageRow, "Damage +8%", 75, GameSave.IsDamageUpgradeMaxed, $"Damage x{GameSave.DamageMultiplier:0.##} (max x{StatCaps.PermanentMaxDamageMultiplier:0.#})");
             SetUpgradeRow(_speedRow, "Move Speed +6%", 60, GameSave.IsSpeedUpgradeMaxed, $"Speed x{GameSave.SpeedMultiplier:0.##} (max x{StatCaps.PermanentMaxSpeedMultiplier:0.#})");
+
+            if (GameSave.WhirlwindUnlocked)
+                SetOwnedRow(_whirlwindRow, "Whirlwind Attack");
+            else
+                SetUpgradeRow(_whirlwindRow, "Whirlwind Attack", 500, false, string.Empty);
         }
 
         static void SetUpgradeRow(UpgradeRowRefs row, string label, int cost, bool maxed, string maxLabel)
@@ -346,21 +352,44 @@ namespace ProjectZx.UI
             if (row.BuyButton != null)
             {
                 row.BuyButton.interactable = !maxed;
+                var image = row.BuyButton.GetComponent<Image>();
+                if (image != null)
+                {
+                    UiSprites.ApplyButtonSprite(image, new Vector2(220f, 52f));
+                    image.color = Color.white;
+                }
+
                 var buyLabel = row.BuyButton.GetComponentInChildren<Text>();
                 if (buyLabel != null)
+                {
                     buyLabel.text = maxed ? "MAX" : "Buy";
+                    buyLabel.color = Color.white;
+                }
             }
         }
 
-        void CreateWhirlwindRow(Transform parent)
+        static void SetOwnedRow(UpgradeRowRefs row, string label)
         {
-            if (GameSave.WhirlwindUnlocked)
-            {
-                CreateText(parent, "Whirlwind — Owned", 20, TextAnchor.MiddleLeft, new Vector2(-195, -70), new Vector2(280, 32));
-                return;
-            }
+            if (row.Label != null)
+                row.Label.text = $"{label} — Owned";
 
-            CreateUpgradeRow(parent, "Whirlwind Attack", 500, -70, BuyWhirlwind);
+            if (row.BuyButton != null)
+            {
+                row.BuyButton.interactable = false;
+                var image = row.BuyButton.GetComponent<Image>();
+                if (image != null)
+                {
+                    UiSprites.ApplyButtonSprite(image, new Vector2(220f, 52f));
+                    image.color = new Color(0.42f, 0.44f, 0.48f, 0.88f);
+                }
+
+                var buyLabel = row.BuyButton.GetComponentInChildren<Text>();
+                if (buyLabel != null)
+                {
+                    buyLabel.text = "Owned";
+                    buyLabel.color = new Color(0.82f, 0.84f, 0.88f);
+                }
+            }
         }
 
         void BuyWhirlwind()
@@ -368,11 +397,7 @@ namespace ProjectZx.UI
             if (GameSave.WhirlwindUnlocked) return;
             if (GameSave.TrySpendGold(500)) GameSave.WhirlwindUnlocked = true;
             RefreshGold();
-            if (_shopPanel != null)
-            {
-                _shopPanel.SetActive(false);
-                OpenShop();
-            }
+            RefreshShopRows();
         }
 
         public void OpenShop()

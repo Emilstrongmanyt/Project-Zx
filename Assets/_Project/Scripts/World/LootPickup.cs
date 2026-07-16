@@ -9,7 +9,8 @@ namespace ProjectZx.World
     public class LootPickup : MonoBehaviour
     {
         const float BaseCollectRange = 1.45f;
-        const float DroppedPickupScale = 0.55f * 3f;
+        const float XpPickupScale = 0.55f * 1.5f;
+        const float DroppedPickupScale = 0.55f * 3f * 1.5f;
 
         PickupType _type;
         int _amount;
@@ -25,7 +26,7 @@ namespace ProjectZx.World
             {
                 case PickupType.Xp:
                     _renderer.sprite = ArtLibrary.XpGem;
-                    transform.localScale = Vector3.one * 0.55f;
+                    transform.localScale = Vector3.one * XpPickupScale;
                     break;
                 case PickupType.HpPotion:
                     _renderer.sprite = ArtLibrary.HpHeartDropped;
