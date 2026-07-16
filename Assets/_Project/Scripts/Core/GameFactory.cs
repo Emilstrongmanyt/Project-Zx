@@ -80,18 +80,18 @@ namespace ProjectZx.Core
             return root;
         }
 
-        public static GameObject CreateStoneObstacle(Vector3 position, float scale)
+        public static GameObject CreateStoneObstacle(Vector3 position, float scale, Sprite sprite = null)
         {
-            var go = CreateSprite("Stone", ArtLibrary.Stone, position, scale, 2);
+            var go = CreateSprite("Stone", sprite ?? ArtLibrary.GetRandomRockSprite(), position, scale, 2);
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 0.42f;
             go.AddComponent<ArenaObstacle>();
             return go;
         }
 
-        public static GameObject CreateTreeObstacle(Vector3 position, float scale)
+        public static GameObject CreateTreeObstacle(Vector3 position, float scale, Sprite sprite = null)
         {
-            var go = CreateSprite("Tree", ArtLibrary.Tree, position, scale, 3);
+            var go = CreateSprite("Tree", sprite ?? ArtLibrary.GetRandomTreeSprite(), position, scale, 3);
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 0.38f;
             go.AddComponent<ArenaObstacle>();
@@ -199,9 +199,15 @@ namespace ProjectZx.Core
             return CreateCampfireObstacle(position, 0.45f);
         }
 
-        public static GameObject CreatePlayer(Vector3 position, bool survivalMode, PlayerClass playerClass = PlayerClass.Batter)
+        public static GameObject CreatePlayer(
+            Vector3 position,
+            bool survivalMode,
+            PlayerClass playerClass = PlayerClass.Batter,
+            PlayableHero hero = PlayableHero.RollZy,
+            float scale = 0.42f)
         {
-            var go = CreateSprite("Player", ArtLibrary.PlayerIdle, position, 0.35f, 10);
+            var sanitizedHero = GameSave.SanitizeHero(hero);
+            var go = CreateSprite("Player", ArtLibrary.GetHeroIdleSprite(sanitizedHero), position, scale, 10);
             go.tag = "Player";
 
             var rb = go.AddComponent<Rigidbody2D>();
@@ -215,7 +221,7 @@ namespace ProjectZx.Core
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 0.45f;
 
-            go.AddComponent<TapMovement>().Configure(!survivalMode);
+            go.AddComponent<TapMovement>().Configure(!survivalMode, sanitizedHero);
             go.AddComponent<HitFlash>();
             var stats = go.AddComponent<PlayerStats>();
             stats.ConfigureForRun(survivalMode);
@@ -280,6 +286,32 @@ namespace ProjectZx.Core
             proximity.isTrigger = true;
             proximity.radius = 2.8f;
             go.AddComponent<NpcInteractable>().Initialize(onInteract);
+            return go;
+        }
+
+        public static GameObject CreateHeroCampNpc(Vector3 position, PlayableHero hero, float scale = 0.38f)
+        {
+            var go = CreateSprite($"{GameSave.GetHeroDisplayName(hero)}CampNpc", ArtLibrary.GetHeroIdleSprite(hero), position, scale, 9);
+            var col = go.AddComponent<CircleCollider2D>();
+            col.radius = 0.55f;
+            col.isTrigger = true;
+            go.AddComponent<NpcInteractable>();
+            go.AddComponent<HeroCampNpc>().Initialize(hero);
+            return go;
+        }
+
+        public static GameObject CreateRowZiUnlockNpc(Vector3 position)
+        {
+            var go = CreateSprite("RowZiUnlockNpc", ArtLibrary.GetHeroIdleSprite(PlayableHero.RowZi), position, 0.4f, 9);
+            var col = go.AddComponent<CircleCollider2D>();
+            col.radius = 0.6f;
+            col.isTrigger = true;
+            go.AddComponent<NpcInteractable>().Initialize(() =>
+            {
+                if (GameSave.RowZiUnlocked) return;
+                GameSave.RowZiUnlocked = true;
+                Achievements.UnlockTogetherAgain();
+            });
             return go;
         }
 

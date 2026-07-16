@@ -19,6 +19,8 @@ namespace ProjectZx.Core
         const string BowmanUnlockedKey = "zx_bowman_unlocked";
         const string MagicianUnlockedKey = "zx_magician_unlocked";
         const string SelectedClassKey = "zx_selected_class";
+        const string SelectedHeroKey = "zx_selected_hero";
+        const string RowZiUnlockedKey = "zx_rowzi_unlocked";
         const string ZombieKillsKey = "zx_lifetime_zombie_kills";
         const string BossKillsKey = "zx_lifetime_boss_kills";
         const string DeathsKey = "zx_lifetime_deaths";
@@ -127,6 +129,47 @@ namespace ProjectZx.Core
                 PlayerPrefs.SetInt(SelectedClassKey, (int)SanitizeClass(value));
                 PlayerPrefs.Save();
             }
+        }
+
+        public static PlayableHero SelectedHero
+        {
+            get
+            {
+                var stored = (PlayableHero)PlayerPrefs.GetInt(SelectedHeroKey, (int)PlayableHero.RollZy);
+                return SanitizeHero(stored);
+            }
+            set
+            {
+                PlayerPrefs.SetInt(SelectedHeroKey, (int)SanitizeHero(value));
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool RowZiUnlocked
+        {
+            get => PlayerPrefs.GetInt(RowZiUnlockedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(RowZiUnlockedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static PlayableHero? GetStandbyHero()
+        {
+            if (!RowZiUnlocked) return null;
+            return SelectedHero == PlayableHero.RollZy ? PlayableHero.RowZi : PlayableHero.RollZy;
+        }
+
+        public static string GetHeroDisplayName(PlayableHero hero)
+        {
+            return hero == PlayableHero.RowZi ? "RowZi" : "RollZy";
+        }
+
+        public static PlayableHero SanitizeHero(PlayableHero hero)
+        {
+            if (hero == PlayableHero.RowZi && !RowZiUnlocked) return PlayableHero.RollZy;
+            return hero;
         }
 
         public static PlayerClass SanitizeClass(PlayerClass playerClass)

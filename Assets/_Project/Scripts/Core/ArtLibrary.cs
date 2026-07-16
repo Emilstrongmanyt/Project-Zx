@@ -2,6 +2,14 @@ using UnityEngine;
 
 namespace ProjectZx.Core
 {
+    public struct HeroSpriteSet
+    {
+        public Sprite Idle;
+        public Sprite WalkA;
+        public Sprite WalkB;
+        public bool FacesRightByDefault;
+    }
+
     /// <summary>
     /// Loads NARt art from Resources/Art with procedural fallbacks for camp-specific tiles.
     /// </summary>
@@ -30,6 +38,10 @@ namespace ProjectZx.Core
             _bow = null;
             _stone = null;
             _tree = null;
+            _treeVariants = null;
+            _rockVariants = null;
+            _rollZySprites = null;
+            _rowZiSprites = null;
             _door = null;
             _shopUi = null;
             _levelUpUi = null;
@@ -74,6 +86,10 @@ namespace ProjectZx.Core
         static Sprite _bow;
         static Sprite _stone;
         static Sprite _tree;
+        static Sprite[] _treeVariants;
+        static Sprite[] _rockVariants;
+        static Sprite[] _rollZySprites;
+        static Sprite[] _rowZiSprites;
         static Sprite _door;
         static Sprite _shopUi;
         static Sprite _levelUpUi;
@@ -130,8 +146,46 @@ namespace ProjectZx.Core
         public static Sprite BaseballBat => _baseballBat ??= LoadOrCreateBat();
         public static Sprite Spear => _spear ??= CreateSpearSprite();
         public static Sprite Bow => _bow ??= LoadOrCreateBow();
-        public static Sprite Stone => _stone ??= CreateStoneSprite();
-        public static Sprite Tree => _tree ??= CreateTreeSprite();
+        public static Sprite Stone => _stone ??= GetRandomRockSprite();
+        public static Sprite Tree => _tree ??= GetRandomTreeSprite();
+
+        public static Sprite GetRandomTreeSprite()
+        {
+            _treeVariants ??= LoadSheetSprites("TreeSheet", 9);
+            return PickRandom(_treeVariants) ?? CreateTreeSprite();
+        }
+
+        public static Sprite GetRandomRockSprite()
+        {
+            _rockVariants ??= LoadSheetSprites("RockSheet", 10);
+            return PickRandom(_rockVariants) ?? CreateStoneSprite();
+        }
+
+        public static HeroSpriteSet GetHeroSprites(PlayableHero hero)
+        {
+            if (hero == PlayableHero.RowZi)
+            {
+                _rowZiSprites ??= LoadSheetSprites("RowZi", 8);
+                return new HeroSpriteSet
+                {
+                    Idle = _rowZiSprites[0],
+                    WalkA = _rowZiSprites[2],
+                    WalkB = _rowZiSprites[3],
+                    FacesRightByDefault = false
+                };
+            }
+
+            _rollZySprites ??= LoadSheetSprites("RollZy", 8);
+            return new HeroSpriteSet
+            {
+                Idle = _rollZySprites[0],
+                WalkA = _rollZySprites[1],
+                WalkB = _rollZySprites[2],
+                FacesRightByDefault = true
+            };
+        }
+
+        public static Sprite GetHeroIdleSprite(PlayableHero hero) => GetHeroSprites(hero).Idle;
         public static Sprite Door => _door ??= CreateDoorSprite();
         public static Sprite ShopUi => _shopUi ??= Load("Art/shop_ui", "ShopUI");
         public static Sprite LevelUpUi => _levelUpUi ??= Load("Art/level_up_ui", "LevelUpUI");
@@ -201,6 +255,37 @@ namespace ProjectZx.Core
                     hit = ZombieHit;
                     break;
             }
+        }
+
+        static Sprite[] LoadSheetSprites(string sheetName, int count)
+        {
+            var sprites = new Sprite[count];
+            var loaded = 0;
+            for (var i = 0; i < count; i++)
+            {
+                sprites[i] = Load($"{sheetName}_{i}", sheetName);
+                if (sprites[i] != null) loaded++;
+            }
+
+            return loaded > 0 ? sprites : null;
+        }
+
+        static Sprite PickRandom(Sprite[] sprites)
+        {
+            if (sprites == null || sprites.Length == 0) return null;
+            Sprite pick = null;
+            for (var attempt = 0; attempt < 6; attempt++)
+            {
+                pick = sprites[Random.Range(0, sprites.Length)];
+                if (pick != null) return pick;
+            }
+
+            foreach (var sprite in sprites)
+            {
+                if (sprite != null) return sprite;
+            }
+
+            return null;
         }
 
         static Sprite Load(string path, params string[] fallbackPaths)

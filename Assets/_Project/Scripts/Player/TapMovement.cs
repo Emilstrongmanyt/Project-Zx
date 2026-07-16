@@ -30,11 +30,33 @@ namespace ProjectZx.Player
         SpriteRenderer _renderer;
         Sprite _idle;
         Sprite _walk;
+        Sprite _walkA;
+        Sprite _walkB;
+        PlayableHero _hero;
+        bool _facesRightByDefault;
+        float _walkAnimTimer;
+        bool _useWalkFrameA = true;
         int _chaseTouchId = -1;
         bool _chaseMouse;
         readonly List<RaycastHit2D> _castHits = new();
 
-        public void Configure(bool npcInteraction) => allowNpcInteraction = npcInteraction;
+        public void Configure(bool npcInteraction, PlayableHero hero = PlayableHero.RollZy)
+        {
+            allowNpcInteraction = npcInteraction;
+            _hero = GameSave.SanitizeHero(hero);
+            ApplyHeroSprites();
+        }
+
+        void ApplyHeroSprites()
+        {
+            var set = ArtLibrary.GetHeroSprites(_hero);
+            _idle = set.Idle ?? ArtLibrary.PlayerIdle;
+            _walkA = set.WalkA ?? ArtLibrary.PlayerWalk;
+            _walkB = set.WalkB ?? _walkA;
+            _walk = _walkA;
+            _facesRightByDefault = set.FacesRightByDefault;
+            if (_renderer != null) _renderer.sprite = _idle;
+        }
 
         void OnEnable()
         {
@@ -56,8 +78,6 @@ namespace ProjectZx.Player
             _rb = GetComponent<Rigidbody2D>();
             _renderer = GetComponent<SpriteRenderer>();
             _camera = Camera.main;
-            _idle = ArtLibrary.PlayerIdle;
-            _walk = ArtLibrary.PlayerWalk;
 
             _rb.bodyType = RigidbodyType2D.Kinematic;
             _rb.gravityScale = 0f;
@@ -397,16 +417,30 @@ namespace ProjectZx.Player
             if (magician != null && magician.IsCasting) return;
 
             var moving = _moveTarget != null || _rb.linearVelocity.sqrMagnitude > 0.01f;
-            _renderer.sprite = moving ? _walk : _idle;
+            if (!moving)
+            {
+                _walkAnimTimer = 0f;
+                _useWalkFrameA = true;
+                _renderer.sprite = _idle;
+                return;
+            }
 
-            if (!moving) return;
+            _walkAnimTimer -= Time.deltaTime;
+            if (_walkAnimTimer <= 0f)
+            {
+                _walkAnimTimer = 0.18f;
+                _useWalkFrameA = !_useWalkFrameA;
+            }
+
+            _renderer.sprite = _useWalkFrameA ? _walkA : _walkB;
 
             var faceX = _moveTarget.HasValue
                 ? _moveTarget.Value.x - transform.position.x
                 : _rb.linearVelocity.x;
 
-            if (faceX != 0f)
-                _renderer.flipX = faceX < 0f;
+            if (faceX == 0f) return;
+
+            _renderer.flipX = _facesRightByDefault ? faceX < 0f : faceX < 0f;
         }
     }
 }
