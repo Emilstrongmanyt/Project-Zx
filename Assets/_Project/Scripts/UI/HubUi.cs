@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using ProjectZx.Core;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,9 +10,22 @@ namespace ProjectZx.UI
     {
         public static HubUi Instance { get; private set; }
 
+        const float SafeRight = 140f;
+        const float SafeTop = 36f;
+
         Text _goldText;
         Text _statsBodyText;
-        Text _achievementsBodyText;
+        Text _achievementCountText;
+
+        struct AchievementRowRefs
+        {
+            public AchievementId Id;
+            public Image Background;
+            public Text TitleText;
+            public Text DescText;
+        }
+
+        readonly List<AchievementRowRefs> _achievementRows = new();
 
         GameObject _shopPanel;
         GameObject _statsPanel;
@@ -57,9 +71,9 @@ namespace ProjectZx.UI
             canvasGo.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            CreateUiIcon(canvasGo.transform, ArtLibrary.GoldCoin, new Vector2(-58, -30), new Vector2(36, 36), TextAnchor.UpperRight);
-            _goldText = CreateText(canvasGo.transform, "0", 26, TextAnchor.UpperRight, new Vector2(-12, -30), new Vector2(120, 40));
-            _goldText.alignment = TextAnchor.UpperRight;
+            CreateUiIcon(canvasGo.transform, ArtLibrary.GoldCoin, new Vector2(-SafeRight, -SafeTop), new Vector2(34, 34), TextAnchor.UpperRight);
+            _goldText = CreateText(canvasGo.transform, "0", 24, TextAnchor.UpperRight, new Vector2(-SafeRight + 72f, -SafeTop), new Vector2(100, 36));
+            _goldText.alignment = TextAnchor.MiddleRight;
 
             _shopPanel = BuildShopPanel(canvasGo.transform);
             _statsPanel = BuildStatsPanel(canvasGo.transform);
@@ -85,13 +99,89 @@ namespace ProjectZx.UI
 
         GameObject BuildAchievementsPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "AchievementsPanel", Vector2.zero, new Vector2(760, 620), ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, "Achievements", 30, TextAnchor.MiddleCenter, new Vector2(0, 260), new Vector2(500, 44));
-            _achievementsBodyText = CreateText(panel.transform, "", 19, TextAnchor.MiddleCenter, new Vector2(0, -20), new Vector2(680, 460));
-            _achievementsBodyText.alignment = TextAnchor.UpperLeft;
-            CreateButton(panel.transform, "Close", new Vector2(0, -270), () => panel.SetActive(false));
+            var panel = CreateDialogPanel(parent, "AchievementsPanel", Vector2.zero, new Vector2(800, 640), ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, "Achievements", 30, TextAnchor.MiddleCenter, new Vector2(0, 280), new Vector2(500, 44));
+            _achievementCountText = CreateText(panel.transform, "", 20, TextAnchor.MiddleCenter, new Vector2(0, 245), new Vector2(500, 30));
+
+            var scrollGo = new GameObject("AchievementScroll");
+            scrollGo.transform.SetParent(panel.transform, false);
+            var scrollRectTransform = scrollGo.AddComponent<RectTransform>();
+            scrollRectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+            scrollRectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            scrollRectTransform.pivot = new Vector2(0.5f, 0.5f);
+            scrollRectTransform.anchoredPosition = new Vector2(0f, -10f);
+            scrollRectTransform.sizeDelta = new Vector2(720f, 430f);
+
+            var scroll = scrollGo.AddComponent<ScrollRect>();
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 24f;
+
+            var viewport = new GameObject("Viewport");
+            viewport.transform.SetParent(scrollGo.transform, false);
+            var viewportRect = viewport.AddComponent<RectTransform>();
+            viewportRect.anchorMin = Vector2.zero;
+            viewportRect.anchorMax = Vector2.one;
+            viewportRect.offsetMin = Vector2.zero;
+            viewportRect.offsetMax = Vector2.zero;
+            viewport.AddComponent<Mask>().showMaskGraphic = false;
+            viewport.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.02f);
+
+            var content = new GameObject("Content");
+            content.transform.SetParent(viewport.transform, false);
+            var contentRect = content.AddComponent<RectTransform>();
+            contentRect.anchorMin = new Vector2(0f, 1f);
+            contentRect.anchorMax = new Vector2(1f, 1f);
+            contentRect.pivot = new Vector2(0.5f, 1f);
+            contentRect.anchoredPosition = Vector2.zero;
+
+            scroll.viewport = viewportRect;
+            scroll.content = contentRect;
+
+            var y = 0f;
+            const float rowHeight = 72f;
+            foreach (var def in Achievements.All)
+            {
+                _achievementRows.Add(CreateAchievementRow(content.transform, def, y));
+                y -= rowHeight;
+            }
+
+            contentRect.sizeDelta = new Vector2(700f, Mathf.Abs(y));
+
+            CreateButton(panel.transform, "Close", new Vector2(0, -285), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
+        }
+
+        AchievementRowRefs CreateAchievementRow(Transform parent, AchievementDef def, float y)
+        {
+            var go = new GameObject(def.Id + "Row");
+            go.transform.SetParent(parent, false);
+            var rect = go.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0f, y);
+            rect.sizeDelta = new Vector2(680f, 64f);
+
+            var image = go.AddComponent<Image>();
+            UiSprites.ApplyButtonSprite(image, new Vector2(680f, 64f));
+            go.AddComponent<Button>();
+
+            var title = CreateText(go.transform, def.Title, 20, TextAnchor.UpperLeft, new Vector2(14f, -8f), new Vector2(640f, 28f));
+            title.alignment = TextAnchor.UpperLeft;
+            var desc = CreateText(go.transform, def.Description, 17, TextAnchor.UpperLeft, new Vector2(14f, -34f), new Vector2(640f, 24f));
+            desc.alignment = TextAnchor.UpperLeft;
+            desc.color = new Color(0.88f, 0.9f, 0.95f);
+
+            return new AchievementRowRefs
+            {
+                Id = def.Id,
+                Background = image,
+                TitleText = title,
+                DescText = desc
+            };
         }
 
         GameObject BuildStatsPanel(Transform parent)
@@ -312,8 +402,35 @@ namespace ProjectZx.UI
 
         void RefreshAchievements()
         {
-            if (_achievementsBodyText != null)
-                _achievementsBodyText.text = Achievements.BuildPanelText();
+            if (_achievementCountText != null)
+                _achievementCountText.text = $"Unlocked {Achievements.UnlockedCount}/{Achievements.All.Count}";
+
+            foreach (var row in _achievementRows)
+            {
+                var unlocked = Achievements.IsUnlocked(row.Id);
+                if (row.Background != null)
+                {
+                    row.Background.color = unlocked
+                        ? new Color(0.35f, 0.72f, 0.42f, 1f)
+                        : new Color(0.42f, 0.44f, 0.48f, 0.82f);
+                }
+
+                if (row.TitleText != null)
+                {
+                    row.TitleText.text = unlocked
+                        ? Achievements.GetDef(row.Id).Title
+                        : $"???  {Achievements.GetDef(row.Id).Title}";
+                    row.TitleText.color = unlocked ? Color.white : new Color(0.78f, 0.8f, 0.84f);
+                }
+
+                if (row.DescText != null)
+                {
+                    row.DescText.text = Achievements.GetDef(row.Id).Description;
+                    row.DescText.color = unlocked
+                        ? new Color(0.92f, 0.96f, 0.98f)
+                        : new Color(0.62f, 0.66f, 0.7f);
+                }
+            }
         }
 
         void RefreshStats()

@@ -3,6 +3,7 @@ using ProjectZx.Core;
 using ProjectZx.Enemies;
 using ProjectZx.Player;
 using ProjectZx.UI;
+using ProjectZx.World;
 using UnityEngine;
 
 namespace ProjectZx.Waves
@@ -113,16 +114,14 @@ namespace ProjectZx.Waves
 
         void SpawnEnemy(int round, bool boss, bool roundTwentyBoss)
         {
-            var angle = Random.Range(0f, Mathf.PI * 2f);
-            var distance = Random.Range(7f, 12f);
-            var offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
             var origin = _player != null ? (Vector2)_player.position : Vector2.zero;
+            var spawnPos = ArenaBounds.RandomSpawnAround(origin, 7f, 12f);
 
             var zombieKind = EnemyZombieKind.Outside;
             if (!boss && MapKind == SurvivalMapKind.Inside)
                 zombieKind = round >= 20 ? EnemyZombieKind.InsideElite : EnemyZombieKind.Inside;
 
-            GameFactory.CreateEnemy(origin + offset, round, boss, roundTwentyBoss, zombieKind);
+            GameFactory.CreateEnemy(spawnPos, round, boss, roundTwentyBoss, zombieKind);
             EnemiesRemaining++;
         }
 

@@ -4,11 +4,12 @@ using UnityEngine;
 
 namespace ProjectZx.World
 {
-    public enum PickupType { Xp, Gold }
+    public enum PickupType { Xp, Gold, HpPotion }
 
     public class LootPickup : MonoBehaviour
     {
         const float BaseCollectRange = 1.45f;
+        const float DroppedPickupScale = 0.55f * 3f;
 
         PickupType _type;
         int _amount;
@@ -19,9 +20,24 @@ namespace ProjectZx.World
             _type = type;
             _amount = amount;
             _renderer = gameObject.AddComponent<SpriteRenderer>();
-            _renderer.sprite = type == PickupType.Xp ? ArtLibrary.HpHeartDropped : ArtLibrary.GoldCoinDropped;
+
+            switch (type)
+            {
+                case PickupType.Xp:
+                    _renderer.sprite = ArtLibrary.XpGem;
+                    transform.localScale = Vector3.one * 0.55f;
+                    break;
+                case PickupType.HpPotion:
+                    _renderer.sprite = ArtLibrary.HpHeartDropped;
+                    transform.localScale = Vector3.one * DroppedPickupScale;
+                    break;
+                default:
+                    _renderer.sprite = ArtLibrary.GoldCoinDropped;
+                    transform.localScale = Vector3.one * DroppedPickupScale;
+                    break;
+            }
+
             _renderer.sortingOrder = 8;
-            transform.localScale = Vector3.one * 0.55f;
         }
 
         void Update()
@@ -57,8 +73,18 @@ namespace ProjectZx.World
 
             if (stats == null) return;
 
-            if (_type == PickupType.Xp) stats.AddXp(_amount);
-            else stats.AddRunGold(_amount);
+            switch (_type)
+            {
+                case PickupType.Xp:
+                    stats.AddXp(_amount);
+                    break;
+                case PickupType.HpPotion:
+                    stats.Heal(_amount);
+                    break;
+                default:
+                    stats.AddRunGold(_amount);
+                    break;
+            }
 
             Destroy(gameObject);
         }

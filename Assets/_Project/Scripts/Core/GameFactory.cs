@@ -273,11 +273,18 @@ namespace ProjectZx.Core
 
         public static GameObject CreatePickup(Vector3 position, PickupType type, int amount)
         {
-            var go = new GameObject(type == PickupType.Xp ? "XpPickup" : "GoldPickup");
+            var name = type switch
+            {
+                PickupType.Xp => "XpPickup",
+                PickupType.HpPotion => "HpPotionPickup",
+                _ => "GoldPickup"
+            };
+
+            var go = new GameObject(name);
             go.transform.position = position;
             var col = go.AddComponent<CircleCollider2D>();
             col.isTrigger = true;
-            col.radius = 0.55f;
+            col.radius = type == PickupType.Xp ? 0.55f : 0.85f;
             go.AddComponent<LootPickup>().Initialize(type, amount);
             return go;
         }
