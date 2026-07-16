@@ -1,16 +1,10 @@
 fileFormatVersion: 2
-guid: 94f4e28186e6a464b8da6d8cf0e9c5db
+guid: 54f40c287b125d946a11a32c6b5f7c94
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -2056480536797229218
-    second: BossJAttacking 1_0
-  - first:
-      213: -8014520840396194259
-    second: BossJAttacking 1_1
-  - first:
-      213: -943743538299417952
-    second: BossJAttacking 1_2
+      213: -8863347318016071528
+    second: ZombieJ_Inside2_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -132,13 +126,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: BossJAttacking 1_0
+      name: ZombieJ_Inside2_0
       rect:
         serializedVersion: 2
-        x: 40
-        y: 4
-        width: 179
-        height: 240
+        x: 24
+        y: 1
+        width: 80
+        height: 127
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -147,52 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: e5f42b4f8d9e573e0800000000000000
-      internalID: -2056480536797229218
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: BossJAttacking 1_1
-      rect:
-        serializedVersion: 2
-        x: 217
-        y: 8
-        width: 19
-        height: 10
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: d2e383722c3b6c090800000000000000
-      internalID: -8014520840396194259
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: BossJAttacking 1_2
-      rect:
-        serializedVersion: 2
-        x: 186
-        y: 0
-        width: 52
-        height: 6
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 0aac798804627e2f0800000000000000
-      internalID: -943743538299417952
+      spriteID: 898adb403901ff480800000000000000
+      internalID: -8863347318016071528
       vertices: []
       indices: 
       edges: []
@@ -211,9 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      BossJAttacking 1_0: -2056480536797229218
-      BossJAttacking 1_1: -8014520840396194259
-      BossJAttacking 1_2: -943743538299417952
+      ZombieJ_Inside2_0: -8863347318016071528
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

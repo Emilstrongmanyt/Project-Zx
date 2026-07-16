@@ -55,16 +55,25 @@ namespace ProjectZx.Core
                 var isBorder = row == 0 || row == rows - 1 || col == 0 || col == cols - 1;
                 var tileIndex = col + row * 7;
                 Sprite sprite;
-                if (mapKind == SurvivalMapKind.Inside)
-                    sprite = ArtLibrary.GetInsideTile(tileIndex);
-                else if (isBorder)
+                if (isBorder)
                     sprite = ArtLibrary.WaterTile;
+                else if (mapKind == SurvivalMapKind.Inside)
+                    sprite = ArtLibrary.GetInsideTile(tileIndex);
                 else
                     sprite = ArtLibrary.GetOutsideTile(tileIndex);
 
                 var tileScale = ArtLibrary.GetTileScale(sprite, tileSize);
                 var tile = CreateSprite($"Tile_{col}_{row}", sprite, pos, tileScale, -10);
                 ApplyFloorMaterial(tile.GetComponent<SpriteRenderer>());
+                if (isBorder)
+                {
+                    tile.AddComponent<WaterTile>();
+                    var waterCol = tile.AddComponent<BoxCollider2D>();
+                    var tileRenderer = tile.GetComponent<SpriteRenderer>();
+                    waterCol.size = tileRenderer != null && tileRenderer.sprite != null
+                        ? tileRenderer.sprite.bounds.size
+                        : Vector2.one;
+                }
                 tile.transform.SetParent(root.transform, true);
             }
 
@@ -223,9 +232,14 @@ namespace ProjectZx.Core
             return go;
         }
 
-        public static GameObject CreateEnemy(Vector3 position, int round, bool isBoss, bool isRoundTwentyBoss = false)
+        public static GameObject CreateEnemy(Vector3 position, int round, bool isBoss, bool isRoundTwentyBoss = false, EnemyZombieKind zombieKind = EnemyZombieKind.Outside)
         {
-            var sprite = isBoss ? ArtLibrary.Boss : ArtLibrary.Zombie;
+            Sprite sprite;
+            if (isBoss)
+                sprite = ArtLibrary.Boss;
+            else
+                ArtLibrary.GetZombieSprites(zombieKind, out sprite, out _);
+
             var scale = (isBoss ? 0.55f : 0.32f * 2.5f) * 1.5f;
             if (isRoundTwentyBoss) scale *= 2.5f;
             var go = CreateSprite(isBoss ? "Boss" : "Zombie", sprite, position, scale, 5);
@@ -243,7 +257,7 @@ namespace ProjectZx.Core
 
             go.AddComponent<HitFlash>();
             var enemy = go.AddComponent<EnemyActor>();
-            enemy.Initialize(round, isBoss, isRoundTwentyBoss);
+            enemy.Initialize(round, isBoss, isRoundTwentyBoss, zombieKind);
             return go;
         }
 

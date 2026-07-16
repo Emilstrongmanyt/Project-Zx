@@ -27,8 +27,16 @@ namespace ProjectZx.Core
                 BuildSurvival(GameSessionContext.SurvivalMap);
         }
 
+        static void EnsureAudioManager()
+        {
+            if (AudioManager.Instance != null) return;
+            new GameObject("AudioManager").AddComponent<AudioManager>();
+        }
+
         static void BuildMainMenu()
         {
+            EnsureAudioManager();
+            AudioManager.Instance?.PlayCampBgm();
             SetupCamera(new Color(0.12f, 0.2f, 0.14f));
             GameFactory.CreateGrassField("CampGrass", 44f, 34f, 1f);
             GameFactory.ScatterArenaObstacles(40f, 30f, 6, 10, 0);
@@ -48,6 +56,12 @@ namespace ProjectZx.Core
 
         static void BuildSurvival(SurvivalMapKind mapKind)
         {
+            EnsureAudioManager();
+            if (mapKind == SurvivalMapKind.Inside)
+                AudioManager.Instance?.PlayInsideBgm();
+            else
+                AudioManager.Instance?.PlayOutsideBgm();
+
             var isInside = mapKind == SurvivalMapKind.Inside;
             SetupCamera(isInside ? new Color(0.2f, 0.16f, 0.12f) : new Color(0.14f, 0.28f, 0.12f));
 
@@ -69,6 +83,8 @@ namespace ProjectZx.Core
             var session = new GameObject("SurvivalSession").AddComponent<SurvivalSession>();
             session.Begin(player.transform, hud, mapKind);
 
+            var bossAudio = new GameObject("BossProximityAudio").AddComponent<BossProximityAudio>();
+            bossAudio.BindPlayer(player.transform);
         }
 
         static void SetupCamera(Color background)

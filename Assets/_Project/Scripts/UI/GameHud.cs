@@ -52,9 +52,11 @@ namespace ProjectZx.UI
             canvasGo.AddComponent<GraphicRaycaster>();
 
             _roundText = CreateText(canvasGo.transform, "Round 1", 30, new Vector2(-30, -30), TextAnchor.UpperLeft);
-            _hpText = CreateText(canvasGo.transform, "HP 100/100", 26, new Vector2(-30, -70), TextAnchor.UpperLeft);
-            _xpText = CreateText(canvasGo.transform, "Run XP 0/30", 26, new Vector2(-30, -110), TextAnchor.UpperLeft);
-            _goldText = CreateText(canvasGo.transform, "Run Gold 0", 26, new Vector2(-30, -150), TextAnchor.UpperLeft);
+            CreateUiIcon(canvasGo.transform, ArtLibrary.HpHeart, new Vector2(-58, -70), new Vector2(28, 28), TextAnchor.UpperLeft);
+            _hpText = CreateText(canvasGo.transform, "HP 100/100", 24, new Vector2(-24, -70), TextAnchor.UpperLeft);
+            _xpText = CreateText(canvasGo.transform, "Run XP 0/30", 24, new Vector2(-30, -108), TextAnchor.UpperLeft);
+            CreateUiIcon(canvasGo.transform, ArtLibrary.GoldCoin, new Vector2(-58, -146), new Vector2(28, 28), TextAnchor.UpperLeft);
+            _goldText = CreateText(canvasGo.transform, "Run Gold 0", 24, new Vector2(-24, -146), TextAnchor.UpperLeft);
             _bannerText = CreateText(canvasGo.transform, "", 36, Vector2.zero, TextAnchor.MiddleCenter);
             _bannerText.color = new Color(1f, 0.85f, 0.3f);
 
@@ -72,9 +74,10 @@ namespace ProjectZx.UI
             rect.anchorMax = new Vector2(1f, 1f);
             rect.pivot = new Vector2(1f, 1f);
             rect.anchoredPosition = new Vector2(-30f, -30f);
-            rect.sizeDelta = new Vector2(220f, 52f);
+            var size = new Vector2(220f, 52f);
+            rect.sizeDelta = size;
             var image = go.AddComponent<Image>();
-            image.color = new Color(0.45f, 0.22f, 0.18f, 0.95f);
+            UiSprites.ApplyButtonSprite(image, size);
             var button = go.AddComponent<Button>();
             button.onClick.AddListener(ShowRetreatConfirm);
 
@@ -127,9 +130,10 @@ namespace ProjectZx.UI
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = pos;
-            rect.sizeDelta = new Vector2(200, 52);
+            var size = new Vector2(200, 52);
+            rect.sizeDelta = size;
             var image = go.AddComponent<Image>();
-            image.color = new Color(0.2f, 0.35f, 0.55f, 0.95f);
+            UiSprites.ApplyButtonSprite(image, size);
             var button = go.AddComponent<Button>();
             button.onClick.AddListener(() => onClick());
 
@@ -285,6 +289,32 @@ namespace ProjectZx.UI
             _bannerTimer = 2.5f;
         }
 
+        static void CreateUiIcon(Transform parent, Sprite sprite, Vector2 pos, Vector2 size, TextAnchor anchor)
+        {
+            var go = new GameObject(sprite != null ? sprite.name + "Icon" : "Icon");
+            go.transform.SetParent(parent, false);
+            var rect = go.AddComponent<RectTransform>();
+            var topAnchored = anchor == TextAnchor.UpperLeft || anchor == TextAnchor.UpperCenter || anchor == TextAnchor.UpperRight;
+            if (topAnchored)
+            {
+                rect.anchorMin = new Vector2(anchor == TextAnchor.UpperRight ? 1f : anchor == TextAnchor.UpperCenter ? 0.5f : 0f, 1f);
+                rect.anchorMax = rect.anchorMin;
+                rect.pivot = new Vector2(anchor == TextAnchor.UpperRight ? 1f : anchor == TextAnchor.UpperCenter ? 0.5f : 0f, 1f);
+            }
+            else
+            {
+                rect.anchorMin = new Vector2(0.5f, 0.5f);
+                rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+            }
+
+            rect.anchoredPosition = pos;
+            rect.sizeDelta = size;
+            var image = go.AddComponent<Image>();
+            image.sprite = sprite;
+            image.raycastTarget = false;
+        }
+
         static Text CreateText(Transform parent, string text, int size, Vector2 pos, TextAnchor anchor)
         {
             var go = new GameObject("Text");
@@ -358,9 +388,10 @@ namespace ProjectZx.UI
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = pos;
-            rect.sizeDelta = new Vector2(360, 56);
+            var size = new Vector2(360, 56);
+            rect.sizeDelta = size;
             var image = go.AddComponent<Image>();
-            image.color = new Color(0.18f, 0.32f, 0.5f, 0.96f);
+            UiSprites.ApplyButtonSprite(image, size);
             var button = go.AddComponent<Button>();
             button.onClick.AddListener(() => onClick());
 

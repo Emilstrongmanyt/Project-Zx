@@ -1,16 +1,16 @@
 fileFormatVersion: 2
-guid: 94f4e28186e6a464b8da6d8cf0e9c5db
+guid: fdcfac5b4eee44443a3ebeb17648681e
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -2056480536797229218
-    second: BossJAttacking 1_0
+      213: -8313685459786316763
+    second: BossJAttackingHit_0
   - first:
-      213: -8014520840396194259
-    second: BossJAttacking 1_1
+      213: -98731198254019099
+    second: BossJAttackingHit_1
   - first:
-      213: -943743538299417952
-    second: BossJAttacking 1_2
+      213: -5051234619269840552
+    second: BossJAttackingHit_2
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -132,7 +132,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: BossJAttacking 1_0
+      name: BossJAttackingHit_0
       rect:
         serializedVersion: 2
         x: 40
@@ -147,14 +147,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: e5f42b4f8d9e573e0800000000000000
-      internalID: -2056480536797229218
+      spriteID: 5244b134f1bdf9c80800000000000000
+      internalID: -8313685459786316763
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: BossJAttacking 1_1
+      name: BossJAttackingHit_1
       rect:
         serializedVersion: 2
         x: 217
@@ -169,14 +169,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d2e383722c3b6c090800000000000000
-      internalID: -8014520840396194259
+      spriteID: 5ed02df8f7c31aef0800000000000000
+      internalID: -98731198254019099
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: BossJAttacking 1_2
+      name: BossJAttackingHit_2
       rect:
         serializedVersion: 2
         x: 186
@@ -191,8 +191,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 0aac798804627e2f0800000000000000
-      internalID: -943743538299417952
+      spriteID: 851044950e866e9b0800000000000000
+      internalID: -5051234619269840552
       vertices: []
       indices: 
       edges: []
@@ -211,9 +211,9 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      BossJAttacking 1_0: -2056480536797229218
-      BossJAttacking 1_1: -8014520840396194259
-      BossJAttacking 1_2: -943743538299417952
+      BossJAttackingHit_0: -8313685459786316763
+      BossJAttackingHit_1: -98731198254019099
+      BossJAttackingHit_2: -5051234619269840552
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

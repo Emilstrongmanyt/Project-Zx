@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using ProjectZx.Combat;
 using ProjectZx.Core;
 using ProjectZx.UI;
+using ProjectZx.Enemies;
 using ProjectZx.World;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -126,7 +127,22 @@ namespace ProjectZx.Player
             var hitCount = _rb.Cast(direction, filter, _castHits, distance);
             var allowed = distance;
             if (hitCount > 0)
-                allowed = Mathf.Max(0f, _castHits[0].distance - 0.02f);
+            {
+                var blockingIndex = -1;
+                for (var i = 0; i < hitCount; i++)
+                {
+                    var col = _castHits[i].collider;
+                    if (col == null) continue;
+                    if (col.GetComponent<EnemyActor>() != null) continue;
+                    blockingIndex = i;
+                    break;
+                }
+
+                if (blockingIndex < 0)
+                    allowed = distance;
+                else
+                    allowed = Mathf.Max(0f, _castHits[blockingIndex].distance - 0.02f);
+            }
 
             if (allowed <= 0.0001f)
             {
@@ -232,7 +248,22 @@ namespace ProjectZx.Player
                 _pendingDoor = null;
             }
 
+            if (IsWaterAt(world)) return;
+
             _moveTarget = world;
+        }
+
+        static bool IsWaterAt(Vector2 world)
+        {
+            var hits = Physics2D.OverlapPointAll(world);
+            foreach (var hit in hits)
+            {
+                if (hit == null) continue;
+                if (hit.GetComponent<WaterTile>() != null || hit.GetComponentInParent<WaterTile>() != null)
+                    return true;
+            }
+
+            return false;
         }
 
         bool TryHandleNpcTap(Vector2 world, bool isChase)
