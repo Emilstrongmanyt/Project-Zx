@@ -31,16 +31,21 @@ namespace ProjectZx.Combat
 
         public bool IsThrusting => _attacking;
 
-        float EffectiveAttackRange
+        float BaseAttackRange
         {
             get
             {
                 var stats = GetComponent<PlayerStats>();
                 var rangeMul = stats != null ? stats.RunAttackRangeMultiplier : 1f;
-                var baseRange = attackRange * rangeMul;
-                return GameSave.WhirlwindUnlocked ? baseRange * WhirlwindRangeMultiplier : baseRange;
+                return attackRange * rangeMul;
             }
         }
+
+        float WhirlwindAttackRange => BaseAttackRange * WhirlwindRangeMultiplier;
+
+        bool UseWhirlwind =>
+            GameSave.GetSelectedAttackMode(PlayerClass.Spearman) == AttackMode.Whirlwind
+            && GameSave.WhirlwindUnlocked;
 
         void Awake()
         {
@@ -80,9 +85,9 @@ namespace ProjectZx.Combat
             _cooldown -= Time.deltaTime * attackSpeed;
             if (_cooldown > 0f) return;
 
-            if (GameSave.WhirlwindUnlocked)
+            if (UseWhirlwind)
             {
-                if (!HasEnemyInArc(EffectiveAttackRange)) return;
+                if (!HasEnemyInArc(WhirlwindAttackRange)) return;
                 PerformWhirlwind();
                 return;
             }
@@ -91,7 +96,7 @@ namespace ProjectZx.Combat
             if (enemy == null) return;
 
             var dist = Vector2.Distance(transform.position, enemy.transform.position);
-            if (dist > EffectiveAttackRange) return;
+            if (dist > BaseAttackRange) return;
 
             PerformThrust(enemy);
         }
@@ -147,7 +152,7 @@ namespace ProjectZx.Combat
                 if (!_whirlwindDamageApplied && progress >= 0.5f)
                 {
                     _whirlwindDamageApplied = true;
-                    DamageEnemiesInArc(EffectiveAttackRange);
+                    DamageEnemiesInArc(WhirlwindAttackRange);
                 }
             }
             else

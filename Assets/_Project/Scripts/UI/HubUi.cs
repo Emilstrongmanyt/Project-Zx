@@ -28,6 +28,7 @@ namespace ProjectZx.UI
         readonly List<AchievementRowRefs> _achievementRows = new();
 
         GameObject _shopPanel;
+        GameObject _loadoutPanel;
         GameObject _statsPanel;
         GameObject _achievementsPanel;
         GameObject _mapPanel;
@@ -42,8 +43,10 @@ namespace ProjectZx.UI
             public Button MagicianButton;
         }
 
-        ClassPickerRefs _mapClassPicker;
-        ClassPickerRefs _campClassPicker;
+        ClassPickerRefs _loadoutClassPicker;
+        Text _techniqueStatusText;
+        Button _techniqueStandardButton;
+        Button _techniqueSpecialButton;
 
         struct UpgradeRowRefs
         {
@@ -80,6 +83,7 @@ namespace ProjectZx.UI
             _goldText.alignment = TextAnchor.MiddleRight;
 
             _shopPanel = BuildShopPanel(canvasGo.transform);
+            _loadoutPanel = BuildLoadoutPanel(canvasGo.transform);
             _statsPanel = BuildStatsPanel(canvasGo.transform);
             _achievementsPanel = BuildAchievementsPanel(canvasGo.transform);
             _mapPanel = BuildMapPanel(canvasGo.transform);
@@ -96,8 +100,9 @@ namespace ProjectZx.UI
             _whirlwindRow = CreateUpgradeRow(panel.transform, "Whirlwind (360°/180°)", 500, -32, BuyWhirlwind);
             _piercingShotRow = CreateUpgradeRow(panel.transform, "Piercing Shot (Bowman)", 2000, -76, BuyPiercingShot);
 
-            CreateButton(panel.transform, "Character Stats", new Vector2(-130, -220), () => OpenStats());
-            CreateButton(panel.transform, "Close", new Vector2(130, -220), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Build Loadout", new Vector2(-150, -220), () => OpenLoadout());
+            CreateButton(panel.transform, "Character Stats", new Vector2(150, -220), () => OpenStats());
+            CreateButton(panel.transform, "Close", new Vector2(0, -275), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
@@ -189,6 +194,26 @@ namespace ProjectZx.UI
             };
         }
 
+        GameObject BuildLoadoutPanel(Transform parent)
+        {
+            var panel = CreateDialogPanel(parent, "LoadoutPanel", Vector2.zero, new Vector2(740, 660), ArtLibrary.ShopUi);
+            CreateText(panel.transform, "Build Loadout", 30, TextAnchor.MiddleCenter, new Vector2(0, 290), new Vector2(500, 44));
+            _loadoutClassPicker = BuildClassPicker(panel.transform, 230f, 185f, 120f);
+            CreateText(panel.transform, "Attack Technique", 24, TextAnchor.MiddleCenter, new Vector2(0, 42), new Vector2(500, 36));
+            _techniqueStatusText = CreateText(panel.transform, "", 18, TextAnchor.MiddleCenter, new Vector2(0, 8), new Vector2(620, 56));
+            _techniqueStatusText.alignment = TextAnchor.UpperCenter;
+            _techniqueStandardButton = CreateButton(panel.transform, "Standard", new Vector2(-140, -52), () => SelectAttackMode(AttackMode.Standard));
+            _techniqueSpecialButton = CreateButton(panel.transform, "Special", new Vector2(140, -52), SelectSpecialAttackMode);
+            CreateButton(panel.transform, "Back to Shop", new Vector2(-140, -285), () =>
+            {
+                panel.SetActive(false);
+                OpenShop();
+            });
+            CreateButton(panel.transform, "Close", new Vector2(140, -285), () => panel.SetActive(false));
+            panel.SetActive(false);
+            return panel;
+        }
+
         GameObject BuildStatsPanel(Transform parent)
         {
             var panel = CreateDialogPanel(parent, "StatsPanel", Vector2.zero, new Vector2(720, 560), ArtLibrary.ShopUi);
@@ -208,22 +233,23 @@ namespace ProjectZx.UI
 
         GameObject BuildMapPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, new Vector2(680, 460), ArtLibrary.ChallengeBoardUi);
-            _mapClassPicker = BuildClassPicker(panel.transform, 165f, 120f, 55f);
-            CreateButton(panel.transform, "Outside Survival", new Vector2(0, -95), () => EnterSurvival(SurvivalMapKind.Outside));
-            CreateButton(panel.transform, "Close", new Vector2(0, -175), () => panel.SetActive(false));
+            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, new Vector2(620, 300), ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, "Outside Survival", 28, TextAnchor.MiddleCenter, new Vector2(0, 70), new Vector2(500, 40));
+            CreateText(panel.transform, "Set class & technique at the Wizard shop first.", 18, TextAnchor.MiddleCenter, new Vector2(0, 20), new Vector2(540, 48));
+            CreateButton(panel.transform, "Start Run", new Vector2(0, -55), () => EnterSurvival(SurvivalMapKind.Outside));
+            CreateButton(panel.transform, "Close", new Vector2(0, -125), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
 
         GameObject BuildCampfirePanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, new Vector2(680, 520), ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, "Campfire Travel", 28, TextAnchor.MiddleCenter, new Vector2(0, 210), new Vector2(500, 40));
-            _campClassPicker = BuildClassPicker(panel.transform, 160f, 115f, 50f);
-            CreateButton(panel.transform, "Outside Survival", new Vector2(0, -100), () => EnterSurvival(SurvivalMapKind.Outside));
-            CreateButton(panel.transform, "Inside Survival", new Vector2(0, -165), () => EnterSurvival(SurvivalMapKind.Inside));
-            CreateButton(panel.transform, "Close", new Vector2(0, -230), () => panel.SetActive(false));
+            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, new Vector2(620, 380), ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, "Campfire Travel", 28, TextAnchor.MiddleCenter, new Vector2(0, 120), new Vector2(500, 40));
+            CreateText(panel.transform, "Set class & technique at the Wizard shop first.", 18, TextAnchor.MiddleCenter, new Vector2(0, 70), new Vector2(540, 48));
+            CreateButton(panel.transform, "Outside Survival", new Vector2(0, -10), () => EnterSurvival(SurvivalMapKind.Outside));
+            CreateButton(panel.transform, "Inside Survival", new Vector2(0, -75), () => EnterSurvival(SurvivalMapKind.Inside));
+            CreateButton(panel.transform, "Close", new Vector2(0, -145), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
@@ -247,8 +273,79 @@ namespace ProjectZx.UI
             if (playerClass == PlayerClass.Bowman && !GameSave.BowmanUnlocked) return;
             if (playerClass == PlayerClass.Magician && !GameSave.MagicianUnlocked) return;
             GameSave.SelectedClass = playerClass;
-            RefreshClassPicker(_mapClassPicker);
-            RefreshClassPicker(_campClassPicker);
+            RefreshLoadoutPanel();
+        }
+
+        void SelectAttackMode(AttackMode mode)
+        {
+            if (!AttackModeCatalog.IsAvailableForClass(GameSave.SelectedClass, mode)) return;
+            if (!AttackModeCatalog.IsUnlocked(mode)) return;
+            GameSave.SetSelectedAttackMode(GameSave.SelectedClass, mode);
+            RefreshTechniquePicker();
+        }
+
+        void SelectSpecialAttackMode()
+        {
+            var special = AttackModeCatalog.GetSpecialModeForClass(GameSave.SelectedClass);
+            if (special == AttackMode.Standard) return;
+            SelectAttackMode(special);
+        }
+
+        void RefreshLoadoutPanel()
+        {
+            RefreshClassPicker(_loadoutClassPicker);
+            RefreshTechniquePicker();
+        }
+
+        void RefreshTechniquePicker()
+        {
+            var playerClass = GameSave.SelectedClass;
+            var selected = GameSave.GetSelectedAttackMode(playerClass);
+            var special = AttackModeCatalog.GetSpecialModeForClass(playerClass);
+            var specialUnlocked = special != AttackMode.Standard && AttackModeCatalog.IsUnlocked(special);
+
+            if (_techniqueStatusText != null)
+                _techniqueStatusText.text = AttackModeCatalog.GetDescription(playerClass, selected);
+
+            RefreshAttackModeButton(_techniqueStandardButton, AttackMode.Standard, selected, true, "Standard");
+
+            if (_techniqueSpecialButton == null) return;
+
+            if (special == AttackMode.Standard)
+            {
+                _techniqueSpecialButton.gameObject.SetActive(false);
+                return;
+            }
+
+            _techniqueSpecialButton.gameObject.SetActive(true);
+            RefreshAttackModeButton(
+                _techniqueSpecialButton,
+                special,
+                selected,
+                specialUnlocked,
+                specialUnlocked
+                    ? AttackModeCatalog.GetLabel(special, playerClass)
+                    : AttackModeCatalog.GetLockedHint(special));
+        }
+
+        static void RefreshAttackModeButton(Button button, AttackMode mode, AttackMode selected, bool unlocked, string label)
+        {
+            if (button == null) return;
+
+            button.interactable = unlocked;
+            var image = button.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = !unlocked
+                    ? new Color(0.25f, 0.25f, 0.28f, 0.7f)
+                    : selected == mode
+                        ? new Color(0.28f, 0.5f, 0.32f, 0.98f)
+                        : new Color(0.2f, 0.35f, 0.55f, 0.95f);
+            }
+
+            var buttonLabel = button.GetComponentInChildren<Text>();
+            if (buttonLabel != null)
+                buttonLabel.text = label;
         }
 
         static string GetClassStatusText(PlayerClass selected)
@@ -317,6 +414,7 @@ namespace ProjectZx.UI
             GameSessionContext.CarryRound = 0;
             GameSessionContext.RunSnapshot = default;
             _shopPanel.SetActive(false);
+            _loadoutPanel.SetActive(false);
             _statsPanel.SetActive(false);
             _achievementsPanel.SetActive(false);
             _mapPanel.SetActive(false);
@@ -454,6 +552,7 @@ namespace ProjectZx.UI
             if (GameSave.TrySpendGold(500)) GameSave.WhirlwindUnlocked = true;
             RefreshGold();
             RefreshShopRows();
+            if (_loadoutPanel != null && _loadoutPanel.activeSelf) RefreshLoadoutPanel();
         }
 
         void BuyPiercingShot()
@@ -462,21 +561,33 @@ namespace ProjectZx.UI
             if (GameSave.TrySpendGold(2000)) GameSave.PiercingShotUnlocked = true;
             RefreshGold();
             RefreshShopRows();
+            if (_loadoutPanel != null && _loadoutPanel.activeSelf) RefreshLoadoutPanel();
         }
 
         public void OpenShop()
         {
             RefreshGold();
             RefreshShopRows();
+            _loadoutPanel.SetActive(false);
             _statsPanel.SetActive(false);
             _achievementsPanel.SetActive(false);
             _shopPanel.SetActive(true);
+        }
+
+        public void OpenLoadout()
+        {
+            RefreshLoadoutPanel();
+            _shopPanel.SetActive(false);
+            _statsPanel.SetActive(false);
+            _achievementsPanel.SetActive(false);
+            _loadoutPanel.SetActive(true);
         }
 
         public void OpenStats()
         {
             RefreshStats();
             _shopPanel.SetActive(false);
+            _loadoutPanel.SetActive(false);
             _achievementsPanel.SetActive(false);
             _statsPanel.SetActive(true);
         }
@@ -485,6 +596,7 @@ namespace ProjectZx.UI
         {
             RefreshAchievements();
             _shopPanel.SetActive(false);
+            _loadoutPanel.SetActive(false);
             _statsPanel.SetActive(false);
             _achievementsPanel.SetActive(true);
         }
@@ -532,10 +644,14 @@ namespace ProjectZx.UI
             if (selected == PlayerClass.Bowman) baseDamage *= 0.9f;
             var moveSpeed = 4.5f * GameSave.SpeedMultiplier;
 
+            var attackMode = GameSave.GetSelectedAttackMode(selected);
+            var technique = AttackModeCatalog.GetLabel(attackMode, selected);
+
             _statsBodyText.text =
                 "CURRENT BUILD\n" +
                 $"Hero: {GameSave.GetHeroDisplayName(GameSave.SelectedHero)}\n" +
                 $"Class: {className}\n" +
+                $"Technique: {technique}\n" +
                 $"Max HP: {GameSave.MaxHp}\n" +
                 $"Base Damage: {baseDamage:0.#}\n" +
                 $"Move Speed: {moveSpeed:0.##}\n" +
@@ -556,7 +672,6 @@ namespace ProjectZx.UI
 
         public void OpenMapSelect()
         {
-            RefreshClassPicker(_mapClassPicker);
             _mapPanel.SetActive(true);
         }
 
@@ -568,7 +683,6 @@ namespace ProjectZx.UI
                 return;
             }
 
-            RefreshClassPicker(_campClassPicker);
             _campfirePanel.SetActive(true);
         }
 
