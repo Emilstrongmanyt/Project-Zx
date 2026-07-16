@@ -27,6 +27,7 @@ namespace ProjectZx.Core
             _campfire = null;
             _baseballBat = null;
             _spear = null;
+            _bow = null;
             _stone = null;
             _tree = null;
             _door = null;
@@ -70,6 +71,7 @@ namespace ProjectZx.Core
         static Sprite _campfire;
         static Sprite _baseballBat;
         static Sprite _spear;
+        static Sprite _bow;
         static Sprite _stone;
         static Sprite _tree;
         static Sprite _door;
@@ -127,6 +129,7 @@ namespace ProjectZx.Core
         public static Sprite Campfire => _campfire ??= CreateCampfireSprite();
         public static Sprite BaseballBat => _baseballBat ??= LoadOrCreateBat();
         public static Sprite Spear => _spear ??= CreateSpearSprite();
+        public static Sprite Bow => _bow ??= LoadOrCreateBow();
         public static Sprite Stone => _stone ??= CreateStoneSprite();
         public static Sprite Tree => _tree ??= CreateTreeSprite();
         public static Sprite Door => _door ??= CreateDoorSprite();
@@ -287,6 +290,47 @@ namespace ProjectZx.Core
         {
             var sprite = Resources.Load<Sprite>("Placeholders/baseball_bat");
             return sprite != null ? sprite : CreateBaseballBatSprite();
+        }
+
+        static Sprite LoadOrCreateBow()
+        {
+            var sprite = Resources.Load<Sprite>("Placeholders/bow");
+            return sprite != null ? sprite : CreateBowSprite();
+        }
+
+        static Sprite CreateBowSprite()
+        {
+            const int w = 22;
+            const int h = 18;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+
+            void Set(int x, int y, Color c)
+            {
+                if (x >= 0 && x < w && y >= 0 && y < h) tex.SetPixel(x, y, c);
+            }
+
+            var clear = new Color(0, 0, 0, 0);
+            var wood = new Color(0.5f, 0.34f, 0.18f);
+            var stringColor = new Color(0.82f, 0.78f, 0.7f);
+
+            for (var y = 0; y < h; y++)
+            for (var x = 0; x < w; x++)
+                Set(x, y, clear);
+
+            for (var y = 3; y <= 14; y++)
+            {
+                var t = Mathf.Abs(y - 8.5f) / 5.5f;
+                var x = Mathf.RoundToInt(Mathf.Lerp(3f, 18f, t));
+                Set(x, y, wood);
+                if (x > 4) Set(x - 1, y, wood);
+            }
+
+            for (var y = 4; y <= 13; y++)
+                Set(19, y, stringColor);
+
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.15f, 0.5f), 16f);
         }
 
         static Sprite LoadOrCreateXpGem()

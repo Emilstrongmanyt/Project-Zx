@@ -64,6 +64,7 @@ namespace ProjectZx.Waves
                         _roundActive = false;
                         _hud?.SetRoundComplete(CurrentRound);
                         GameSave.RecordHighestRound(CurrentRound);
+                        TryUnlockBowman(CurrentRound);
                         yield return new WaitForSeconds(2f);
                         break;
                     }
@@ -132,6 +133,13 @@ namespace ProjectZx.Waves
         }
 
         static float GetWaveDelay(int round) => Mathf.Clamp(2.8f - round * 0.03f, 1.2f, 2.8f);
+
+        void TryUnlockBowman(int round)
+        {
+            if (MapKind != SurvivalMapKind.Inside || round < 50 || GameSave.BowmanUnlocked) return;
+            GameSave.BowmanUnlocked = true;
+            Achievements.UnlockInsideArcher();
+        }
 
         void SpawnEnemy(int round, bool boss, bool roundTwentyBoss)
         {
