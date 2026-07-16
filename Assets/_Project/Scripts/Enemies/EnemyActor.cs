@@ -10,10 +10,13 @@ namespace ProjectZx.Enemies
     [RequireComponent(typeof(Rigidbody2D))]
     public class EnemyActor : MonoBehaviour
     {
-        const float FireBreathRange = 4.5f;
+        const float FireBreathRange = 6.75f;
         const float FireBreathDuration = 3f;
         const float FireBreathCooldown = 12f;
         const float FireBreathTick = 0.45f;
+        const float FireBreathScale = 3f;
+        const float FireBreathOffsetX = 1.65f;
+        const float FireBreathHitPadding = 0.9f;
         const float EnemySeparationRadius = 1.15f;
         const float EnemySeparationPush = 0.24f;
         const float CastSkin = 0.1f;
@@ -120,12 +123,23 @@ namespace ProjectZx.Enemies
         {
             _fireBreathFx = new GameObject("FireBreath");
             _fireBreathFx.transform.SetParent(transform, false);
-            _fireBreathFx.transform.localPosition = new Vector3(1.1f, 0.15f, 0f);
-            _fireBreathFx.transform.localScale = Vector3.one * 2f;
             _fireBreathRenderer = _fireBreathFx.AddComponent<SpriteRenderer>();
             _fireBreathRenderer.sprite = ArtLibrary.GetFireBreathFrame(0);
             _fireBreathRenderer.sortingOrder = 8;
+            ApplyFireBreathTransform(true);
             _fireBreathFx.SetActive(false);
+        }
+
+        void ApplyFireBreathTransform(bool facingRight)
+        {
+            if (_fireBreathFx == null) return;
+
+            _fireBreathFx.transform.localScale = Vector3.one * FireBreathScale;
+            _fireBreathFx.transform.localPosition = new Vector3(facingRight ? FireBreathOffsetX : -FireBreathOffsetX, 0.15f, 0f);
+
+            if (_fireBreathRenderer != null)
+                // Fire breath art faces left by default, same as BossJ.
+                _fireBreathRenderer.flipX = facingRight;
         }
 
         void FixedUpdate()
@@ -367,8 +381,7 @@ namespace ProjectZx.Enemies
                 if (_fireBreathRenderer != null && _fireBreathFx != null)
                 {
                     _fireBreathRenderer.sprite = ArtLibrary.GetFireBreathFrame(_fireAnimFrame);
-                    _fireBreathFx.transform.localScale = new Vector3(facingRight ? 2f : -2f, 2f, 1f);
-                    _fireBreathFx.transform.localPosition = new Vector3(facingRight ? 1.1f : -1.1f, 0.15f, 0f);
+                    ApplyFireBreathTransform(facingRight);
                 }
 
                 _fireBreathDamageTimer -= Time.deltaTime;
@@ -376,7 +389,7 @@ namespace ProjectZx.Enemies
                 {
                     _fireBreathDamageTimer = FireBreathTick;
                     var stats = _player.GetComponent<PlayerStats>();
-                    if (stats != null && !stats.IsDead && dist <= FireBreathRange + 0.6f)
+                    if (stats != null && !stats.IsDead && dist <= FireBreathRange + FireBreathHitPadding)
                     {
                         stats.TakeDamage(Mathf.RoundToInt(_attack * 0.55f));
                         HitFlash.FlashSprite(_player.gameObject);
@@ -413,8 +426,7 @@ namespace ProjectZx.Enemies
             if (_fireBreathFx != null)
             {
                 _fireBreathFx.SetActive(true);
-                _fireBreathFx.transform.localScale = new Vector3(facingRight ? 2f : -2f, 2f, 1f);
-                _fireBreathFx.transform.localPosition = new Vector3(facingRight ? 1.1f : -1.1f, 0.15f, 0f);
+                ApplyFireBreathTransform(facingRight);
                 if (_fireBreathRenderer != null)
                     _fireBreathRenderer.sprite = ArtLibrary.GetFireBreathFrame(0);
             }
