@@ -47,7 +47,11 @@ namespace ProjectZx.Core
             var rows = Mathf.CeilToInt(height / tileSize);
             var originX = -(cols * tileSize) * 0.5f + tileSize * 0.5f;
             var originY = -(rows * tileSize) * 0.5f + tileSize * 0.5f;
-            var borderDepth = ArenaBounds.WaterBorderDepth;
+            var borderDepth = Mathf.Max(1, ArenaBounds.WaterBorderDepth);
+            // Cache once so every border cell uses the same water sprite (no land fallback).
+            var waterSprite = ArtLibrary.WaterTile;
+            if (waterSprite == null)
+                Debug.LogError("[GameFactory] Water tile sprite failed to load; borders will be missing.");
 
             for (var row = 0; row < rows; row++)
             for (var col = 0; col < cols; col++)
@@ -58,7 +62,7 @@ namespace ProjectZx.Core
                 var tileIndex = col + row * 7;
                 Sprite sprite;
                 if (isBorder)
-                    sprite = ArtLibrary.WaterTile;
+                    sprite = waterSprite;
                 else if (mapKind == SurvivalMapKind.Dungeon)
                     sprite = ArtLibrary.GetDungeonTile(tileIndex);
                 else if (mapKind == SurvivalMapKind.Inside)
@@ -66,19 +70,27 @@ namespace ProjectZx.Core
                 else
                     sprite = ArtLibrary.GetOutsideTile(tileIndex);
 
+                if (sprite == null) continue;
+
                 var tileScale = ArtLibrary.GetTileScale(sprite, tileSize);
                 var sortOrder = isBorder ? ArenaBounds.WaterSortOrder : ArenaBounds.FloorSortOrder;
-                var tile = CreateSprite($"Tile_{col}_{row}", sprite, pos, tileScale, sortOrder);
+                var tile = CreateSprite(
+                    isBorder ? $"Water_{col}_{row}" : $"Tile_{col}_{row}",
+                    sprite,
+                    pos,
+                    tileScale,
+                    sortOrder);
                 var tileRenderer = tile.GetComponent<SpriteRenderer>();
-                if (!isBorder)
-                    ApplyFloorMaterial(tileRenderer);
-                else
+                // URP 2D needs an explicit sprite material; without it water can vanish on device.
+                ApplyFloorMaterial(tileRenderer);
+                if (isBorder)
                 {
                     tile.AddComponent<WaterTile>();
                     var waterCol = tile.AddComponent<BoxCollider2D>();
                     // Local size so world collider matches one tile after scale is applied.
                     var scale = Mathf.Max(0.001f, tile.transform.localScale.x);
                     waterCol.size = Vector2.one * (tileSize / scale);
+                    waterCol.isTrigger = false;
                 }
                 tile.transform.SetParent(root.transform, true);
             }
@@ -276,23 +288,12 @@ namespace ProjectZx.Core
             return go;
         }
 
+        /// <summary>
+        /// Outdoor camp / hub ground with the same water ring as survival arenas.
+        /// </summary>
         public static GameObject CreateGrassField(string name, float width, float height, float tileSize = 1f)
         {
-            var root = new GameObject(name);
-            var cols = Mathf.CeilToInt(width / tileSize);
-            var rows = Mathf.CeilToInt(height / tileSize);
-            var originX = -(cols * tileSize) * 0.5f + tileSize * 0.5f;
-            var originY = -(rows * tileSize) * 0.5f + tileSize * 0.5f;
-
-            for (var row = 0; row < rows; row++)
-            for (var col = 0; col < cols; col++)
-            {
-                var pos = new Vector3(originX + col * tileSize, originY + row * tileSize, 0f);
-                var tile = CreateSprite($"Grass_{col}_{row}", ArtLibrary.GetGrassVariant(col + row * 3), pos, 0.25f, ArenaBounds.FloorSortOrder);
-                tile.transform.SetParent(root.transform, true);
-            }
-
-            return root;
+            return CreateTiledField(name, width, height, SurvivalMapKind.Outside, tileSize);
         }
 
         public static GameObject CreateCampfire(Vector3 position)

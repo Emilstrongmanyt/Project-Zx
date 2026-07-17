@@ -68,7 +68,9 @@ namespace ProjectZx.World
                 if (player == null) return;
                 playerTransform = player.transform;
                 stats = player.GetComponent<PlayerStats>();
-                var lootRange = stats != null ? BaseCollectRange * stats.RunLootRangeMultiplier : BaseCollectRange;
+                var lootRange = stats != null
+                    ? BaseCollectRange * stats.EffectiveLootRangeMultiplier
+                    : BaseCollectRange;
                 if (Vector2.Distance(transform.position, playerTransform.position) > lootRange) return;
             }
 

@@ -215,7 +215,12 @@ namespace ProjectZx.UI
             _stats = player != null ? player.GetComponent<PlayerStats>() : null;
 
             if (_stats != null)
+            {
                 _stats.LevelUpChoiceRequired += OnLevelUpChoiceRequired;
+                // Campfire Blessing grants a free pick at run start.
+                if (_stats.PendingLevelUpChoices > 0)
+                    OnLevelUpChoiceRequired(_stats.PendingLevelUpChoices);
+            }
         }
 
         void OnLevelUpChoiceRequired(int remaining)

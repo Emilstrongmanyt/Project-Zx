@@ -22,6 +22,17 @@ namespace ProjectZx.Core
         public float RunAttackSpeedMultiplier;
         public float RunAttackRangeMultiplier;
         public float RunLootRangeMultiplier;
+        public float RunCritChance;
+        public float RunCritMultiplier;
+        public float RunLifesteal;
+        public float RunBossDamageBonus;
+        public float RunExecuteBonus;
+        public float RunGoldFindMultiplier;
+        public float RunXpMultiplier;
+        public float RunRegenPerSecond;
+        public bool RunShieldUnlocked;
+        public float RunBerserkBonus;
+        public bool SecondWindUsed;
     }
 
     public static class GameSessionContext

@@ -33,8 +33,11 @@ namespace ProjectZx.Enemies
         public bool IsRoundTwentyBoss { get; private set; }
 
         int _hp;
+        int _maxHp;
         int _attack;
         float _speed;
+        float _freezeTimer;
+        Color _baseColor = Color.white;
         int _round;
         Transform _player;
         Rigidbody2D _rb;
@@ -94,7 +97,13 @@ namespace ProjectZx.Enemies
             _player = GameObject.FindGameObjectWithTag("Player")?.transform;
             ApplySprites(isBoss, isRoundTwentyBoss, zombieKind);
 
-            if (_renderer != null) _renderer.sprite = _idleSprite;
+            if (_renderer != null)
+            {
+                _renderer.sprite = _idleSprite;
+                _baseColor = _renderer.color;
+            }
+
+            _maxHp = Mathf.Max(1, _hp);
 
             if (isBoss)
                 SetupFireBreathFx();
@@ -103,6 +112,18 @@ namespace ProjectZx.Enemies
 
             _canSprint = !isBoss && round >= 10;
             _sprintCooldown = Random.Range(2f, SprintCooldown);
+        }
+
+        public float HpRatio => _maxHp > 0 ? (float)_hp / _maxHp : 0f;
+        public bool IsFrozen => _freezeTimer > 0f;
+
+        /// <summary>Freeze non-boss zombies in place for a short duration (frost tip).</summary>
+        public void ApplyFreeze(float duration)
+        {
+            if (!IsAlive || IsBoss || duration <= 0f) return;
+            _freezeTimer = Mathf.Max(_freezeTimer, duration);
+            if (_renderer != null)
+                _renderer.color = new Color(0.55f, 0.82f, 1f, 1f);
         }
 
         void ApplySprites(bool isBoss, bool isRoundTwentyBoss, EnemyZombieKind zombieKind)
@@ -151,7 +172,7 @@ namespace ProjectZx.Enemies
         void FixedUpdate()
         {
             if (!IsAlive || _player == null) return;
-            if (_fireBreathing)
+            if (_fireBreathing || IsFrozen)
             {
                 _rb.linearVelocity = Vector2.zero;
                 return;
@@ -300,6 +321,7 @@ namespace ProjectZx.Enemies
             if (!IsAlive || _player == null) return;
 
             UpdateHitSpriteTimer();
+            UpdateFreeze();
             UpdateSprint();
             _contactCooldown -= Time.deltaTime;
             _fireBreathCooldown -= Time.deltaTime;
@@ -310,6 +332,7 @@ namespace ProjectZx.Enemies
                 if (_fireBreathing) return;
             }
 
+            if (IsFrozen) return;
             if (_contactCooldown > 0f) return;
             if (Vector2.Distance(transform.position, _player.position) > 0.75f) return;
 
@@ -324,9 +347,19 @@ namespace ProjectZx.Enemies
 
         float GetMoveSpeed() => _speed * (_sprinting ? SprintSpeedMultiplier : 1f);
 
+        void UpdateFreeze()
+        {
+            if (_freezeTimer <= 0f) return;
+            _freezeTimer -= Time.deltaTime;
+            if (_freezeTimer > 0f) return;
+            _freezeTimer = 0f;
+            if (_renderer != null)
+                _renderer.color = _baseColor;
+        }
+
         void UpdateSprint()
         {
-            if (!_canSprint || _fireBreathing || _player == null) return;
+            if (!_canSprint || _fireBreathing || IsFrozen || _player == null) return;
 
             _sprintCooldown -= Time.deltaTime;
             if (_sprinting)

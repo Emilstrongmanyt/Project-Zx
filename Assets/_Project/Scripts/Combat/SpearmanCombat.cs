@@ -82,7 +82,7 @@ namespace ProjectZx.Combat
             if (_attacking) return;
 
             var stats = GetComponent<PlayerStats>();
-            var attackSpeed = stats != null ? stats.RunAttackSpeedMultiplier : 1f;
+            var attackSpeed = stats != null ? stats.EffectiveAttackSpeed : 1f;
             _cooldown -= Time.deltaTime * attackSpeed;
             if (_cooldown > 0f) return;
 
@@ -114,9 +114,7 @@ namespace ProjectZx.Combat
             if (_bodyRenderer != null)
                 _bodyRenderer.flipX = !_attackFacingRight;
 
-            var stats = GetComponent<PlayerStats>();
-            var damage = Mathf.RoundToInt(stats != null ? stats.Damage : 10f);
-            enemy.TakeDamage(damage);
+            CombatDamage.Apply(GetComponent<PlayerStats>(), enemy, canApplyFrost: true);
         }
 
         void PerformWhirlwind()
@@ -186,9 +184,8 @@ namespace ProjectZx.Combat
         void DamageEnemiesInArc(float range)
         {
             var stats = GetComponent<PlayerStats>();
-            var damage = Mathf.RoundToInt(stats != null ? stats.Damage : 10f);
             foreach (var enemy in FindEnemiesInArc(range))
-                enemy.TakeDamage(damage);
+                CombatDamage.Apply(stats, enemy, canApplyFrost: true);
         }
 
         bool HasEnemyInArc(float range)

@@ -7,17 +7,21 @@ namespace ProjectZx.World
     {
         public const float ArenaWidth = 64f;
         public const float ArenaHeight = 48f;
+        public const float CampWidth = 44f;
+        public const float CampHeight = 34f;
         public const float TileSize = 1f;
         public const float SpawnClearRadius = 1.05f;
         public const int FloorSortOrder = -1000;
         public const int WaterSortOrder = -900;
-        public const int WaterBorderDepth = 2;
+        /// <summary>Outer ring of water tiles around playable land (both camp and survival).</summary>
+        public const int WaterBorderDepth = 3;
         public const int EntitySortBase = 100;
         public const float SortDepthScale = 40f;
 
         static readonly Collider2D[] OverlapBuffer = new Collider2D[12];
 
-        public static float PlayableHalfHeight => ArenaHeight * 0.5f - TileSize * 2f;
+        public static float WaterMargin => TileSize * WaterBorderDepth;
+        public static float PlayableHalfHeight => ArenaHeight * 0.5f - WaterMargin;
 
         public static int GetYSortOrder(float worldY, int offset = 0)
         {
@@ -28,8 +32,8 @@ namespace ProjectZx.World
 
         public static Vector2 ClampToPlayable(Vector2 position)
         {
-            var maxX = ArenaWidth * 0.5f - TileSize * 2f;
-            var maxY = ArenaHeight * 0.5f - TileSize * 2f;
+            var maxX = ArenaWidth * 0.5f - WaterMargin;
+            var maxY = ArenaHeight * 0.5f - WaterMargin;
             return new Vector2(
                 Mathf.Clamp(position.x, -maxX, maxX),
                 Mathf.Clamp(position.y, -maxY, maxY));
@@ -37,8 +41,8 @@ namespace ProjectZx.World
 
         public static bool IsInsidePlayable(Vector2 position)
         {
-            var maxX = ArenaWidth * 0.5f - TileSize * 2f;
-            var maxY = ArenaHeight * 0.5f - TileSize * 2f;
+            var maxX = ArenaWidth * 0.5f - WaterMargin;
+            var maxY = ArenaHeight * 0.5f - WaterMargin;
             return Mathf.Abs(position.x) <= maxX && Mathf.Abs(position.y) <= maxY;
         }
 

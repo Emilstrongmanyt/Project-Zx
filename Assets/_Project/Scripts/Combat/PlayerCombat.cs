@@ -79,7 +79,7 @@ namespace ProjectZx.Combat
             if (_swinging) return;
 
             var stats = GetComponent<PlayerStats>();
-            var attackSpeed = stats != null ? stats.RunAttackSpeedMultiplier : 1f;
+            var attackSpeed = stats != null ? stats.EffectiveAttackSpeed : 1f;
             _cooldown -= Time.deltaTime * attackSpeed;
             if (_cooldown > 0f) return;
 
@@ -112,9 +112,7 @@ namespace ProjectZx.Combat
             if (_bodyRenderer != null)
                 _bodyRenderer.flipX = !_swingFacingRight;
 
-            var stats = GetComponent<PlayerStats>();
-            var damage = Mathf.RoundToInt(stats != null ? stats.Damage : 10f);
-            enemy.TakeDamage(damage);
+            CombatDamage.Apply(GetComponent<PlayerStats>(), enemy);
         }
 
         void PerformWhirlwind()
@@ -174,9 +172,8 @@ namespace ProjectZx.Combat
         void DamageEnemiesInRange(float range)
         {
             var stats = GetComponent<PlayerStats>();
-            var damage = Mathf.RoundToInt(stats != null ? stats.Damage : 10f);
             foreach (var enemy in FindEnemiesInRange(range))
-                enemy.TakeDamage(damage);
+                CombatDamage.Apply(stats, enemy);
         }
 
         bool HasEnemyInRange(float range)

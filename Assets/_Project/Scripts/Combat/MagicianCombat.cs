@@ -50,7 +50,7 @@ namespace ProjectZx.Combat
             if (_casting) return;
 
             var stats = GetComponent<PlayerStats>();
-            var attackSpeed = stats != null ? stats.RunAttackSpeedMultiplier : 1f;
+            var attackSpeed = stats != null ? stats.EffectiveAttackSpeed : 1f;
             _cooldown -= Time.deltaTime * attackSpeed;
             if (_cooldown > 0f) return;
 
@@ -74,15 +74,11 @@ namespace ProjectZx.Combat
                 _bodyRenderer.flipX = enemy.transform.position.x < transform.position.x;
 
             var stats = GetComponent<PlayerStats>();
-            var baseDamage = stats != null ? stats.Damage : 10f;
-            var primaryDamage = Mathf.RoundToInt(baseDamage * PrimaryDamageMultiplier);
-            var splashDamage = Mathf.Max(1, Mathf.RoundToInt(baseDamage * SplashDamageMultiplier));
-
-            enemy.TakeDamage(primaryDamage);
+            CombatDamage.Apply(stats, enemy, PrimaryDamageMultiplier);
             foreach (var other in FindEnemiesInSplash(enemy.transform.position))
             {
                 if (other == enemy) continue;
-                other.TakeDamage(splashDamage);
+                CombatDamage.Apply(stats, other, SplashDamageMultiplier);
             }
         }
 
