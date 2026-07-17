@@ -65,7 +65,7 @@ namespace ProjectZx.Core
                     sprite = ArtLibrary.GetOutsideTile(tileIndex);
 
                 var tileScale = ArtLibrary.GetTileScale(sprite, tileSize);
-                var tile = CreateSprite($"Tile_{col}_{row}", sprite, pos, tileScale, -10);
+                var tile = CreateSprite($"Tile_{col}_{row}", sprite, pos, tileScale, ArenaBounds.FloorSortOrder);
                 ApplyFloorMaterial(tile.GetComponent<SpriteRenderer>());
                 if (isBorder)
                 {
@@ -94,10 +94,9 @@ namespace ProjectZx.Core
 
         public static GameObject CreateStoneObstacle(Vector3 position, float scale, Sprite sprite = null)
         {
-            var go = CreateSprite("Stone", sprite ?? ArtLibrary.GetRandomRockSprite(), position, scale, 2);
-            var col = go.AddComponent<CircleCollider2D>();
-            col.radius = 0.42f;
+            var go = CreateSprite("Stone", sprite ?? ArtLibrary.GetRandomRockSprite(), position, scale, 0);
             go.AddComponent<ArenaObstacle>();
+            go.AddComponent<StoneObstacle>();
             return go;
         }
 
@@ -111,14 +110,15 @@ namespace ProjectZx.Core
 
         public static GameObject CreateCampfireObstacle(Vector3 position, float scale = 0.55f)
         {
-            var go = CreateSprite("Campfire", ArtLibrary.Campfire, position, scale, 4);
+            var go = CreateSprite("Campfire", ArtLibrary.Campfire, position, scale, 0);
+            go.AddComponent<YSortRenderer>();
             var glow = new GameObject("CampfireGlow");
             glow.transform.SetParent(go.transform, false);
             glow.transform.localPosition = Vector3.zero;
             var glowRenderer = glow.AddComponent<SpriteRenderer>();
             glowRenderer.sprite = ArtLibrary.Campfire;
             glowRenderer.color = new Color(1f, 0.55f, 0.15f, 0.35f);
-            glowRenderer.sortingOrder = 5;
+            glow.AddComponent<YSortRenderer>().Configure(1);
             glow.transform.localScale = Vector3.one * 1.6f;
 
             var col = go.AddComponent<CircleCollider2D>();
@@ -298,7 +298,7 @@ namespace ProjectZx.Core
             for (var col = 0; col < cols; col++)
             {
                 var pos = new Vector3(originX + col * tileSize, originY + row * tileSize, 0f);
-                var tile = CreateSprite($"Grass_{col}_{row}", ArtLibrary.GetGrassVariant(col + row * 3), pos, 0.25f, -10);
+                var tile = CreateSprite($"Grass_{col}_{row}", ArtLibrary.GetGrassVariant(col + row * 3), pos, 0.25f, ArenaBounds.FloorSortOrder);
                 tile.transform.SetParent(root.transform, true);
             }
 
@@ -320,7 +320,7 @@ namespace ProjectZx.Core
             var sanitizedHero = GameSave.SanitizeHero(hero);
             var go = CreateSprite("Player", ArtLibrary.GetHeroIdleSprite(sanitizedHero), position, scale, 0);
             go.tag = "Player";
-            go.AddComponent<YSortRenderer>();
+            go.AddComponent<YSortRenderer>().Configure(2);
 
             var rb = go.AddComponent<Rigidbody2D>();
             rb.bodyType = RigidbodyType2D.Kinematic;

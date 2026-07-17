@@ -10,19 +10,22 @@ namespace ProjectZx.World
 
         void Awake()
         {
-            SetupTrunkCollider();
+            var renderer = GetComponent<SpriteRenderer>();
+            var sprite = renderer != null ? renderer.sprite : null;
+            SetupTrunkCollider(sprite);
 
             if (GetComponent<YSortRenderer>() == null)
-                gameObject.AddComponent<YSortRenderer>();
+            {
+                var sortBias = sprite != null ? sprite.bounds.size.y * 0.12f : 0f;
+                gameObject.AddComponent<YSortRenderer>().Configure(0, sortBias);
+            }
         }
 
-        void SetupTrunkCollider()
+        void SetupTrunkCollider(Sprite sprite)
         {
             foreach (var col in GetComponents<Collider2D>())
                 Destroy(col);
 
-            var renderer = GetComponent<SpriteRenderer>();
-            var sprite = renderer != null ? renderer.sprite : null;
             if (sprite == null)
             {
                 var fallback = gameObject.AddComponent<CircleCollider2D>();
