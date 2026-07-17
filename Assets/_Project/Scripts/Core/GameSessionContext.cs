@@ -3,7 +3,8 @@ namespace ProjectZx.Core
     public enum SurvivalMapKind
     {
         Outside,
-        Inside
+        Inside,
+        Dungeon
     }
 
     public struct SurvivalRunSnapshot

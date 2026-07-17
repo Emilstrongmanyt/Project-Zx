@@ -57,18 +57,42 @@ namespace ProjectZx.Core
         static void BuildSurvival(SurvivalMapKind mapKind)
         {
             EnsureAudioManager();
-            if (mapKind == SurvivalMapKind.Inside)
-                AudioManager.Instance?.PlayInsideBgm();
-            else
-                AudioManager.Instance?.PlayOutsideBgm();
+            switch (mapKind)
+            {
+                case SurvivalMapKind.Inside:
+                    AudioManager.Instance?.PlayInsideBgm();
+                    break;
+                case SurvivalMapKind.Dungeon:
+                    AudioManager.Instance?.PlayInsideBgm();
+                    break;
+                default:
+                    AudioManager.Instance?.PlayOutsideBgm();
+                    break;
+            }
 
             var isInside = mapKind == SurvivalMapKind.Inside;
-            SetupCamera(isInside ? new Color(0.2f, 0.16f, 0.12f) : new Color(0.14f, 0.28f, 0.12f));
+            var isDungeon = mapKind == SurvivalMapKind.Dungeon;
+            SetupCamera(isDungeon
+                ? new Color(0.08f, 0.07f, 0.1f)
+                : isInside
+                    ? new Color(0.2f, 0.16f, 0.12f)
+                    : new Color(0.14f, 0.28f, 0.12f));
 
             const float arenaW = 64f;
             const float arenaH = 48f;
-            GameFactory.CreateTiledField(isInside ? "InsideFloor" : "OutsideFloor", arenaW, arenaH, mapKind, 1f);
-            GameFactory.ScatterArenaObstacles(arenaW, arenaH, isInside ? 0 : 14, isInside ? 0 : 10, isInside ? 2 : 3);
+            GameFactory.CreateTiledField(
+                isDungeon ? "DungeonFloor" : isInside ? "InsideFloor" : "OutsideFloor",
+                arenaW,
+                arenaH,
+                mapKind,
+                1f);
+
+            if (isInside)
+                GameFactory.ScatterInsideObstacles(arenaW, arenaH);
+            else if (isDungeon)
+                GameFactory.ScatterCryptObstacles(arenaW, arenaH);
+            else
+                GameFactory.ScatterArenaObstacles(arenaW, arenaH, 14, 10, 3);
 
             var player = GameFactory.CreatePlayer(
                 Vector3.zero,
