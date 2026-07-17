@@ -75,8 +75,8 @@ namespace ProjectZx.Core
         {
             return mode switch
             {
-                AttackMode.Whirlwind => "Buy Whirlwind in shop (500g)",
-                AttackMode.PiercingShot => "Buy Piercing Shot in shop (2000g)",
+                AttackMode.Whirlwind => $"Buy Whirlwind in shop ({ShopCosts.Whirlwind}g)",
+                AttackMode.PiercingShot => $"Buy Piercing Shot in shop ({ShopCosts.PiercingShot}g)",
                 _ => string.Empty
             };
         }

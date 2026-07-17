@@ -212,7 +212,35 @@ namespace ProjectZx.Core
         public static Sprite LevelUpUi => _levelUpUi ??= Load("Art/level_up_ui", "LevelUpUI");
         public static Sprite ChallengeBoardUi => _challengeBoardUi ??= Load("Art/challenge_board_ui", "ChallengeBoardUI");
         // Never fall back to land tiles — that made water borders look "removed".
-        public static Sprite WaterTile => _waterTile ??= LoadTile("Art/tile1_water", "tile1Water");
+        public static Sprite WaterTile
+        {
+            get
+            {
+                if (_waterTile != null) return _waterTile;
+                _waterTile = LoadTile("Art/tile1_water", "tile1Water");
+                // Last resort: solid blue so borders never become grass/land.
+                if (_waterTile == null || IsLikelyLandTile(_waterTile))
+                    _waterTile = CreateTileFallback("tile1_water");
+                return _waterTile;
+            }
+        }
+
+        static bool IsLikelyLandTile(Sprite sprite)
+        {
+            // Guard against a bad asset swap: if average pixel is clearly green grass, reject.
+            if (sprite == null || sprite.texture == null) return true;
+            try
+            {
+                var tex = sprite.texture;
+                if (!tex.isReadable) return false;
+                var sample = tex.GetPixel(tex.width / 2, tex.height / 2);
+                return sample.g > sample.b + 0.12f && sample.g > sample.r + 0.05f;
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         public static Sprite GetGrassVariant(int index)
         {

@@ -15,6 +15,11 @@ namespace ProjectZx.Core
         const string InsideUnlockedKey = "zx_inside_unlocked";
         const string WhirlwindKey = "zx_whirlwind";
         const string PiercingShotKey = "zx_piercing_shot";
+        const string FrostTipKey = "zx_frost_tip";
+        const string GoldMagnetKey = "zx_gold_magnet";
+        const string ThickHideKey = "zx_thick_hide";
+        const string SecondWindKey = "zx_second_wind";
+        const string CampfireBlessingKey = "zx_campfire_blessing";
         const string SpearmanUnlockedKey = "zx_spearman_unlocked";
         const string BowmanUnlockedKey = "zx_bowman_unlocked";
         const string MagicianUnlockedKey = "zx_magician_unlocked";
@@ -121,6 +126,62 @@ namespace ProjectZx.Core
                 PlayerPrefs.Save();
             }
         }
+
+        public static bool FrostTipUnlocked
+        {
+            get => PlayerPrefs.GetInt(FrostTipKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(FrostTipKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool GoldMagnetUnlocked
+        {
+            get => PlayerPrefs.GetInt(GoldMagnetKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(GoldMagnetKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool ThickHideUnlocked
+        {
+            get => PlayerPrefs.GetInt(ThickHideKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(ThickHideKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool SecondWindUnlocked
+        {
+            get => PlayerPrefs.GetInt(SecondWindKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(SecondWindKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool CampfireBlessingUnlocked
+        {
+            get => PlayerPrefs.GetInt(CampfireBlessingKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(CampfireBlessingKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Permanent pickup radius bonus from Gold Magnet.</summary>
+        public static float LootRangeMultiplier => GoldMagnetUnlocked ? 1.25f : 1f;
+
+        /// <summary>Permanent gold pickup bonus from Gold Magnet.</summary>
+        public static float GoldFindMultiplier => GoldMagnetUnlocked ? 1.25f : 1f;
 
         public static PlayerClass SelectedClass
         {

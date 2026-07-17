@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ProjectZx.Core;
+using ProjectZx.Enemies;
 using ProjectZx.Waves;
 using UnityEngine;
 
@@ -13,11 +14,24 @@ namespace ProjectZx.Player
         Attack,
         AttackSpeed,
         AttackRange,
-        LootRange
+        LootRange,
+        CritChance,
+        CritDamage,
+        Lifesteal,
+        BossHunter,
+        Execute,
+        GoldFind,
+        Regen,
+        Shield,
+        Berserk,
+        XpBoost
     }
 
     public class PlayerStats : MonoBehaviour
     {
+        const float ShieldCooldownSeconds = 12f;
+        const float RegenOutOfCombatDelay = 2f;
+
         public int MaxHp { get; private set; }
         public int CurrentHp { get; private set; }
         public int RunXp { get; private set; }
@@ -32,10 +46,25 @@ namespace ProjectZx.Player
         public float RunAttackSpeedMultiplier { get; private set; } = 1f;
         public float RunAttackRangeMultiplier { get; private set; } = 1f;
         public float RunLootRangeMultiplier { get; private set; } = 1f;
+        public float RunCritChance { get; private set; }
+        public float RunCritMultiplier { get; private set; } = 1.5f;
+        public float RunLifesteal { get; private set; }
+        public float RunBossDamageBonus { get; private set; }
+        public float RunExecuteBonus { get; private set; }
+        public float RunGoldFindMultiplier { get; private set; } = 1f;
+        public float RunXpMultiplier { get; private set; } = 1f;
+        public float RunRegenPerSecond { get; private set; }
+        public bool RunShieldUnlocked { get; private set; }
+        public float RunBerserkBonus { get; private set; }
 
         public event Action<int> LevelUpChoiceRequired;
 
         bool _goldBanked;
+        bool _secondWindUsed;
+        bool _shieldReady;
+        float _shieldCooldown;
+        float _timeSinceDamaged = 99f;
+        float _regenAccumulator;
 
         public void ConfigureForRun(bool survivalMode)
         {
@@ -47,19 +76,84 @@ namespace ProjectZx.Player
             Level = 1;
             IsDead = false;
             _goldBanked = false;
+            _secondWindUsed = false;
+            _shieldReady = false;
+            _shieldCooldown = 0f;
+            _timeSinceDamaged = 99f;
             XpToNext = GetXpRequiredForLevel(1);
-            PendingLevelUpChoices = 0;
+            PendingLevelUpChoices = survivalMode && GameSave.CampfireBlessingUnlocked ? 1 : 0;
             RunSpeedMultiplier = 1f;
             RunDamageMultiplier = 1f;
             RunAttackSpeedMultiplier = 1f;
             RunAttackRangeMultiplier = 1f;
             RunLootRangeMultiplier = 1f;
+            RunCritChance = 0f;
+            RunCritMultiplier = 1.5f;
+            RunLifesteal = 0f;
+            RunBossDamageBonus = 0f;
+            RunExecuteBonus = 0f;
+            RunGoldFindMultiplier = 1f;
+            RunXpMultiplier = 1f;
+            RunRegenPerSecond = 0f;
+            RunShieldUnlocked = false;
+            RunBerserkBonus = 0f;
+        }
+
+        void Update()
+        {
+            if (!SurvivalMode || IsDead) return;
+
+            _timeSinceDamaged += Time.deltaTime;
+
+            if (RunShieldUnlocked)
+            {
+                if (!_shieldReady)
+                {
+                    _shieldCooldown -= Time.deltaTime;
+                    if (_shieldCooldown <= 0f)
+                        _shieldReady = true;
+                }
+            }
+
+            if (RunRegenPerSecond > 0f && _timeSinceDamaged >= RegenOutOfCombatDelay && CurrentHp < MaxHp)
+            {
+                _regenAccumulator += RunRegenPerSecond * Time.deltaTime;
+                if (_regenAccumulator >= 1f)
+                {
+                    var heal = Mathf.FloorToInt(_regenAccumulator);
+                    _regenAccumulator -= heal;
+                    Heal(heal);
+                }
+            }
+            else
+            {
+                _regenAccumulator = 0f;
+            }
         }
 
         public void TakeDamage(int amount)
         {
             if (IsDead || amount <= 0) return;
+
+            if (RunShieldUnlocked && _shieldReady)
+            {
+                _shieldReady = false;
+                _shieldCooldown = ShieldCooldownSeconds;
+                return;
+            }
+
+            if (GameSave.ThickHideUnlocked)
+                amount = Mathf.Max(1, Mathf.RoundToInt(amount * 0.85f));
+
             CurrentHp = Mathf.Max(0, CurrentHp - amount);
+            _timeSinceDamaged = 0f;
+
+            if (GameSave.SecondWindUnlocked && !_secondWindUsed && CurrentHp > 0 && CurrentHp <= MaxHp * 0.2f)
+            {
+                _secondWindUsed = true;
+                Heal(Mathf.Max(1, Mathf.RoundToInt(MaxHp * 0.3f)));
+            }
+
             if (CurrentHp <= 0) Die();
         }
 
@@ -77,6 +171,7 @@ namespace ProjectZx.Player
             if (!SurvivalMode || IsDead || amount <= 0) return;
             if (Level >= StatCaps.MaxRunLevel) return;
 
+            amount = Mathf.Max(1, Mathf.RoundToInt(amount * RunXpMultiplier));
             RunXp += amount;
 
             var leveled = false;
@@ -105,6 +200,16 @@ namespace ProjectZx.Player
         public bool CanOfferSpeedTalent => RunSpeedMultiplier * 1.1f <= StatCaps.RunMaxSpeedMultiplier + 0.001f;
         public bool CanOfferAttackTalent => RunDamageMultiplier * 1.12f <= StatCaps.RunMaxDamageMultiplier + 0.001f;
         public bool CanOfferHpTalent => MaxHp + 15 <= StatCaps.RunMaxHp;
+        public bool CanOfferCritChance => RunCritChance + 0.08f <= 0.55f;
+        public bool CanOfferCritDamage => RunCritMultiplier + 0.25f <= 3f;
+        public bool CanOfferLifesteal => RunLifesteal + 0.04f <= 0.2f;
+        public bool CanOfferBossHunter => RunBossDamageBonus + 0.2f <= 0.8f;
+        public bool CanOfferExecute => RunExecuteBonus + 0.3f <= 0.9f;
+        public bool CanOfferGoldFind => RunGoldFindMultiplier * 1.15f <= 2f;
+        public bool CanOfferRegen => RunRegenPerSecond + 2f <= 8f;
+        public bool CanOfferShield => !RunShieldUnlocked;
+        public bool CanOfferBerserk => RunBerserkBonus + 0.25f <= 0.5f;
+        public bool CanOfferXpBoost => RunXpMultiplier * 1.15f <= 2f;
 
         public static List<RunLevelChoice> RollLevelUpChoices(PlayerStats stats, int count = 4)
         {
@@ -118,7 +223,10 @@ namespace ProjectZx.Player
                     RunLevelChoice.Attack,
                     RunLevelChoice.AttackSpeed,
                     RunLevelChoice.AttackRange,
-                    RunLevelChoice.LootRange
+                    RunLevelChoice.LootRange,
+                    RunLevelChoice.CritChance,
+                    RunLevelChoice.Lifesteal,
+                    RunLevelChoice.BossHunter
                 });
             }
             else
@@ -129,6 +237,16 @@ namespace ProjectZx.Player
                 pool.Add(RunLevelChoice.AttackSpeed);
                 pool.Add(RunLevelChoice.AttackRange);
                 pool.Add(RunLevelChoice.LootRange);
+                if (stats.CanOfferCritChance) pool.Add(RunLevelChoice.CritChance);
+                if (stats.CanOfferCritDamage) pool.Add(RunLevelChoice.CritDamage);
+                if (stats.CanOfferLifesteal) pool.Add(RunLevelChoice.Lifesteal);
+                if (stats.CanOfferBossHunter) pool.Add(RunLevelChoice.BossHunter);
+                if (stats.CanOfferExecute) pool.Add(RunLevelChoice.Execute);
+                if (stats.CanOfferGoldFind) pool.Add(RunLevelChoice.GoldFind);
+                if (stats.CanOfferRegen) pool.Add(RunLevelChoice.Regen);
+                if (stats.CanOfferShield) pool.Add(RunLevelChoice.Shield);
+                if (stats.CanOfferBerserk) pool.Add(RunLevelChoice.Berserk);
+                if (stats.CanOfferXpBoost) pool.Add(RunLevelChoice.XpBoost);
             }
 
             for (var i = pool.Count - 1; i > 0; i--)
@@ -150,6 +268,16 @@ namespace ProjectZx.Player
                 RunLevelChoice.AttackSpeed => "+12% Attack Speed",
                 RunLevelChoice.AttackRange => "+10% Attack Range",
                 RunLevelChoice.LootRange => "+15% Loot Range",
+                RunLevelChoice.CritChance => "+8% Crit Chance",
+                RunLevelChoice.CritDamage => "+25% Crit Damage",
+                RunLevelChoice.Lifesteal => "+4% Lifesteal",
+                RunLevelChoice.BossHunter => "+20% Damage vs Bosses",
+                RunLevelChoice.Execute => "+30% Damage under 25% HP",
+                RunLevelChoice.GoldFind => "+15% Gold Find",
+                RunLevelChoice.Regen => "+2 HP/sec out of combat",
+                RunLevelChoice.Shield => "Block 1 hit every 12s",
+                RunLevelChoice.Berserk => "+25% Damage under 40% HP",
+                RunLevelChoice.XpBoost => "+15% XP Gain",
                 _ => choice.ToString()
             };
         }
@@ -182,6 +310,48 @@ namespace ProjectZx.Player
                 case RunLevelChoice.LootRange:
                     RunLootRangeMultiplier *= 1.15f;
                     break;
+                case RunLevelChoice.CritChance:
+                    if (!CanOfferCritChance) break;
+                    RunCritChance = Mathf.Min(0.55f, RunCritChance + 0.08f);
+                    break;
+                case RunLevelChoice.CritDamage:
+                    if (!CanOfferCritDamage) break;
+                    RunCritMultiplier = Mathf.Min(3f, RunCritMultiplier + 0.25f);
+                    break;
+                case RunLevelChoice.Lifesteal:
+                    if (!CanOfferLifesteal) break;
+                    RunLifesteal = Mathf.Min(0.2f, RunLifesteal + 0.04f);
+                    break;
+                case RunLevelChoice.BossHunter:
+                    if (!CanOfferBossHunter) break;
+                    RunBossDamageBonus = Mathf.Min(0.8f, RunBossDamageBonus + 0.2f);
+                    break;
+                case RunLevelChoice.Execute:
+                    if (!CanOfferExecute) break;
+                    RunExecuteBonus = Mathf.Min(0.9f, RunExecuteBonus + 0.3f);
+                    break;
+                case RunLevelChoice.GoldFind:
+                    if (!CanOfferGoldFind) break;
+                    RunGoldFindMultiplier = Mathf.Min(2f, RunGoldFindMultiplier * 1.15f);
+                    break;
+                case RunLevelChoice.Regen:
+                    if (!CanOfferRegen) break;
+                    RunRegenPerSecond = Mathf.Min(8f, RunRegenPerSecond + 2f);
+                    break;
+                case RunLevelChoice.Shield:
+                    if (!CanOfferShield) break;
+                    RunShieldUnlocked = true;
+                    _shieldReady = true;
+                    _shieldCooldown = 0f;
+                    break;
+                case RunLevelChoice.Berserk:
+                    if (!CanOfferBerserk) break;
+                    RunBerserkBonus = Mathf.Min(0.5f, RunBerserkBonus + 0.25f);
+                    break;
+                case RunLevelChoice.XpBoost:
+                    if (!CanOfferXpBoost) break;
+                    RunXpMultiplier = Mathf.Min(2f, RunXpMultiplier * 1.15f);
+                    break;
             }
 
             PendingLevelUpChoices--;
@@ -192,7 +362,8 @@ namespace ProjectZx.Player
         public void AddRunGold(int amount)
         {
             if (!SurvivalMode || IsDead || amount <= 0 || _goldBanked) return;
-            RunGold += amount;
+            var mult = GameSave.GoldFindMultiplier * RunGoldFindMultiplier;
+            RunGold += Mathf.Max(1, Mathf.RoundToInt(amount * mult));
         }
 
         public void BankRunGoldToSave()
@@ -221,6 +392,42 @@ namespace ProjectZx.Player
 
         public float Damage => 10f * GameSave.DamageMultiplier * RunDamageMultiplier;
 
+        public float EffectiveAttackSpeed =>
+            RunAttackSpeedMultiplier * (IsBerserkActive ? 1f + RunBerserkBonus : 1f);
+
+        public bool IsBerserkActive =>
+            RunBerserkBonus > 0f && MaxHp > 0 && CurrentHp <= MaxHp * 0.4f;
+
+        public int RollDamage(EnemyActor target, float weaponMultiplier = 1f)
+        {
+            var dmg = Damage * weaponMultiplier;
+
+            if (IsBerserkActive)
+                dmg *= 1f + RunBerserkBonus;
+
+            if (target != null)
+            {
+                if (target.IsBoss && RunBossDamageBonus > 0f)
+                    dmg *= 1f + RunBossDamageBonus;
+                else if (!target.IsBoss && RunExecuteBonus > 0f && target.HpRatio <= 0.25f)
+                    dmg *= 1f + RunExecuteBonus;
+            }
+
+            if (RunCritChance > 0f && UnityEngine.Random.value < RunCritChance)
+                dmg *= RunCritMultiplier;
+
+            return Mathf.Max(1, Mathf.RoundToInt(dmg));
+        }
+
+        public void OnDamageDealt(int damageDealt)
+        {
+            if (damageDealt <= 0 || RunLifesteal <= 0f) return;
+            Heal(Mathf.Max(1, Mathf.RoundToInt(damageDealt * RunLifesteal)));
+        }
+
+        public float EffectiveLootRangeMultiplier =>
+            RunLootRangeMultiplier * GameSave.LootRangeMultiplier;
+
         public void CaptureSnapshot(out SurvivalRunSnapshot snapshot)
         {
             snapshot = new SurvivalRunSnapshot
@@ -237,7 +444,18 @@ namespace ProjectZx.Player
                 RunDamageMultiplier = RunDamageMultiplier,
                 RunAttackSpeedMultiplier = RunAttackSpeedMultiplier,
                 RunAttackRangeMultiplier = RunAttackRangeMultiplier,
-                RunLootRangeMultiplier = RunLootRangeMultiplier
+                RunLootRangeMultiplier = RunLootRangeMultiplier,
+                RunCritChance = RunCritChance,
+                RunCritMultiplier = RunCritMultiplier,
+                RunLifesteal = RunLifesteal,
+                RunBossDamageBonus = RunBossDamageBonus,
+                RunExecuteBonus = RunExecuteBonus,
+                RunGoldFindMultiplier = RunGoldFindMultiplier,
+                RunXpMultiplier = RunXpMultiplier,
+                RunRegenPerSecond = RunRegenPerSecond,
+                RunShieldUnlocked = RunShieldUnlocked,
+                RunBerserkBonus = RunBerserkBonus,
+                SecondWindUsed = _secondWindUsed
             };
         }
 
@@ -265,6 +483,23 @@ namespace ProjectZx.Player
             RunLootRangeMultiplier = snapshot.RunLootRangeMultiplier > 0f
                 ? snapshot.RunLootRangeMultiplier
                 : 1f;
+            RunCritChance = snapshot.RunCritChance;
+            RunCritMultiplier = snapshot.RunCritMultiplier > 0f ? snapshot.RunCritMultiplier : 1.5f;
+            RunLifesteal = snapshot.RunLifesteal;
+            RunBossDamageBonus = snapshot.RunBossDamageBonus;
+            RunExecuteBonus = snapshot.RunExecuteBonus;
+            RunGoldFindMultiplier = snapshot.RunGoldFindMultiplier > 0f ? snapshot.RunGoldFindMultiplier : 1f;
+            RunXpMultiplier = snapshot.RunXpMultiplier > 0f ? snapshot.RunXpMultiplier : 1f;
+            RunRegenPerSecond = snapshot.RunRegenPerSecond;
+            RunShieldUnlocked = snapshot.RunShieldUnlocked;
+            RunBerserkBonus = snapshot.RunBerserkBonus;
+            _secondWindUsed = snapshot.SecondWindUsed;
+            if (RunShieldUnlocked)
+            {
+                _shieldReady = true;
+                _shieldCooldown = 0f;
+            }
+
             IsDead = CurrentHp <= 0;
         }
     }

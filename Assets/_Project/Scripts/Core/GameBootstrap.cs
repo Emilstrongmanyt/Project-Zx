@@ -37,9 +37,13 @@ namespace ProjectZx.Core
         {
             EnsureAudioManager();
             AudioManager.Instance?.PlayCampBgm();
-            SetupCamera(new Color(0.12f, 0.2f, 0.14f));
-            GameFactory.CreateGrassField("CampGrass", 44f, 34f, 1f);
-            GameFactory.ScatterArenaObstacles(40f, 30f, 6, 10, 0);
+            // Deep water clear color so the ring reads clearly past the tile edge.
+            SetupCamera(new Color(0.1f, 0.2f, 0.48f));
+            GameFactory.CreateGrassField("CampGrass", ArenaBounds.CampWidth, ArenaBounds.CampHeight, 1f);
+            GameFactory.ScatterArenaObstacles(
+                ArenaBounds.CampWidth - ArenaBounds.WaterMargin * 2f,
+                ArenaBounds.CampHeight - ArenaBounds.WaterMargin * 2f,
+                6, 10, 0);
 
             var campfire = GameFactory.CreateCampfire(Vector3.zero);
             var hub = new GameObject("HubUi").AddComponent<HubUi>();
@@ -77,10 +81,11 @@ namespace ProjectZx.Core
                 ? new Color(0.08f, 0.07f, 0.1f)
                 : isInside
                     ? new Color(0.2f, 0.16f, 0.12f)
-                    : new Color(0.14f, 0.28f, 0.12f));
+                    // Match water tile so survival shores read as a continuous lake edge.
+                    : new Color(0.1f, 0.2f, 0.48f));
 
-            const float arenaW = 64f;
-            const float arenaH = 48f;
+            const float arenaW = ArenaBounds.ArenaWidth;
+            const float arenaH = ArenaBounds.ArenaHeight;
             GameFactory.CreateTiledField(
                 isDungeon ? "DungeonFloor" : isInside ? "InsideFloor" : "OutsideFloor",
                 arenaW,

@@ -69,7 +69,7 @@ namespace ProjectZx.Combat
             if (_drawing) return;
 
             var stats = GetComponent<PlayerStats>();
-            var attackSpeed = stats != null ? stats.RunAttackSpeedMultiplier : 1f;
+            var attackSpeed = stats != null ? stats.EffectiveAttackSpeed : 1f;
             _cooldown -= Time.deltaTime * attackSpeed;
             if (_cooldown > 0f) return;
 
@@ -94,15 +94,14 @@ namespace ProjectZx.Combat
                 _bodyRenderer.flipX = !_drawFacingRight;
 
             var stats = GetComponent<PlayerStats>();
-            var damage = Mathf.RoundToInt((stats != null ? stats.Damage : 10f) * DamageMultiplier);
-            enemy.TakeDamage(damage);
+            CombatDamage.Apply(stats, enemy, DamageMultiplier, canApplyFrost: true);
 
             if (GameSave.GetSelectedAttackMode(PlayerClass.Bowman) == AttackMode.PiercingShot
                 && GameSave.PiercingShotUnlocked)
-                DamagePierceTarget(enemy, damage);
+                DamagePierceTarget(enemy);
         }
 
-        void DamagePierceTarget(EnemyActor primary, int primaryDamage)
+        void DamagePierceTarget(EnemyActor primary)
         {
             var direction = ((Vector2)primary.transform.position - (Vector2)transform.position).normalized;
             EnemyActor best = null;
@@ -124,7 +123,7 @@ namespace ProjectZx.Combat
             }
 
             if (best == null) return;
-            best.TakeDamage(Mathf.Max(1, Mathf.RoundToInt(primaryDamage * PierceSecondaryMultiplier)));
+            CombatDamage.Apply(GetComponent<PlayerStats>(), best, DamageMultiplier * PierceSecondaryMultiplier, canApplyFrost: true);
         }
 
         void UpdateDrawAnimation()
