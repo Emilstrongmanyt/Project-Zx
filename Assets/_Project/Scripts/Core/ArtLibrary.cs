@@ -156,8 +156,8 @@ namespace ProjectZx.Core
         public static Sprite BaseballBat => _baseballBat ??= LoadOrCreateBat();
         public static Sprite Spear => _spear ??= CreateSpearSprite();
         public static Sprite Bow => _bow ??= LoadOrCreateBow();
-        public static Sprite Stone => _stone ??= GetRandomRockSprite();
-        public static Sprite Tree => _tree ??= GetRandomTreeSprite();
+        public static Sprite Stone => _stone ??= GetPrimarySheetSprite("RockSheet", 10) ?? CreateStoneSprite();
+        public static Sprite Tree => _tree ??= GetPrimarySheetSprite("TreeSheet", 9) ?? CreateTreeSprite();
 
         public static Sprite[] TreeVariants => _treeVariants ??= LoadSheetSprites("TreeSheet", 9);
         public static Sprite[] RockVariants => _rockVariants ??= LoadSheetSprites("RockSheet", 10);
@@ -166,15 +166,9 @@ namespace ProjectZx.Core
         public static Sprite[] WarheadVariants => _warheadVariants ??= LoadSheetSprites("WarheadSheet", 8);
         public static Sprite[] CryptVariants => _cryptVariants ??= LoadSheetSprites("CryptSheet", 9);
 
-        public static Sprite GetRandomTreeSprite()
-        {
-            return PickRandom(TreeVariants) ?? CreateTreeSprite();
-        }
-
-        public static Sprite GetRandomRockSprite()
-        {
-            return PickRandom(RockVariants) ?? CreateStoneSprite();
-        }
+        // Single fixed art (build-48 style), not multi-variant shuffle bags.
+        public static Sprite GetRandomTreeSprite() => Tree;
+        public static Sprite GetRandomRockSprite() => Stone;
 
         public static Sprite GetRandomComputerSprite() => PickRandom(ComputerVariants);
 
@@ -291,6 +285,18 @@ namespace ProjectZx.Core
                     hit = ZombieHit;
                     break;
             }
+        }
+
+        static Sprite GetPrimarySheetSprite(string sheetName, int expectedCount)
+        {
+            var sprites = LoadSheetSprites(sheetName, expectedCount);
+            if (sprites == null) return null;
+            foreach (var sprite in sprites)
+            {
+                if (sprite != null) return sprite;
+            }
+
+            return null;
         }
 
         static Sprite[] LoadHeroSheetSprites(string sheetName, int count)
