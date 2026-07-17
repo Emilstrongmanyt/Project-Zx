@@ -56,18 +56,33 @@ namespace ProjectZx.Core
         }
 
         public void PlayCampBgm() => PlayBgm("Campfire BGM");
-        public void PlayOutsideBgm() => PlayBgm("OutsideBGM");
+        public void PlayOutsideBgm() => PlayBgm("Outside BGM1", "OutsideBGM");
         public void PlayInsideBgm() => PlayBgm("InsideBGM");
 
-        void PlayBgm(string clipName)
+        void PlayBgm(string clipName, params string[] fallbackClipNames)
         {
-            var clip = Resources.Load<AudioClip>(clipName);
+            var clip = LoadBgmClip(clipName, fallbackClipNames);
             if (clip == null || _bgmSource == null) return;
             if (_bgmSource.clip == clip && _bgmSource.isPlaying) return;
 
             _bgmSource.clip = clip;
             _bgmSource.volume = BgmVolume;
             _bgmSource.Play();
+        }
+
+        static AudioClip LoadBgmClip(string clipName, params string[] fallbackClipNames)
+        {
+            var clip = Resources.Load<AudioClip>(clipName);
+            if (clip != null) return clip;
+
+            foreach (var fallback in fallbackClipNames)
+            {
+                if (string.IsNullOrEmpty(fallback)) continue;
+                clip = Resources.Load<AudioClip>(fallback);
+                if (clip != null) return clip;
+            }
+
+            return null;
         }
 
         public void StopBossSfx()
