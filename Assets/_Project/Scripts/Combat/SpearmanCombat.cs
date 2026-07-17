@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using ProjectZx.Core;
 using ProjectZx.Enemies;
 using ProjectZx.Player;
+using ProjectZx.World;
 using UnityEngine;
 
 namespace ProjectZx.Combat
@@ -67,7 +68,7 @@ namespace ProjectZx.Combat
 
             var spearRenderer = spearGo.AddComponent<SpriteRenderer>();
             spearRenderer.sprite = ArtLibrary.Spear;
-            spearRenderer.sortingOrder = 11;
+            spearGo.AddComponent<YSortRenderer>().Configure(1);
 
             _spearTip = spearGo.transform;
             _spearPivot.localRotation = Quaternion.Euler(0f, 0f, RestAngle);

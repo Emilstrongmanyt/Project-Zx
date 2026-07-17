@@ -125,7 +125,7 @@ namespace ProjectZx.Enemies
             _fireBreathFx.transform.SetParent(transform, false);
             _fireBreathRenderer = _fireBreathFx.AddComponent<SpriteRenderer>();
             _fireBreathRenderer.sprite = ArtLibrary.GetFireBreathFrame(0);
-            _fireBreathRenderer.sortingOrder = 8;
+            _fireBreathFx.AddComponent<YSortRenderer>().Configure(1);
             ApplyFireBreathTransform(true);
             _fireBreathFx.SetActive(false);
         }
