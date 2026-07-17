@@ -5,15 +5,15 @@ namespace ProjectZx.World
     [RequireComponent(typeof(SpriteRenderer))]
     public class YSortRenderer : MonoBehaviour
     {
-        const float SortPrecision = 100f;
-
         [SerializeField] int sortOffset;
+        [SerializeField] float sortYBias;
 
         SpriteRenderer _renderer;
 
-        public void Configure(int offset = 0)
+        public void Configure(int offset = 0, float yBias = 0f)
         {
             sortOffset = offset;
+            sortYBias = yBias;
             Apply();
         }
 
@@ -32,7 +32,7 @@ namespace ProjectZx.World
             if (_renderer == null) _renderer = GetComponent<SpriteRenderer>();
             if (_renderer == null) return;
 
-            _renderer.sortingOrder = Mathf.RoundToInt(-transform.position.y * SortPrecision) + sortOffset;
+            _renderer.sortingOrder = ArenaBounds.GetYSortOrder(transform.position.y + sortYBias, sortOffset);
         }
     }
 }

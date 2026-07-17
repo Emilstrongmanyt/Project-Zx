@@ -9,8 +9,20 @@ namespace ProjectZx.World
         public const float ArenaHeight = 48f;
         public const float TileSize = 1f;
         public const float SpawnClearRadius = 1.05f;
+        public const int FloorSortOrder = -1000;
+        public const int EntitySortBase = 100;
+        public const float SortDepthScale = 40f;
 
         static readonly Collider2D[] OverlapBuffer = new Collider2D[12];
+
+        public static float PlayableHalfHeight => ArenaHeight * 0.5f - TileSize * 2f;
+
+        public static int GetYSortOrder(float worldY, int offset = 0)
+        {
+            // South (lower Y) draws in front with a positive, stable sorting band above floor tiles.
+            var depth = Mathf.RoundToInt((PlayableHalfHeight - worldY) * SortDepthScale);
+            return EntitySortBase + depth + offset;
+        }
 
         public static Vector2 ClampToPlayable(Vector2 position)
         {

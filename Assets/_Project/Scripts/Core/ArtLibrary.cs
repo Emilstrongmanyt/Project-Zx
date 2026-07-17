@@ -191,7 +191,7 @@ namespace ProjectZx.Core
         {
             if (hero == PlayableHero.RowZi)
             {
-                _rowZiSprites ??= LoadSheetSprites("RowZi", 8);
+                _rowZiSprites ??= LoadHeroSheetSprites("RowZi", 8);
                 return new HeroSpriteSet
                 {
                     Idle = _rowZiSprites[0],
@@ -201,7 +201,7 @@ namespace ProjectZx.Core
                 };
             }
 
-            _rollZySprites ??= LoadSheetSprites("RollZy", 8);
+            _rollZySprites ??= LoadHeroSheetSprites("RollZy", 8);
             return new HeroSpriteSet
             {
                 Idle = _rollZySprites[0],
@@ -293,25 +293,47 @@ namespace ProjectZx.Core
             }
         }
 
-        static Sprite[] LoadSheetSprites(string sheetName, int expectedCount)
+        static Sprite[] LoadHeroSheetSprites(string sheetName, int count)
         {
-            var fromSheet = Resources.LoadAll<Sprite>(sheetName);
-            if (fromSheet != null && fromSheet.Length > 1)
-            {
-                System.Array.Sort(fromSheet, (a, b) => string.CompareOrdinal(a.name, b.name));
-                return fromSheet;
-            }
-
-            var sprites = new Sprite[expectedCount];
+            var sprites = new Sprite[count];
             var loaded = 0;
-            for (var i = 0; i < expectedCount; i++)
+            for (var i = 0; i < count; i++)
             {
                 sprites[i] = Load($"{sheetName}_{i}", sheetName);
                 if (sprites[i] != null) loaded++;
             }
 
-            if (loaded > 0) return sprites;
-            return fromSheet != null && fromSheet.Length > 0 ? fromSheet : null;
+            return loaded > 0 ? sprites : null;
+        }
+
+        static Sprite[] LoadSheetSprites(string sheetName, int expectedCount)
+        {
+            var fromSheet = Resources.LoadAll<Sprite>(sheetName);
+            if (fromSheet != null && fromSheet.Length > 0)
+            {
+                var prefix = sheetName + "_";
+                var filtered = new System.Collections.Generic.List<Sprite>();
+                foreach (var sprite in fromSheet)
+                {
+                    if (sprite == null) continue;
+                    if (!sprite.name.StartsWith(prefix, System.StringComparison.Ordinal)) continue;
+                    filtered.Add(sprite);
+                }
+
+                if (filtered.Count > 0)
+                {
+                    filtered.Sort((a, b) => GetSheetSpriteIndex(a.name, prefix).CompareTo(GetSheetSpriteIndex(b.name, prefix)));
+                    return filtered.ToArray();
+                }
+            }
+
+            return LoadHeroSheetSprites(sheetName, expectedCount);
+        }
+
+        static int GetSheetSpriteIndex(string spriteName, string prefix)
+        {
+            if (!spriteName.StartsWith(prefix, System.StringComparison.Ordinal)) return int.MaxValue;
+            return int.TryParse(spriteName.Substring(prefix.Length), out var index) ? index : int.MaxValue;
         }
 
         static Sprite PickRandom(Sprite[] sprites)
