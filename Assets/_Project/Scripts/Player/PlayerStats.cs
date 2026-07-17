@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using ProjectZx.Core;
 using ProjectZx.Enemies;
+using ProjectZx.UI;
 using ProjectZx.Waves;
 using UnityEngine;
 
@@ -145,6 +146,7 @@ namespace ProjectZx.Player
             if (GameSave.ThickHideUnlocked)
                 amount = Mathf.Max(1, Mathf.RoundToInt(amount * 0.85f));
 
+            FloatingDamageNumber.Spawn(transform.position, amount, isHeroHit: true);
             CurrentHp = Mathf.Max(0, CurrentHp - amount);
             _timeSinceDamaged = 0f;
 

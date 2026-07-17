@@ -61,14 +61,14 @@ namespace ProjectZx.UI
             canvasGo.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            _roundText = CreateText(canvasGo.transform, "Round 1", 28, new Vector2(SafeLeft, -SafeTop), TextAnchor.UpperLeft);
-            CreateUiIcon(canvasGo.transform, ArtLibrary.HpHeart, new Vector2(SafeLeft, -SafeTop - 40f), new Vector2(30, 30), TextAnchor.UpperLeft);
-            _hpText = CreateText(canvasGo.transform, "HP 100/100", 22, new Vector2(SafeLeft + 38f, -SafeTop - 40f), TextAnchor.UpperLeft);
-            CreateUiIcon(canvasGo.transform, ArtLibrary.XpGem, new Vector2(SafeLeft, -SafeTop - 78f), new Vector2(28, 28), TextAnchor.UpperLeft);
-            _xpText = CreateText(canvasGo.transform, "Run XP 0/30", 22, new Vector2(SafeLeft + 38f, -SafeTop - 78f), TextAnchor.UpperLeft);
-            CreateUiIcon(canvasGo.transform, ArtLibrary.GoldCoin, new Vector2(SafeLeft, -SafeTop - 116f), new Vector2(28, 28), TextAnchor.UpperLeft);
-            _goldText = CreateText(canvasGo.transform, "Run Gold 0", 22, new Vector2(SafeLeft + 38f, -SafeTop - 116f), TextAnchor.UpperLeft);
-            _bannerText = CreateText(canvasGo.transform, "", 36, Vector2.zero, TextAnchor.MiddleCenter);
+            _roundText = CreateText(canvasGo.transform, "Round 1", 34, new Vector2(SafeLeft, -SafeTop), TextAnchor.UpperLeft);
+            CreateUiIcon(canvasGo.transform, ArtLibrary.HpHeart, new Vector2(SafeLeft, -SafeTop - 46f), new Vector2(34, 34), TextAnchor.UpperLeft);
+            _hpText = CreateText(canvasGo.transform, "HP 100/100", 28, new Vector2(SafeLeft + 42f, -SafeTop - 46f), TextAnchor.UpperLeft);
+            CreateUiIcon(canvasGo.transform, ArtLibrary.XpGem, new Vector2(SafeLeft, -SafeTop - 90f), new Vector2(32, 32), TextAnchor.UpperLeft);
+            _xpText = CreateText(canvasGo.transform, "Run XP 0/30", 28, new Vector2(SafeLeft + 42f, -SafeTop - 90f), TextAnchor.UpperLeft);
+            CreateUiIcon(canvasGo.transform, ArtLibrary.GoldCoin, new Vector2(SafeLeft, -SafeTop - 134f), new Vector2(32, 32), TextAnchor.UpperLeft);
+            _goldText = CreateText(canvasGo.transform, "Run Gold 0", 28, new Vector2(SafeLeft + 42f, -SafeTop - 134f), TextAnchor.UpperLeft);
+            _bannerText = CreateText(canvasGo.transform, "", 44, Vector2.zero, TextAnchor.MiddleCenter);
             _bannerText.color = new Color(1f, 0.85f, 0.3f);
 
             _levelUpPanel = BuildLevelUpPanel(canvasGo.transform);
@@ -79,10 +79,10 @@ namespace ProjectZx.UI
 
         GameObject BuildAchievementToast(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "AchievementToast", new Vector2(0f, 120f), new Vector2(520f, 150f), ArtLibrary.ChallengeBoardUi);
-            _achievementToastTitle = CreatePanelText(panel.transform, "Achievement Unlocked!", 26, new Vector2(0f, 38f), new Vector2(460f, 36f));
+            var panel = CreateDialogPanel(parent, "AchievementToast", new Vector2(0f, 120f), new Vector2(560f, 170f), ArtLibrary.ChallengeBoardUi);
+            _achievementToastTitle = CreatePanelText(panel.transform, "Achievement Unlocked!", 30, new Vector2(0f, 42f), new Vector2(500f, 40f));
             _achievementToastTitle.color = new Color(1f, 0.9f, 0.45f);
-            _achievementToastBody = CreatePanelText(panel.transform, "", 20, new Vector2(0f, -18f), new Vector2(460f, 70f));
+            _achievementToastBody = CreatePanelText(panel.transform, "", 24, new Vector2(0f, -20f), new Vector2(500f, 80f));
             panel.SetActive(false);
             return panel;
         }
@@ -107,7 +107,7 @@ namespace ProjectZx.UI
             rect.anchorMax = new Vector2(1f, 1f);
             rect.pivot = new Vector2(1f, 1f);
             rect.anchoredPosition = new Vector2(-SafeRight, -SafeTop);
-            var size = new Vector2(220f, 52f);
+            var size = new Vector2(240f, 58f);
             rect.sizeDelta = size;
             var image = go.AddComponent<Image>();
             UiSprites.ApplyButtonSprite(image, size);
@@ -124,7 +124,7 @@ namespace ProjectZx.UI
             var text = textGo.AddComponent<Text>();
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.text = "Retreat";
-            text.fontSize = 22;
+            text.fontSize = 26;
             text.color = Color.white;
             text.alignment = TextAnchor.MiddleCenter;
             text.raycastTarget = false;
@@ -132,12 +132,12 @@ namespace ProjectZx.UI
 
         GameObject BuildRetreatPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "RetreatPanel", Vector2.zero, new Vector2(520, 280), ArtLibrary.ChallengeBoardUi);
-            CreatePanelText(panel.transform, "Retreat to Camp?", 30, new Vector2(0, 70), new Vector2(460, 44));
-            CreatePanelText(panel.transform, "Run gold will be saved. Current progress ends.", 20, new Vector2(0, 20), new Vector2(460, 60));
+            var panel = CreateDialogPanel(parent, "RetreatPanel", Vector2.zero, new Vector2(560, 300), ArtLibrary.ChallengeBoardUi);
+            CreatePanelText(panel.transform, "Retreat to Camp?", 34, new Vector2(0, 78), new Vector2(500, 48));
+            CreatePanelText(panel.transform, "Run gold will be saved. Current progress ends.", 24, new Vector2(0, 22), new Vector2(500, 64));
 
-            CreateHudButton(panel.transform, "Yes, Retreat", new Vector2(-120, -70), ConfirmRetreat);
-            CreateHudButton(panel.transform, "Keep Fighting", new Vector2(120, -70), () => _retreatPanel.SetActive(false));
+            CreateHudButton(panel.transform, "Yes, Retreat", new Vector2(-130, -78), ConfirmRetreat);
+            CreateHudButton(panel.transform, "Keep Fighting", new Vector2(130, -78), () => _retreatPanel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
@@ -163,7 +163,7 @@ namespace ProjectZx.UI
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = pos;
-            var size = new Vector2(200, 52);
+            var size = new Vector2(220, 58);
             rect.sizeDelta = size;
             var image = go.AddComponent<Image>();
             UiSprites.ApplyButtonSprite(image, size);
@@ -180,7 +180,7 @@ namespace ProjectZx.UI
             var text = textGo.AddComponent<Text>();
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.text = label;
-            text.fontSize = 20;
+            text.fontSize = 24;
             text.color = Color.white;
             text.alignment = TextAnchor.MiddleCenter;
             text.raycastTarget = false;
@@ -188,9 +188,9 @@ namespace ProjectZx.UI
 
         GameObject BuildLevelUpPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "LevelUpPanel", Vector2.zero, new Vector2(560, 520), ArtLibrary.LevelUpUi);
-            _levelUpTitle = CreatePanelText(panel.transform, "Level Up!", 34, new Vector2(0, 200), new Vector2(500, 50));
-            CreatePanelText(panel.transform, "Pick one of four random boosts", 22, new Vector2(0, 155), new Vector2(500, 40));
+            var panel = CreateDialogPanel(parent, "LevelUpPanel", Vector2.zero, new Vector2(620, 580), ArtLibrary.LevelUpUi);
+            _levelUpTitle = CreatePanelText(panel.transform, "Level Up!", 40, new Vector2(0, 220), new Vector2(560, 54));
+            CreatePanelText(panel.transform, "Pick one of four random boosts", 26, new Vector2(0, 168), new Vector2(560, 44));
 
             var rootGo = new GameObject("ChoiceButtons");
             rootGo.transform.SetParent(panel.transform, false);
@@ -198,8 +198,8 @@ namespace ProjectZx.UI
             rootRect.anchorMin = new Vector2(0.5f, 0.5f);
             rootRect.anchorMax = new Vector2(0.5f, 0.5f);
             rootRect.pivot = new Vector2(0.5f, 0.5f);
-            rootRect.anchoredPosition = new Vector2(0f, -20f);
-            rootRect.sizeDelta = new Vector2(420f, 320f);
+            rootRect.anchoredPosition = new Vector2(0f, -24f);
+            rootRect.sizeDelta = new Vector2(480f, 360f);
             _choiceButtonRoot = rootGo.transform;
 
             panel.SetActive(false);
@@ -238,8 +238,8 @@ namespace ProjectZx.UI
         {
             ClearChoiceButtons();
             var choices = PlayerStats.RollLevelUpChoices(_stats, 4);
-            var yStart = 90f;
-            const float yStep = -80f;
+            var yStart = 100f;
+            const float yStep = -88f;
 
             for (var i = 0; i < choices.Count; i++)
             {
@@ -378,7 +378,7 @@ namespace ProjectZx.UI
             rect.anchorMax = anchor == TextAnchor.MiddleCenter ? new Vector2(0.5f, 0.5f) : new Vector2(0, 1);
             rect.pivot = anchor == TextAnchor.MiddleCenter ? new Vector2(0.5f, 0.5f) : new Vector2(0, 1);
             rect.anchoredPosition = pos;
-            rect.sizeDelta = new Vector2(700, 50);
+            rect.sizeDelta = new Vector2(820, 56);
             var label = go.AddComponent<Text>();
             label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             label.text = text;
@@ -442,7 +442,7 @@ namespace ProjectZx.UI
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = pos;
-            var size = new Vector2(360, 56);
+            var size = new Vector2(420, 68);
             rect.sizeDelta = size;
             var image = go.AddComponent<Image>();
             UiSprites.ApplyButtonSprite(image, size);
@@ -454,14 +454,16 @@ namespace ProjectZx.UI
             var textRect = textGo.AddComponent<RectTransform>();
             textRect.anchorMin = Vector2.zero;
             textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = Vector2.zero;
-            textRect.offsetMax = Vector2.zero;
+            textRect.offsetMin = new Vector2(10f, 4f);
+            textRect.offsetMax = new Vector2(-10f, -4f);
             var text = textGo.AddComponent<Text>();
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.text = label;
-            text.fontSize = 24;
+            text.fontSize = 28;
             text.color = Color.white;
             text.alignment = TextAnchor.MiddleCenter;
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
             text.raycastTarget = false;
 
             _choiceButtons.Add(go);

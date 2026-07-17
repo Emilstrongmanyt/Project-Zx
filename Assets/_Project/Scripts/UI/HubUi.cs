@@ -85,8 +85,8 @@ namespace ProjectZx.UI
             canvasGo.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            CreateUiIcon(canvasGo.transform, ArtLibrary.GoldCoin, new Vector2(-SafeRight, -SafeTop), new Vector2(34, 34), TextAnchor.UpperRight);
-            _goldText = CreateText(canvasGo.transform, "0", 24, TextAnchor.UpperRight, new Vector2(-SafeRight + 72f, -SafeTop), new Vector2(100, 36));
+            CreateUiIcon(canvasGo.transform, ArtLibrary.GoldCoin, new Vector2(-SafeRight, -SafeTop), new Vector2(40, 40), TextAnchor.UpperRight);
+            _goldText = CreateText(canvasGo.transform, "0", 30, TextAnchor.UpperRight, new Vector2(-SafeRight + 80f, -SafeTop), new Vector2(120, 42));
             _goldText.alignment = TextAnchor.MiddleRight;
 
             _shopPanel = BuildShopPanel(canvasGo.transform);
@@ -99,8 +99,8 @@ namespace ProjectZx.UI
 
         GameObject BuildShopPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "ShopPanel", Vector2.zero, new Vector2(960, 900), ArtLibrary.ShopUi);
-            CreateText(panel.transform, "Wizard Shop", 32, TextAnchor.MiddleCenter, new Vector2(0, 390), new Vector2(500, 44));
+            var panel = CreateDialogPanel(parent, "ShopPanel", Vector2.zero, new Vector2(1100, 980), ArtLibrary.ShopUi);
+            CreateText(panel.transform, "Wizard Shop", 40, TextAnchor.MiddleCenter, new Vector2(0, 430), new Vector2(620, 52));
 
             var scrollRoot = new GameObject("ShopScroll");
             scrollRoot.transform.SetParent(panel.transform, false);
@@ -108,14 +108,14 @@ namespace ProjectZx.UI
             scrollRectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             scrollRectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             scrollRectTransform.pivot = new Vector2(0.5f, 0.5f);
-            scrollRectTransform.anchoredPosition = new Vector2(0f, 40f);
-            scrollRectTransform.sizeDelta = new Vector2(880f, 620f);
+            scrollRectTransform.anchoredPosition = new Vector2(0f, 36f);
+            scrollRectTransform.sizeDelta = new Vector2(1000f, 680f);
 
             var scroll = scrollRoot.AddComponent<ScrollRect>();
             scroll.horizontal = false;
             scroll.vertical = true;
             scroll.movementType = ScrollRect.MovementType.Clamped;
-            scroll.scrollSensitivity = 28f;
+            scroll.scrollSensitivity = 32f;
 
             var viewport = new GameObject("Viewport");
             viewport.transform.SetParent(scrollRoot.transform, false);
@@ -137,8 +137,8 @@ namespace ProjectZx.UI
             contentRect.anchoredPosition = Vector2.zero;
             scroll.content = contentRect;
 
-            var y = -8f;
-            const float step = -56f;
+            var y = -10f;
+            const float step = -68f;
             _hpRow = CreateShopUpgradeRow(content.transform, "Max HP +15", ShopCosts.HpUpgrade, y, BuyHp);
             y += step;
             _damageRow = CreateShopUpgradeRow(content.transform, "Damage +8%", ShopCosts.DamageUpgrade, y, BuyDamage);
@@ -159,20 +159,20 @@ namespace ProjectZx.UI
             y += step;
             _frostTipRow = CreateShopUpgradeRow(content.transform, "Frost Tip (freeze zombies 0.5–1s)", ShopCosts.FrostTip, y, BuyFrostTip);
 
-            contentRect.sizeDelta = new Vector2(0f, Mathf.Abs(y) + 64f);
+            contentRect.sizeDelta = new Vector2(0f, Mathf.Abs(y) + 80f);
 
-            CreateButton(panel.transform, "Build Loadout", new Vector2(-195, -360), () => OpenLoadout(), large: true);
-            CreateButton(panel.transform, "Character Stats", new Vector2(195, -360), () => OpenStats(), large: true);
-            CreateButton(panel.transform, "Close", new Vector2(0, -420), () => panel.SetActive(false), large: true);
+            CreateButton(panel.transform, "Build Loadout", new Vector2(-220, -400), () => OpenLoadout(), large: true);
+            CreateButton(panel.transform, "Character Stats", new Vector2(220, -400), () => OpenStats(), large: true);
+            CreateButton(panel.transform, "Close", new Vector2(0, -470), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
         }
 
         GameObject BuildAchievementsPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "AchievementsPanel", Vector2.zero, new Vector2(1040, 832), ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, "Achievements", 40, TextAnchor.MiddleCenter, new Vector2(0, 364), new Vector2(650, 56));
-            _achievementCountText = CreateText(panel.transform, "", 26, TextAnchor.MiddleCenter, new Vector2(0, 318), new Vector2(650, 40));
+            var panel = CreateDialogPanel(parent, "AchievementsPanel", Vector2.zero, new Vector2(1100, 880), ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, "Achievements", 44, TextAnchor.MiddleCenter, new Vector2(0, 380), new Vector2(700, 58));
+            _achievementCountText = CreateText(panel.transform, "", 30, TextAnchor.MiddleCenter, new Vector2(0, 330), new Vector2(700, 44));
 
             var scrollGo = new GameObject("AchievementScroll");
             scrollGo.transform.SetParent(panel.transform, false);
@@ -181,7 +181,7 @@ namespace ProjectZx.UI
             scrollRectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             scrollRectTransform.pivot = new Vector2(0.5f, 0.5f);
             scrollRectTransform.anchoredPosition = new Vector2(0f, -14f);
-            scrollRectTransform.sizeDelta = new Vector2(936f, 560f);
+            scrollRectTransform.sizeDelta = new Vector2(1000f, 600f);
 
             var scroll = scrollGo.AddComponent<ScrollRect>();
             scroll.horizontal = false;
@@ -211,16 +211,16 @@ namespace ProjectZx.UI
             scroll.content = contentRect;
 
             var y = 0f;
-            const float rowHeight = 94f;
+            const float rowHeight = 104f;
             foreach (var def in Achievements.All)
             {
                 _achievementRows.Add(CreateAchievementRow(content.transform, def, y));
                 y -= rowHeight;
             }
 
-            contentRect.sizeDelta = new Vector2(910f, Mathf.Abs(y));
+            contentRect.sizeDelta = new Vector2(980f, Mathf.Abs(y));
 
-            CreateButton(panel.transform, "Close", new Vector2(0, -370), () => panel.SetActive(false), large: true);
+            CreateButton(panel.transform, "Close", new Vector2(0, -390), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
         }
@@ -234,15 +234,15 @@ namespace ProjectZx.UI
             rect.anchorMax = new Vector2(0.5f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
             rect.anchoredPosition = new Vector2(0f, y);
-            rect.sizeDelta = new Vector2(884f, 84f);
+            rect.sizeDelta = new Vector2(960f, 94f);
 
             var image = go.AddComponent<Image>();
-            UiSprites.ApplyButtonSprite(image, new Vector2(884f, 84f));
+            UiSprites.ApplyButtonSprite(image, new Vector2(960f, 94f));
             go.AddComponent<Button>();
 
-            var title = CreateText(go.transform, def.Title, 26, TextAnchor.UpperLeft, new Vector2(18f, -10f), new Vector2(832f, 36f));
+            var title = CreateText(go.transform, def.Title, 30, TextAnchor.UpperLeft, new Vector2(20f, -12f), new Vector2(900f, 40f));
             title.alignment = TextAnchor.UpperLeft;
-            var desc = CreateText(go.transform, def.Description, 22, TextAnchor.UpperLeft, new Vector2(18f, -44f), new Vector2(832f, 32f));
+            var desc = CreateText(go.transform, def.Description, 24, TextAnchor.UpperLeft, new Vector2(20f, -50f), new Vector2(900f, 36f));
             desc.alignment = TextAnchor.UpperLeft;
             desc.color = new Color(0.88f, 0.9f, 0.95f);
 
@@ -257,85 +257,85 @@ namespace ProjectZx.UI
 
         GameObject BuildLoadoutPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "LoadoutPanel", Vector2.zero, new Vector2(860, 820), ArtLibrary.ShopUi);
-            CreateText(panel.transform, "Build Loadout", 32, TextAnchor.MiddleCenter, new Vector2(0, 360), new Vector2(560, 48));
+            var panel = CreateDialogPanel(parent, "LoadoutPanel", Vector2.zero, new Vector2(960, 900), ArtLibrary.ShopUi);
+            CreateText(panel.transform, "Build Loadout", 38, TextAnchor.MiddleCenter, new Vector2(0, 390), new Vector2(620, 52));
 
             // Class section
-            _loadoutClassPicker = BuildClassPicker(panel.transform, 300f, 260f, 190f);
+            _loadoutClassPicker = BuildClassPicker(panel.transform, 320f, 275f, 200f);
 
             // Technique section (clear gap under class buttons at ~190-132)
-            CreateText(panel.transform, "Attack Technique", 24, TextAnchor.MiddleCenter, new Vector2(0, 70), new Vector2(560, 36));
-            _techniqueStatusText = CreateText(panel.transform, "", 17, TextAnchor.MiddleCenter, new Vector2(0, 28), new Vector2(700, 48));
+            CreateText(panel.transform, "Attack Technique", 28, TextAnchor.MiddleCenter, new Vector2(0, 70), new Vector2(620, 40));
+            _techniqueStatusText = CreateText(panel.transform, "", 20, TextAnchor.MiddleCenter, new Vector2(0, 24), new Vector2(780, 52));
             _techniqueStatusText.alignment = TextAnchor.UpperCenter;
-            _techniqueStandardButton = CreateButton(panel.transform, "Standard", new Vector2(-150, -40), () => SelectAttackMode(AttackMode.Standard));
-            _techniqueSpecialButton = CreateButton(panel.transform, "Special", new Vector2(150, -40), SelectSpecialAttackMode);
+            _techniqueStandardButton = CreateButton(panel.transform, "Standard", new Vector2(-160, -50), () => SelectAttackMode(AttackMode.Standard));
+            _techniqueSpecialButton = CreateButton(panel.transform, "Special", new Vector2(160, -50), SelectSpecialAttackMode);
 
             // Movement control (mutually exclusive)
-            CreateText(panel.transform, "Movement Control", 24, TextAnchor.MiddleCenter, new Vector2(0, -120), new Vector2(560, 36));
-            CreateText(panel.transform, "Only one control style is active at a time.", 16, TextAnchor.MiddleCenter, new Vector2(0, -152), new Vector2(640, 28));
-            _movementJoystickButton = CreateButton(panel.transform, "Joystick", new Vector2(-150, -210), () => SelectMovementControl(MovementControlType.Joystick));
-            _movementTapHoldButton = CreateButton(panel.transform, "Tap / Hold", new Vector2(150, -210), () => SelectMovementControl(MovementControlType.TapHold));
+            CreateText(panel.transform, "Movement Control", 28, TextAnchor.MiddleCenter, new Vector2(0, -140), new Vector2(620, 40));
+            CreateText(panel.transform, "Only one control style is active at a time.", 20, TextAnchor.MiddleCenter, new Vector2(0, -176), new Vector2(700, 32));
+            _movementJoystickButton = CreateButton(panel.transform, "Joystick", new Vector2(-160, -240), () => SelectMovementControl(MovementControlType.Joystick));
+            _movementTapHoldButton = CreateButton(panel.transform, "Tap / Hold", new Vector2(160, -240), () => SelectMovementControl(MovementControlType.TapHold));
 
-            CreateButton(panel.transform, "Back to Shop", new Vector2(-150, -320), () =>
+            CreateButton(panel.transform, "Back to Shop", new Vector2(-160, -350), () =>
             {
                 panel.SetActive(false);
                 OpenShop();
             });
-            CreateButton(panel.transform, "Close", new Vector2(150, -320), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Close", new Vector2(160, -350), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
 
         GameObject BuildStatsPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "StatsPanel", Vector2.zero, new Vector2(760, 700), ArtLibrary.ShopUi);
-            CreateText(panel.transform, "Character Stats", 30, TextAnchor.MiddleCenter, new Vector2(0, 300), new Vector2(500, 44));
-            _statsBodyText = CreateText(panel.transform, "", 19, TextAnchor.MiddleCenter, new Vector2(0, -10), new Vector2(680, 520));
+            var panel = CreateDialogPanel(parent, "StatsPanel", Vector2.zero, new Vector2(860, 780), ArtLibrary.ShopUi);
+            CreateText(panel.transform, "Character Stats", 36, TextAnchor.MiddleCenter, new Vector2(0, 330), new Vector2(560, 48));
+            _statsBodyText = CreateText(panel.transform, "", 22, TextAnchor.MiddleCenter, new Vector2(0, -10), new Vector2(760, 580));
             _statsBodyText.alignment = TextAnchor.UpperLeft;
 
-            CreateButton(panel.transform, "Back to Shop", new Vector2(-130, -300), () =>
+            CreateButton(panel.transform, "Back to Shop", new Vector2(-150, -330), () =>
             {
                 panel.SetActive(false);
                 OpenShop();
             });
-            CreateButton(panel.transform, "Close", new Vector2(130, -300), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Close", new Vector2(150, -330), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
 
         GameObject BuildMapPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, new Vector2(806, 390), ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, "Outside Survival", 36, TextAnchor.MiddleCenter, new Vector2(0, 91), new Vector2(650, 52));
-            CreateText(panel.transform, "Set class & technique at the Wizard shop first.", 24, TextAnchor.MiddleCenter, new Vector2(0, 26), new Vector2(700, 62));
-            CreateButton(panel.transform, "Start Run", new Vector2(0, -72), () => EnterSurvival(SurvivalMapKind.Outside), large: true);
-            CreateButton(panel.transform, "Close", new Vector2(0, -162), () => panel.SetActive(false), large: true);
+            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, new Vector2(860, 420), ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, "Outside Survival", 40, TextAnchor.MiddleCenter, new Vector2(0, 100), new Vector2(700, 56));
+            CreateText(panel.transform, "Set class & technique at the Wizard shop first.", 26, TextAnchor.MiddleCenter, new Vector2(0, 30), new Vector2(760, 64));
+            CreateButton(panel.transform, "Start Run", new Vector2(0, -70), () => EnterSurvival(SurvivalMapKind.Outside), large: true);
+            CreateButton(panel.transform, "Close", new Vector2(0, -165), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
         }
 
         GameObject BuildCampfirePanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, new Vector2(620, 380), ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, "Campfire Travel", 28, TextAnchor.MiddleCenter, new Vector2(0, 120), new Vector2(500, 40));
-            CreateText(panel.transform, "Set class & technique at the Wizard shop first.", 18, TextAnchor.MiddleCenter, new Vector2(0, 70), new Vector2(540, 48));
-            CreateButton(panel.transform, "Outside Survival", new Vector2(0, -10), () => EnterSurvival(SurvivalMapKind.Outside));
-            CreateButton(panel.transform, "Inside Survival", new Vector2(0, -75), () => EnterSurvival(SurvivalMapKind.Inside));
-            CreateButton(panel.transform, "Close", new Vector2(0, -145), () => panel.SetActive(false));
+            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, new Vector2(700, 420), ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, "Campfire Travel", 34, TextAnchor.MiddleCenter, new Vector2(0, 140), new Vector2(560, 48));
+            CreateText(panel.transform, "Set class & technique at the Wizard shop first.", 22, TextAnchor.MiddleCenter, new Vector2(0, 85), new Vector2(620, 52));
+            CreateButton(panel.transform, "Outside Survival", new Vector2(0, -5), () => EnterSurvival(SurvivalMapKind.Outside));
+            CreateButton(panel.transform, "Inside Survival", new Vector2(0, -80), () => EnterSurvival(SurvivalMapKind.Inside));
+            CreateButton(panel.transform, "Close", new Vector2(0, -155), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
 
         ClassPickerRefs BuildClassPicker(Transform parent, float titleY, float statusY, float buttonY)
         {
-            CreateText(parent, "Choose Class", 24, TextAnchor.MiddleCenter, new Vector2(0, titleY), new Vector2(500, 36));
+            CreateText(parent, "Choose Class", 28, TextAnchor.MiddleCenter, new Vector2(0, titleY), new Vector2(560, 40));
             return new ClassPickerRefs
             {
-                StatusText = CreateText(parent, "", 18, TextAnchor.MiddleCenter, new Vector2(0, statusY), new Vector2(640, 40)),
-                BatterButton = CreateButton(parent, "Batter", new Vector2(-150, buttonY), () => SelectClass(PlayerClass.Batter)),
-                SpearmanButton = CreateButton(parent, "Spearman", new Vector2(150, buttonY), () => SelectClass(PlayerClass.Spearman)),
-                BowmanButton = CreateButton(parent, "Bowman", new Vector2(-150, buttonY - 70f), () => SelectClass(PlayerClass.Bowman)),
-                MagicianButton = CreateButton(parent, "Magician", new Vector2(150, buttonY - 70f), () => SelectClass(PlayerClass.Magician))
+                StatusText = CreateText(parent, "", 22, TextAnchor.MiddleCenter, new Vector2(0, statusY), new Vector2(720, 44)),
+                BatterButton = CreateButton(parent, "Batter", new Vector2(-160, buttonY), () => SelectClass(PlayerClass.Batter)),
+                SpearmanButton = CreateButton(parent, "Spearman", new Vector2(160, buttonY), () => SelectClass(PlayerClass.Spearman)),
+                BowmanButton = CreateButton(parent, "Bowman", new Vector2(-160, buttonY - 76f), () => SelectClass(PlayerClass.Bowman)),
+                MagicianButton = CreateButton(parent, "Magician", new Vector2(160, buttonY - 76f), () => SelectClass(PlayerClass.Magician))
             };
         }
 
@@ -530,28 +530,30 @@ namespace ProjectZx.UI
         {
             return new UpgradeRowRefs
             {
-                Label = CreateText(parent, $"{label} — {cost}g", 26, TextAnchor.MiddleLeft, new Vector2(-254, y), new Vector2(364, 42)),
+                Label = CreateText(parent, $"{label} — {cost}g", 28, TextAnchor.MiddleLeft, new Vector2(-254, y), new Vector2(400, 48)),
                 BuyButton = CreateButton(parent, "Buy", new Vector2(266, y), onBuy, large: true)
             };
         }
 
         UpgradeRowRefs CreateShopUpgradeRow(Transform parent, string label, int cost, float y, Action onBuy)
         {
-            var labelText = CreateText(parent, $"{label} — {cost}g", 22, TextAnchor.MiddleLeft, new Vector2(-40f, y - 24f), new Vector2(520f, 40f));
+            var labelText = CreateText(parent, $"{label} — {cost}g", 26, TextAnchor.MiddleLeft, new Vector2(-40f, y - 28f), new Vector2(620f, 52f));
             var labelRect = labelText.GetComponent<RectTransform>();
             labelRect.anchorMin = new Vector2(0.5f, 1f);
             labelRect.anchorMax = new Vector2(0.5f, 1f);
             labelRect.pivot = new Vector2(0.5f, 1f);
-            labelRect.anchoredPosition = new Vector2(-90f, y);
+            labelRect.anchoredPosition = new Vector2(-100f, y);
             labelText.alignment = TextAnchor.MiddleLeft;
+            labelText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            labelText.verticalOverflow = VerticalWrapMode.Truncate;
 
-            var buyButton = CreateButton(parent, "Buy", new Vector2(300f, y - 24f), onBuy, large: true);
+            var buyButton = CreateButton(parent, "Buy", new Vector2(340f, y - 28f), onBuy, large: true);
             var buyRect = buyButton.GetComponent<RectTransform>();
             buyRect.anchorMin = new Vector2(0.5f, 1f);
             buyRect.anchorMax = new Vector2(0.5f, 1f);
             buyRect.pivot = new Vector2(0.5f, 1f);
-            buyRect.anchoredPosition = new Vector2(300f, y);
-            buyRect.sizeDelta = new Vector2(200f, 48f);
+            buyRect.anchoredPosition = new Vector2(340f, y);
+            buyRect.sizeDelta = new Vector2(220f, 56f);
 
             return new UpgradeRowRefs
             {
@@ -683,7 +685,7 @@ namespace ProjectZx.UI
                 var image = row.BuyButton.GetComponent<Image>();
                 if (image != null)
                 {
-                    UiSprites.ApplyButtonSprite(image, new Vector2(220f, 52f));
+                    UiSprites.ApplyButtonSprite(image, new Vector2(240f, 56f));
                     image.color = new Color(0.32f, 0.34f, 0.38f, 0.75f);
                 }
 
@@ -707,7 +709,7 @@ namespace ProjectZx.UI
                 var image = row.BuyButton.GetComponent<Image>();
                 if (image != null)
                 {
-                    UiSprites.ApplyButtonSprite(image, new Vector2(220f, 52f));
+                    UiSprites.ApplyButtonSprite(image, new Vector2(240f, 56f));
                     image.color = Color.white;
                 }
 
@@ -731,7 +733,7 @@ namespace ProjectZx.UI
                 var image = row.BuyButton.GetComponent<Image>();
                 if (image != null)
                 {
-                    UiSprites.ApplyButtonSprite(image, new Vector2(220f, 52f));
+                    UiSprites.ApplyButtonSprite(image, new Vector2(240f, 56f));
                     image.color = new Color(0.42f, 0.44f, 0.48f, 0.88f);
                 }
 
@@ -985,14 +987,16 @@ namespace ProjectZx.UI
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = pos;
-            var size = large ? new Vector2(286, 68) : new Vector2(220, 52);
+            var size = large ? new Vector2(300, 72) : new Vector2(240, 58);
             rect.sizeDelta = size;
             var image = go.AddComponent<Image>();
             UiSprites.ApplyButtonSprite(image, size);
             var button = go.AddComponent<Button>();
             button.onClick.AddListener(() => onClick());
-            var fontSize = large ? 28 : 22;
-            CreateText(go.transform, label, fontSize, TextAnchor.MiddleCenter, Vector2.zero, new Vector2(size.x - 20f, size.y - 8f));
+            var fontSize = large ? 30 : 24;
+            var labelText = CreateText(go.transform, label, fontSize, TextAnchor.MiddleCenter, Vector2.zero, new Vector2(size.x - 24f, size.y - 10f));
+            labelText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            labelText.verticalOverflow = VerticalWrapMode.Truncate;
             return button;
         }
     }

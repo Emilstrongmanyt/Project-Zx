@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using ProjectZx.Core;
 using ProjectZx.Player;
+using ProjectZx.UI;
 using ProjectZx.Waves;
 using ProjectZx.World;
 using UnityEngine;
@@ -483,6 +484,7 @@ namespace ProjectZx.Enemies
         {
             if (!IsAlive || amount <= 0) return;
             ShowHitSprite();
+            FloatingDamageNumber.Spawn(transform.position, amount, isHeroHit: false);
             _hp -= amount;
             if (_hp <= 0) Die();
         }
