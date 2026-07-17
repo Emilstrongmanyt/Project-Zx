@@ -57,6 +57,8 @@ namespace ProjectZx.Core
                 Sprite sprite;
                 if (isBorder)
                     sprite = ArtLibrary.WaterTile;
+                else if (mapKind == SurvivalMapKind.Dungeon)
+                    sprite = ArtLibrary.GetDungeonTile(tileIndex);
                 else if (mapKind == SurvivalMapKind.Inside)
                     sprite = ArtLibrary.GetInsideTile(tileIndex);
                 else
@@ -78,6 +80,16 @@ namespace ProjectZx.Core
             }
 
             return root;
+        }
+
+        public static GameObject CreatePropObstacle(string name, Sprite sprite, Vector3 position, float scale, float colliderRadius = 0.34f)
+        {
+            var go = CreateSprite(name, sprite, position, scale, 0);
+            var col = go.AddComponent<CircleCollider2D>();
+            col.radius = colliderRadius;
+            go.AddComponent<ArenaObstacle>();
+            go.AddComponent<YSortRenderer>();
+            return go;
         }
 
         public static GameObject CreateStoneObstacle(Vector3 position, float scale, Sprite sprite = null)
@@ -117,52 +129,152 @@ namespace ProjectZx.Core
 
         public static GameObject ScatterArenaObstacles(float arenaWidth, float arenaHeight, int stoneCount, int treeCount, int campfireCount)
         {
+            ScatterPlaced.Clear();
             var root = new GameObject("ArenaObstacles");
             var rng = new System.Random(90210);
-            var placed = new List<Vector2>();
+            var rockBag = new SpriteVariantBag(ArtLibrary.RockVariants, rng);
+            var treeBag = new SpriteVariantBag(ArtLibrary.TreeVariants, rng);
+
+            void PlaceRocks()
+            {
+                for (var i = 0; i < stoneCount; i++)
+                    TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 2.4f, 6f, 2f,
+                        pos => CreateStoneObstacle(new Vector3(pos.x, pos.y, 0f), 1f, rockBag.Pick()));
+            }
+
+            void PlaceTrees()
+            {
+                for (var i = 0; i < treeCount; i++)
+                    TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 3f, 5f, 2f,
+                        pos => CreateTreeObstacle(new Vector3(pos.x, pos.y, 0f), 1f, treeBag.Pick()));
+            }
+
+            void PlaceCampfires()
+            {
+                for (var i = 0; i < campfireCount; i++)
+                    TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 4f, 8f, 1f,
+                        pos => CreateCampfireObstacle(new Vector3(pos.x, pos.y, 0f), 0.55f));
+            }
+
+            PlaceRocks();
+            PlaceTrees();
+            PlaceCampfires();
+            return root;
+        }
+
+        public static GameObject ScatterInsideObstacles(float arenaWidth, float arenaHeight)
+        {
+            ScatterPlaced.Clear();
+            var root = new GameObject("InsideObstacles");
+            var rng = new System.Random(90211);
+            var insideBag = new SpriteVariantBag(ArtLibrary.InsidePropVariants, rng);
+            var computerBag = new SpriteVariantBag(ArtLibrary.ComputerVariants, rng);
+            var warheadBag = new SpriteVariantBag(ArtLibrary.WarheadVariants, rng);
+
+            for (var i = 0; i < 12; i++)
+                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 2.6f, 5f, 1.8f,
+                    pos => CreatePropObstacle("InsideProp", insideBag.Pick(), new Vector3(pos.x, pos.y, 0f), 1f, 0.32f));
+
+            for (var i = 0; i < 8; i++)
+                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 2.8f, 5f, 1.6f,
+                    pos => CreatePropObstacle("Computer", computerBag.Pick(), new Vector3(pos.x, pos.y, 0f), 1f, 0.36f));
+
+            for (var i = 0; i < 6; i++)
+                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 3f, 6f, 1.7f,
+                    pos => CreatePropObstacle("Warhead", warheadBag.Pick(), new Vector3(pos.x, pos.y, 0f), 1f, 0.3f));
+
+            return root;
+        }
+
+        public static GameObject ScatterCryptObstacles(float arenaWidth, float arenaHeight)
+        {
+            ScatterPlaced.Clear();
+            var root = new GameObject("CryptObstacles");
+            var rng = new System.Random(90212);
+            var cryptBag = new SpriteVariantBag(ArtLibrary.CryptVariants, rng);
+
+            for (var i = 0; i < 22; i++)
+                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 2.5f, 5f, 1.8f,
+                    pos => CreatePropObstacle("CryptProp", cryptBag.Pick(), new Vector3(pos.x, pos.y, 0f), 1f, 0.34f));
+
+            return root;
+        }
+
+        static readonly List<Vector2> ScatterPlaced = new();
+
+        static void TryPlaceObstacle(
+            Transform parent,
+            System.Random rng,
+            float arenaWidth,
+            float arenaHeight,
+            float minSpacing,
+            float minCenterDist,
+            float scaleMultiplier,
+            System.Func<Vector2, GameObject> create)
+        {
             var margin = 2.5f;
             var halfW = arenaWidth * 0.5f - margin;
             var halfH = arenaHeight * 0.5f - margin;
 
-            void TryPlace(System.Func<Vector2, GameObject> create, float minSpacing, float minCenterDist, float scaleMultiplier = 1f)
+            for (var attempt = 0; attempt < 24; attempt++)
             {
-                for (var attempt = 0; attempt < 24; attempt++)
+                var pos = new Vector2(
+                    ((float)rng.NextDouble() * 2f - 1f) * halfW,
+                    ((float)rng.NextDouble() * 2f - 1f) * halfH);
+
+                if (pos.magnitude < minCenterDist) continue;
+
+                var tooClose = false;
+                foreach (var other in ScatterPlaced)
                 {
-                    var pos = new Vector2(
-                        ((float)rng.NextDouble() * 2f - 1f) * halfW,
-                        ((float)rng.NextDouble() * 2f - 1f) * halfH);
-
-                    if (pos.magnitude < minCenterDist) continue;
-
-                    var tooClose = false;
-                    foreach (var other in placed)
-                    {
-                        if (Vector2.Distance(other, pos) >= minSpacing) continue;
-                        tooClose = true;
-                        break;
-                    }
-
-                    if (tooClose) continue;
-
-                    placed.Add(pos);
-                    var scale = (0.38f + (float)rng.NextDouble() * 0.42f) * scaleMultiplier;
-                    var obstacle = create(pos);
-                    obstacle.transform.localScale = Vector3.one * scale;
-                    obstacle.transform.SetParent(root.transform, true);
-                    return;
+                    if (Vector2.Distance(other, pos) >= minSpacing) continue;
+                    tooClose = true;
+                    break;
                 }
+
+                if (tooClose) continue;
+
+                ScatterPlaced.Add(pos);
+                var scale = (0.38f + (float)rng.NextDouble() * 0.42f) * scaleMultiplier;
+                var obstacle = create(pos);
+                obstacle.transform.localScale = Vector3.one * scale;
+                obstacle.transform.SetParent(parent, true);
+                return;
+            }
+        }
+
+        sealed class SpriteVariantBag
+        {
+            readonly Sprite[] _sprites;
+            readonly System.Random _rng;
+            readonly List<int> _remaining = new();
+
+            public SpriteVariantBag(Sprite[] sprites, System.Random rng)
+            {
+                _sprites = sprites;
+                _rng = rng;
+                Refill();
             }
 
-            for (var i = 0; i < stoneCount; i++)
-                TryPlace(pos => CreateStoneObstacle(new Vector3(pos.x, pos.y, 0f), 1f), 2.4f, 6f, 2f);
+            public Sprite Pick()
+            {
+                if (_remaining.Count == 0) Refill();
+                var index = _rng.Next(_remaining.Count);
+                var spriteIndex = _remaining[index];
+                _remaining.RemoveAt(index);
+                return _sprites[spriteIndex];
+            }
 
-            for (var i = 0; i < treeCount; i++)
-                TryPlace(pos => CreateTreeObstacle(new Vector3(pos.x, pos.y, 0f), 1f), 3f, 5f, 2f);
+            void Refill()
+            {
+                _remaining.Clear();
+                if (_sprites == null) return;
 
-            for (var i = 0; i < campfireCount; i++)
-                TryPlace(pos => CreateCampfireObstacle(new Vector3(pos.x, pos.y, 0f), 0.55f), 4f, 8f);
-
-            return root;
+                for (var i = 0; i < _sprites.Length; i++)
+                {
+                    if (_sprites[i] != null) _remaining.Add(i);
+                }
+            }
         }
 
         public static GameObject CreateArenaDoor(Vector3 position)

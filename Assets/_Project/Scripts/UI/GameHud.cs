@@ -309,7 +309,12 @@ namespace ProjectZx.UI
 
         public void SetRound(int round, SurvivalMapKind mapKind)
         {
-            var mapLabel = mapKind == SurvivalMapKind.Inside ? "Inside" : "Outside";
+            var mapLabel = mapKind switch
+            {
+                SurvivalMapKind.Inside => "Inside",
+                SurvivalMapKind.Dungeon => "Dungeon",
+                _ => "Outside"
+            };
             _roundText.text = $"{mapLabel} — Round {round}";
         }
 

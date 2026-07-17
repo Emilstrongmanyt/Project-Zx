@@ -40,6 +40,10 @@ namespace ProjectZx.Core
             _tree = null;
             _treeVariants = null;
             _rockVariants = null;
+            _computerVariants = null;
+            _insidePropVariants = null;
+            _warheadVariants = null;
+            _cryptVariants = null;
             _rollZySprites = null;
             _rowZiSprites = null;
             _door = null;
@@ -48,6 +52,7 @@ namespace ProjectZx.Core
             _challengeBoardUi = null;
             _outsideTiles = null;
             _insideTiles = null;
+            _dungeonTiles = null;
             _waterTile = null;
             _fireBreathFrames = null;
             _zombieHit = null;
@@ -88,6 +93,10 @@ namespace ProjectZx.Core
         static Sprite _tree;
         static Sprite[] _treeVariants;
         static Sprite[] _rockVariants;
+        static Sprite[] _computerVariants;
+        static Sprite[] _insidePropVariants;
+        static Sprite[] _warheadVariants;
+        static Sprite[] _cryptVariants;
         static Sprite[] _rollZySprites;
         static Sprite[] _rowZiSprites;
         static Sprite _door;
@@ -96,6 +105,7 @@ namespace ProjectZx.Core
         static Sprite _challengeBoardUi;
         static Sprite[] _outsideTiles;
         static Sprite[] _insideTiles;
+        static Sprite[] _dungeonTiles;
         static Sprite _waterTile;
         static Sprite[] _fireBreathFrames;
         static Sprite _zombieHit;
@@ -149,17 +159,33 @@ namespace ProjectZx.Core
         public static Sprite Stone => _stone ??= GetRandomRockSprite();
         public static Sprite Tree => _tree ??= GetRandomTreeSprite();
 
+        public static Sprite[] TreeVariants => _treeVariants ??= LoadSheetSprites("TreeSheet", 9);
+        public static Sprite[] RockVariants => _rockVariants ??= LoadSheetSprites("RockSheet", 10);
+        public static Sprite[] ComputerVariants => _computerVariants ??= LoadSheetSprites("ComputerSheet", 8);
+        public static Sprite[] InsidePropVariants => _insidePropVariants ??= LoadSheetSprites("Inside1Sheet", 9);
+        public static Sprite[] WarheadVariants => _warheadVariants ??= LoadSheetSprites("WarheadSheet", 8);
+        public static Sprite[] CryptVariants => _cryptVariants ??= LoadSheetSprites("CryptSheet", 9);
+
         public static Sprite GetRandomTreeSprite()
         {
-            _treeVariants ??= LoadSheetSprites("TreeSheet", 9);
-            return PickRandom(_treeVariants) ?? CreateTreeSprite();
+            return PickRandom(TreeVariants) ?? CreateTreeSprite();
         }
 
         public static Sprite GetRandomRockSprite()
         {
-            _rockVariants ??= LoadSheetSprites("RockSheet", 10);
-            return PickRandom(_rockVariants) ?? CreateStoneSprite();
+            return PickRandom(RockVariants) ?? CreateStoneSprite();
         }
+
+        public static Sprite GetRandomComputerSprite() => PickRandom(ComputerVariants);
+
+        public static Sprite GetRandomInsidePropSprite() => PickRandom(InsidePropVariants);
+
+        public static Sprite GetRandomWarheadSprite() => PickRandom(WarheadVariants);
+
+        public static Sprite GetRandomCryptSprite() => PickRandom(CryptVariants);
+
+        public static int GetVariantCount(Sprite[] variants) =>
+            variants == null ? 0 : System.Array.FindAll(variants, sprite => sprite != null).Length;
 
         public static HeroSpriteSet GetHeroSprites(PlayableHero hero)
         {
@@ -224,6 +250,16 @@ namespace ProjectZx.Core
             return _insideTiles[Mathf.Abs(index) % _insideTiles.Length];
         }
 
+        public static Sprite GetDungeonTile(int index)
+        {
+            _dungeonTiles ??= new[]
+            {
+                CreateTileFallback("dungeon_cave_a"),
+                CreateTileFallback("dungeon_cave_b")
+            };
+            return _dungeonTiles[Mathf.Abs(index) % _dungeonTiles.Length];
+        }
+
         public static Sprite GetFireBreathFrame(int frame)
         {
             _fireBreathFrames ??= new[]
@@ -257,32 +293,50 @@ namespace ProjectZx.Core
             }
         }
 
-        static Sprite[] LoadSheetSprites(string sheetName, int count)
+        static Sprite[] LoadSheetSprites(string sheetName, int expectedCount)
         {
-            var sprites = new Sprite[count];
+            var fromSheet = Resources.LoadAll<Sprite>(sheetName);
+            if (fromSheet != null && fromSheet.Length > 1)
+            {
+                System.Array.Sort(fromSheet, (a, b) => string.CompareOrdinal(a.name, b.name));
+                return fromSheet;
+            }
+
+            var sprites = new Sprite[expectedCount];
             var loaded = 0;
-            for (var i = 0; i < count; i++)
+            for (var i = 0; i < expectedCount; i++)
             {
                 sprites[i] = Load($"{sheetName}_{i}", sheetName);
                 if (sprites[i] != null) loaded++;
             }
 
-            return loaded > 0 ? sprites : null;
+            if (loaded > 0) return sprites;
+            return fromSheet != null && fromSheet.Length > 0 ? fromSheet : null;
         }
 
         static Sprite PickRandom(Sprite[] sprites)
         {
+            return PickRandom(sprites, null);
+        }
+
+        public static Sprite PickRandom(Sprite[] sprites, System.Random rng)
+        {
             if (sprites == null || sprites.Length == 0) return null;
-            Sprite pick = null;
-            for (var attempt = 0; attempt < 6; attempt++)
+
+            var validCount = 0;
+            for (var i = 0; i < sprites.Length; i++)
             {
-                pick = sprites[Random.Range(0, sprites.Length)];
-                if (pick != null) return pick;
+                if (sprites[i] != null) validCount++;
             }
 
-            foreach (var sprite in sprites)
+            if (validCount == 0) return null;
+
+            var target = rng != null ? rng.Next(validCount) : Random.Range(0, validCount);
+            for (var i = 0; i < sprites.Length; i++)
             {
-                if (sprite != null) return sprite;
+                if (sprites[i] == null) continue;
+                if (target == 0) return sprites[i];
+                target--;
             }
 
             return null;
@@ -762,15 +816,20 @@ namespace ProjectZx.Core
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
             tex.filterMode = FilterMode.Point;
 
+            var isDungeon = name.Contains("dungeon");
             var isInside = name.Contains("inside");
             var isWater = name.Contains("water");
             var baseColor = isWater
                 ? new Color(0.12f, 0.22f, 0.52f)
+                : isDungeon
+                    ? new Color(0.14f, 0.13f, 0.16f)
                 : isInside
                     ? new Color(0.34f, 0.28f, 0.2f)
                     : new Color(0.24f, 0.48f, 0.2f);
             var accent = isWater
                 ? new Color(0.2f, 0.34f, 0.62f)
+                : isDungeon
+                    ? new Color(0.22f, 0.2f, 0.24f)
                 : isInside
                     ? new Color(0.42f, 0.34f, 0.24f)
                     : new Color(0.3f, 0.58f, 0.26f);
