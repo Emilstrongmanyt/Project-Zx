@@ -47,12 +47,14 @@ namespace ProjectZx.Core
             var rows = Mathf.CeilToInt(height / tileSize);
             var originX = -(cols * tileSize) * 0.5f + tileSize * 0.5f;
             var originY = -(rows * tileSize) * 0.5f + tileSize * 0.5f;
+            var borderDepth = ArenaBounds.WaterBorderDepth;
 
             for (var row = 0; row < rows; row++)
             for (var col = 0; col < cols; col++)
             {
                 var pos = new Vector3(originX + col * tileSize, originY + row * tileSize, 0f);
-                var isBorder = row == 0 || row == rows - 1 || col == 0 || col == cols - 1;
+                var isBorder = row < borderDepth || row >= rows - borderDepth
+                    || col < borderDepth || col >= cols - borderDepth;
                 var tileIndex = col + row * 7;
                 Sprite sprite;
                 if (isBorder)
@@ -65,16 +67,18 @@ namespace ProjectZx.Core
                     sprite = ArtLibrary.GetOutsideTile(tileIndex);
 
                 var tileScale = ArtLibrary.GetTileScale(sprite, tileSize);
-                var tile = CreateSprite($"Tile_{col}_{row}", sprite, pos, tileScale, ArenaBounds.FloorSortOrder);
-                ApplyFloorMaterial(tile.GetComponent<SpriteRenderer>());
-                if (isBorder)
+                var sortOrder = isBorder ? ArenaBounds.WaterSortOrder : ArenaBounds.FloorSortOrder;
+                var tile = CreateSprite($"Tile_{col}_{row}", sprite, pos, tileScale, sortOrder);
+                var tileRenderer = tile.GetComponent<SpriteRenderer>();
+                if (!isBorder)
+                    ApplyFloorMaterial(tileRenderer);
+                else
                 {
                     tile.AddComponent<WaterTile>();
                     var waterCol = tile.AddComponent<BoxCollider2D>();
-                    var tileRenderer = tile.GetComponent<SpriteRenderer>();
-                    waterCol.size = tileRenderer != null && tileRenderer.sprite != null
-                        ? tileRenderer.sprite.bounds.size
-                        : Vector2.one;
+                    // Local size so world collider matches one tile after scale is applied.
+                    var scale = Mathf.Max(0.001f, tile.transform.localScale.x);
+                    waterCol.size = Vector2.one * (tileSize / scale);
                 }
                 tile.transform.SetParent(root.transform, true);
             }
@@ -94,7 +98,7 @@ namespace ProjectZx.Core
 
         public static GameObject CreateStoneObstacle(Vector3 position, float scale, Sprite sprite = null)
         {
-            var go = CreateSprite("Stone", sprite ?? ArtLibrary.Stone, position, scale, 0);
+            var go = CreateSprite("Stone", sprite ?? ArtLibrary.GetRandomRockSprite(), position, scale, 0);
             go.AddComponent<ArenaObstacle>();
             go.AddComponent<StoneObstacle>();
             return go;
@@ -102,7 +106,7 @@ namespace ProjectZx.Core
 
         public static GameObject CreateTreeObstacle(Vector3 position, float scale, Sprite sprite = null)
         {
-            var go = CreateSprite("Tree", sprite ?? ArtLibrary.Tree, position, scale, 0);
+            var go = CreateSprite("Tree", sprite ?? ArtLibrary.GetRandomTreeSprite(), position, scale, 0);
             go.AddComponent<ArenaObstacle>();
             go.AddComponent<TreeObstacle>();
             return go;
@@ -301,7 +305,7 @@ namespace ProjectZx.Core
             bool survivalMode,
             PlayerClass playerClass = PlayerClass.Batter,
             PlayableHero hero = PlayableHero.RollZy,
-            float scale = 0.42f)
+            float scale = 0.42f * 1.3f)
         {
             var sanitizedHero = GameSave.SanitizeHero(hero);
             var go = CreateSprite("Player", ArtLibrary.GetHeroIdleSprite(sanitizedHero), position, scale, 0);

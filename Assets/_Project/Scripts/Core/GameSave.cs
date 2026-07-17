@@ -20,6 +20,7 @@ namespace ProjectZx.Core
         const string MagicianUnlockedKey = "zx_magician_unlocked";
         const string SelectedClassKey = "zx_selected_class";
         const string SelectedHeroKey = "zx_selected_hero";
+        const string MovementControlKey = "zx_movement_control";
         const string RowZiUnlockedKey = "zx_rowzi_unlocked";
         const string AttackModeBatterKey = "zx_attack_batter";
         const string AttackModeSpearmanKey = "zx_attack_spearman";
@@ -175,6 +176,25 @@ namespace ProjectZx.Core
             if (hero == PlayableHero.RowZi && !RowZiUnlocked) return PlayableHero.RollZy;
             return hero;
         }
+
+        public static MovementControlType SelectedMovementControl
+        {
+            get
+            {
+                var stored = PlayerPrefs.GetInt(MovementControlKey, (int)MovementControlType.Joystick);
+                return stored == (int)MovementControlType.TapHold
+                    ? MovementControlType.TapHold
+                    : MovementControlType.Joystick;
+            }
+            set
+            {
+                PlayerPrefs.SetInt(MovementControlKey, (int)value);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool UsesJoystickMovement => SelectedMovementControl == MovementControlType.Joystick;
+        public static bool UsesTapHoldMovement => SelectedMovementControl == MovementControlType.TapHold;
 
         public static PlayerClass SanitizeClass(PlayerClass playerClass)
         {
