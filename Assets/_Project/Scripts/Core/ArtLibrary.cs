@@ -156,8 +156,8 @@ namespace ProjectZx.Core
         public static Sprite BaseballBat => _baseballBat ??= LoadOrCreateBat();
         public static Sprite Spear => _spear ??= CreateSpearSprite();
         public static Sprite Bow => _bow ??= LoadOrCreateBow();
-        public static Sprite Stone => _stone ??= GetPrimarySheetSprite("RockSheet", 10) ?? CreateStoneSprite();
-        public static Sprite Tree => _tree ??= GetPrimarySheetSprite("TreeSheet", 9) ?? CreateTreeSprite();
+        public static Sprite Stone => _stone ??= GetSheetVariant("RockSheet", 10, 0) ?? CreateStoneSprite();
+        public static Sprite Tree => _tree ??= GetSheetVariant("TreeSheet", 9, 0) ?? CreateTreeSprite();
 
         public static Sprite[] TreeVariants => _treeVariants ??= LoadSheetSprites("TreeSheet", 9);
         public static Sprite[] RockVariants => _rockVariants ??= LoadSheetSprites("RockSheet", 10);
@@ -166,9 +166,10 @@ namespace ProjectZx.Core
         public static Sprite[] WarheadVariants => _warheadVariants ??= LoadSheetSprites("WarheadSheet", 8);
         public static Sprite[] CryptVariants => _cryptVariants ??= LoadSheetSprites("CryptSheet", 9);
 
-        // Single fixed art (build-48 style), not multi-variant shuffle bags.
-        public static Sprite GetRandomTreeSprite() => Tree;
-        public static Sprite GetRandomRockSprite() => Stone;
+        // Outside trees/rocks use sheet variants #1 and #2 only (indices 0 and 1).
+        public static Sprite GetRandomTreeSprite() => PickFromFirstTwo(TreeVariants) ?? CreateTreeSprite();
+
+        public static Sprite GetRandomRockSprite() => PickFromFirstTwo(RockVariants) ?? CreateStoneSprite();
 
         public static Sprite GetRandomComputerSprite() => PickRandom(ComputerVariants);
 
@@ -210,7 +211,8 @@ namespace ProjectZx.Core
         public static Sprite ShopUi => _shopUi ??= Load("Art/shop_ui", "ShopUI");
         public static Sprite LevelUpUi => _levelUpUi ??= Load("Art/level_up_ui", "LevelUpUI");
         public static Sprite ChallengeBoardUi => _challengeBoardUi ??= Load("Art/challenge_board_ui", "ChallengeBoardUI");
-        public static Sprite WaterTile => _waterTile ??= LoadTile("Art/tile1_water", "tile1Water", "Art/tile1_outside", "tile1Outside");
+        // Never fall back to land tiles — that made water borders look "removed".
+        public static Sprite WaterTile => _waterTile ??= LoadTile("Art/tile1_water", "tile1Water");
 
         public static Sprite GetGrassVariant(int index)
         {
@@ -287,16 +289,30 @@ namespace ProjectZx.Core
             }
         }
 
-        static Sprite GetPrimarySheetSprite(string sheetName, int expectedCount)
+        static Sprite GetSheetVariant(string sheetName, int expectedCount, int index)
         {
             var sprites = LoadSheetSprites(sheetName, expectedCount);
-            if (sprites == null) return null;
+            if (sprites == null || sprites.Length == 0) return null;
+
+            var clamped = Mathf.Clamp(index, 0, sprites.Length - 1);
+            if (sprites[clamped] != null) return sprites[clamped];
+
             foreach (var sprite in sprites)
             {
                 if (sprite != null) return sprite;
             }
 
             return null;
+        }
+
+        static Sprite PickFromFirstTwo(Sprite[] sprites)
+        {
+            if (sprites == null || sprites.Length == 0) return null;
+            var first = sprites[0];
+            var second = sprites.Length > 1 ? sprites[1] : null;
+            if (first == null) return second;
+            if (second == null) return first;
+            return Random.Range(0, 2) == 0 ? first : second;
         }
 
         static Sprite[] LoadHeroSheetSprites(string sheetName, int count)

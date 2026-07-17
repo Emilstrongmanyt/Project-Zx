@@ -8,7 +8,7 @@ namespace ProjectZx.Player
     {
         public static CampHeroManager Instance { get; private set; }
 
-        const float PlayerScale = 0.42f;
+        const float PlayerScale = 0.42f * 1.3f;
         const float NpcScale = 0.38f;
 
         static readonly Vector3 DefaultPlayerSpawn = new(0f, -4.2f, 0f);

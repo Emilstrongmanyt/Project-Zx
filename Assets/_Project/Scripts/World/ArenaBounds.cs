@@ -10,6 +10,8 @@ namespace ProjectZx.World
         public const float TileSize = 1f;
         public const float SpawnClearRadius = 1.05f;
         public const int FloorSortOrder = -1000;
+        public const int WaterSortOrder = -900;
+        public const int WaterBorderDepth = 2;
         public const int EntitySortBase = 100;
         public const float SortDepthScale = 40f;
 

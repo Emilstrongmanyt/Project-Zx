@@ -24,8 +24,15 @@ namespace ProjectZx.UI
 
         public static void EnsureExists()
         {
-            if (Instance != null) return;
-            new GameObject("MovementJoystick").AddComponent<MovementJoystick>();
+            if (Instance == null)
+                new GameObject("MovementJoystick").AddComponent<MovementJoystick>();
+            ApplyControlMode();
+        }
+
+        public static void ApplyControlMode()
+        {
+            if (Instance != null)
+                Instance.ApplyControlModeInternal();
         }
 
         void Awake()
@@ -38,6 +45,7 @@ namespace ProjectZx.UI
 
             Instance = this;
             BuildUi();
+            ApplyControlModeInternal();
         }
 
         void OnDestroy()
@@ -47,9 +55,30 @@ namespace ProjectZx.UI
 
         void Update()
         {
+            if (!GameSave.UsesJoystickMovement)
+            {
+                if (IsHeld) Release();
+                return;
+            }
+
             if (!IsHeld) return;
             if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade)
                 Release();
+        }
+
+        void ApplyControlModeInternal()
+        {
+            var enabled = GameSave.UsesJoystickMovement;
+            if (!enabled && IsHeld) Release();
+            Direction = Vector2.zero;
+
+            // Keep the root object active so the singleton survives mode switches;
+            // hide only the on-screen canvas when tap/hold is selected.
+            if (transform.childCount > 0)
+            {
+                var canvas = transform.GetChild(0).gameObject;
+                canvas.SetActive(enabled);
+            }
         }
 
         void BuildUi()
@@ -100,6 +129,7 @@ namespace ProjectZx.UI
 
         public void OnPointerDown(PointerEventData eventData)
         {
+            if (!GameSave.UsesJoystickMovement) return;
             if (IsHeld) return;
             _pointerId = eventData.pointerId;
             IsHeld = true;
@@ -108,6 +138,7 @@ namespace ProjectZx.UI
 
         public void OnDrag(PointerEventData eventData)
         {
+            if (!GameSave.UsesJoystickMovement) return;
             if (!IsHeld || eventData.pointerId != _pointerId) return;
             UpdateKnob(eventData.position);
         }
@@ -120,7 +151,7 @@ namespace ProjectZx.UI
 
         public bool IsPointerOver(Vector2 screenPos)
         {
-            if (_baseRect == null) return false;
+            if (!GameSave.UsesJoystickMovement || _baseRect == null) return false;
             return RectTransformUtility.RectangleContainsScreenPoint(_baseRect, screenPos, null);
         }
 

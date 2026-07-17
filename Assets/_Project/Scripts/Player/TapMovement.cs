@@ -98,20 +98,29 @@ namespace ProjectZx.Player
 
         void FixedUpdate()
         {
-            var joystick = MovementJoystick.Instance;
-            var joyDir = joystick != null ? joystick.Direction : Vector2.zero;
-            if (joyDir.sqrMagnitude > 0.01f)
+            if (GameSave.UsesJoystickMovement)
             {
-                _moveTarget = null;
-                _pendingNpc = null;
-                _pendingDoor = null;
-                _chaseTouchId = -1;
-                _chaseMouse = false;
-                _blockedTimer = 0f;
-                MoveByDelta(joyDir.normalized * GetSpeed() * Time.fixedDeltaTime);
+                var joystick = MovementJoystick.Instance;
+                var joyDir = joystick != null ? joystick.Direction : Vector2.zero;
+                if (joyDir.sqrMagnitude > 0.01f)
+                {
+                    _moveTarget = null;
+                    _pendingNpc = null;
+                    _pendingDoor = null;
+                    _chaseTouchId = -1;
+                    _chaseMouse = false;
+                    _blockedTimer = 0f;
+                    MoveByDelta(joyDir.normalized * GetSpeed() * Time.fixedDeltaTime);
+                    return;
+                }
+
+                _rb.linearVelocity = Vector2.zero;
+                TryCompletePendingNpcInteract();
+                TryCompletePendingDoor();
                 return;
             }
 
+            // Tap / hold movement mode only.
             if (_moveTarget == null)
             {
                 _rb.linearVelocity = Vector2.zero;
@@ -281,17 +290,25 @@ namespace ProjectZx.Player
             if (MovementJoystick.Instance != null && MovementJoystick.Instance.IsPointerOver(screenPos)) return;
             if (IsPointerOverBlockingUi(screenPos)) return;
 
+            // In joystick mode, taps only walk-to/interact with NPCs and doors (no free move targets).
+            if (GameSave.UsesJoystickMovement)
+            {
+                TrySetMoveTarget(screenPos, isChase: false, movementAllowed: false);
+                return;
+            }
+
             _chaseTouchId = touchId;
             _chaseMouse = touchId < 0;
-            TrySetMoveTarget(screenPos, isChase: false);
+            TrySetMoveTarget(screenPos, isChase: false, movementAllowed: true);
         }
 
         void UpdateChaseTarget(Vector2 screenPos)
         {
+            if (!GameSave.UsesTapHoldMovement) return;
             if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade) return;
             if (MovementJoystick.Instance != null && MovementJoystick.Instance.IsPointerOver(screenPos)) return;
             if (IsPointerOverBlockingUi(screenPos)) return;
-            TrySetMoveTarget(screenPos, true);
+            TrySetMoveTarget(screenPos, true, movementAllowed: true);
         }
 
         void EndChase()
@@ -300,7 +317,7 @@ namespace ProjectZx.Player
             _chaseMouse = false;
         }
 
-        void TrySetMoveTarget(Vector2 screenPos, bool isChase)
+        void TrySetMoveTarget(Vector2 screenPos, bool isChase, bool movementAllowed)
         {
             if (_camera == null) _camera = Camera.main;
             if (_camera == null) return;
@@ -321,12 +338,16 @@ namespace ProjectZx.Player
                         return;
                     }
 
+                    if (!movementAllowed) return;
+
                     _pendingDoor = door;
                     _pendingNpc = null;
                     _moveTarget = door.transform.position;
                     return;
                 }
             }
+
+            if (!movementAllowed) return;
 
             if (isChase)
             {
@@ -483,7 +504,9 @@ namespace ProjectZx.Player
             var magician = GetComponent<MagicianCombat>();
             if (magician != null && magician.IsCasting) return;
 
-            var joyDir = MovementJoystick.Instance != null ? MovementJoystick.Instance.Direction : Vector2.zero;
+            var joyDir = GameSave.UsesJoystickMovement && MovementJoystick.Instance != null
+                ? MovementJoystick.Instance.Direction
+                : Vector2.zero;
             var moving = joyDir.sqrMagnitude > 0.01f || _moveTarget != null || _rb.linearVelocity.sqrMagnitude > 0.01f;
             if (!moving)
             {

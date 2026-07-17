@@ -47,6 +47,8 @@ namespace ProjectZx.UI
         Text _techniqueStatusText;
         Button _techniqueStandardButton;
         Button _techniqueSpecialButton;
+        Button _movementJoystickButton;
+        Button _movementTapHoldButton;
 
         struct UpgradeRowRefs
         {
@@ -196,20 +198,31 @@ namespace ProjectZx.UI
 
         GameObject BuildLoadoutPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "LoadoutPanel", Vector2.zero, new Vector2(740, 660), ArtLibrary.ShopUi);
-            CreateText(panel.transform, "Build Loadout", 30, TextAnchor.MiddleCenter, new Vector2(0, 290), new Vector2(500, 44));
-            _loadoutClassPicker = BuildClassPicker(panel.transform, 230f, 185f, 120f);
-            CreateText(panel.transform, "Attack Technique", 24, TextAnchor.MiddleCenter, new Vector2(0, 42), new Vector2(500, 36));
-            _techniqueStatusText = CreateText(panel.transform, "", 18, TextAnchor.MiddleCenter, new Vector2(0, 8), new Vector2(620, 56));
+            var panel = CreateDialogPanel(parent, "LoadoutPanel", Vector2.zero, new Vector2(860, 820), ArtLibrary.ShopUi);
+            CreateText(panel.transform, "Build Loadout", 32, TextAnchor.MiddleCenter, new Vector2(0, 360), new Vector2(560, 48));
+
+            // Class section
+            _loadoutClassPicker = BuildClassPicker(panel.transform, 300f, 260f, 190f);
+
+            // Technique section (clear gap under class buttons at ~190-132)
+            CreateText(panel.transform, "Attack Technique", 24, TextAnchor.MiddleCenter, new Vector2(0, 70), new Vector2(560, 36));
+            _techniqueStatusText = CreateText(panel.transform, "", 17, TextAnchor.MiddleCenter, new Vector2(0, 28), new Vector2(700, 48));
             _techniqueStatusText.alignment = TextAnchor.UpperCenter;
-            _techniqueStandardButton = CreateButton(panel.transform, "Standard", new Vector2(-140, -52), () => SelectAttackMode(AttackMode.Standard));
-            _techniqueSpecialButton = CreateButton(panel.transform, "Special", new Vector2(140, -52), SelectSpecialAttackMode);
-            CreateButton(panel.transform, "Back to Shop", new Vector2(-140, -285), () =>
+            _techniqueStandardButton = CreateButton(panel.transform, "Standard", new Vector2(-150, -40), () => SelectAttackMode(AttackMode.Standard));
+            _techniqueSpecialButton = CreateButton(panel.transform, "Special", new Vector2(150, -40), SelectSpecialAttackMode);
+
+            // Movement control (mutually exclusive)
+            CreateText(panel.transform, "Movement Control", 24, TextAnchor.MiddleCenter, new Vector2(0, -120), new Vector2(560, 36));
+            CreateText(panel.transform, "Only one control style is active at a time.", 16, TextAnchor.MiddleCenter, new Vector2(0, -152), new Vector2(640, 28));
+            _movementJoystickButton = CreateButton(panel.transform, "Joystick", new Vector2(-150, -210), () => SelectMovementControl(MovementControlType.Joystick));
+            _movementTapHoldButton = CreateButton(panel.transform, "Tap / Hold", new Vector2(150, -210), () => SelectMovementControl(MovementControlType.TapHold));
+
+            CreateButton(panel.transform, "Back to Shop", new Vector2(-150, -320), () =>
             {
                 panel.SetActive(false);
                 OpenShop();
             });
-            CreateButton(panel.transform, "Close", new Vector2(140, -285), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Close", new Vector2(150, -320), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
@@ -259,12 +272,43 @@ namespace ProjectZx.UI
             CreateText(parent, "Choose Class", 24, TextAnchor.MiddleCenter, new Vector2(0, titleY), new Vector2(500, 36));
             return new ClassPickerRefs
             {
-                StatusText = CreateText(parent, "", 20, TextAnchor.MiddleCenter, new Vector2(0, statusY), new Vector2(560, 32)),
-                BatterButton = CreateButton(parent, "Batter", new Vector2(-130, buttonY), () => SelectClass(PlayerClass.Batter)),
-                SpearmanButton = CreateButton(parent, "Spearman", new Vector2(130, buttonY), () => SelectClass(PlayerClass.Spearman)),
-                BowmanButton = CreateButton(parent, "Bowman", new Vector2(-130, buttonY - 58f), () => SelectClass(PlayerClass.Bowman)),
-                MagicianButton = CreateButton(parent, "Magician", new Vector2(130, buttonY - 58f), () => SelectClass(PlayerClass.Magician))
+                StatusText = CreateText(parent, "", 18, TextAnchor.MiddleCenter, new Vector2(0, statusY), new Vector2(640, 40)),
+                BatterButton = CreateButton(parent, "Batter", new Vector2(-150, buttonY), () => SelectClass(PlayerClass.Batter)),
+                SpearmanButton = CreateButton(parent, "Spearman", new Vector2(150, buttonY), () => SelectClass(PlayerClass.Spearman)),
+                BowmanButton = CreateButton(parent, "Bowman", new Vector2(-150, buttonY - 70f), () => SelectClass(PlayerClass.Bowman)),
+                MagicianButton = CreateButton(parent, "Magician", new Vector2(150, buttonY - 70f), () => SelectClass(PlayerClass.Magician))
             };
+        }
+
+        void SelectMovementControl(MovementControlType controlType)
+        {
+            GameSave.SelectedMovementControl = controlType;
+            MovementJoystick.ApplyControlMode();
+            RefreshMovementControlPicker();
+        }
+
+        void RefreshMovementControlPicker()
+        {
+            var selected = GameSave.SelectedMovementControl;
+            RefreshMovementControlButton(_movementJoystickButton, MovementControlType.Joystick, selected, "Joystick");
+            RefreshMovementControlButton(_movementTapHoldButton, MovementControlType.TapHold, selected, "Tap / Hold");
+        }
+
+        static void RefreshMovementControlButton(Button button, MovementControlType mode, MovementControlType selected, string label)
+        {
+            if (button == null) return;
+            button.interactable = true;
+            var image = button.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = selected == mode
+                    ? new Color(0.28f, 0.5f, 0.32f, 0.98f)
+                    : new Color(0.2f, 0.35f, 0.55f, 0.95f);
+            }
+
+            var buttonLabel = button.GetComponentInChildren<Text>();
+            if (buttonLabel != null)
+                buttonLabel.text = label;
         }
 
         void SelectClass(PlayerClass playerClass)
@@ -295,6 +339,7 @@ namespace ProjectZx.UI
         {
             RefreshClassPicker(_loadoutClassPicker);
             RefreshTechniquePicker();
+            RefreshMovementControlPicker();
         }
 
         void RefreshTechniquePicker()
@@ -643,6 +688,7 @@ namespace ProjectZx.UI
             var baseDamage = 10f * GameSave.DamageMultiplier;
             if (selected == PlayerClass.Bowman) baseDamage *= 0.9f;
             var moveSpeed = 4.5f * GameSave.SpeedMultiplier;
+            var movementLabel = GameSave.UsesJoystickMovement ? "Joystick" : "Tap / Hold";
 
             var attackMode = GameSave.GetSelectedAttackMode(selected);
             var technique = AttackModeCatalog.GetLabel(attackMode, selected);
@@ -652,6 +698,7 @@ namespace ProjectZx.UI
                 $"Hero: {GameSave.GetHeroDisplayName(GameSave.SelectedHero)}\n" +
                 $"Class: {className}\n" +
                 $"Technique: {technique}\n" +
+                $"Movement: {movementLabel}\n" +
                 $"Max HP: {GameSave.MaxHp}\n" +
                 $"Base Damage: {baseDamage:0.#}\n" +
                 $"Move Speed: {moveSpeed:0.##}\n" +
