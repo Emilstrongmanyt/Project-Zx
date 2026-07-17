@@ -16,6 +16,8 @@ namespace ProjectZx.Enemies
         const float FireBreathTick = 0.45f;
         const float FireBreathScale = 3f;
         const float FireBreathOffsetX = 1.65f;
+        const float FireBreathOffsetY = 0.55f;
+        const int FireBreathSortOffset = 40;
         const float FireBreathHitPadding = 0.9f;
         const float EnemySeparationRadius = 1.15f;
         const float EnemySeparationPush = 0.24f;
@@ -125,7 +127,8 @@ namespace ProjectZx.Enemies
             _fireBreathFx.transform.SetParent(transform, false);
             _fireBreathRenderer = _fireBreathFx.AddComponent<SpriteRenderer>();
             _fireBreathRenderer.sprite = ArtLibrary.GetFireBreathFrame(0);
-            _fireBreathFx.AddComponent<YSortRenderer>().Configure(1);
+            // Large sort offset so breath draws above the boss body (higher world Y alone sorts behind).
+            _fireBreathFx.AddComponent<YSortRenderer>().Configure(FireBreathSortOffset);
             ApplyFireBreathTransform(true);
             _fireBreathFx.SetActive(false);
         }
@@ -135,7 +138,10 @@ namespace ProjectZx.Enemies
             if (_fireBreathFx == null) return;
 
             _fireBreathFx.transform.localScale = Vector3.one * FireBreathScale;
-            _fireBreathFx.transform.localPosition = new Vector3(facingRight ? FireBreathOffsetX : -FireBreathOffsetX, 0.15f, 0f);
+            _fireBreathFx.transform.localPosition = new Vector3(
+                facingRight ? FireBreathOffsetX : -FireBreathOffsetX,
+                FireBreathOffsetY,
+                0f);
 
             if (_fireBreathRenderer != null)
                 // Fire breath art faces left by default, same as BossJ.

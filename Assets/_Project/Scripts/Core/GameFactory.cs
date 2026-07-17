@@ -138,11 +138,11 @@ namespace ProjectZx.Core
             var rng = new System.Random(90210);
 
             for (var i = 0; i < stoneCount; i++)
-                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 2.4f, 6f, 2f,
+                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 2.4f, 6f, 1.7f,
                     pos => CreateStoneObstacle(new Vector3(pos.x, pos.y, 0f), 1f));
 
             for (var i = 0; i < treeCount; i++)
-                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 3f, 5f, 2f,
+                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 3f, 5f, 1.7f,
                     pos => CreateTreeObstacle(new Vector3(pos.x, pos.y, 0f), 1f));
 
             for (var i = 0; i < campfireCount; i++)

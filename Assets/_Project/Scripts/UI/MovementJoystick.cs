@@ -79,6 +79,8 @@ namespace ProjectZx.UI
                 var canvas = transform.GetChild(0).gameObject;
                 canvas.SetActive(enabled);
             }
+
+            if (_knobRect != null) _knobRect.anchoredPosition = Vector2.zero;
         }
 
         void BuildUi()
@@ -101,11 +103,15 @@ namespace ProjectZx.UI
             var baseGo = new GameObject("JoystickBase");
             baseGo.transform.SetParent(canvasGo.transform, false);
             _baseRect = baseGo.AddComponent<RectTransform>();
+            // Center pivot so ScreenPointToLocalPoint matches knob anchoredPosition space
+            // (previously bottom-right pivot made the knob jump toward top-left on touch).
             _baseRect.anchorMin = new Vector2(1f, 0f);
             _baseRect.anchorMax = new Vector2(1f, 0f);
-            _baseRect.pivot = new Vector2(1f, 0f);
-            _baseRect.anchoredPosition = new Vector2(-220f * UiScale, 210f * UiScale);
+            _baseRect.pivot = new Vector2(0.5f, 0.5f);
             _baseRect.sizeDelta = new Vector2(baseSize, baseSize);
+            _baseRect.anchoredPosition = new Vector2(
+                -220f * UiScale - baseSize * 0.5f,
+                210f * UiScale + baseSize * 0.5f);
 
             var baseImage = baseGo.AddComponent<Image>();
             baseImage.sprite = GetCircleSprite();
@@ -133,7 +139,9 @@ namespace ProjectZx.UI
             if (IsHeld) return;
             _pointerId = eventData.pointerId;
             IsHeld = true;
-            UpdateKnob(eventData.position);
+            // Stay centered until the player actually drags.
+            if (_knobRect != null) _knobRect.anchoredPosition = Vector2.zero;
+            Direction = Vector2.zero;
         }
 
         public void OnDrag(PointerEventData eventData)
