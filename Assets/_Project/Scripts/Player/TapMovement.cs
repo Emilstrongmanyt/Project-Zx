@@ -18,6 +18,8 @@ namespace ProjectZx.Player
     {
         const float ArrivalDistance = 0.12f;
         const float NpcTapRadius = 1.8f;
+        const float CastSkin = 0.04f;
+        const float StuckClearDelay = 0.35f;
 
         [SerializeField] float baseSpeed = 4.5f;
         [SerializeField] bool allowNpcInteraction = true;
@@ -38,6 +40,7 @@ namespace ProjectZx.Player
         bool _useWalkFrameA = true;
         int _chaseTouchId = -1;
         bool _chaseMouse;
+        float _blockedTimer;
         readonly List<RaycastHit2D> _castHits = new();
 
         public void Configure(bool npcInteraction, PlayableHero hero = PlayableHero.RollZy)
@@ -117,7 +120,14 @@ namespace ProjectZx.Player
             }
 
             var step = GetSpeed() * Time.fixedDeltaTime;
-            MoveByDelta(Vector2.ClampMagnitude(delta, step));
+            if (MoveByDelta(Vector2.ClampMagnitude(delta, step)))
+                _blockedTimer = 0f;
+            else
+                _blockedTimer += Time.fixedDeltaTime;
+
+            if (_blockedTimer >= StuckClearDelay && _chaseTouchId < 0 && !_chaseMouse)
+                _moveTarget = null;
+
             TryCompletePendingNpcInteract();
             TryCompletePendingDoor();
         }
@@ -129,13 +139,47 @@ namespace ProjectZx.Player
             return baseSpeed * GameSave.SpeedMultiplier * runSpeed;
         }
 
-        void MoveByDelta(Vector2 delta)
+        bool MoveByDelta(Vector2 delta)
         {
             if (delta.sqrMagnitude < 0.00001f)
             {
                 _rb.linearVelocity = Vector2.zero;
-                return;
+                return false;
             }
+
+            if (TryMoveDelta(delta, out var hitNormal))
+                return true;
+
+            var distance = delta.magnitude;
+            var direction = delta / distance;
+
+            if (hitNormal.sqrMagnitude > 0.0001f)
+            {
+                var slide = direction - Vector2.Dot(direction, hitNormal) * hitNormal;
+                if (slide.sqrMagnitude > 0.0001f && TryMoveDelta(slide.normalized * distance, out _))
+                    return true;
+            }
+
+            var perp = new Vector2(-direction.y, direction.x) * distance;
+            if (TryMoveDelta(perp, out _) || TryMoveDelta(-perp, out _))
+                return true;
+
+            var blendedA = (direction + perp.normalized).normalized * distance * 0.75f;
+            if (TryMoveDelta(blendedA, out _))
+                return true;
+
+            var blendedB = (direction - perp.normalized).normalized * distance * 0.75f;
+            if (TryMoveDelta(blendedB, out _))
+                return true;
+
+            _rb.linearVelocity = Vector2.zero;
+            return false;
+        }
+
+        bool TryMoveDelta(Vector2 delta, out Vector2 hitNormal)
+        {
+            hitNormal = Vector2.zero;
+            if (delta.sqrMagnitude < 0.00001f) return false;
 
             var distance = delta.magnitude;
             var direction = delta / distance;
@@ -148,31 +192,37 @@ namespace ProjectZx.Player
             var allowed = distance;
             if (hitCount > 0)
             {
-                var blockingIndex = -1;
-                for (var i = 0; i < hitCount; i++)
-                {
-                    var col = _castHits[i].collider;
-                    if (col == null) continue;
-                    if (col.GetComponent<EnemyActor>() != null) continue;
-                    blockingIndex = i;
-                    break;
-                }
-
+                var blockingIndex = FindFirstBlockingHit(hitCount);
                 if (blockingIndex < 0)
                     allowed = distance;
                 else
-                    allowed = Mathf.Max(0f, _castHits[blockingIndex].distance - 0.02f);
+                {
+                    hitNormal = _castHits[blockingIndex].normal;
+                    allowed = Mathf.Max(0f, _castHits[blockingIndex].distance - CastSkin);
+                }
             }
 
-            if (allowed <= 0.0001f)
-            {
-                _rb.linearVelocity = Vector2.zero;
-                return;
-            }
+            if (allowed <= 0.0001f) return false;
 
-            var next = _rb.position + direction * allowed;
-            _rb.MovePosition(next);
+            _rb.MovePosition(_rb.position + direction * allowed);
             _rb.linearVelocity = direction * (allowed / Time.fixedDeltaTime);
+            return true;
+        }
+
+        int FindFirstBlockingHit(int hitCount)
+        {
+            for (var i = 0; i < hitCount; i++)
+            {
+                var col = _castHits[i].collider;
+                if (col == null) continue;
+
+                var enemy = col.GetComponent<EnemyActor>() ?? col.GetComponentInParent<EnemyActor>();
+                if (enemy != null && !enemy.IsAlive) continue;
+
+                return i;
+            }
+
+            return -1;
         }
 
         void OnFingerDown(Finger finger)
@@ -371,6 +421,7 @@ namespace ProjectZx.Player
             _pendingDoor = null;
             _chaseTouchId = -1;
             _chaseMouse = false;
+            _blockedTimer = 0f;
             _rb.linearVelocity = Vector2.zero;
         }
 

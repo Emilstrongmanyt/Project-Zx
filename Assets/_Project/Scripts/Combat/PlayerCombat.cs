@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using ProjectZx.Core;
 using ProjectZx.Enemies;
 using ProjectZx.Player;
+using ProjectZx.World;
 using UnityEngine;
 
 namespace ProjectZx.Combat
@@ -65,7 +66,7 @@ namespace ProjectZx.Combat
 
             var batRenderer = batGo.AddComponent<SpriteRenderer>();
             batRenderer.sprite = ArtLibrary.BaseballBat;
-            batRenderer.sortingOrder = 11;
+            batGo.AddComponent<YSortRenderer>().Configure(1);
 
             _batPivot.localRotation = Quaternion.Euler(0f, 0f, RestAngle);
         }

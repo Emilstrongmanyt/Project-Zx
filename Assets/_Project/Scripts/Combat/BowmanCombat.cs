@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using ProjectZx.Core;
 using ProjectZx.Enemies;
 using ProjectZx.Player;
+using ProjectZx.World;
 using UnityEngine;
 
 namespace ProjectZx.Combat
@@ -55,7 +56,7 @@ namespace ProjectZx.Combat
 
             var bowRenderer = bowGo.AddComponent<SpriteRenderer>();
             bowRenderer.sprite = ArtLibrary.Bow;
-            bowRenderer.sortingOrder = 11;
+            bowGo.AddComponent<YSortRenderer>().Configure(1);
 
             _bowPivot.localRotation = Quaternion.Euler(0f, 0f, -12f);
         }

@@ -91,10 +91,9 @@ namespace ProjectZx.Core
 
         public static GameObject CreateTreeObstacle(Vector3 position, float scale, Sprite sprite = null)
         {
-            var go = CreateSprite("Tree", sprite ?? ArtLibrary.GetRandomTreeSprite(), position, scale, 3);
-            var col = go.AddComponent<CircleCollider2D>();
-            col.radius = 0.38f;
+            var go = CreateSprite("Tree", sprite ?? ArtLibrary.GetRandomTreeSprite(), position, scale, 0);
             go.AddComponent<ArenaObstacle>();
+            go.AddComponent<TreeObstacle>();
             return go;
         }
 
@@ -207,8 +206,9 @@ namespace ProjectZx.Core
             float scale = 0.42f)
         {
             var sanitizedHero = GameSave.SanitizeHero(hero);
-            var go = CreateSprite("Player", ArtLibrary.GetHeroIdleSprite(sanitizedHero), position, scale, 10);
+            var go = CreateSprite("Player", ArtLibrary.GetHeroIdleSprite(sanitizedHero), position, scale, 0);
             go.tag = "Player";
+            go.AddComponent<YSortRenderer>();
 
             var rb = go.AddComponent<Rigidbody2D>();
             rb.bodyType = RigidbodyType2D.Kinematic;
@@ -260,8 +260,9 @@ namespace ProjectZx.Core
             var scale = (isBoss ? 0.55f : 0.32f * 2.5f) * 1.5f;
             if (isBoss) scale *= 1.5f;
             if (isRoundTwentyBoss) scale *= 2.5f;
-            var go = CreateSprite(isBoss ? "Boss" : "Zombie", sprite, position, scale, 5);
+            var go = CreateSprite(isBoss ? "Boss" : "Zombie", sprite, position, scale, 0);
             go.tag = "Enemy";
+            go.AddComponent<YSortRenderer>();
 
             var rb = go.AddComponent<Rigidbody2D>();
             rb.bodyType = RigidbodyType2D.Kinematic;
