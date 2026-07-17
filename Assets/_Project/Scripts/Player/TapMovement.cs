@@ -98,6 +98,20 @@ namespace ProjectZx.Player
 
         void FixedUpdate()
         {
+            var joystick = MovementJoystick.Instance;
+            var joyDir = joystick != null ? joystick.Direction : Vector2.zero;
+            if (joyDir.sqrMagnitude > 0.01f)
+            {
+                _moveTarget = null;
+                _pendingNpc = null;
+                _pendingDoor = null;
+                _chaseTouchId = -1;
+                _chaseMouse = false;
+                _blockedTimer = 0f;
+                MoveByDelta(joyDir.normalized * GetSpeed() * Time.fixedDeltaTime);
+                return;
+            }
+
             if (_moveTarget == null)
             {
                 _rb.linearVelocity = Vector2.zero;
@@ -264,6 +278,7 @@ namespace ProjectZx.Player
         void BeginPointer(Vector2 screenPos, int touchId)
         {
             if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade) return;
+            if (MovementJoystick.Instance != null && MovementJoystick.Instance.IsPointerOver(screenPos)) return;
             if (IsPointerOverBlockingUi(screenPos)) return;
 
             _chaseTouchId = touchId;
@@ -274,6 +289,7 @@ namespace ProjectZx.Player
         void UpdateChaseTarget(Vector2 screenPos)
         {
             if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade) return;
+            if (MovementJoystick.Instance != null && MovementJoystick.Instance.IsPointerOver(screenPos)) return;
             if (IsPointerOverBlockingUi(screenPos)) return;
             TrySetMoveTarget(screenPos, true);
         }
@@ -467,7 +483,8 @@ namespace ProjectZx.Player
             var magician = GetComponent<MagicianCombat>();
             if (magician != null && magician.IsCasting) return;
 
-            var moving = _moveTarget != null || _rb.linearVelocity.sqrMagnitude > 0.01f;
+            var joyDir = MovementJoystick.Instance != null ? MovementJoystick.Instance.Direction : Vector2.zero;
+            var moving = joyDir.sqrMagnitude > 0.01f || _moveTarget != null || _rb.linearVelocity.sqrMagnitude > 0.01f;
             if (!moving)
             {
                 _walkAnimTimer = 0f;
@@ -485,9 +502,11 @@ namespace ProjectZx.Player
 
             _renderer.sprite = _useWalkFrameA ? _walkA : _walkB;
 
-            var faceX = _moveTarget.HasValue
-                ? _moveTarget.Value.x - transform.position.x
-                : _rb.linearVelocity.x;
+            var faceX = joyDir.sqrMagnitude > 0.01f
+                ? joyDir.x
+                : _moveTarget.HasValue
+                    ? _moveTarget.Value.x - transform.position.x
+                    : _rb.linearVelocity.x;
 
             if (faceX == 0f) return;
 

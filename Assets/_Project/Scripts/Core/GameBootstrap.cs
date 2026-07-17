@@ -52,6 +52,7 @@ namespace ProjectZx.Core
             var campfireNpc = campfire.AddComponent<NpcInteractable>();
             campfireNpc.Initialize(() => hub.OpenCampfireTravel());
 
+            MovementJoystick.EnsureExists();
         }
 
         static void BuildSurvival(SurvivalMapKind mapKind)
@@ -113,6 +114,8 @@ namespace ProjectZx.Core
 
             var bossAudio = new GameObject("BossProximityAudio").AddComponent<BossProximityAudio>();
             bossAudio.BindPlayer(player.transform);
+
+            MovementJoystick.EnsureExists();
         }
 
         static void SetupCamera(Color background)

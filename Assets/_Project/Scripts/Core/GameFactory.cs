@@ -94,7 +94,7 @@ namespace ProjectZx.Core
 
         public static GameObject CreateStoneObstacle(Vector3 position, float scale, Sprite sprite = null)
         {
-            var go = CreateSprite("Stone", sprite ?? ArtLibrary.GetRandomRockSprite(), position, scale, 0);
+            var go = CreateSprite("Stone", sprite ?? ArtLibrary.Stone, position, scale, 0);
             go.AddComponent<ArenaObstacle>();
             go.AddComponent<StoneObstacle>();
             return go;
@@ -102,7 +102,7 @@ namespace ProjectZx.Core
 
         public static GameObject CreateTreeObstacle(Vector3 position, float scale, Sprite sprite = null)
         {
-            var go = CreateSprite("Tree", sprite ?? ArtLibrary.GetRandomTreeSprite(), position, scale, 0);
+            var go = CreateSprite("Tree", sprite ?? ArtLibrary.Tree, position, scale, 0);
             go.AddComponent<ArenaObstacle>();
             go.AddComponent<TreeObstacle>();
             return go;
@@ -132,33 +132,19 @@ namespace ProjectZx.Core
             ScatterPlaced.Clear();
             var root = new GameObject("ArenaObstacles");
             var rng = new System.Random(90210);
-            var rockBag = new SpriteVariantBag(ArtLibrary.RockVariants, rng);
-            var treeBag = new SpriteVariantBag(ArtLibrary.TreeVariants, rng);
 
-            void PlaceRocks()
-            {
-                for (var i = 0; i < stoneCount; i++)
-                    TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 2.4f, 6f, 2f,
-                        pos => CreateStoneObstacle(new Vector3(pos.x, pos.y, 0f), 1f, rockBag.Pick()));
-            }
+            for (var i = 0; i < stoneCount; i++)
+                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 2.4f, 6f, 2f,
+                    pos => CreateStoneObstacle(new Vector3(pos.x, pos.y, 0f), 1f));
 
-            void PlaceTrees()
-            {
-                for (var i = 0; i < treeCount; i++)
-                    TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 3f, 5f, 2f,
-                        pos => CreateTreeObstacle(new Vector3(pos.x, pos.y, 0f), 1f, treeBag.Pick()));
-            }
+            for (var i = 0; i < treeCount; i++)
+                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 3f, 5f, 2f,
+                    pos => CreateTreeObstacle(new Vector3(pos.x, pos.y, 0f), 1f));
 
-            void PlaceCampfires()
-            {
-                for (var i = 0; i < campfireCount; i++)
-                    TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 4f, 8f, 1f,
-                        pos => CreateCampfireObstacle(new Vector3(pos.x, pos.y, 0f), 0.55f));
-            }
+            for (var i = 0; i < campfireCount; i++)
+                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 4f, 8f, 1f,
+                    pos => CreateCampfireObstacle(new Vector3(pos.x, pos.y, 0f), 0.55f));
 
-            PlaceRocks();
-            PlaceTrees();
-            PlaceCampfires();
             return root;
         }
 

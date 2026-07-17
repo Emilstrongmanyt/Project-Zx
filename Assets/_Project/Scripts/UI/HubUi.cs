@@ -92,26 +92,26 @@ namespace ProjectZx.UI
 
         GameObject BuildShopPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "ShopPanel", Vector2.zero, new Vector2(700, 620), ArtLibrary.ShopUi);
+            var panel = CreateDialogPanel(parent, "ShopPanel", Vector2.zero, new Vector2(910, 806), ArtLibrary.ShopUi);
 
-            _hpRow = CreateUpgradeRow(panel.transform, "Max HP +15", 50, 100, () => BuyHp());
-            _damageRow = CreateUpgradeRow(panel.transform, "Damage +8%", 75, 56, () => BuyDamage());
-            _speedRow = CreateUpgradeRow(panel.transform, "Move Speed +6%", 60, 12, () => BuySpeed());
-            _whirlwindRow = CreateUpgradeRow(panel.transform, "Whirlwind (360°/180°)", 500, -32, BuyWhirlwind);
-            _piercingShotRow = CreateUpgradeRow(panel.transform, "Piercing Shot (Bowman)", 2000, -76, BuyPiercingShot);
+            _hpRow = CreateUpgradeRow(panel.transform, "Max HP +15", 50, 130, () => BuyHp());
+            _damageRow = CreateUpgradeRow(panel.transform, "Damage +8%", 75, 72, () => BuyDamage());
+            _speedRow = CreateUpgradeRow(panel.transform, "Move Speed +6%", 60, 14, () => BuySpeed());
+            _whirlwindRow = CreateUpgradeRow(panel.transform, "Whirlwind (360°/180°)", 500, -44, BuyWhirlwind);
+            _piercingShotRow = CreateUpgradeRow(panel.transform, "Piercing Shot (Bowman)", 2000, -102, BuyPiercingShot);
 
-            CreateButton(panel.transform, "Build Loadout", new Vector2(-150, -220), () => OpenLoadout());
-            CreateButton(panel.transform, "Character Stats", new Vector2(150, -220), () => OpenStats());
-            CreateButton(panel.transform, "Close", new Vector2(0, -275), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Build Loadout", new Vector2(-195, -286), () => OpenLoadout(), large: true);
+            CreateButton(panel.transform, "Character Stats", new Vector2(195, -286), () => OpenStats(), large: true);
+            CreateButton(panel.transform, "Close", new Vector2(0, -358), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
         }
 
         GameObject BuildAchievementsPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "AchievementsPanel", Vector2.zero, new Vector2(800, 640), ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, "Achievements", 30, TextAnchor.MiddleCenter, new Vector2(0, 280), new Vector2(500, 44));
-            _achievementCountText = CreateText(panel.transform, "", 20, TextAnchor.MiddleCenter, new Vector2(0, 245), new Vector2(500, 30));
+            var panel = CreateDialogPanel(parent, "AchievementsPanel", Vector2.zero, new Vector2(1040, 832), ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, "Achievements", 40, TextAnchor.MiddleCenter, new Vector2(0, 364), new Vector2(650, 56));
+            _achievementCountText = CreateText(panel.transform, "", 26, TextAnchor.MiddleCenter, new Vector2(0, 318), new Vector2(650, 40));
 
             var scrollGo = new GameObject("AchievementScroll");
             scrollGo.transform.SetParent(panel.transform, false);
@@ -119,8 +119,8 @@ namespace ProjectZx.UI
             scrollRectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             scrollRectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             scrollRectTransform.pivot = new Vector2(0.5f, 0.5f);
-            scrollRectTransform.anchoredPosition = new Vector2(0f, -10f);
-            scrollRectTransform.sizeDelta = new Vector2(720f, 430f);
+            scrollRectTransform.anchoredPosition = new Vector2(0f, -14f);
+            scrollRectTransform.sizeDelta = new Vector2(936f, 560f);
 
             var scroll = scrollGo.AddComponent<ScrollRect>();
             scroll.horizontal = false;
@@ -150,16 +150,16 @@ namespace ProjectZx.UI
             scroll.content = contentRect;
 
             var y = 0f;
-            const float rowHeight = 72f;
+            const float rowHeight = 94f;
             foreach (var def in Achievements.All)
             {
                 _achievementRows.Add(CreateAchievementRow(content.transform, def, y));
                 y -= rowHeight;
             }
 
-            contentRect.sizeDelta = new Vector2(700f, Mathf.Abs(y));
+            contentRect.sizeDelta = new Vector2(910f, Mathf.Abs(y));
 
-            CreateButton(panel.transform, "Close", new Vector2(0, -285), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Close", new Vector2(0, -370), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
         }
@@ -173,15 +173,15 @@ namespace ProjectZx.UI
             rect.anchorMax = new Vector2(0.5f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
             rect.anchoredPosition = new Vector2(0f, y);
-            rect.sizeDelta = new Vector2(680f, 64f);
+            rect.sizeDelta = new Vector2(884f, 84f);
 
             var image = go.AddComponent<Image>();
-            UiSprites.ApplyButtonSprite(image, new Vector2(680f, 64f));
+            UiSprites.ApplyButtonSprite(image, new Vector2(884f, 84f));
             go.AddComponent<Button>();
 
-            var title = CreateText(go.transform, def.Title, 20, TextAnchor.UpperLeft, new Vector2(14f, -8f), new Vector2(640f, 28f));
+            var title = CreateText(go.transform, def.Title, 26, TextAnchor.UpperLeft, new Vector2(18f, -10f), new Vector2(832f, 36f));
             title.alignment = TextAnchor.UpperLeft;
-            var desc = CreateText(go.transform, def.Description, 17, TextAnchor.UpperLeft, new Vector2(14f, -34f), new Vector2(640f, 24f));
+            var desc = CreateText(go.transform, def.Description, 22, TextAnchor.UpperLeft, new Vector2(18f, -44f), new Vector2(832f, 32f));
             desc.alignment = TextAnchor.UpperLeft;
             desc.color = new Color(0.88f, 0.9f, 0.95f);
 
@@ -233,11 +233,11 @@ namespace ProjectZx.UI
 
         GameObject BuildMapPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, new Vector2(620, 300), ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, "Outside Survival", 28, TextAnchor.MiddleCenter, new Vector2(0, 70), new Vector2(500, 40));
-            CreateText(panel.transform, "Set class & technique at the Wizard shop first.", 18, TextAnchor.MiddleCenter, new Vector2(0, 20), new Vector2(540, 48));
-            CreateButton(panel.transform, "Start Run", new Vector2(0, -55), () => EnterSurvival(SurvivalMapKind.Outside));
-            CreateButton(panel.transform, "Close", new Vector2(0, -125), () => panel.SetActive(false));
+            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, new Vector2(806, 390), ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, "Outside Survival", 36, TextAnchor.MiddleCenter, new Vector2(0, 91), new Vector2(650, 52));
+            CreateText(panel.transform, "Set class & technique at the Wizard shop first.", 24, TextAnchor.MiddleCenter, new Vector2(0, 26), new Vector2(700, 62));
+            CreateButton(panel.transform, "Start Run", new Vector2(0, -72), () => EnterSurvival(SurvivalMapKind.Outside), large: true);
+            CreateButton(panel.transform, "Close", new Vector2(0, -162), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
         }
@@ -426,8 +426,8 @@ namespace ProjectZx.UI
         {
             return new UpgradeRowRefs
             {
-                Label = CreateText(parent, $"{label} — {cost}g", 20, TextAnchor.MiddleLeft, new Vector2(-195, y), new Vector2(280, 32)),
-                BuyButton = CreateButton(parent, "Buy", new Vector2(205, y), onBuy)
+                Label = CreateText(parent, $"{label} — {cost}g", 26, TextAnchor.MiddleLeft, new Vector2(-254, y), new Vector2(364, 42)),
+                BuyButton = CreateButton(parent, "Buy", new Vector2(266, y), onBuy, large: true)
             };
         }
 
@@ -771,7 +771,7 @@ namespace ProjectZx.UI
             image.raycastTarget = false;
         }
 
-        static Button CreateButton(Transform parent, string label, Vector2 pos, Action onClick)
+        static Button CreateButton(Transform parent, string label, Vector2 pos, Action onClick, bool large = false)
         {
             var go = new GameObject(label + "Button");
             go.transform.SetParent(parent, false);
@@ -780,13 +780,14 @@ namespace ProjectZx.UI
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = pos;
-            var size = new Vector2(220, 52);
+            var size = large ? new Vector2(286, 68) : new Vector2(220, 52);
             rect.sizeDelta = size;
             var image = go.AddComponent<Image>();
             UiSprites.ApplyButtonSprite(image, size);
             var button = go.AddComponent<Button>();
             button.onClick.AddListener(() => onClick());
-            CreateText(go.transform, label, 22, TextAnchor.MiddleCenter, Vector2.zero, new Vector2(200, 44));
+            var fontSize = large ? 28 : 22;
+            CreateText(go.transform, label, fontSize, TextAnchor.MiddleCenter, Vector2.zero, new Vector2(size.x - 20f, size.y - 8f));
             return button;
         }
     }
