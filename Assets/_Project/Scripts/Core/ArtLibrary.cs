@@ -50,7 +50,6 @@ namespace ProjectZx.Core
             _shopUi = null;
             _levelUpUi = null;
             _challengeBoardUi = null;
-            _achievementBoardUi = null;
             _outsideTiles = null;
             _insideTiles = null;
             _dungeonTiles = null;
@@ -105,7 +104,6 @@ namespace ProjectZx.Core
         static Sprite _shopUi;
         static Sprite _levelUpUi;
         static Sprite _challengeBoardUi;
-        static Sprite _achievementBoardUi;
         static Sprite[] _outsideTiles;
         static Sprite[] _insideTiles;
         static Sprite[] _dungeonTiles;
@@ -154,7 +152,8 @@ namespace ProjectZx.Core
         public static Sprite Btn360x56 => _btn360x56 ??= Load("btn_360x56", "btn_primary");
         public static Sprite Wizard => _wizard ??= Load("Placeholders/wizard");
         public static Sprite Knight => _knight ??= Load("Placeholders/knight");
-        public static Sprite AchievementKeeper => _achievementKeeper ??= Load("Art/achievement_keeper", "AchievementKeeper", "Placeholders/wizard");
+        /// <summary>World NPC: achievement board (not the wizard placeholder).</summary>
+        public static Sprite AchievementKeeper => _achievementKeeper ??= LoadOrCreateAchievementBoardNpc();
         public static Sprite Ground => _ground ??= Load("Placeholders/ground");
         public static Sprite GrassTile => _grassTile ??= LoadOrCreateGrass();
         public static Sprite Campfire => _campfire ??= CreateCampfireSprite();
@@ -216,8 +215,6 @@ namespace ProjectZx.Core
         public static Sprite ShopUi => _shopUi ??= Load("Art/shop_ui", "ShopUI");
         public static Sprite LevelUpUi => _levelUpUi ??= Load("Art/level_up_ui", "LevelUpUI");
         public static Sprite ChallengeBoardUi => _challengeBoardUi ??= Load("Art/challenge_board_ui", "ChallengeBoardUI");
-        /// <summary>Distinct from shop brown panel — purple/gold trophy board for achievements.</summary>
-        public static Sprite AchievementBoardUi => _achievementBoardUi ??= CreateAchievementBoardUiSprite();
         // Never fall back to land tiles — that made water borders look "removed".
         public static Sprite WaterTile
         {
@@ -623,15 +620,22 @@ namespace ProjectZx.Core
             return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 16f);
         }
 
-        /// <summary>
-        /// Purple/gold achievement panel — clearly different from the brown shop plate.
-        /// </summary>
-        static Sprite CreateAchievementBoardUiSprite()
+        static Sprite LoadOrCreateAchievementBoardNpc()
         {
-            const int w = 128;
-            const int h = 96;
+            // Prefer a dedicated board asset; otherwise build a standing trophy board for the camp NPC.
+            // Do not fall back to ChallengeBoardUI (flat UI plate — wrong for a world prop).
+            var loaded = TryLoadSprite("Art/achievement_keeper", TilePixelsPerUnit)
+                         ?? TryLoadSprite("AchievementKeeper", TilePixelsPerUnit);
+            return loaded != null ? loaded : CreateAchievementBoardNpcSprite();
+        }
+
+        /// <summary>Standing achievement board world sprite (pivot at feet).</summary>
+        static Sprite CreateAchievementBoardNpcSprite()
+        {
+            const int w = 32;
+            const int h = 40;
             var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-            tex.filterMode = FilterMode.Bilinear;
+            tex.filterMode = FilterMode.Point;
 
             void Set(int x, int y, Color c)
             {
@@ -639,58 +643,43 @@ namespace ProjectZx.Core
             }
 
             var clear = new Color(0, 0, 0, 0);
-            var fill = new Color(0.22f, 0.12f, 0.34f, 0.96f);
-            var fillInner = new Color(0.32f, 0.18f, 0.48f, 0.98f);
-            var border = new Color(0.92f, 0.72f, 0.28f, 1f);
-            var borderDark = new Color(0.55f, 0.38f, 0.12f, 1f);
-            var accent = new Color(1f, 0.85f, 0.4f, 1f);
+            var post = new Color(0.38f, 0.24f, 0.12f, 1f);
+            var board = new Color(0.28f, 0.16f, 0.4f, 1f);
+            var boardLight = new Color(0.4f, 0.24f, 0.55f, 1f);
+            var frame = new Color(0.9f, 0.7f, 0.25f, 1f);
+            var star = new Color(1f, 0.88f, 0.35f, 1f);
 
             for (var y = 0; y < h; y++)
             for (var x = 0; x < w; x++)
                 Set(x, y, clear);
 
-            // Rounded rect body.
-            const int radius = 12;
-            for (var y = 0; y < h; y++)
-            for (var x = 0; x < w; x++)
+            // Post / stake
+            for (var y = 0; y <= 12; y++)
             {
-                var inCorner = false;
-                float cx = 0, cy = 0;
-                if (x < radius && y < radius) { cx = radius; cy = radius; inCorner = true; }
-                else if (x >= w - radius && y < radius) { cx = w - radius - 1; cy = radius; inCorner = true; }
-                else if (x < radius && y >= h - radius) { cx = radius; cy = h - radius - 1; inCorner = true; }
-                else if (x >= w - radius && y >= h - radius) { cx = w - radius - 1; cy = h - radius - 1; inCorner = true; }
-
-                if (inCorner && Vector2.Distance(new Vector2(x, y), new Vector2(cx, cy)) > radius)
-                    continue;
-
-                var edgeDist = Mathf.Min(x, y, w - 1 - x, h - 1 - y);
-                if (edgeDist <= 2)
-                    Set(x, y, edgeDist == 0 ? borderDark : border);
-                else if (edgeDist <= 5)
-                    Set(x, y, Color.Lerp(border, fill, (edgeDist - 2) / 3f));
-                else
-                {
-                    var t = (float)y / h;
-                    Set(x, y, Color.Lerp(fill, fillInner, t));
-                }
+                Set(14, y, post);
+                Set(15, y, post);
+                Set(16, y, post);
             }
 
-            // Small gold trophy accent at top center.
-            for (var y = h - 18; y <= h - 8; y++)
-            for (var x = w / 2 - 4; x <= w / 2 + 4; x++)
+            // Board face
+            for (var y = 12; y <= 36; y++)
+            for (var x = 4; x <= 27; x++)
             {
-                var dx = Mathf.Abs(x - w / 2);
-                var dy = h - 8 - y;
-                if (dx + dy <= 5) Set(x, y, accent);
+                var edge = x <= 5 || x >= 26 || y <= 13 || y >= 35;
+                Set(x, y, edge ? frame : (y > 24 ? boardLight : board));
             }
 
-            for (var y = h - 22; y <= h - 18; y++)
-            for (var x = w / 2 - 2; x <= w / 2 + 2; x++)
-                Set(x, y, border);
+            // Star / trophy mark
+            Set(15, 28, star); Set(16, 28, star);
+            Set(14, 27, star); Set(15, 27, star); Set(16, 27, star); Set(17, 27, star);
+            Set(15, 26, star); Set(16, 26, star);
+            Set(13, 25, star); Set(18, 25, star);
+            Set(15, 24, star); Set(16, 24, star);
+            Set(15, 22, star); Set(16, 22, star);
+            Set(14, 21, star); Set(15, 21, star); Set(16, 21, star); Set(17, 21, star);
 
             tex.Apply();
-            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.05f), 16f);
         }
 
         static Sprite CreateXpGemSprite()

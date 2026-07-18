@@ -170,7 +170,7 @@ namespace ProjectZx.UI
 
         GameObject BuildAchievementsPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "AchievementsPanel", Vector2.zero, new Vector2(1100, 880), ArtLibrary.AchievementBoardUi);
+            var panel = CreateDialogPanel(parent, "AchievementsPanel", Vector2.zero, new Vector2(1100, 880), ArtLibrary.ChallengeBoardUi);
             CreateText(panel.transform, "Achievements", 44, TextAnchor.MiddleCenter, new Vector2(0, 380), new Vector2(700, 58));
             _achievementCountText = CreateText(panel.transform, "", 30, TextAnchor.MiddleCenter, new Vector2(0, 330), new Vector2(700, 44));
 

@@ -149,18 +149,20 @@ namespace ProjectZx.Core
             var root = new GameObject("ArenaObstacles");
             var rng = new System.Random(90210);
 
+            // Extra footprint padding so large tree crowns cannot cover reserved NPC pads.
             for (var i = 0; i < stoneCount; i++)
-                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 2.4f, 6f, 1.7f,
-                    pos => CreateStoneObstacle(new Vector3(pos.x, pos.y, 0f), 1f));
+                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 2.6f, 6f, 1.7f,
+                    pos => CreateStoneObstacle(new Vector3(pos.x, pos.y, 0f), 1f), footprintPadding: 1.1f);
 
             for (var i = 0; i < treeCount; i++)
-                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 3f, 5f, 1.7f,
-                    pos => CreateTreeObstacle(new Vector3(pos.x, pos.y, 0f), 1f));
+                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 3.2f, 5f, 1.7f,
+                    pos => CreateTreeObstacle(new Vector3(pos.x, pos.y, 0f), 1f), footprintPadding: 1.8f);
 
             for (var i = 0; i < campfireCount; i++)
                 TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 4f, 8f, 1f,
-                    pos => CreateCampfireObstacle(new Vector3(pos.x, pos.y, 0f), 0.55f));
+                    pos => CreateCampfireObstacle(new Vector3(pos.x, pos.y, 0f), 0.55f), footprintPadding: 0.8f);
 
+            PruneObstaclesInClearings(root.transform);
             return root;
         }
 
@@ -229,15 +231,38 @@ namespace ProjectZx.Core
             ScatterClearingRadii.Add(Mathf.Max(0.5f, radius));
         }
 
-        static bool IsInsideReservedClearing(Vector2 pos)
+        static bool IsInsideReservedClearing(Vector2 pos, float footprintPadding = 0f)
         {
             for (var i = 0; i < ScatterClearingCenters.Count; i++)
             {
-                if (Vector2.Distance(pos, ScatterClearingCenters[i]) < ScatterClearingRadii[i])
+                var limit = ScatterClearingRadii[i] + footprintPadding;
+                if (Vector2.Distance(pos, ScatterClearingCenters[i]) < limit)
                     return true;
             }
 
             return false;
+        }
+
+        /// <summary>Destroy any obstacle that still overlaps a reserved NPC/spawn clearing.</summary>
+        public static void PruneObstaclesInClearings(Transform root = null)
+        {
+            if (ScatterClearingCenters.Count == 0) return;
+
+            var obstacles = Object.FindObjectsByType<ArenaObstacle>();
+            for (var i = 0; i < obstacles.Length; i++)
+            {
+                var obstacle = obstacles[i];
+                if (obstacle == null) continue;
+                if (root != null && !obstacle.transform.IsChildOf(root) && obstacle.transform != root)
+                    continue;
+
+                var pos = (Vector2)obstacle.transform.position;
+                // Trees are tall/wide after scale — use generous prune radius.
+                var isTree = obstacle.GetComponent<TreeObstacle>() != null;
+                var pad = isTree ? 2.0f : 1.2f;
+                if (!IsInsideReservedClearing(pos, pad)) continue;
+                Object.Destroy(obstacle.gameObject);
+            }
         }
 
         static void TryPlaceObstacle(
@@ -248,20 +273,21 @@ namespace ProjectZx.Core
             float minSpacing,
             float minCenterDist,
             float scaleMultiplier,
-            System.Func<Vector2, GameObject> create)
+            System.Func<Vector2, GameObject> create,
+            float footprintPadding = 0f)
         {
             var margin = 2.5f;
             var halfW = arenaWidth * 0.5f - margin;
             var halfH = arenaHeight * 0.5f - margin;
 
-            for (var attempt = 0; attempt < 48; attempt++)
+            for (var attempt = 0; attempt < 64; attempt++)
             {
                 var pos = new Vector2(
                     ((float)rng.NextDouble() * 2f - 1f) * halfW,
                     ((float)rng.NextDouble() * 2f - 1f) * halfH);
 
                 if (pos.magnitude < minCenterDist) continue;
-                if (IsInsideReservedClearing(pos)) continue;
+                if (IsInsideReservedClearing(pos, footprintPadding)) continue;
 
                 var tooClose = false;
                 foreach (var other in ScatterPlaced)
@@ -421,9 +447,10 @@ namespace ProjectZx.Core
             return go;
         }
 
-        public static GameObject CreateNpc(string name, Sprite sprite, Vector3 position, System.Action onInteract)
+        public static GameObject CreateNpc(string name, Sprite sprite, Vector3 position, System.Action onInteract, float scale = 0.38f)
         {
-            var go = CreateSprite(name, sprite, position, 0.38f, 6);
+            var go = CreateSprite(name, sprite, position, scale, 6);
+            go.AddComponent<YSortRenderer>().Configure(3);
             var proximity = go.AddComponent<CircleCollider2D>();
             proximity.isTrigger = true;
             proximity.radius = 2.8f;
