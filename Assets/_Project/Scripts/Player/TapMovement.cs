@@ -17,7 +17,7 @@ namespace ProjectZx.Player
     public class TapMovement : MonoBehaviour
     {
         const float ArrivalDistance = 0.12f;
-        const float NpcTapRadius = 1.8f;
+        const float NpcTapRadius = 2.4f;
         const float CastSkin = 0.04f;
         const float StuckClearDelay = 0.35f;
 

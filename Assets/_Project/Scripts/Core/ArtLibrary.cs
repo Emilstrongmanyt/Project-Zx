@@ -67,6 +67,7 @@ namespace ProjectZx.Core
             _hpHeart = null;
             _hpHeartDropped = null;
             _xpGem = null;
+            _pinkCrystal = null;
             _btnPrimary = null;
             _btn220x52 = null;
             _btn200x52 = null;
@@ -120,6 +121,7 @@ namespace ProjectZx.Core
         static Sprite _hpHeart;
         static Sprite _hpHeartDropped;
         static Sprite _xpGem;
+        static Sprite _pinkCrystal;
         static Sprite _btnPrimary;
         static Sprite _btn220x52;
         static Sprite _btn200x52;
@@ -143,6 +145,7 @@ namespace ProjectZx.Core
         public static Sprite HpHeart => _hpHeart ??= Load("HeartHP", "HPHeart");
         public static Sprite HpHeartDropped => _hpHeartDropped ??= Load("HPHeartDropped", "HeartHP", "HPHeart");
         public static Sprite XpGem => _xpGem ??= LoadOrCreateXpGem();
+        public static Sprite PinkCrystal => _pinkCrystal ??= CreatePinkCrystalSprite();
         public static Sprite BtnPrimary => _btnPrimary ??= Load("btn_primary");
         public static Sprite Btn220x52 => _btn220x52 ??= Load("btn_220x52", "btn_primary");
         public static Sprite Btn200x52 => _btn200x52 ??= Load("btn_200x52", "btn_primary");
@@ -292,8 +295,8 @@ namespace ProjectZx.Core
         }
 
         /// <summary>
-        /// Fire breath art points right (base left, tip +X). Pivot is at the left/base so
-        /// localRotation aims the stream from the boss mouth toward the player.
+        /// Fire breath art tip points left (-X). Pivot is on the right/base (mouth) so
+        /// rotation swings the stream out from the boss toward the player.
         /// </summary>
         static void EnsureFireBreathFrames()
         {
@@ -305,11 +308,11 @@ namespace ProjectZx.Core
                 var src = Load($"FireBreath{i + 1}");
                 if (src != null && src.texture != null)
                 {
-                    // Pivot on the base (left edge) so rotation swings the tip toward the player.
+                    // Pivot on the base (right edge) for left-pointing flame art.
                     _fireBreathFrames[i] = Sprite.Create(
                         src.texture,
                         src.rect,
-                        new Vector2(0f, 0.5f),
+                        new Vector2(1f, 0.5f),
                         src.pixelsPerUnit > 0f ? src.pixelsPerUnit : TilePixelsPerUnit,
                         0,
                         SpriteMeshType.FullRect);
@@ -574,6 +577,48 @@ namespace ProjectZx.Core
             return sprite != null ? sprite : CreateXpGemSprite();
         }
 
+        static Sprite CreatePinkCrystalSprite()
+        {
+            const int size = 16;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+
+            void Set(int x, int y, Color c)
+            {
+                if (x >= 0 && x < size && y >= 0 && y < size) tex.SetPixel(x, y, c);
+            }
+
+            var clear = new Color(0, 0, 0, 0);
+            var core = new Color(1f, 0.55f, 0.9f, 1f);
+            var mid = new Color(0.95f, 0.28f, 0.72f, 1f);
+            var edge = new Color(0.62f, 0.08f, 0.48f, 1f);
+            var shine = new Color(1f, 0.88f, 0.98f, 1f);
+
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+                Set(x, y, clear);
+
+            // Tall diamond crystal.
+            for (var y = 1; y <= 14; y++)
+            {
+                var t = y <= 8 ? (y - 1) / 7f : (14 - y) / 6f;
+                var half = Mathf.Max(1, Mathf.RoundToInt(Mathf.Lerp(1f, 5f, t)));
+                for (var x = 8 - half; x <= 8 + half; x++)
+                {
+                    var edgeDist = Mathf.Abs(x - 8f) / half;
+                    var c = edgeDist > 0.75f ? edge : edgeDist > 0.35f ? mid : core;
+                    Set(x, y, c);
+                }
+            }
+
+            Set(7, 11, shine);
+            Set(8, 12, shine);
+            Set(6, 9, shine);
+
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 16f);
+        }
+
         static Sprite CreateXpGemSprite()
         {
             const int size = 14;
@@ -656,7 +701,8 @@ namespace ProjectZx.Core
             }
 
             tex.Apply();
-            // Base on the left, tip to the right — matches authored FireBreath frames.
+            // Procedural fallback draws tip-right; pivot left so it matches +X aim without +180.
+            // Runtime authored frames use right pivot + 180°; this fallback is only if load fails.
             return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0f, 0.5f), 32f);
         }
 

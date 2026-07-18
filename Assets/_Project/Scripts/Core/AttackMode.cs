@@ -44,7 +44,6 @@ namespace ProjectZx.Core
         {
             return mode switch
             {
-                AttackMode.Whirlwind when playerClass == PlayerClass.Spearman => "Whirlwind (180°)",
                 AttackMode.Whirlwind => "Whirlwind (360°)",
                 AttackMode.PiercingShot => "Piercing Shot",
                 _ => "Standard"
@@ -55,10 +54,8 @@ namespace ProjectZx.Core
         {
             return mode switch
             {
-                AttackMode.Whirlwind when playerClass == PlayerClass.Spearman =>
-                    "Forward arc cleave — buy in shop, then equip here.",
                 AttackMode.Whirlwind =>
-                    "Full spin cleave — buy in shop, then equip here.",
+                    "Full 360° spin cleave — buy in shop, then equip here.",
                 AttackMode.PiercingShot =>
                     "Primary hit plus 50% damage to one enemy behind.",
                 AttackMode.Standard when playerClass == PlayerClass.Bowman =>

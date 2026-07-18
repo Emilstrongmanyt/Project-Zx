@@ -32,6 +32,7 @@ namespace ProjectZx.Enemies
         const float SprintSpeedMultiplier = 2.1f;
         const float HpPotionDropChance = 0.05f;
         const float BossHpPotionDropChance = 0.12f;
+        const float MapLootDropChance = 0.005f;
 
         public bool IsAlive { get; private set; } = true;
         public bool IsBoss { get; private set; }
@@ -170,7 +171,7 @@ namespace ProjectZx.Enemies
 
         /// <summary>
         /// Aim breath along the vector to the player (left/right/up/down and diagonals).
-        /// Fire art points right (+X) at identity; rotate so the tip follows the player.
+        /// Fire art tip is on the -X side of the texture; rotate so the stream leaves the mouth.
         /// </summary>
         void ApplyFireBreathToward(Vector3 target)
         {
@@ -183,8 +184,8 @@ namespace ProjectZx.Enemies
             _fireBreathFx.transform.localPosition = new Vector3(mouth.x, mouth.y, 0f);
             _fireBreathFx.transform.localScale = Vector3.one * FireBreathScale;
 
-            // Unity 2D: 0° = +X (right). Sprite tip is authored on the +X side.
-            var angle = Mathf.Atan2(_fireBreathAim.y, _fireBreathAim.x) * Mathf.Rad2Deg;
+            // Unity 2D: 0° = +X. Authored tip points left (-X), so add 180° to aim at the player.
+            var angle = Mathf.Atan2(_fireBreathAim.y, _fireBreathAim.x) * Mathf.Rad2Deg + 180f;
             _fireBreathFx.transform.localRotation = Quaternion.Euler(0f, 0f, angle);
 
             if (_fireBreathRenderer != null)
@@ -585,6 +586,10 @@ namespace ProjectZx.Enemies
                 var healAmount = Mathf.Max(8, Mathf.RoundToInt(MaxHpForPotionDrop() * 0.25f));
                 GameFactory.CreatePickup(pos + Vector2.up * 0.25f, PickupType.HpPotion, healAmount);
             }
+
+            // Rare pink crystal: vacuum every loot pile currently on the map.
+            if (Random.value < MapLootDropChance)
+                GameFactory.CreatePickup(pos + Vector2.down * 0.3f, PickupType.MapLoot, 1);
 
             var session = UnityEngine.Object.FindAnyObjectByType<SurvivalSession>();
             session?.NotifyEnemyKilled(this);

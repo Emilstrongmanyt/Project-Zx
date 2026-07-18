@@ -153,7 +153,7 @@ namespace ProjectZx.UI
             y += step;
             _campfireBlessingRow = CreateShopUpgradeRow(content.transform, "Campfire Blessing (free level-up at run start)", ShopCosts.CampfireBlessing, y, BuyCampfireBlessing);
             y += step;
-            _whirlwindRow = CreateShopUpgradeRow(content.transform, "Whirlwind (360°/180°)", ShopCosts.Whirlwind, y, BuyWhirlwind);
+            _whirlwindRow = CreateShopUpgradeRow(content.transform, "Whirlwind (360°)", ShopCosts.Whirlwind, y, BuyWhirlwind);
             y += step;
             _piercingShotRow = CreateShopUpgradeRow(content.transform, "Piercing Shot (Bowman)", ShopCosts.PiercingShot, y, BuyPiercingShot);
             y += step;
@@ -456,7 +456,7 @@ namespace ProjectZx.UI
         {
             return selected switch
             {
-                PlayerClass.Spearman => "Spearman — long reach, 180° whirlwind",
+                PlayerClass.Spearman => "Spearman — long reach, 360° whirlwind",
                 PlayerClass.Bowman => "Bowman — ranged arrows, piercing upgrade",
                 PlayerClass.Magician => "Magician — splash spells",
                 _ => "Batter — melee bat, 360° whirlwind"
@@ -655,9 +655,9 @@ namespace ProjectZx.UI
                 SetUpgradeRow(_campfireBlessingRow, "Campfire Blessing (free level-up at run start)", ShopCosts.CampfireBlessing, false, string.Empty);
 
             if (GameSave.WhirlwindUnlocked)
-                SetOwnedRow(_whirlwindRow, "Whirlwind (360°/180°)");
+                SetOwnedRow(_whirlwindRow, "Whirlwind (360°)");
             else
-                SetUpgradeRow(_whirlwindRow, "Whirlwind (360°/180°)", ShopCosts.Whirlwind, false, string.Empty);
+                SetUpgradeRow(_whirlwindRow, "Whirlwind (360°)", ShopCosts.Whirlwind, false, string.Empty);
 
             if (GameSave.PiercingShotUnlocked)
                 SetOwnedRow(_piercingShotRow, "Piercing Shot (Bowman)");
