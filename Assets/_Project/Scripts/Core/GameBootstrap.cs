@@ -41,15 +41,19 @@ namespace ProjectZx.Core
             SetupCamera(new Color(0.1f, 0.2f, 0.48f));
             GameFactory.CreateGrassField("CampGrass", ArenaBounds.CampWidth, ArenaBounds.CampHeight, 1f);
 
-            // Keep trees/rocks off campfire, NPCs, and hero stand points.
+            // Keep trees/rocks off campfire, map NPCs, and hero stand points (generous radii).
             GameFactory.ClearScatterReservations();
-            GameFactory.ReserveClearing(Vector2.zero, 3.6f);                 // campfire
-            GameFactory.ReserveClearing(new Vector2(-2.1f, 1.1f), 2.4f);     // wizard shop
-            GameFactory.ReserveClearing(new Vector2(2.1f, 1.1f), 2.4f);      // knight map
-            GameFactory.ReserveClearing(new Vector2(0f, 2.8f), 2.5f);        // achievement keeper
-            GameFactory.ReserveClearing(new Vector2(0f, -4.2f), 2.8f);       // player spawn
-            GameFactory.ReserveClearing(new Vector2(2.6f, -3.4f), 2.4f);     // standby hero (RowZi)
-            GameFactory.ReserveClearing(new Vector2(-2.6f, -3.4f), 2.2f);    // alternate hero slot
+            GameFactory.ReserveClearing(Vector2.zero, 4.5f);                 // campfire (map travel)
+            GameFactory.ReserveClearing(new Vector2(-2.1f, 1.1f), 3.6f);     // wizard shop
+            GameFactory.ReserveClearing(new Vector2(2.1f, 1.1f), 3.6f);      // knight map
+            GameFactory.ReserveClearing(new Vector2(0f, 2.8f), 3.6f);        // achievement board
+            GameFactory.ReserveClearing(new Vector2(0f, -4.2f), 3.2f);       // player spawn
+            GameFactory.ReserveClearing(new Vector2(2.6f, -3.4f), 3.0f);     // standby hero
+            GameFactory.ReserveClearing(new Vector2(-2.6f, -3.4f), 2.8f);    // alternate hero slot
+            // Extra pads between campfire and side NPCs (trees often wedged here).
+            GameFactory.ReserveClearing(new Vector2(-1.2f, 0.6f), 2.4f);
+            GameFactory.ReserveClearing(new Vector2(1.2f, 0.6f), 2.4f);
+            GameFactory.ReserveClearing(new Vector2(0f, 1.4f), 2.8f);
 
             GameFactory.ScatterArenaObstacles(
                 ArenaBounds.CampWidth - ArenaBounds.WaterMargin * 2f,
@@ -62,7 +66,7 @@ namespace ProjectZx.Core
 
             GameFactory.CreateNpc("WizardShop", ArtLibrary.Wizard, new Vector3(-2.1f, 1.1f), () => hub.OpenShop());
             GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(2.1f, 1.1f), () => hub.OpenMapSelect());
-            GameFactory.CreateNpc("AchievementKeeper", ArtLibrary.AchievementKeeper, new Vector3(0f, 2.8f), () => hub.OpenAchievements());
+            GameFactory.CreateNpc("AchievementBoard", ArtLibrary.AchievementKeeper, new Vector3(0f, 2.8f), () => hub.OpenAchievements(), 0.72f);
 
             var campfireNpc = campfire.AddComponent<NpcInteractable>();
             campfireNpc.Initialize(() => hub.OpenCampfireTravel());
