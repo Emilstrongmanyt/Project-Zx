@@ -324,7 +324,8 @@ namespace ProjectZx.Core
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 0.45f;
 
-            go.AddComponent<TapMovement>().Configure(!survivalMode, sanitizedHero);
+            // Survival still needs NPC taps (RowZi unlock at the R20 door).
+            go.AddComponent<TapMovement>().Configure(true, sanitizedHero);
             go.AddComponent<HitFlash>();
             var stats = go.AddComponent<PlayerStats>();
             stats.ConfigureForRun(survivalMode);
@@ -406,15 +407,16 @@ namespace ProjectZx.Core
 
         public static GameObject CreateRowZiUnlockNpc(Vector3 position)
         {
-            var go = CreateSprite("RowZiUnlockNpc", ArtLibrary.GetHeroIdleSprite(PlayableHero.RowZi), position, 0.4f, 9);
+            var go = CreateSprite("RowZiUnlockNpc", ArtLibrary.GetHeroIdleSprite(PlayableHero.RowZi), position, 0.55f, 12);
             var col = go.AddComponent<CircleCollider2D>();
-            col.radius = 0.6f;
+            col.radius = 0.85f;
             col.isTrigger = true;
             go.AddComponent<NpcInteractable>().Initialize(() =>
             {
                 if (GameSave.RowZiUnlocked) return;
                 GameSave.RowZiUnlocked = true;
                 Achievements.UnlockTogetherAgain();
+                GameHud.Instance?.ShowBanner("RowZi joined your camp!", 3.5f);
             });
             return go;
         }
@@ -425,6 +427,7 @@ namespace ProjectZx.Core
             {
                 PickupType.Xp => "XpPickup",
                 PickupType.HpPotion => "HpPotionPickup",
+                PickupType.MapLoot => "MapLootPickup",
                 _ => "GoldPickup"
             };
 
@@ -432,7 +435,7 @@ namespace ProjectZx.Core
             go.transform.position = position;
             var col = go.AddComponent<CircleCollider2D>();
             col.isTrigger = true;
-            col.radius = type == PickupType.Xp ? 0.55f : 0.85f;
+            col.radius = type == PickupType.Xp ? 0.55f : type == PickupType.MapLoot ? 0.75f : 0.85f;
             go.AddComponent<LootPickup>().Initialize(type, amount);
             return go;
         }

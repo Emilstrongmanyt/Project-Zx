@@ -18,7 +18,7 @@ namespace ProjectZx.Combat
         [SerializeField] float attackRange = 3.4f;
         [SerializeField] float attackInterval = 0.55f;
         [SerializeField] float thrustDuration = 0.24f;
-        [SerializeField] float whirlwindDuration = 0.34f;
+        [SerializeField] float whirlwindDuration = 0.4f;
 
         float _cooldown;
         float _attackTimer;
@@ -88,7 +88,7 @@ namespace ProjectZx.Combat
 
             if (UseWhirlwind)
             {
-                if (!HasEnemyInArc(WhirlwindAttackRange)) return;
+                if (!HasEnemyInRange(WhirlwindAttackRange)) return;
                 PerformWhirlwind();
                 return;
             }
@@ -119,18 +119,19 @@ namespace ProjectZx.Combat
 
         void PerformWhirlwind()
         {
-            var enemy = FindClosestEnemy();
-            _attackFacingRight = enemy == null || enemy.transform.position.x >= transform.position.x;
-
             AudioManager.Instance?.PlaySwingSfx();
             _cooldown = attackInterval;
             _attacking = true;
             _whirlwindSwing = true;
             _whirlwindDamageApplied = false;
             _attackTimer = whirlwindDuration;
+            _attackFacingRight = true;
 
             if (_bodyRenderer != null)
-                _bodyRenderer.flipX = !_attackFacingRight;
+                _bodyRenderer.flipX = false;
+
+            if (_spearPivot != null)
+                _spearPivot.localScale = Vector3.one;
         }
 
         void UpdateAttackAnimation()
@@ -142,16 +143,15 @@ namespace ProjectZx.Combat
             if (_whirlwindSwing)
             {
                 var progress = 1f - Mathf.Clamp01(_attackTimer / whirlwindDuration);
-                var startAngle = _attackFacingRight ? -90f : 90f;
-                var endAngle = _attackFacingRight ? 90f : -90f;
-                var angle = Mathf.Lerp(startAngle, endAngle, progress);
-                _spearPivot.localScale = new Vector3(_attackFacingRight ? 1f : -1f, 1f, 1f);
+                // Full 360° spin so enemies on every side are in the cleave.
+                var angle = Mathf.Lerp(0f, 360f, progress);
+                _spearPivot.localScale = Vector3.one;
                 _spearPivot.localRotation = Quaternion.Euler(0f, 0f, angle);
 
                 if (!_whirlwindDamageApplied && progress >= 0.5f)
                 {
                     _whirlwindDamageApplied = true;
-                    DamageEnemiesInArc(WhirlwindAttackRange);
+                    DamageEnemiesInRange(WhirlwindAttackRange);
                 }
             }
             else
@@ -181,28 +181,22 @@ namespace ProjectZx.Combat
                 _spearTip.localPosition = new Vector3(0.42f, 0.02f, 0f);
         }
 
-        void DamageEnemiesInArc(float range)
+        void DamageEnemiesInRange(float range)
         {
             var stats = GetComponent<PlayerStats>();
-            foreach (var enemy in FindEnemiesInArc(range))
+            foreach (var enemy in FindEnemiesInRange(range))
                 CombatDamage.Apply(stats, enemy, canApplyFrost: true);
         }
 
-        bool HasEnemyInArc(float range)
-        {
-            return FindEnemiesInArc(range).Count > 0;
-        }
+        bool HasEnemyInRange(float range) => FindEnemiesInRange(range).Count > 0;
 
-        List<EnemyActor> FindEnemiesInArc(float range)
+        List<EnemyActor> FindEnemiesInRange(float range)
         {
             var hits = new List<EnemyActor>();
-            var forward = _attackFacingRight ? Vector2.right : Vector2.left;
             foreach (var enemy in Object.FindObjectsByType<EnemyActor>())
             {
                 if (enemy == null || !enemy.IsAlive) continue;
-                var offset = (Vector2)enemy.transform.position - (Vector2)transform.position;
-                if (offset.sqrMagnitude > range * range) continue;
-                if (Vector2.Dot(offset.normalized, forward) < 0f) continue;
+                if (Vector2.Distance(transform.position, enemy.transform.position) > range) continue;
                 hits.Add(enemy);
             }
 

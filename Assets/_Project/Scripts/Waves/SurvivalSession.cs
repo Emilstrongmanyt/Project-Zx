@@ -65,6 +65,20 @@ namespace ProjectZx.Waves
                         _hud?.SetRoundComplete(CurrentRound);
                         GameSave.RecordHighestRound(CurrentRound);
                         TryUnlockBowman(CurrentRound);
+
+                        // Outside R20: door + RowZi spawn on boss death — do not start R21 until the door is used.
+                        if (CurrentRound == 20 && MapKind == SurvivalMapKind.Outside)
+                        {
+                            _hud?.ShowBanner("Talk to RowZi, then enter the door!", 5f);
+                            while (_player != null)
+                            {
+                                stats = _player.GetComponent<PlayerStats>();
+                                if (stats != null && stats.IsDead) break;
+                                yield return null;
+                            }
+                            break;
+                        }
+
                         yield return new WaitForSeconds(2f);
                         break;
                     }
@@ -74,6 +88,10 @@ namespace ProjectZx.Waves
                 if (_player == null) break;
                 stats = _player.GetComponent<PlayerStats>();
                 if (stats != null && stats.IsDead) break;
+
+                // Player left via door (scene unload) or died while waiting after R20.
+                if (CurrentRound == 20 && MapKind == SurvivalMapKind.Outside)
+                    break;
             }
 
             yield return new WaitForSeconds(2f);

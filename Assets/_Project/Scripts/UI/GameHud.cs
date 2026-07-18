@@ -332,6 +332,13 @@ namespace ProjectZx.UI
             _bannerTimer = 2f;
         }
 
+        public void ShowBanner(string message, float duration = 2f)
+        {
+            if (_bannerText == null || string.IsNullOrEmpty(message)) return;
+            _bannerText.text = message;
+            _bannerTimer = duration;
+        }
+
         public void ShowWaveIncoming(int wave = 1, int totalWaves = 1)
         {
             _bannerText.text = totalWaves > 1
