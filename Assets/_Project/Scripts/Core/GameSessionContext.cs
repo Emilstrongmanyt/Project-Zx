@@ -41,6 +41,11 @@ namespace ProjectZx.Core
         public static PlayerClass SelectedClass { get; set; } = PlayerClass.Batter;
         public static PlayableHero SelectedHero { get; set; } = PlayableHero.RollZy;
         public static bool FreshSurvivalRun { get; set; } = true;
+        /// <summary>
+        /// When starting a fresh run, RunLoop increments from this value (0 → round 1).
+        /// Inside starts use 20 so the first fight is round 21 after R20 door unlock.
+        /// </summary>
+        public static int StartingRound { get; set; }
         public static int CarryRound { get; set; }
         public static SurvivalRunSnapshot RunSnapshot;
     }

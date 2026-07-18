@@ -36,7 +36,9 @@ namespace ProjectZx.Waves
             _player = player;
             _hud = hud;
             MapKind = mapKind;
-            CurrentRound = GameSessionContext.FreshSurvivalRun ? 0 : GameSessionContext.CarryRound;
+            CurrentRound = GameSessionContext.FreshSurvivalRun
+                ? Mathf.Max(0, GameSessionContext.StartingRound)
+                : GameSessionContext.CarryRound;
             StartCoroutine(RunLoop());
         }
 
@@ -98,6 +100,7 @@ namespace ProjectZx.Waves
             var finalStats = _player != null ? _player.GetComponent<PlayerStats>() : null;
             finalStats?.BankRunGoldToSave();
             GameSessionContext.FreshSurvivalRun = true;
+            GameSessionContext.StartingRound = 0;
             GameSessionContext.CarryRound = 0;
             GameSessionContext.RunSnapshot = default;
             GameFactory.LoadScene(GameScenes.MainMenuMap);
@@ -194,6 +197,7 @@ namespace ProjectZx.Waves
             }
 
             GameSessionContext.FreshSurvivalRun = true;
+            GameSessionContext.StartingRound = 0;
             GameSessionContext.CarryRound = 0;
             GameSessionContext.RunSnapshot = default;
             GameFactory.LoadScene(GameScenes.MainMenuMap);

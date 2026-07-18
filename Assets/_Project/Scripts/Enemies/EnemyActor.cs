@@ -243,9 +243,22 @@ namespace ProjectZx.Enemies
                 return;
             }
 
-            if (_blockedTimer > 0.25f)
+            // Slide around blockers with several angles (helps large BossJ on tree trunks).
+            if (_blockedTimer > 0.12f)
             {
-                var rng = Random.insideUnitCircle.normalized * distance;
+                for (var i = 0; i < 8; i++)
+                {
+                    var angle = i * 45f * Mathf.Deg2Rad;
+                    var slide = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
+                    if (!TryMoveDelta(slide)) continue;
+                    _blockedTimer = 0f;
+                    return;
+                }
+            }
+
+            if (_blockedTimer > 0.45f)
+            {
+                var rng = Random.insideUnitCircle.normalized * (distance * 1.5f);
                 if (TryMoveDelta(rng))
                     _blockedTimer = 0f;
             }
@@ -320,10 +333,20 @@ namespace ProjectZx.Enemies
                 var col = _castHits[i].collider;
                 if (col == null) continue;
                 if (col.GetComponent<EnemyActor>() != null) continue;
+                // Large bosses clip through trees/rocks so R20 BossJ does not pin on trunks.
+                if (IsBoss && IsSoftWorldObstacle(col)) continue;
                 return i;
             }
 
             return -1;
+        }
+
+        static bool IsSoftWorldObstacle(Collider2D col)
+        {
+            if (col == null) return false;
+            return col.GetComponent<TreeObstacle>() != null
+                   || col.GetComponent<StoneObstacle>() != null
+                   || col.GetComponent<ArenaObstacle>() != null;
         }
 
         void ApplyEnemySeparation()

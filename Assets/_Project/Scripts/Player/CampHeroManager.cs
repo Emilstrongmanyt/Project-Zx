@@ -35,10 +35,13 @@ namespace ProjectZx.Player
         public void SelectHeroFromNpc(PlayableHero hero, Vector3 npcPosition)
         {
             if (hero == PlayableHero.RowZi && !GameSave.RowZiUnlocked) return;
-            if (GameSave.SelectedHero == hero) return;
+
+            var selected = GameSave.SanitizeHero(hero);
+            if (GameSave.SelectedHero == selected && _player != null) return;
 
             var oldPlayerPosition = _player != null ? _player.transform.position : DefaultPlayerSpawn;
-            GameSave.SelectedHero = hero;
+            GameSave.SelectedHero = selected;
+            // Stand in each other's place so the swap feels like trading spots.
             Refresh(npcPosition, oldPlayerPosition);
         }
 
@@ -47,7 +50,8 @@ namespace ProjectZx.Player
             DestroyObject(_standbyNpc);
             DestroyObject(_player);
 
-            _player = GameFactory.CreatePlayer(playerPosition, false, GameSave.SelectedClass, GameSave.SelectedHero, PlayerScale);
+            var hero = GameSave.SanitizeHero(GameSave.SelectedHero);
+            _player = GameFactory.CreatePlayer(playerPosition, false, GameSave.SelectedClass, hero, PlayerScale);
 
             var standby = GameSave.GetStandbyHero();
             if (!standby.HasValue) return;

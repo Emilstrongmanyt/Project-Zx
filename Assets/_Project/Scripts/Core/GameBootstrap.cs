@@ -40,6 +40,17 @@ namespace ProjectZx.Core
             // Deep water clear color so the ring reads clearly past the tile edge.
             SetupCamera(new Color(0.1f, 0.2f, 0.48f));
             GameFactory.CreateGrassField("CampGrass", ArenaBounds.CampWidth, ArenaBounds.CampHeight, 1f);
+
+            // Keep trees/rocks off campfire, NPCs, and hero stand points.
+            GameFactory.ClearScatterReservations();
+            GameFactory.ReserveClearing(Vector2.zero, 3.6f);                 // campfire
+            GameFactory.ReserveClearing(new Vector2(-2.1f, 1.1f), 2.4f);     // wizard shop
+            GameFactory.ReserveClearing(new Vector2(2.1f, 1.1f), 2.4f);      // knight map
+            GameFactory.ReserveClearing(new Vector2(0f, 2.8f), 2.5f);        // achievement keeper
+            GameFactory.ReserveClearing(new Vector2(0f, -4.2f), 2.8f);       // player spawn
+            GameFactory.ReserveClearing(new Vector2(2.6f, -3.4f), 2.4f);     // standby hero (RowZi)
+            GameFactory.ReserveClearing(new Vector2(-2.6f, -3.4f), 2.2f);    // alternate hero slot
+
             GameFactory.ScatterArenaObstacles(
                 ArenaBounds.CampWidth - ArenaBounds.WaterMargin * 2f,
                 ArenaBounds.CampHeight - ArenaBounds.WaterMargin * 2f,
@@ -93,6 +104,8 @@ namespace ProjectZx.Core
                 mapKind,
                 1f);
 
+            GameFactory.ClearScatterReservations();
+            GameFactory.ReserveClearing(Vector2.zero, 4.5f); // player spawn / fight space
             if (isInside)
                 GameFactory.ScatterInsideObstacles(arenaW, arenaH);
             else if (isDungeon)

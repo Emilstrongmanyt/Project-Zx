@@ -81,7 +81,7 @@ namespace ProjectZx.UI
 
         GameObject BuildAchievementToast(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "AchievementToast", new Vector2(0f, 120f), new Vector2(560f, 170f), ArtLibrary.ChallengeBoardUi);
+            var panel = CreateDialogPanel(parent, "AchievementToast", new Vector2(0f, 120f), new Vector2(560f, 170f), ArtLibrary.AchievementBoardUi);
             _achievementToastTitle = CreatePanelText(panel.transform, "Achievement Unlocked!", 30, new Vector2(0f, 42f), new Vector2(500f, 40f));
             _achievementToastTitle.color = new Color(1f, 0.9f, 0.45f);
             _achievementToastBody = CreatePanelText(panel.transform, "", 24, new Vector2(0f, -20f), new Vector2(500f, 80f));
