@@ -16,10 +16,14 @@ namespace ProjectZx.Enemies
         const float FireBreathCooldown = 12f;
         const float FireBreathTick = 0.45f;
         const float FireBreathScale = 3f;
-        const float FireBreathOffsetX = 1.65f;
-        const float FireBreathOffsetY = 0.55f;
+        /// <summary>Distance from boss center to the breath mouth along the aim direction.</summary>
+        const float FireBreathMouthOffset = 0.95f;
+        /// <summary>Slight vertical bias so breath leaves near the boss head.</summary>
+        const float FireBreathMouthBiasY = 0.35f;
         const int FireBreathSortOffset = 40;
         const float FireBreathHitPadding = 0.9f;
+        /// <summary>Cosine of half-angle for breath damage cone (~55° half-angle).</summary>
+        const float FireBreathConeDot = 0.55f;
         const float EnemySeparationRadius = 1.15f;
         const float EnemySeparationPush = 0.24f;
         const float CastSkin = 0.1f;
@@ -57,6 +61,7 @@ namespace ProjectZx.Enemies
         float _hitSpriteTimer;
         GameObject _fireBreathFx;
         SpriteRenderer _fireBreathRenderer;
+        Vector2 _fireBreathAim = Vector2.left;
         float _blockedTimer;
         bool _canSprint;
         bool _sprinting;
@@ -151,23 +156,49 @@ namespace ProjectZx.Enemies
             _fireBreathRenderer.sprite = ArtLibrary.GetFireBreathFrame(0);
             // Large sort offset so breath draws above the boss body (higher world Y alone sorts behind).
             _fireBreathFx.AddComponent<YSortRenderer>().Configure(FireBreathSortOffset);
-            ApplyFireBreathTransform(true);
+            ApplyFireBreathToward(_player != null ? _player.position : transform.position + Vector3.left);
             _fireBreathFx.SetActive(false);
         }
 
-        void ApplyFireBreathTransform(bool facingRight)
+        Vector2 GetFireBreathAim(Vector3 target)
+        {
+            var toTarget = (Vector2)(target - transform.position);
+            if (toTarget.sqrMagnitude < 0.0001f)
+                return _fireBreathAim.sqrMagnitude > 0.0001f ? _fireBreathAim : Vector2.left;
+            return toTarget.normalized;
+        }
+
+        /// <summary>
+        /// Aim breath along the vector to the player (left/right/up/down and diagonals).
+        /// Fire art points right (+X) at identity; rotate so the tip follows the player.
+        /// </summary>
+        void ApplyFireBreathToward(Vector3 target)
         {
             if (_fireBreathFx == null) return;
 
+            _fireBreathAim = GetFireBreathAim(target);
+
+            var mouth = _fireBreathAim * FireBreathMouthOffset
+                        + new Vector2(0f, FireBreathMouthBiasY);
+            _fireBreathFx.transform.localPosition = new Vector3(mouth.x, mouth.y, 0f);
             _fireBreathFx.transform.localScale = Vector3.one * FireBreathScale;
-            _fireBreathFx.transform.localPosition = new Vector3(
-                facingRight ? FireBreathOffsetX : -FireBreathOffsetX,
-                FireBreathOffsetY,
-                0f);
+
+            // Unity 2D: 0° = +X (right). Sprite tip is authored on the +X side.
+            var angle = Mathf.Atan2(_fireBreathAim.y, _fireBreathAim.x) * Mathf.Rad2Deg;
+            _fireBreathFx.transform.localRotation = Quaternion.Euler(0f, 0f, angle);
 
             if (_fireBreathRenderer != null)
-                // Fire breath art faces left by default, same as BossJ.
-                _fireBreathRenderer.flipX = facingRight;
+                _fireBreathRenderer.flipX = false;
+        }
+
+        bool IsPlayerInFireBreathCone(float maxRange)
+        {
+            if (_player == null) return false;
+            var toPlayer = (Vector2)_player.position - (Vector2)transform.position;
+            var dist = toPlayer.magnitude;
+            if (dist > maxRange) return false;
+            if (dist < 0.35f) return true;
+            return Vector2.Dot(toPlayer / dist, _fireBreathAim) >= FireBreathConeDot;
         }
 
         void FixedUpdate()
@@ -404,7 +435,6 @@ namespace ProjectZx.Enemies
         {
             var dist = Vector2.Distance(transform.position, _player.position);
             UpdateFacingToward(_player.position);
-            var facingRight = IsFacingTarget(_player.position);
 
             if (_fireBreathing)
             {
@@ -418,10 +448,11 @@ namespace ProjectZx.Enemies
 
                 if (_renderer != null) _renderer.sprite = _attackSprite;
 
+                // Keep stream aimed at the player (up/down/left/right/diagonals).
                 if (_fireBreathRenderer != null && _fireBreathFx != null)
                 {
                     _fireBreathRenderer.sprite = ArtLibrary.GetFireBreathFrame(_fireAnimFrame);
-                    ApplyFireBreathTransform(facingRight);
+                    ApplyFireBreathToward(_player.position);
                 }
 
                 _fireBreathDamageTimer -= Time.deltaTime;
@@ -429,7 +460,8 @@ namespace ProjectZx.Enemies
                 {
                     _fireBreathDamageTimer = FireBreathTick;
                     var stats = _player.GetComponent<PlayerStats>();
-                    if (stats != null && !stats.IsDead && dist <= FireBreathRange + FireBreathHitPadding)
+                    if (stats != null && !stats.IsDead
+                        && IsPlayerInFireBreathCone(FireBreathRange + FireBreathHitPadding))
                     {
                         stats.TakeDamage(Mathf.RoundToInt(_attack * 0.55f));
                         HitFlash.FlashSprite(_player.gameObject);
@@ -452,10 +484,10 @@ namespace ProjectZx.Enemies
 
             if (_fireBreathCooldown > 0f) return;
 
-            BeginFireBreath(facingRight);
+            BeginFireBreath();
         }
 
-        void BeginFireBreath(bool facingRight)
+        void BeginFireBreath()
         {
             _fireBreathing = true;
             _fireBreathTimer = FireBreathDuration;
@@ -466,7 +498,7 @@ namespace ProjectZx.Enemies
             if (_fireBreathFx != null)
             {
                 _fireBreathFx.SetActive(true);
-                ApplyFireBreathTransform(facingRight);
+                ApplyFireBreathToward(_player != null ? _player.position : transform.position + Vector3.left);
                 if (_fireBreathRenderer != null)
                     _fireBreathRenderer.sprite = ArtLibrary.GetFireBreathFrame(0);
             }

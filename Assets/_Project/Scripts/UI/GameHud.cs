@@ -57,6 +57,8 @@ namespace ProjectZx.UI
             var canvasGo = new GameObject("HudCanvas");
             var canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            // Above damage floaters (40) and joystick (50) so level-up talents stay on top.
+            canvas.sortingOrder = 100;
             canvasGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             canvasGo.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
             canvasGo.AddComponent<GraphicRaycaster>();
@@ -229,6 +231,7 @@ namespace ProjectZx.UI
 
             IsChoosingUpgrade = true;
             Time.timeScale = 0f;
+            FloatingDamageNumber.ClearAll();
             _levelUpTitle.text = remaining > 1 ? $"Level Up! ({remaining} picks)" : "Level Up!";
             PopulateChoiceButtons();
             _levelUpPanel.SetActive(true);

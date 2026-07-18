@@ -6,7 +6,7 @@ namespace ProjectZx.UI
     /// <summary>
     /// Scrolling damage popup over a unit's head.
     /// Uses screen-space UI (not TextMesh) so numbers render correctly under URP 2D.
-    /// White for enemies, red for the hero.
+    /// White for enemies, red for the hero. Always draws under modal HUD (level-up talents).
     /// </summary>
     public class FloatingDamageNumber : MonoBehaviour
     {
@@ -14,7 +14,8 @@ namespace ProjectZx.UI
         const float RisePixelsPerSecond = 90f;
         const float HeadOffsetY = 0.95f;
         const int FontSize = 48;
-        const int CanvasSortOrder = 250;
+        // Below HudCanvas (100) and retreat/level-up panels so talents stay on top.
+        const int CanvasSortOrder = 40;
 
         static readonly Color EnemyColor = Color.white;
         static readonly Color HeroColor = new Color(1f, 0.2f, 0.2f, 1f);
@@ -33,6 +34,8 @@ namespace ProjectZx.UI
         public static void Spawn(Vector3 worldPosition, int amount, bool isHeroHit)
         {
             if (amount <= 0) return;
+            // Never show combat floaters over level-up talent picks.
+            if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade) return;
 
             EnsureCanvas();
             if (_canvas == null) return;
@@ -42,6 +45,18 @@ namespace ProjectZx.UI
 
             var number = go.AddComponent<FloatingDamageNumber>();
             number.Setup(worldPosition, amount, isHeroHit);
+        }
+
+        /// <summary>Remove active floaters when opening modal UI (level-up, etc.).</summary>
+        public static void ClearAll()
+        {
+            if (_canvas == null) return;
+            for (var i = _canvas.transform.childCount - 1; i >= 0; i--)
+            {
+                var child = _canvas.transform.GetChild(i);
+                if (child != null)
+                    Object.Destroy(child.gameObject);
+            }
         }
 
         static void EnsureCanvas()
@@ -88,7 +103,6 @@ namespace ProjectZx.UI
             _label.verticalOverflow = VerticalWrapMode.Overflow;
             _label.raycastTarget = false;
 
-            // Soft shadow so white numbers stay readable on bright tiles.
             var shadow = gameObject.AddComponent<Shadow>();
             shadow.effectColor = new Color(0f, 0f, 0f, 0.75f);
             shadow.effectDistance = new Vector2(2f, -2f);
@@ -99,6 +113,12 @@ namespace ProjectZx.UI
 
         void LateUpdate()
         {
+            if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
             _age += Time.deltaTime;
             _risePixels += RisePixelsPerSecond * Time.deltaTime;
 
@@ -124,17 +144,15 @@ namespace ProjectZx.UI
             if (cam == null) return;
 
             var screen = cam.WorldToScreenPoint(_worldAnchor);
-            // Behind camera / invalid depth — hide for this frame.
             if (screen.z < 0f)
             {
-                _label.enabled = false;
+                if (_label != null) _label.enabled = false;
                 return;
             }
 
             if (_label != null && !_label.enabled)
                 _label.enabled = true;
 
-            // Overlay canvas: RectTransform.position is in screen pixels.
             _rect.position = new Vector3(
                 screen.x + _xJitterPixels,
                 screen.y + _risePixels,
