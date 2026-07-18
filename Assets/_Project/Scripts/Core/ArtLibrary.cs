@@ -286,16 +286,40 @@ namespace ProjectZx.Core
 
         public static Sprite GetFireBreathFrame(int frame)
         {
-            _fireBreathFrames ??= new[]
-            {
-                Load("FireBreath1"),
-                Load("FireBreath2"),
-                Load("FireBreath3"),
-                Load("FireBreath4")
-            };
-
+            EnsureFireBreathFrames();
             var index = Mathf.Abs(frame) % _fireBreathFrames.Length;
-            return _fireBreathFrames[index] ?? CreateFireBreathFrames()[index];
+            return _fireBreathFrames[index];
+        }
+
+        /// <summary>
+        /// Fire breath art points right (base left, tip +X). Pivot is at the left/base so
+        /// localRotation aims the stream from the boss mouth toward the player.
+        /// </summary>
+        static void EnsureFireBreathFrames()
+        {
+            if (_fireBreathFrames != null) return;
+
+            _fireBreathFrames = new Sprite[4];
+            for (var i = 0; i < 4; i++)
+            {
+                var src = Load($"FireBreath{i + 1}");
+                if (src != null && src.texture != null)
+                {
+                    // Pivot on the base (left edge) so rotation swings the tip toward the player.
+                    _fireBreathFrames[i] = Sprite.Create(
+                        src.texture,
+                        src.rect,
+                        new Vector2(0f, 0.5f),
+                        src.pixelsPerUnit > 0f ? src.pixelsPerUnit : TilePixelsPerUnit,
+                        0,
+                        SpriteMeshType.FullRect);
+                    _fireBreathFrames[i].name = $"FireBreath{i + 1}_aim";
+                }
+                else
+                {
+                    _fireBreathFrames[i] = CreateFireBreathFrameSprite(i);
+                }
+            }
         }
 
         public static void GetZombieSprites(EnemyZombieKind kind, out Sprite idle, out Sprite hit)
@@ -632,6 +656,7 @@ namespace ProjectZx.Core
             }
 
             tex.Apply();
+            // Base on the left, tip to the right — matches authored FireBreath frames.
             return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0f, 0.5f), 32f);
         }
 
