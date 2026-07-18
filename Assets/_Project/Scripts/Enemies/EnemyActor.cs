@@ -37,6 +37,7 @@ namespace ProjectZx.Enemies
         public bool IsAlive { get; private set; } = true;
         public bool IsBoss { get; private set; }
         public bool IsRoundTwentyBoss { get; private set; }
+        public bool IsRoundThirtyBoss { get; private set; }
 
         int _hp;
         int _maxHp;
@@ -71,14 +72,31 @@ namespace ProjectZx.Enemies
         readonly List<RaycastHit2D> _castHits = new();
         readonly Collider2D[] _overlapBuffer = new Collider2D[12];
 
-        public void Initialize(int round, bool isBoss, bool isRoundTwentyBoss = false, EnemyZombieKind zombieKind = EnemyZombieKind.Outside)
+        public void Initialize(
+            int round,
+            bool isBoss,
+            bool isRoundTwentyBoss = false,
+            EnemyZombieKind zombieKind = EnemyZombieKind.Outside,
+            bool isRoundThirtyBoss = false)
         {
             _round = round;
             IsBoss = isBoss;
             IsRoundTwentyBoss = isRoundTwentyBoss;
+            IsRoundThirtyBoss = isRoundThirtyBoss;
             _hp = isBoss ? 220 + round * 30 : 18 + round * 6;
             _attack = isBoss ? 18 + round : 6 + Mathf.FloorToInt(round * 0.6f);
             _speed = isBoss ? 1.5f + round * 0.03f : 1.2f + round * 0.07f;
+
+            // Inside R30 stage boss: same footprint as Outside R20 boss, 3× that boss's stats.
+            if (isRoundThirtyBoss)
+            {
+                const int outsideR20Hp = 220 + 20 * 30;
+                const int outsideR20Attack = 18 + 20;
+                const float outsideR20Speed = 1.5f + 20 * 0.03f;
+                _hp = outsideR20Hp * 3;
+                _attack = outsideR20Attack * 3;
+                _speed = outsideR20Speed;
+            }
 
             if (!isBoss)
             {
@@ -102,7 +120,7 @@ namespace ProjectZx.Enemies
             _rb = GetComponent<Rigidbody2D>();
             _renderer = GetComponent<SpriteRenderer>();
             _player = GameObject.FindGameObjectWithTag("Player")?.transform;
-            ApplySprites(isBoss, isRoundTwentyBoss, zombieKind);
+            ApplySprites(isBoss, isRoundTwentyBoss || isRoundThirtyBoss, zombieKind);
 
             if (_renderer != null)
             {
@@ -620,7 +638,14 @@ namespace ProjectZx.Enemies
             if (IsRoundTwentyBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Outside)
             {
                 GameSave.SpearmanUnlocked = true;
+                GameSave.InsideMapUnlocked = true;
                 ArenaDoor.Spawn(pos + Vector2.up * 0.5f);
+            }
+
+            if (IsRoundThirtyBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Inside)
+            {
+                GameSave.DungeonMapUnlocked = true;
+                ArenaGateway.Spawn(pos + Vector2.up * 0.5f);
             }
 
             Destroy(gameObject);

@@ -13,6 +13,7 @@ namespace ProjectZx.Core
         const string DmgLevelKey = "zx_up_dmg";
         const string SpdLevelKey = "zx_up_spd";
         const string InsideUnlockedKey = "zx_inside_unlocked";
+        const string DungeonUnlockedKey = "zx_dungeon_unlocked";
         const string WhirlwindKey = "zx_whirlwind";
         const string PiercingShotKey = "zx_piercing_shot";
         const string FrostTipKey = "zx_frost_tip";
@@ -73,6 +74,16 @@ namespace ProjectZx.Core
             set
             {
                 PlayerPrefs.SetInt(InsideUnlockedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool DungeonMapUnlocked
+        {
+            get => PlayerPrefs.GetInt(DungeonUnlockedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(DungeonUnlockedKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
         }

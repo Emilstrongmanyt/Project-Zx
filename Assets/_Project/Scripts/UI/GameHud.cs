@@ -347,9 +347,9 @@ namespace ProjectZx.UI
             _bannerTimer = totalWaves > 1 ? 1.8f : 1.5f;
         }
 
-        public void ShowBossWarning(bool roundTwentyBoss = false)
+        public void ShowBossWarning(bool stageBoss = false)
         {
-            _bannerText.text = roundTwentyBoss ? "ROUND 20 BOSS!" : "BOSS INCOMING!";
+            _bannerText.text = stageBoss ? "STAGE BOSS!" : "BOSS INCOMING!";
             _bannerTimer = 2.5f;
         }
 

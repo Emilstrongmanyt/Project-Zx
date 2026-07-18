@@ -27,6 +27,7 @@ namespace ProjectZx.Player
         Vector2? _moveTarget;
         NpcInteractable _pendingNpc;
         ArenaDoor _pendingDoor;
+        ArenaGateway _pendingGateway;
         Camera _camera;
         Rigidbody2D _rb;
         SpriteRenderer _renderer;
@@ -107,6 +108,7 @@ namespace ProjectZx.Player
                     _moveTarget = null;
                     _pendingNpc = null;
                     _pendingDoor = null;
+                    _pendingGateway = null;
                     _chaseTouchId = -1;
                     _chaseMouse = false;
                     _blockedTimer = 0f;
@@ -117,6 +119,7 @@ namespace ProjectZx.Player
                 _rb.linearVelocity = Vector2.zero;
                 TryCompletePendingNpcInteract();
                 TryCompletePendingDoor();
+                TryCompletePendingGateway();
                 return;
             }
 
@@ -126,6 +129,7 @@ namespace ProjectZx.Player
                 _rb.linearVelocity = Vector2.zero;
                 TryCompletePendingNpcInteract();
                 TryCompletePendingDoor();
+                TryCompletePendingGateway();
                 return;
             }
 
@@ -139,6 +143,7 @@ namespace ProjectZx.Player
                     _moveTarget = null;
                 TryCompletePendingNpcInteract();
                 TryCompletePendingDoor();
+                TryCompletePendingGateway();
                 return;
             }
 
@@ -153,6 +158,7 @@ namespace ProjectZx.Player
 
             TryCompletePendingNpcInteract();
             TryCompletePendingDoor();
+            TryCompletePendingGateway();
         }
 
         float GetSpeed()
@@ -341,8 +347,27 @@ namespace ProjectZx.Player
                     if (!movementAllowed) return;
 
                     _pendingDoor = door;
+                    _pendingGateway = null;
                     _pendingNpc = null;
                     _moveTarget = door.transform.position;
+                    return;
+                }
+
+                var gateway = FindGatewayAtTap(world);
+                if (gateway != null)
+                {
+                    if (gateway.TryEnter(transform))
+                    {
+                        ClearMovement();
+                        return;
+                    }
+
+                    if (!movementAllowed) return;
+
+                    _pendingGateway = gateway;
+                    _pendingDoor = null;
+                    _pendingNpc = null;
+                    _moveTarget = gateway.transform.position;
                     return;
                 }
             }
@@ -353,6 +378,7 @@ namespace ProjectZx.Player
             {
                 _pendingNpc = null;
                 _pendingDoor = null;
+                _pendingGateway = null;
             }
 
             if (IsWaterAt(world)) return;
@@ -388,6 +414,7 @@ namespace ProjectZx.Player
 
             _pendingNpc = npc;
             _pendingDoor = null;
+            _pendingGateway = null;
             _moveTarget = npc.transform.position;
             return true;
         }
@@ -409,6 +436,14 @@ namespace ProjectZx.Player
                 ClearMovement();
         }
 
+        void TryCompletePendingGateway()
+        {
+            if (_pendingGateway == null) return;
+            if (Vector2.Distance(transform.position, _pendingGateway.transform.position) > 2.2f) return;
+            if (_pendingGateway.TryEnter(transform))
+                ClearMovement();
+        }
+
         static ArenaDoor FindDoorAtTap(Vector2 worldPos)
         {
             var doors = UnityEngine.Object.FindObjectsByType<ArenaDoor>();
@@ -422,6 +457,24 @@ namespace ProjectZx.Player
                 if (dist > NpcTapRadius || dist >= bestDist) continue;
                 bestDist = dist;
                 best = door;
+            }
+
+            return best;
+        }
+
+        static ArenaGateway FindGatewayAtTap(Vector2 worldPos)
+        {
+            var gateways = UnityEngine.Object.FindObjectsByType<ArenaGateway>();
+            ArenaGateway best = null;
+            var bestDist = float.MaxValue;
+
+            foreach (var gateway in gateways)
+            {
+                if (gateway == null) continue;
+                var dist = Vector2.Distance(worldPos, gateway.transform.position);
+                if (dist > NpcTapRadius || dist >= bestDist) continue;
+                bestDist = dist;
+                best = gateway;
             }
 
             return best;
@@ -456,6 +509,7 @@ namespace ProjectZx.Player
             _moveTarget = null;
             _pendingNpc = null;
             _pendingDoor = null;
+            _pendingGateway = null;
             _chaseTouchId = -1;
             _chaseMouse = false;
             _blockedTimer = 0f;

@@ -351,6 +351,15 @@ namespace ProjectZx.Core
             return go;
         }
 
+        public static GameObject CreateArenaGateway(Vector3 position)
+        {
+            var go = CreateSprite("ArenaGateway", ArtLibrary.Gateway, position, 1.15f, 10);
+            var col = go.AddComponent<BoxCollider2D>();
+            col.size = new Vector2(1.4f, 2.1f);
+            col.isTrigger = true;
+            return go;
+        }
+
         /// <summary>
         /// Outdoor camp / hub ground with the same water ring as survival arenas.
         /// </summary>
@@ -416,7 +425,13 @@ namespace ProjectZx.Core
             return go;
         }
 
-        public static GameObject CreateEnemy(Vector3 position, int round, bool isBoss, bool isRoundTwentyBoss = false, EnemyZombieKind zombieKind = EnemyZombieKind.Outside)
+        public static GameObject CreateEnemy(
+            Vector3 position,
+            int round,
+            bool isBoss,
+            bool isRoundTwentyBoss = false,
+            EnemyZombieKind zombieKind = EnemyZombieKind.Outside,
+            bool isRoundThirtyBoss = false)
         {
             Sprite sprite;
             if (isBoss)
@@ -424,9 +439,11 @@ namespace ProjectZx.Core
             else
                 ArtLibrary.GetZombieSprites(zombieKind, out sprite, out _);
 
+            var isStageBoss = isRoundTwentyBoss || isRoundThirtyBoss;
             var scale = (isBoss ? 0.55f : 0.32f * 2.5f) * 1.5f;
             if (isBoss) scale *= 1.5f;
-            if (isRoundTwentyBoss) scale *= 2.5f;
+            // Outside R20 and Inside R30 stage bosses share the same large scale.
+            if (isStageBoss) scale *= 2.5f;
             var go = CreateSprite(isBoss ? "Boss" : "Zombie", sprite, position, scale, 0);
             go.tag = "Enemy";
             go.AddComponent<YSortRenderer>();
@@ -439,11 +456,11 @@ namespace ProjectZx.Core
             rb.useFullKinematicContacts = true;
 
             var col = go.AddComponent<CircleCollider2D>();
-            col.radius = isRoundTwentyBoss ? 1.1f : isBoss ? 0.7f : 0.4f;
+            col.radius = isStageBoss ? 1.1f : isBoss ? 0.7f : 0.4f;
 
             go.AddComponent<HitFlash>();
             var enemy = go.AddComponent<EnemyActor>();
-            enemy.Initialize(round, isBoss, isRoundTwentyBoss, zombieKind);
+            enemy.Initialize(round, isBoss, isRoundTwentyBoss, zombieKind, isRoundThirtyBoss);
             return go;
         }
 

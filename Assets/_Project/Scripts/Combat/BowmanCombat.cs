@@ -23,6 +23,7 @@ namespace ProjectZx.Combat
         bool _drawFacingRight = true;
         Transform _bowPivot;
         SpriteRenderer _bodyRenderer;
+        Transform _bowVisual;
 
         public bool IsDrawing => _drawing;
 
@@ -46,17 +47,20 @@ namespace ProjectZx.Combat
         {
             var pivotGo = new GameObject("BowPivot");
             pivotGo.transform.SetParent(transform, false);
-            pivotGo.transform.localPosition = new Vector3(0.06f, -0.22f, 0f);
+            pivotGo.transform.localPosition = new Vector3(0.08f, -0.18f, 0f);
             _bowPivot = pivotGo.transform;
 
             var bowGo = new GameObject("Bow");
             bowGo.transform.SetParent(_bowPivot, false);
-            bowGo.transform.localPosition = new Vector3(0.18f, 0.04f, 0f);
-            bowGo.transform.localScale = Vector3.one * 0.85f;
+            bowGo.transform.localPosition = new Vector3(0.22f, 0.06f, 0f);
+            // Large enough to read clearly over the hero sprite.
+            bowGo.transform.localScale = Vector3.one * 1.55f;
+            _bowVisual = bowGo.transform;
 
             var bowRenderer = bowGo.AddComponent<SpriteRenderer>();
             bowRenderer.sprite = ArtLibrary.Bow;
-            bowGo.AddComponent<YSortRenderer>().Configure(1);
+            bowRenderer.color = Color.white;
+            bowGo.AddComponent<YSortRenderer>().Configure(3);
 
             _bowPivot.localRotation = Quaternion.Euler(0f, 0f, -12f);
         }
@@ -94,36 +98,25 @@ namespace ProjectZx.Combat
                 _bodyRenderer.flipX = !_drawFacingRight;
 
             var stats = GetComponent<PlayerStats>();
-            CombatDamage.Apply(stats, enemy, DamageMultiplier, canApplyFrost: true);
+            var origin = GetArrowSpawnPoint();
+            var pierce = GameSave.GetSelectedAttackMode(PlayerClass.Bowman) == AttackMode.PiercingShot
+                         && GameSave.PiercingShotUnlocked;
 
-            if (GameSave.GetSelectedAttackMode(PlayerClass.Bowman) == AttackMode.PiercingShot
-                && GameSave.PiercingShotUnlocked)
-                DamagePierceTarget(enemy);
+            ArrowProjectile.Spawn(
+                origin,
+                enemy,
+                stats,
+                DamageMultiplier,
+                canApplyFrost: true,
+                pierce: pierce,
+                pierceMultiplier: PierceSecondaryMultiplier);
         }
 
-        void DamagePierceTarget(EnemyActor primary)
+        Vector3 GetArrowSpawnPoint()
         {
-            var direction = ((Vector2)primary.transform.position - (Vector2)transform.position).normalized;
-            EnemyActor best = null;
-            var bestProjection = float.MinValue;
-
-            foreach (var enemy in FindAllEnemies())
-            {
-                if (enemy == null || enemy == primary || !enemy.IsAlive) continue;
-
-                var offset = (Vector2)enemy.transform.position - (Vector2)transform.position;
-                if (offset.sqrMagnitude > AttackRange * AttackRange) continue;
-
-                var projection = Vector2.Dot(offset, direction);
-                if (projection <= 0.35f) continue;
-
-                if (projection <= bestProjection) continue;
-                bestProjection = projection;
-                best = enemy;
-            }
-
-            if (best == null) return;
-            CombatDamage.Apply(GetComponent<PlayerStats>(), best, DamageMultiplier * PierceSecondaryMultiplier, canApplyFrost: true);
+            if (_bowVisual != null)
+                return _bowVisual.position + (_drawFacingRight ? Vector3.right : Vector3.left) * 0.35f;
+            return transform.position + new Vector3(_drawFacingRight ? 0.45f : -0.45f, 0.1f, 0f);
         }
 
         void UpdateDrawAnimation()

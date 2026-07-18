@@ -43,7 +43,7 @@ namespace ProjectZx.Core
         public static bool FreshSurvivalRun { get; set; } = true;
         /// <summary>
         /// When starting a fresh run, RunLoop increments from this value (0 → round 1).
-        /// Inside starts use 20 so the first fight is round 21 after R20 door unlock.
+        /// All map transitions (door / gateway / hub select) start fresh at 0.
         /// </summary>
         public static int StartingRound { get; set; }
         public static int CarryRound { get; set; }
