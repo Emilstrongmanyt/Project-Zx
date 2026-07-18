@@ -25,9 +25,11 @@ namespace ProjectZx.World
 
             _used = true;
             Achievements.UnlockDungeonDelver();
+            // Unlocks campfire "Inside Survival (R21)" for future fresh runs.
             GameSave.InsideMapUnlocked = true;
             GameSessionContext.SurvivalMap = SurvivalMapKind.Inside;
             GameSessionContext.FreshSurvivalRun = false;
+            GameSessionContext.StartingRound = 0;
             GameSessionContext.CarryRound = SurvivalSession.Instance != null
                 ? SurvivalSession.Instance.CurrentRound
                 : 20;

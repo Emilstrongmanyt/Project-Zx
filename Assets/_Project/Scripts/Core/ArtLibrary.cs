@@ -50,6 +50,7 @@ namespace ProjectZx.Core
             _shopUi = null;
             _levelUpUi = null;
             _challengeBoardUi = null;
+            _achievementBoardUi = null;
             _outsideTiles = null;
             _insideTiles = null;
             _dungeonTiles = null;
@@ -104,6 +105,7 @@ namespace ProjectZx.Core
         static Sprite _shopUi;
         static Sprite _levelUpUi;
         static Sprite _challengeBoardUi;
+        static Sprite _achievementBoardUi;
         static Sprite[] _outsideTiles;
         static Sprite[] _insideTiles;
         static Sprite[] _dungeonTiles;
@@ -214,6 +216,8 @@ namespace ProjectZx.Core
         public static Sprite ShopUi => _shopUi ??= Load("Art/shop_ui", "ShopUI");
         public static Sprite LevelUpUi => _levelUpUi ??= Load("Art/level_up_ui", "LevelUpUI");
         public static Sprite ChallengeBoardUi => _challengeBoardUi ??= Load("Art/challenge_board_ui", "ChallengeBoardUI");
+        /// <summary>Distinct from shop brown panel — purple/gold trophy board for achievements.</summary>
+        public static Sprite AchievementBoardUi => _achievementBoardUi ??= CreateAchievementBoardUiSprite();
         // Never fall back to land tiles — that made water borders look "removed".
         public static Sprite WaterTile
         {
@@ -617,6 +621,76 @@ namespace ProjectZx.Core
 
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 16f);
+        }
+
+        /// <summary>
+        /// Purple/gold achievement panel — clearly different from the brown shop plate.
+        /// </summary>
+        static Sprite CreateAchievementBoardUiSprite()
+        {
+            const int w = 128;
+            const int h = 96;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Bilinear;
+
+            void Set(int x, int y, Color c)
+            {
+                if (x >= 0 && x < w && y >= 0 && y < h) tex.SetPixel(x, y, c);
+            }
+
+            var clear = new Color(0, 0, 0, 0);
+            var fill = new Color(0.22f, 0.12f, 0.34f, 0.96f);
+            var fillInner = new Color(0.32f, 0.18f, 0.48f, 0.98f);
+            var border = new Color(0.92f, 0.72f, 0.28f, 1f);
+            var borderDark = new Color(0.55f, 0.38f, 0.12f, 1f);
+            var accent = new Color(1f, 0.85f, 0.4f, 1f);
+
+            for (var y = 0; y < h; y++)
+            for (var x = 0; x < w; x++)
+                Set(x, y, clear);
+
+            // Rounded rect body.
+            const int radius = 12;
+            for (var y = 0; y < h; y++)
+            for (var x = 0; x < w; x++)
+            {
+                var inCorner = false;
+                float cx = 0, cy = 0;
+                if (x < radius && y < radius) { cx = radius; cy = radius; inCorner = true; }
+                else if (x >= w - radius && y < radius) { cx = w - radius - 1; cy = radius; inCorner = true; }
+                else if (x < radius && y >= h - radius) { cx = radius; cy = h - radius - 1; inCorner = true; }
+                else if (x >= w - radius && y >= h - radius) { cx = w - radius - 1; cy = h - radius - 1; inCorner = true; }
+
+                if (inCorner && Vector2.Distance(new Vector2(x, y), new Vector2(cx, cy)) > radius)
+                    continue;
+
+                var edgeDist = Mathf.Min(x, y, w - 1 - x, h - 1 - y);
+                if (edgeDist <= 2)
+                    Set(x, y, edgeDist == 0 ? borderDark : border);
+                else if (edgeDist <= 5)
+                    Set(x, y, Color.Lerp(border, fill, (edgeDist - 2) / 3f));
+                else
+                {
+                    var t = (float)y / h;
+                    Set(x, y, Color.Lerp(fill, fillInner, t));
+                }
+            }
+
+            // Small gold trophy accent at top center.
+            for (var y = h - 18; y <= h - 8; y++)
+            for (var x = w / 2 - 4; x <= w / 2 + 4; x++)
+            {
+                var dx = Mathf.Abs(x - w / 2);
+                var dy = h - 8 - y;
+                if (dx + dy <= 5) Set(x, y, accent);
+            }
+
+            for (var y = h - 22; y <= h - 18; y++)
+            for (var x = w / 2 - 2; x <= w / 2 + 2; x++)
+                Set(x, y, border);
+
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
         }
 
         static Sprite CreateXpGemSprite()

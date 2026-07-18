@@ -170,7 +170,7 @@ namespace ProjectZx.UI
 
         GameObject BuildAchievementsPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "AchievementsPanel", Vector2.zero, new Vector2(1100, 880), ArtLibrary.ChallengeBoardUi);
+            var panel = CreateDialogPanel(parent, "AchievementsPanel", Vector2.zero, new Vector2(1100, 880), ArtLibrary.AchievementBoardUi);
             CreateText(panel.transform, "Achievements", 44, TextAnchor.MiddleCenter, new Vector2(0, 380), new Vector2(700, 58));
             _achievementCountText = CreateText(panel.transform, "", 30, TextAnchor.MiddleCenter, new Vector2(0, 330), new Vector2(700, 44));
 
@@ -316,12 +316,12 @@ namespace ProjectZx.UI
 
         GameObject BuildCampfirePanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, new Vector2(700, 420), ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, "Campfire Travel", 34, TextAnchor.MiddleCenter, new Vector2(0, 140), new Vector2(560, 48));
-            CreateText(panel.transform, "Set class & technique at the Wizard shop first.", 22, TextAnchor.MiddleCenter, new Vector2(0, 85), new Vector2(620, 52));
-            CreateButton(panel.transform, "Outside Survival", new Vector2(0, -5), () => EnterSurvival(SurvivalMapKind.Outside));
-            CreateButton(panel.transform, "Inside Survival", new Vector2(0, -80), () => EnterSurvival(SurvivalMapKind.Inside));
-            CreateButton(panel.transform, "Close", new Vector2(0, -155), () => panel.SetActive(false));
+            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, new Vector2(700, 460), ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, "Campfire Travel", 34, TextAnchor.MiddleCenter, new Vector2(0, 160), new Vector2(560, 48));
+            CreateText(panel.transform, "Set class & technique at the Wizard shop first.", 20, TextAnchor.MiddleCenter, new Vector2(0, 105), new Vector2(620, 48));
+            CreateButton(panel.transform, "Outside Survival (R1)", new Vector2(0, 20), () => EnterSurvival(SurvivalMapKind.Outside));
+            CreateButton(panel.transform, "Inside Survival (R21)", new Vector2(0, -60), () => EnterSurvival(SurvivalMapKind.Inside));
+            CreateButton(panel.transform, "Close", new Vector2(0, -145), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
@@ -513,9 +513,13 @@ namespace ProjectZx.UI
 
             GameSessionContext.SurvivalMap = mapKind;
             GameSessionContext.SelectedClass = GameSave.SelectedClass;
-            GameSessionContext.SelectedHero = GameSave.SelectedHero;
+            GameSessionContext.SelectedHero = GameSave.SanitizeHero(GameSave.SelectedHero);
             GameSessionContext.FreshSurvivalRun = true;
             GameSessionContext.CarryRound = 0;
+            // After R20 door unlock, fresh Inside runs begin at round 21 (StartingRound 20 → ++).
+            GameSessionContext.StartingRound = mapKind == SurvivalMapKind.Inside && GameSave.InsideMapUnlocked
+                ? 20
+                : 0;
             GameSessionContext.RunSnapshot = default;
             _shopPanel.SetActive(false);
             _loadoutPanel.SetActive(false);

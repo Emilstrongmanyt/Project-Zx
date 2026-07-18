@@ -145,7 +145,7 @@ namespace ProjectZx.Core
 
         public static GameObject ScatterArenaObstacles(float arenaWidth, float arenaHeight, int stoneCount, int treeCount, int campfireCount)
         {
-            ScatterPlaced.Clear();
+            BeginScatterPass();
             var root = new GameObject("ArenaObstacles");
             var rng = new System.Random(90210);
 
@@ -166,7 +166,8 @@ namespace ProjectZx.Core
 
         public static GameObject ScatterInsideObstacles(float arenaWidth, float arenaHeight)
         {
-            ScatterPlaced.Clear();
+            BeginScatterPass();
+            ReserveClearing(Vector2.zero, 4f);
             var root = new GameObject("InsideObstacles");
             var rng = new System.Random(90211);
             var insideBag = new SpriteVariantBag(ArtLibrary.InsidePropVariants, rng);
@@ -190,7 +191,8 @@ namespace ProjectZx.Core
 
         public static GameObject ScatterCryptObstacles(float arenaWidth, float arenaHeight)
         {
-            ScatterPlaced.Clear();
+            BeginScatterPass();
+            ReserveClearing(Vector2.zero, 4f);
             var root = new GameObject("CryptObstacles");
             var rng = new System.Random(90212);
             var cryptBag = new SpriteVariantBag(ArtLibrary.CryptVariants, rng);
@@ -203,6 +205,40 @@ namespace ProjectZx.Core
         }
 
         static readonly List<Vector2> ScatterPlaced = new();
+        static readonly List<Vector2> ScatterClearingCenters = new();
+        static readonly List<float> ScatterClearingRadii = new();
+
+        /// <summary>Start a scatter pass. Call <see cref="ReserveClearing"/> first for NPC/spawn zones.</summary>
+        public static void BeginScatterPass()
+        {
+            ScatterPlaced.Clear();
+            // Keep reserved clearings until the next explicit reset of reservations.
+        }
+
+        public static void ClearScatterReservations()
+        {
+            ScatterClearingCenters.Clear();
+            ScatterClearingRadii.Clear();
+            ScatterPlaced.Clear();
+        }
+
+        /// <summary>Keep trees/rocks away from NPCs, campfire, and player spawns.</summary>
+        public static void ReserveClearing(Vector2 center, float radius)
+        {
+            ScatterClearingCenters.Add(center);
+            ScatterClearingRadii.Add(Mathf.Max(0.5f, radius));
+        }
+
+        static bool IsInsideReservedClearing(Vector2 pos)
+        {
+            for (var i = 0; i < ScatterClearingCenters.Count; i++)
+            {
+                if (Vector2.Distance(pos, ScatterClearingCenters[i]) < ScatterClearingRadii[i])
+                    return true;
+            }
+
+            return false;
+        }
 
         static void TryPlaceObstacle(
             Transform parent,
@@ -218,13 +254,14 @@ namespace ProjectZx.Core
             var halfW = arenaWidth * 0.5f - margin;
             var halfH = arenaHeight * 0.5f - margin;
 
-            for (var attempt = 0; attempt < 24; attempt++)
+            for (var attempt = 0; attempt < 48; attempt++)
             {
                 var pos = new Vector2(
                     ((float)rng.NextDouble() * 2f - 1f) * halfW,
                     ((float)rng.NextDouble() * 2f - 1f) * halfH);
 
                 if (pos.magnitude < minCenterDist) continue;
+                if (IsInsideReservedClearing(pos)) continue;
 
                 var tooClose = false;
                 foreach (var other in ScatterPlaced)
@@ -411,12 +448,19 @@ namespace ProjectZx.Core
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 0.85f;
             col.isTrigger = true;
+            go.AddComponent<YSortRenderer>().Configure(4);
             go.AddComponent<NpcInteractable>().Initialize(() =>
             {
-                if (GameSave.RowZiUnlocked) return;
+                if (GameSave.RowZiUnlocked)
+                {
+                    GameHud.Instance?.ShowBanner("RowZi is already at camp — tap her to swap!", 2.5f);
+                    return;
+                }
+
                 GameSave.RowZiUnlocked = true;
                 Achievements.UnlockTogetherAgain();
-                GameHud.Instance?.ShowBanner("RowZi joined your camp!", 3.5f);
+                // Keep current hero; standby RowZi appears after return to camp.
+                GameHud.Instance?.ShowBanner("RowZi unlocked! Swap heroes at camp.", 3.5f);
             });
             return go;
         }
