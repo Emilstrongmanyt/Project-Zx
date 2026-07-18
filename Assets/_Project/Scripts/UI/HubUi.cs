@@ -305,23 +305,26 @@ namespace ProjectZx.UI
 
         GameObject BuildMapPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, new Vector2(860, 420), ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, "Outside Survival", 40, TextAnchor.MiddleCenter, new Vector2(0, 100), new Vector2(700, 56));
-            CreateText(panel.transform, "Set class & technique at the Wizard shop first.", 26, TextAnchor.MiddleCenter, new Vector2(0, 30), new Vector2(760, 64));
-            CreateButton(panel.transform, "Start Run", new Vector2(0, -70), () => EnterSurvival(SurvivalMapKind.Outside), large: true);
-            CreateButton(panel.transform, "Close", new Vector2(0, -165), () => panel.SetActive(false), large: true);
+            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, new Vector2(860, 560), ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, "Survival Challenge", 40, TextAnchor.MiddleCenter, new Vector2(0, 200), new Vector2(700, 56));
+            CreateText(panel.transform, "Set class & technique at the Wizard shop first.\nUnlocked maps start fresh at round 1.", 24, TextAnchor.MiddleCenter, new Vector2(0, 120), new Vector2(760, 72));
+            CreateButton(panel.transform, "Outside Survival (R1)", new Vector2(0, 30), () => EnterSurvival(SurvivalMapKind.Outside), large: true);
+            CreateButton(panel.transform, "Inside Survival (R1)", new Vector2(0, -50), () => EnterSurvival(SurvivalMapKind.Inside), large: true);
+            CreateButton(panel.transform, "Dungeon Survival (R1)", new Vector2(0, -130), () => EnterSurvival(SurvivalMapKind.Dungeon), large: true);
+            CreateButton(panel.transform, "Close", new Vector2(0, -220), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
         }
 
         GameObject BuildCampfirePanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, new Vector2(700, 460), ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, "Campfire Travel", 34, TextAnchor.MiddleCenter, new Vector2(0, 160), new Vector2(560, 48));
-            CreateText(panel.transform, "Set class & technique at the Wizard shop first.", 20, TextAnchor.MiddleCenter, new Vector2(0, 105), new Vector2(620, 48));
-            CreateButton(panel.transform, "Outside Survival (R1)", new Vector2(0, 20), () => EnterSurvival(SurvivalMapKind.Outside));
-            CreateButton(panel.transform, "Inside Survival (R21)", new Vector2(0, -60), () => EnterSurvival(SurvivalMapKind.Inside));
-            CreateButton(panel.transform, "Close", new Vector2(0, -145), () => panel.SetActive(false));
+            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, new Vector2(760, 560), ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, "Campfire Travel", 34, TextAnchor.MiddleCenter, new Vector2(0, 200), new Vector2(640, 48));
+            CreateText(panel.transform, "Choose an unlocked map. Each run starts at round 1.", 20, TextAnchor.MiddleCenter, new Vector2(0, 140), new Vector2(680, 48));
+            CreateButton(panel.transform, "Outside Survival (R1)", new Vector2(0, 50), () => EnterSurvival(SurvivalMapKind.Outside));
+            CreateButton(panel.transform, "Inside Survival (R1)", new Vector2(0, -30), () => EnterSurvival(SurvivalMapKind.Inside));
+            CreateButton(panel.transform, "Dungeon Survival (R1)", new Vector2(0, -110), () => EnterSurvival(SurvivalMapKind.Dungeon));
+            CreateButton(panel.transform, "Close", new Vector2(0, -200), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
@@ -510,16 +513,15 @@ namespace ProjectZx.UI
         void EnterSurvival(SurvivalMapKind mapKind)
         {
             if (mapKind == SurvivalMapKind.Inside && !GameSave.InsideMapUnlocked) return;
+            if (mapKind == SurvivalMapKind.Dungeon && !GameSave.DungeonMapUnlocked) return;
 
             GameSessionContext.SurvivalMap = mapKind;
             GameSessionContext.SelectedClass = GameSave.SelectedClass;
             GameSessionContext.SelectedHero = GameSave.SanitizeHero(GameSave.SelectedHero);
             GameSessionContext.FreshSurvivalRun = true;
             GameSessionContext.CarryRound = 0;
-            // After R20 door unlock, fresh Inside runs begin at round 21 (StartingRound 20 → ++).
-            GameSessionContext.StartingRound = mapKind == SurvivalMapKind.Inside && GameSave.InsideMapUnlocked
-                ? 20
-                : 0;
+            // Every map starts a fresh run at round 1 (StartingRound 0 → ++).
+            GameSessionContext.StartingRound = 0;
             GameSessionContext.RunSnapshot = default;
             _shopPanel.SetActive(false);
             _loadoutPanel.SetActive(false);
@@ -883,18 +885,39 @@ namespace ProjectZx.UI
 
         public void OpenMapSelect()
         {
+            RefreshMapButtons(_mapPanel);
             _mapPanel.SetActive(true);
         }
 
         public void OpenCampfireTravel()
         {
-            if (!GameSave.InsideMapUnlocked)
-            {
-                OpenMapSelect();
-                return;
-            }
-
+            RefreshMapButtons(_campfirePanel);
             _campfirePanel.SetActive(true);
+        }
+
+        static void RefreshMapButtons(GameObject panel)
+        {
+            if (panel == null) return;
+            foreach (var button in panel.GetComponentsInChildren<Button>(true))
+            {
+                if (button == null) continue;
+                var label = button.GetComponentInChildren<Text>();
+                if (label == null) continue;
+                var text = label.text ?? string.Empty;
+
+                if (text.Contains("Inside Survival"))
+                {
+                    var unlocked = GameSave.InsideMapUnlocked;
+                    button.interactable = unlocked;
+                    label.text = unlocked ? "Inside Survival (R1)" : "Inside Survival (Locked)";
+                }
+                else if (text.Contains("Dungeon Survival"))
+                {
+                    var unlocked = GameSave.DungeonMapUnlocked;
+                    button.interactable = unlocked;
+                    label.text = unlocked ? "Dungeon Survival (R1)" : "Dungeon Survival (Locked)";
+                }
+            }
         }
 
         public void RefreshGold()

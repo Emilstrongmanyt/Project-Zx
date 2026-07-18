@@ -36,6 +36,8 @@ namespace ProjectZx.Core
             _baseballBat = null;
             _spear = null;
             _bow = null;
+            _arrow = null;
+            _gateway = null;
             _stone = null;
             _tree = null;
             _treeVariants = null;
@@ -90,6 +92,8 @@ namespace ProjectZx.Core
         static Sprite _baseballBat;
         static Sprite _spear;
         static Sprite _bow;
+        static Sprite _arrow;
+        static Sprite _gateway;
         static Sprite _stone;
         static Sprite _tree;
         static Sprite[] _treeVariants;
@@ -160,6 +164,8 @@ namespace ProjectZx.Core
         public static Sprite BaseballBat => _baseballBat ??= LoadOrCreateBat();
         public static Sprite Spear => _spear ??= CreateSpearSprite();
         public static Sprite Bow => _bow ??= LoadOrCreateBow();
+        public static Sprite Arrow => _arrow ??= CreateArrowSprite();
+        public static Sprite Gateway => _gateway ??= LoadOrCreateGateway();
         public static Sprite Stone => _stone ??= GetSheetVariant("RockSheet", 10, 0) ?? CreateStoneSprite();
         public static Sprite Tree => _tree ??= GetSheetVariant("TreeSheet", 9, 0) ?? CreateTreeSprite();
 
@@ -533,14 +539,21 @@ namespace ProjectZx.Core
 
         static Sprite LoadOrCreateBow()
         {
-            var sprite = Resources.Load<Sprite>("Placeholders/bow");
-            return sprite != null ? sprite : CreateBowSprite();
+            // Prefer a high-contrast procedural bow — the old placeholder was nearly invisible in-game.
+            return CreateBowSprite();
         }
 
+        static Sprite LoadOrCreateGateway()
+        {
+            var sprite = Load("GatewaySprite", "Art/GatewaySprite");
+            return sprite != null ? sprite : CreateGatewayFallbackSprite();
+        }
+
+        /// <summary>Large, high-contrast recurve bow for the bowman weapon slot.</summary>
         static Sprite CreateBowSprite()
         {
-            const int w = 22;
-            const int h = 18;
+            const int w = 48;
+            const int h = 40;
             var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
             tex.filterMode = FilterMode.Point;
 
@@ -550,26 +563,154 @@ namespace ProjectZx.Core
             }
 
             var clear = new Color(0, 0, 0, 0);
-            var wood = new Color(0.5f, 0.34f, 0.18f);
-            var stringColor = new Color(0.82f, 0.78f, 0.7f);
+            var woodDark = new Color(0.28f, 0.14f, 0.05f, 1f);
+            var wood = new Color(0.62f, 0.36f, 0.12f, 1f);
+            var woodLight = new Color(0.88f, 0.58f, 0.22f, 1f);
+            var grip = new Color(0.18f, 0.12f, 0.08f, 1f);
+            var stringColor = new Color(1f, 0.96f, 0.78f, 1f);
+            var stringEdge = new Color(0.95f, 0.82f, 0.25f, 1f);
 
             for (var y = 0; y < h; y++)
             for (var x = 0; x < w; x++)
                 Set(x, y, clear);
 
-            for (var y = 3; y <= 14; y++)
+            // Thick D-shaped limbs (open toward +X).
+            for (var y = 2; y <= 37; y++)
             {
-                var t = Mathf.Abs(y - 8.5f) / 5.5f;
-                var x = Mathf.RoundToInt(Mathf.Lerp(3f, 18f, t));
-                Set(x, y, wood);
-                if (x > 4) Set(x - 1, y, wood);
+                var t = Mathf.Abs(y - 19.5f) / 17.5f;
+                var limbX = Mathf.RoundToInt(Mathf.Lerp(8f, 38f, t * t));
+                for (var tX = 0; tX < 4; tX++)
+                {
+                    var c = tX == 0 ? woodDark : tX == 3 ? woodLight : wood;
+                    Set(limbX + tX, y, c);
+                    Set(limbX + tX, y + 1, c);
+                }
             }
 
-            for (var y = 4; y <= 13; y++)
-                Set(19, y, stringColor);
+            // Grip block near pivot.
+            for (var y = 15; y <= 24; y++)
+            for (var x = 6; x <= 14; x++)
+                Set(x, y, grip);
+
+            // Bright bowstring on the right edge.
+            for (var y = 4; y <= 35; y++)
+            {
+                Set(40, y, stringEdge);
+                Set(41, y, stringColor);
+                Set(42, y, stringEdge);
+            }
+
+            // Tip nocks.
+            for (var x = 36; x <= 42; x++)
+            {
+                Set(x, 3, woodLight);
+                Set(x, 36, woodLight);
+            }
+
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.12f, 0.5f), 16f);
+        }
+
+        /// <summary>Bright arrow projectile — wood shaft, metal tip, red fletching.</summary>
+        static Sprite CreateArrowSprite()
+        {
+            const int w = 36;
+            const int h = 12;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+
+            void Set(int x, int y, Color c)
+            {
+                if (x >= 0 && x < w && y >= 0 && y < h) tex.SetPixel(x, y, c);
+            }
+
+            var clear = new Color(0, 0, 0, 0);
+            var shaft = new Color(0.78f, 0.55f, 0.22f, 1f);
+            var shaftEdge = new Color(0.45f, 0.28f, 0.1f, 1f);
+            var tip = new Color(0.85f, 0.9f, 0.95f, 1f);
+            var tipEdge = new Color(0.45f, 0.5f, 0.55f, 1f);
+            var fletch = new Color(0.95f, 0.18f, 0.18f, 1f);
+            var fletchDark = new Color(0.55f, 0.05f, 0.05f, 1f);
+
+            for (var y = 0; y < h; y++)
+            for (var x = 0; x < w; x++)
+                Set(x, y, clear);
+
+            // Shaft (horizontal, tip on +X).
+            for (var x = 4; x <= 28; x++)
+            {
+                Set(x, 4, shaftEdge);
+                Set(x, 5, shaft);
+                Set(x, 6, shaft);
+                Set(x, 7, shaftEdge);
+            }
+
+            // Metal tip.
+            for (var i = 0; i < 6; i++)
+            {
+                var x = 29 + i;
+                var half = Mathf.Max(0, 3 - i);
+                for (var dy = -half; dy <= half; dy++)
+                    Set(x, 5 + dy + 1, i >= 4 ? tipEdge : tip);
+            }
+
+            // Fletching on the nock.
+            for (var x = 1; x <= 6; x++)
+            {
+                Set(x, 2, fletchDark);
+                Set(x, 3, fletch);
+                Set(x, 8, fletch);
+                Set(x, 9, fletchDark);
+            }
 
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.15f, 0.5f), 16f);
+        }
+
+        static Sprite CreateGatewayFallbackSprite()
+        {
+            const int w = 32;
+            const int h = 40;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+
+            void Set(int x, int y, Color c)
+            {
+                if (x >= 0 && x < w && y >= 0 && y < h) tex.SetPixel(x, y, c);
+            }
+
+            var clear = new Color(0, 0, 0, 0);
+            var stone = new Color(0.22f, 0.2f, 0.28f, 1f);
+            var stoneLight = new Color(0.4f, 0.38f, 0.5f, 1f);
+            var portal = new Color(0.35f, 0.15f, 0.75f, 1f);
+            var portalCore = new Color(0.75f, 0.45f, 1f, 1f);
+
+            for (var y = 0; y < h; y++)
+            for (var x = 0; x < w; x++)
+                Set(x, y, clear);
+
+            for (var y = 2; y < 38; y++)
+            {
+                Set(3, y, stone); Set(4, y, stoneLight);
+                Set(27, y, stoneLight); Set(28, y, stone);
+            }
+
+            for (var x = 3; x <= 28; x++)
+            {
+                Set(x, 2, stone); Set(x, 37, stone);
+            }
+
+            for (var y = 5; y < 35; y++)
+            for (var x = 7; x < 25; x++)
+            {
+                var cx = (x - 15.5f) / 8f;
+                var cy = (y - 20f) / 14f;
+                if (cx * cx + cy * cy > 1f) continue;
+                Set(x, y, Mathf.Abs(cx) + Mathf.Abs(cy) < 0.55f ? portalCore : portal);
+            }
+
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0f), 16f);
         }
 
         static Sprite LoadOrCreateXpGem()

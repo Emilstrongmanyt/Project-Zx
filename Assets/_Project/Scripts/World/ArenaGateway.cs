@@ -4,20 +4,17 @@ using UnityEngine;
 namespace ProjectZx.World
 {
     /// <summary>
-    /// Door dropped after clearing Outside survival round 20.
-    /// Starts a fresh Inside survival run (round 1, level 1).
+    /// Portal dropped after clearing Inside survival round 30.
+    /// Starts a fresh Dungeon survival run (round 1, level 1).
     /// </summary>
-    public class ArenaDoor : MonoBehaviour
+    public class ArenaGateway : MonoBehaviour
     {
         bool _used;
 
         public static void Spawn(Vector3 position)
         {
-            var door = GameFactory.CreateArenaDoor(position);
-            door.AddComponent<ArenaDoor>();
-
-            if (!GameSave.RowZiUnlocked)
-                GameFactory.CreateRowZiUnlockNpc(position + Vector3.left * 2.2f);
+            var gateway = GameFactory.CreateArenaGateway(position);
+            gateway.AddComponent<ArenaGateway>();
         }
 
         public bool TryEnter(Transform player)
@@ -26,11 +23,8 @@ namespace ProjectZx.World
             if (Vector2.Distance(player.position, transform.position) > 2.2f) return false;
 
             _used = true;
-            Achievements.UnlockDungeonDelver();
-            GameSave.InsideMapUnlocked = true;
-
-            // Fresh Inside run — round 1 / level 1, not a continuation of Outside.
-            GameSessionContext.SurvivalMap = SurvivalMapKind.Inside;
+            GameSave.DungeonMapUnlocked = true;
+            GameSessionContext.SurvivalMap = SurvivalMapKind.Dungeon;
             GameSessionContext.FreshSurvivalRun = true;
             GameSessionContext.StartingRound = 0;
             GameSessionContext.CarryRound = 0;

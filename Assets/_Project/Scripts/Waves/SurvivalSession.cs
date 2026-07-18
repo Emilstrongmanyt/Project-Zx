@@ -68,10 +68,10 @@ namespace ProjectZx.Waves
                         GameSave.RecordHighestRound(CurrentRound);
                         TryUnlockBowman(CurrentRound);
 
-                        // Outside R20: door + RowZi spawn on boss death — do not start R21 until the door is used.
-                        if (CurrentRound == 20 && MapKind == SurvivalMapKind.Outside)
+                        // Outside R20: hold until door used.
+                        if (IsStageHoldRound(CurrentRound))
                         {
-                            _hud?.ShowBanner("Talk to RowZi, then enter the door!", 5f);
+                            _hud?.ShowBanner(GetStageHoldBanner(CurrentRound), 5f);
                             while (_player != null)
                             {
                                 stats = _player.GetComponent<PlayerStats>();
@@ -91,8 +91,8 @@ namespace ProjectZx.Waves
                 stats = _player.GetComponent<PlayerStats>();
                 if (stats != null && stats.IsDead) break;
 
-                // Player left via door (scene unload) or died while waiting after R20.
-                if (CurrentRound == 20 && MapKind == SurvivalMapKind.Outside)
+                // Player left via portal (scene unload) or died while waiting after stage clear.
+                if (IsStageHoldRound(CurrentRound))
                     break;
             }
 
@@ -106,6 +106,22 @@ namespace ProjectZx.Waves
             GameFactory.LoadScene(GameScenes.MainMenuMap);
         }
 
+        bool IsStageHoldRound(int round)
+        {
+            if (round == 20 && MapKind == SurvivalMapKind.Outside) return true;
+            if (round == 30 && MapKind == SurvivalMapKind.Inside) return true;
+            return false;
+        }
+
+        string GetStageHoldBanner(int round)
+        {
+            if (round == 20 && MapKind == SurvivalMapKind.Outside)
+                return "Talk to RowZi, then enter the door!";
+            if (round == 30 && MapKind == SurvivalMapKind.Inside)
+                return "Enter the gateway to Dungeon Survival!";
+            return "Stage cleared!";
+        }
+
         IEnumerator SpawnRound(int round)
         {
             _spawning = true;
@@ -115,6 +131,7 @@ namespace ProjectZx.Waves
             var total = 6 + round * 5;
             var bossRound = round % 10 == 0;
             var roundTwentyBoss = round == 20 && MapKind == SurvivalMapKind.Outside;
+            var roundThirtyBoss = round == 30 && MapKind == SurvivalMapKind.Inside;
             if (bossRound) total = Mathf.Max(total - 1, 1);
 
             var waveCount = GetWaveCount(round);
@@ -129,7 +146,7 @@ namespace ProjectZx.Waves
 
                 for (var i = 0; i < count; i++)
                 {
-                    SpawnEnemy(round, false, false);
+                    SpawnEnemy(round, false, false, false);
                     if (i % 3 == 0) yield return null;
                 }
 
@@ -140,8 +157,8 @@ namespace ProjectZx.Waves
             if (bossRound)
             {
                 yield return new WaitForSeconds(0.35f);
-                SpawnEnemy(round, true, roundTwentyBoss);
-                _hud?.ShowBossWarning(roundTwentyBoss);
+                SpawnEnemy(round, true, roundTwentyBoss, roundThirtyBoss);
+                _hud?.ShowBossWarning(roundTwentyBoss || roundThirtyBoss);
             }
 
             _spawning = false;
@@ -162,16 +179,20 @@ namespace ProjectZx.Waves
             Achievements.UnlockInsideArcher();
         }
 
-        void SpawnEnemy(int round, bool boss, bool roundTwentyBoss)
+        void SpawnEnemy(int round, bool boss, bool roundTwentyBoss, bool roundThirtyBoss)
         {
             var origin = _player != null ? (Vector2)_player.position : Vector2.zero;
             var spawnPos = ArenaBounds.RandomSpawnAround(origin, 7f, 12f);
 
-            var zombieKind = EnemyZombieKind.Outside;
-            if (!boss && MapKind == SurvivalMapKind.Inside)
-                zombieKind = round >= 20 ? EnemyZombieKind.InsideElite : EnemyZombieKind.Inside;
+            // Outside: ZombieJ · Inside: ZombieJ_Inside · Dungeon: ZombieJ_Inside2
+            var zombieKind = MapKind switch
+            {
+                SurvivalMapKind.Inside => EnemyZombieKind.Inside,
+                SurvivalMapKind.Dungeon => EnemyZombieKind.InsideElite,
+                _ => EnemyZombieKind.Outside
+            };
 
-            GameFactory.CreateEnemy(spawnPos, round, boss, roundTwentyBoss, zombieKind);
+            GameFactory.CreateEnemy(spawnPos, round, boss, roundTwentyBoss, zombieKind, roundThirtyBoss);
             EnemiesRemaining++;
         }
 
