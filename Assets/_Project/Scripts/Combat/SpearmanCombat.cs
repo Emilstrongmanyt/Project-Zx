@@ -16,8 +16,8 @@ namespace ProjectZx.Combat
         const float ThrustAngle = -4f;
         const float ThrustExtend = 0.55f;
         const float WhirlwindRangeMultiplier = 1.15f;
-        /// <summary>Half-plane in front of the thrust (dot &gt;= 0 → 180°).</summary>
-        const float FrontArcDot = 0f;
+        /// <summary>Half-width of the standard thrust cone (90° each side of target → 180° total).</summary>
+        const float StandardArcHalfDegrees = 90f;
 
         [SerializeField] float attackRange = 3.4f;
         [SerializeField] float attackInterval = 0.55f;
@@ -32,6 +32,7 @@ namespace ProjectZx.Combat
         bool _standardDamageApplied;
         bool _attackFacingRight = true;
         Vector2 _thrustDir = Vector2.right;
+        EnemyActor _primaryTarget;
         Transform _spearPivot;
         Transform _spearTip;
         SpriteRenderer _bodyRenderer;
@@ -117,6 +118,7 @@ namespace ProjectZx.Combat
             _whirlwindSwing = false;
             _standardDamageApplied = false;
             _attackTimer = thrustDuration;
+            _primaryTarget = enemy;
 
             var toEnemy = (Vector2)enemy.transform.position - (Vector2)transform.position;
             _thrustDir = toEnemy.sqrMagnitude > 0.0001f ? toEnemy.normalized : Vector2.right;
@@ -159,7 +161,7 @@ namespace ProjectZx.Combat
                 if (!_whirlwindDamageApplied && progress >= 0.5f)
                 {
                     _whirlwindDamageApplied = true;
-                    DamageEnemiesInRange(WhirlwindAttackRange, frontArcOnly: false);
+                    DamageEnemiesInFullRange(WhirlwindAttackRange);
                 }
             }
             else
@@ -180,7 +182,7 @@ namespace ProjectZx.Combat
                 if (!_standardDamageApplied && progress >= 0.45f)
                 {
                     _standardDamageApplied = true;
-                    DamageEnemiesInRange(BaseAttackRange, frontArcOnly: true);
+                    DamageEnemiesInFrontArc(BaseAttackRange);
                 }
             }
 
@@ -188,34 +190,65 @@ namespace ProjectZx.Combat
 
             _attacking = false;
             _whirlwindSwing = false;
+            _primaryTarget = null;
             _spearPivot.localRotation = Quaternion.Euler(0f, 0f, RestAngle);
             _spearPivot.localScale = Vector3.one;
             if (_spearTip != null)
                 _spearTip.localPosition = new Vector3(0.42f, 0.02f, 0f);
         }
 
-        void DamageEnemiesInRange(float range, bool frontArcOnly)
+        void DamageEnemiesInFullRange(float range)
         {
             var stats = GetComponent<PlayerStats>();
-            foreach (var enemy in FindEnemiesInRange(range, frontArcOnly))
+            foreach (var enemy in FindEnemiesInRange(range, useFrontArc: false))
                 CombatDamage.Apply(stats, enemy, DamageMultiplier, canApplyFrost: true);
         }
 
-        bool HasEnemyInRange(float range) => FindEnemiesInRange(range, frontArcOnly: false).Count > 0;
+        /// <summary>
+        /// Standard thrust: damages the locked target plus any other living enemies inside a
+        /// 180° cone (90° left/right of the thrust direction toward the primary target).
+        /// </summary>
+        void DamageEnemiesInFrontArc(float range)
+        {
+            var stats = GetComponent<PlayerStats>();
+            var hitPrimary = false;
+            foreach (var enemy in FindEnemiesInRange(range, useFrontArc: true))
+            {
+                CombatDamage.Apply(stats, enemy, DamageMultiplier, canApplyFrost: true);
+                if (enemy == _primaryTarget) hitPrimary = true;
+            }
 
-        List<EnemyActor> FindEnemiesInRange(float range, bool frontArcOnly)
+            // Always credit the locked target if still in range (handles edge float error).
+            if (!hitPrimary && _primaryTarget != null && _primaryTarget.IsAlive)
+            {
+                var dist = Vector2.Distance(transform.position, _primaryTarget.transform.position);
+                if (dist <= range)
+                    CombatDamage.Apply(stats, _primaryTarget, DamageMultiplier, canApplyFrost: true);
+            }
+        }
+
+        bool HasEnemyInRange(float range) => FindEnemiesInRange(range, useFrontArc: false).Count > 0;
+
+        List<EnemyActor> FindEnemiesInRange(float range, bool useFrontArc)
         {
             var hits = new List<EnemyActor>();
+            var rangeSq = range * range;
+            var facing = _thrustDir.sqrMagnitude > 0.0001f ? _thrustDir.normalized : Vector2.right;
+
             foreach (var enemy in Object.FindObjectsByType<EnemyActor>())
             {
                 if (enemy == null || !enemy.IsAlive) continue;
                 var offset = (Vector2)enemy.transform.position - (Vector2)transform.position;
-                if (offset.sqrMagnitude > range * range) continue;
+                if (offset.sqrMagnitude > rangeSq) continue;
 
-                if (frontArcOnly)
+                if (useFrontArc)
                 {
-                    var dir = offset.sqrMagnitude > 0.0001f ? offset.normalized : Vector2.right;
-                    if (Vector2.Dot(dir, _thrustDir) < FrontArcDot) continue;
+                    // Primary lock is always valid; others must sit inside the 180° facing cone.
+                    if (enemy != _primaryTarget)
+                    {
+                        if (offset.sqrMagnitude <= 0.0001f) continue;
+                        if (Vector2.Angle(facing, offset) > StandardArcHalfDegrees) continue;
+                    }
                 }
 
                 hits.Add(enemy);

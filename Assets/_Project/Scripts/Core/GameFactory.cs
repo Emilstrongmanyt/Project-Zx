@@ -417,7 +417,8 @@ namespace ProjectZx.Core
             PlayerStats leaderStats,
             PlayableHero hero,
             PlayerClass playerClass,
-            float scale = 0.42f * 1.3f * 0.92f)
+            // ~25% smaller than the previous companion scale so the standby hero reads as support.
+            float scale = 0.42f * 1.3f * 0.92f * 0.75f)
         {
             if (leader == null || leaderStats == null) return null;
 
