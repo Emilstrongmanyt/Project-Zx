@@ -64,8 +64,10 @@ namespace ProjectZx.Core
             var hub = new GameObject("HubUi").AddComponent<HubUi>();
             new GameObject("CampHeroManager").AddComponent<CampHeroManager>().Setup();
 
-            GameFactory.CreateNpc("WizardShop", ArtLibrary.Wizard, new Vector3(-2.1f, 1.1f), () => hub.OpenShop());
-            GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(2.1f, 1.1f), () => hub.OpenMapSelect());
+            // Campfire NPCs: +25% scale vs previous default (0.38 → 0.475).
+            const float campNpcScale = 0.38f * 1.25f;
+            GameFactory.CreateNpc("WizardShop", ArtLibrary.Wizard, new Vector3(-2.1f, 1.1f), () => hub.OpenShop(), campNpcScale);
+            GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(2.1f, 1.1f), () => hub.OpenMapSelect(), campNpcScale);
             GameFactory.CreateNpc("AchievementBoard", ArtLibrary.AchievementKeeper, new Vector3(0f, 2.8f), () => hub.OpenAchievements(), 0.72f);
 
             var campfireNpc = campfire.AddComponent<NpcInteractable>();

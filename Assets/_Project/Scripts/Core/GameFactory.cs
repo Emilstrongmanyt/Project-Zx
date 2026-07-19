@@ -469,6 +469,9 @@ namespace ProjectZx.Core
                 case PlayerClass.Magician:
                     go.AddComponent<MagicianCombat>();
                     break;
+                case PlayerClass.Samurai:
+                    go.AddComponent<SamuraiCombat>();
+                    break;
                 default:
                     go.AddComponent<PlayerCombat>();
                     break;
@@ -481,7 +484,8 @@ namespace ProjectZx.Core
             bool isBoss,
             bool isRoundTwentyBoss = false,
             EnemyZombieKind zombieKind = EnemyZombieKind.Outside,
-            bool isRoundThirtyBoss = false)
+            bool isRoundThirtyBoss = false,
+            bool isRoundFortyBoss = false)
         {
             Sprite sprite;
             if (isBoss)
@@ -489,10 +493,10 @@ namespace ProjectZx.Core
             else
                 ArtLibrary.GetZombieSprites(zombieKind, out sprite, out _);
 
-            var isStageBoss = isRoundTwentyBoss || isRoundThirtyBoss;
+            var isStageBoss = isRoundTwentyBoss || isRoundThirtyBoss || isRoundFortyBoss;
             var scale = (isBoss ? 0.55f : 0.32f * 2.5f) * 1.5f;
             if (isBoss) scale *= 1.5f;
-            // Outside R20 and Inside R30 stage bosses share the same large scale.
+            // Outside R20, Inside R30, and Dungeon R40 stage bosses share the same large scale.
             if (isStageBoss) scale *= 2.5f;
             var go = CreateSprite(isBoss ? "Boss" : "Zombie", sprite, position, scale, 0);
             go.tag = "Enemy";
@@ -510,7 +514,7 @@ namespace ProjectZx.Core
 
             go.AddComponent<HitFlash>();
             var enemy = go.AddComponent<EnemyActor>();
-            enemy.Initialize(round, isBoss, isRoundTwentyBoss, zombieKind, isRoundThirtyBoss);
+            enemy.Initialize(round, isBoss, isRoundTwentyBoss, zombieKind, isRoundThirtyBoss, isRoundFortyBoss);
             return go;
         }
 

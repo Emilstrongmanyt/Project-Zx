@@ -38,6 +38,7 @@ namespace ProjectZx.Enemies
         public bool IsBoss { get; private set; }
         public bool IsRoundTwentyBoss { get; private set; }
         public bool IsRoundThirtyBoss { get; private set; }
+        public bool IsRoundFortyBoss { get; private set; }
 
         int _hp;
         int _maxHp;
@@ -77,12 +78,14 @@ namespace ProjectZx.Enemies
             bool isBoss,
             bool isRoundTwentyBoss = false,
             EnemyZombieKind zombieKind = EnemyZombieKind.Outside,
-            bool isRoundThirtyBoss = false)
+            bool isRoundThirtyBoss = false,
+            bool isRoundFortyBoss = false)
         {
             _round = round;
             IsBoss = isBoss;
             IsRoundTwentyBoss = isRoundTwentyBoss;
             IsRoundThirtyBoss = isRoundThirtyBoss;
+            IsRoundFortyBoss = isRoundFortyBoss;
             _hp = isBoss ? 220 + round * 30 : 18 + round * 6;
             _attack = isBoss ? 18 + round : 6 + Mathf.FloorToInt(round * 0.6f);
             _speed = isBoss ? 1.5f + round * 0.03f : 1.2f + round * 0.07f;
@@ -95,6 +98,17 @@ namespace ProjectZx.Enemies
                 const float outsideR20Speed = 1.5f + 20 * 0.03f;
                 _hp = outsideR20Hp * 3;
                 _attack = outsideR20Attack * 3;
+                _speed = outsideR20Speed;
+            }
+
+            // Dungeon R40 final boss: same footprint, 4× Outside R20 stats.
+            if (isRoundFortyBoss)
+            {
+                const int outsideR20Hp = 220 + 20 * 30;
+                const int outsideR20Attack = 18 + 20;
+                const float outsideR20Speed = 1.5f + 20 * 0.03f;
+                _hp = outsideR20Hp * 4;
+                _attack = outsideR20Attack * 4;
                 _speed = outsideR20Speed;
             }
 
@@ -120,7 +134,7 @@ namespace ProjectZx.Enemies
             _rb = GetComponent<Rigidbody2D>();
             _renderer = GetComponent<SpriteRenderer>();
             _player = GameObject.FindGameObjectWithTag("Player")?.transform;
-            ApplySprites(isBoss, isRoundTwentyBoss || isRoundThirtyBoss, zombieKind);
+            ApplySprites(isBoss, isRoundTwentyBoss || isRoundThirtyBoss || isRoundFortyBoss, zombieKind);
 
             if (_renderer != null)
             {
@@ -647,6 +661,9 @@ namespace ProjectZx.Enemies
                 GameSave.DungeonMapUnlocked = true;
                 ArenaGateway.Spawn(pos + Vector2.up * 0.5f);
             }
+
+            if (IsRoundFortyBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Dungeon)
+                GameSave.SamuraiUnlocked = true;
 
             Destroy(gameObject);
         }

@@ -9,7 +9,8 @@ namespace ProjectZx.Player
         public static CampHeroManager Instance { get; private set; }
 
         const float PlayerScale = 0.42f * 1.3f;
-        const float NpcScale = 0.38f;
+        // Standby hero at campfire — +25% vs previous camp NPC scale.
+        const float NpcScale = 0.38f * 1.25f;
 
         static readonly Vector3 DefaultPlayerSpawn = new(0f, -4.2f, 0f);
         static readonly Vector3 DefaultStandbySpawn = new(2.6f, -3.4f, 0f);
