@@ -14,7 +14,8 @@ namespace ProjectZx.Player
     {
         const float FollowDistance = 1.55f;
         const float FollowSideOffset = 0.65f;
-        const float MoveSpeed = 5.2f;
+        // ~25% slower than the previous companion so they trail a bit behind the leader.
+        const float MoveSpeed = 5.2f * 0.75f;
         const float ArriveSnap = 0.08f;
         const float LootScanInterval = 0.12f;
 

@@ -154,8 +154,8 @@ namespace ProjectZx.Core
         public static Sprite Btn220x52 => _btn220x52 ??= Load("btn_220x52", "btn_primary");
         public static Sprite Btn200x52 => _btn200x52 ??= Load("btn_200x52", "btn_primary");
         public static Sprite Btn360x56 => _btn360x56 ??= Load("btn_360x56", "btn_primary");
-        public static Sprite Wizard => _wizard ??= Load("Placeholders/wizard");
-        public static Sprite Knight => _knight ??= Load("Placeholders/knight");
+        public static Sprite Wizard => _wizard ??= Load("Placeholders/wizard", "WizardNpc");
+        public static Sprite Knight => _knight ??= Load("Placeholders/knight", "KnightNpc");
         /// <summary>World NPC: achievement board (not the wizard placeholder).</summary>
         public static Sprite AchievementKeeper => _achievementKeeper ??= LoadOrCreateAchievementBoardNpc();
         public static Sprite Ground => _ground ??= Load("Placeholders/ground");
