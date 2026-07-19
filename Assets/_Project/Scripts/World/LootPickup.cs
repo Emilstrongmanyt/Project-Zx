@@ -88,7 +88,7 @@ namespace ProjectZx.World
             Collect(stats);
         }
 
-        /// <summary>Apply this pickup's reward and destroy it (used by map-loot crystal).</summary>
+        /// <summary>Apply this pickup's reward and destroy it (used by map-loot crystal / companion).</summary>
         public void ForceCollect(PlayerStats stats)
         {
             if (_collected || stats == null) return;
@@ -103,9 +103,14 @@ namespace ProjectZx.World
             Collect(stats);
         }
 
+        /// <summary>Companion / external collect — credits the given player stats.</summary>
+        public void CollectFor(PlayerStats stats) => Collect(stats);
+
         void Collect(PlayerStats stats)
         {
             if (_collected || stats == null) return;
+            stats = stats.LootCreditTarget;
+            if (stats == null) return;
             _collected = true;
 
             switch (_type)

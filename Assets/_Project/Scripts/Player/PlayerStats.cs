@@ -41,6 +41,12 @@ namespace ProjectZx.Player
         public int XpToNext { get; private set; }
         public bool IsDead { get; private set; }
         public bool SurvivalMode { get; private set; }
+        /// <summary>Standby hero companion — invulnerable assist unit at reduced damage.</summary>
+        public bool IsCompanion { get; private set; }
+        /// <summary>Leader stats when this is a companion (loot / lifesteal credit).</summary>
+        public PlayerStats CompanionLeader { get; private set; }
+        /// <summary>1 for player, 0.2 for companion (80% damage reduction).</summary>
+        public float DamageOutputScale { get; private set; } = 1f;
         public int PendingLevelUpChoices { get; private set; }
         public float RunSpeedMultiplier { get; private set; } = 1f;
         public float RunDamageMultiplier { get; private set; } = 1f;
@@ -70,6 +76,9 @@ namespace ProjectZx.Player
         public void ConfigureForRun(bool survivalMode)
         {
             SurvivalMode = survivalMode;
+            IsCompanion = false;
+            CompanionLeader = null;
+            DamageOutputScale = 1f;
             MaxHp = GameSave.MaxHp;
             CurrentHp = MaxHp;
             RunXp = 0;
@@ -100,9 +109,52 @@ namespace ProjectZx.Player
             RunBerserkBonus = 0f;
         }
 
+        /// <summary>
+        /// Standby hero assist unit: mirrors the leader's run buffs, deals 20% damage, never dies.
+        /// </summary>
+        public void ConfigureAsCompanion(PlayerStats leader)
+        {
+            ConfigureForRun(true);
+            IsCompanion = true;
+            CompanionLeader = leader;
+            DamageOutputScale = 0.2f;
+            PendingLevelUpChoices = 0;
+            MaxHp = 9999;
+            CurrentHp = MaxHp;
+            SyncRunBuffsFromLeader();
+        }
+
+        public void SyncRunBuffsFromLeader()
+        {
+            if (!IsCompanion || CompanionLeader == null) return;
+            var leader = CompanionLeader;
+            RunSpeedMultiplier = leader.RunSpeedMultiplier;
+            RunDamageMultiplier = leader.RunDamageMultiplier;
+            RunAttackSpeedMultiplier = leader.RunAttackSpeedMultiplier;
+            RunAttackRangeMultiplier = leader.RunAttackRangeMultiplier;
+            RunLootRangeMultiplier = leader.RunLootRangeMultiplier;
+            RunCritChance = leader.RunCritChance;
+            RunCritMultiplier = leader.RunCritMultiplier;
+            RunLifesteal = leader.RunLifesteal;
+            RunBossDamageBonus = leader.RunBossDamageBonus;
+            RunExecuteBonus = leader.RunExecuteBonus;
+            RunGoldFindMultiplier = leader.RunGoldFindMultiplier;
+            RunXpMultiplier = leader.RunXpMultiplier;
+            RunRegenPerSecond = 0f;
+            RunShieldUnlocked = false;
+            RunBerserkBonus = leader.RunBerserkBonus;
+            Level = leader.Level;
+        }
+
         void Update()
         {
             if (!SurvivalMode || IsDead) return;
+
+            if (IsCompanion)
+            {
+                SyncRunBuffsFromLeader();
+                return;
+            }
 
             _timeSinceDamaged += Time.deltaTime;
 
@@ -134,7 +186,7 @@ namespace ProjectZx.Player
 
         public void TakeDamage(int amount)
         {
-            if (IsDead || amount <= 0) return;
+            if (IsDead || amount <= 0 || IsCompanion) return;
 
             if (RunShieldUnlocked && _shieldReady)
             {
@@ -392,7 +444,7 @@ namespace ProjectZx.Player
             BankRunGoldToSave();
         }
 
-        public float Damage => 10f * GameSave.DamageMultiplier * RunDamageMultiplier;
+        public float Damage => 10f * GameSave.DamageMultiplier * RunDamageMultiplier * DamageOutputScale;
 
         public float EffectiveAttackSpeed =>
             RunAttackSpeedMultiplier * (IsBerserkActive ? 1f + RunBerserkBonus : 1f);
@@ -424,8 +476,13 @@ namespace ProjectZx.Player
         public void OnDamageDealt(int damageDealt)
         {
             if (damageDealt <= 0 || RunLifesteal <= 0f) return;
-            Heal(Mathf.Max(1, Mathf.RoundToInt(damageDealt * RunLifesteal)));
+            var healTarget = IsCompanion && CompanionLeader != null ? CompanionLeader : this;
+            healTarget.Heal(Mathf.Max(1, Mathf.RoundToInt(damageDealt * RunLifesteal)));
         }
+
+        /// <summary>Credit loot rewards to the real player (companions never bank their own run gold/xp).</summary>
+        public PlayerStats LootCreditTarget =>
+            IsCompanion && CompanionLeader != null ? CompanionLeader : this;
 
         public float EffectiveLootRangeMultiplier =>
             RunLootRangeMultiplier * GameSave.LootRangeMultiplier;

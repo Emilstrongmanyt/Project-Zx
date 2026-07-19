@@ -10,10 +10,14 @@ namespace ProjectZx.Combat
     [RequireComponent(typeof(PlayerStats))]
     public class SpearmanCombat : MonoBehaviour
     {
+        /// <summary>~15% more base damage than Batter (1.0).</summary>
+        const float DamageMultiplier = 1.15f;
         const float RestAngle = -8f;
         const float ThrustAngle = -4f;
         const float ThrustExtend = 0.55f;
         const float WhirlwindRangeMultiplier = 1.15f;
+        /// <summary>Half-plane in front of the thrust (dot &gt;= 0 → 180°).</summary>
+        const float FrontArcDot = 0f;
 
         [SerializeField] float attackRange = 3.4f;
         [SerializeField] float attackInterval = 0.55f;
@@ -25,7 +29,9 @@ namespace ProjectZx.Combat
         bool _attacking;
         bool _whirlwindSwing;
         bool _whirlwindDamageApplied;
+        bool _standardDamageApplied;
         bool _attackFacingRight = true;
+        Vector2 _thrustDir = Vector2.right;
         Transform _spearPivot;
         Transform _spearTip;
         SpriteRenderer _bodyRenderer;
@@ -93,6 +99,7 @@ namespace ProjectZx.Combat
                 return;
             }
 
+            // Can lock any enemy in full range; damage only applies in the 180° facing arc.
             var enemy = FindClosestEnemy();
             if (enemy == null) return;
 
@@ -108,13 +115,15 @@ namespace ProjectZx.Combat
             _cooldown = attackInterval;
             _attacking = true;
             _whirlwindSwing = false;
+            _standardDamageApplied = false;
             _attackTimer = thrustDuration;
-            _attackFacingRight = enemy.transform.position.x >= transform.position.x;
+
+            var toEnemy = (Vector2)enemy.transform.position - (Vector2)transform.position;
+            _thrustDir = toEnemy.sqrMagnitude > 0.0001f ? toEnemy.normalized : Vector2.right;
+            _attackFacingRight = _thrustDir.x >= 0f;
 
             if (_bodyRenderer != null)
                 _bodyRenderer.flipX = !_attackFacingRight;
-
-            CombatDamage.Apply(GetComponent<PlayerStats>(), enemy, canApplyFrost: true);
         }
 
         void PerformWhirlwind()
@@ -143,7 +152,6 @@ namespace ProjectZx.Combat
             if (_whirlwindSwing)
             {
                 var progress = 1f - Mathf.Clamp01(_attackTimer / whirlwindDuration);
-                // Full 360° spin so enemies on every side are in the cleave.
                 var angle = Mathf.Lerp(0f, 360f, progress);
                 _spearPivot.localScale = Vector3.one;
                 _spearPivot.localRotation = Quaternion.Euler(0f, 0f, angle);
@@ -151,23 +159,28 @@ namespace ProjectZx.Combat
                 if (!_whirlwindDamageApplied && progress >= 0.5f)
                 {
                     _whirlwindDamageApplied = true;
-                    DamageEnemiesInRange(WhirlwindAttackRange);
+                    DamageEnemiesInRange(WhirlwindAttackRange, frontArcOnly: false);
                 }
             }
             else
             {
                 var progress = 1f - Mathf.Clamp01(_attackTimer / thrustDuration);
                 var eased = Mathf.Sin(progress * Mathf.PI);
-                var angle = Mathf.Lerp(RestAngle, ThrustAngle, eased);
-                if (!_attackFacingRight) angle = -angle;
-
-                _spearPivot.localScale = new Vector3(_attackFacingRight ? 1f : -1f, 1f, 1f);
-                _spearPivot.localRotation = Quaternion.Euler(0f, 0f, angle);
+                var faceAngle = Mathf.Atan2(_thrustDir.y, _thrustDir.x) * Mathf.Rad2Deg;
+                var swing = Mathf.Lerp(RestAngle, ThrustAngle, eased);
+                _spearPivot.localScale = Vector3.one;
+                _spearPivot.localRotation = Quaternion.Euler(0f, 0f, faceAngle + swing);
 
                 if (_spearTip != null)
                 {
                     var extend = Mathf.Lerp(0f, ThrustExtend, eased);
                     _spearTip.localPosition = new Vector3(0.42f + extend, 0.02f, 0f);
+                }
+
+                if (!_standardDamageApplied && progress >= 0.45f)
+                {
+                    _standardDamageApplied = true;
+                    DamageEnemiesInRange(BaseAttackRange, frontArcOnly: true);
                 }
             }
 
@@ -181,22 +194,30 @@ namespace ProjectZx.Combat
                 _spearTip.localPosition = new Vector3(0.42f, 0.02f, 0f);
         }
 
-        void DamageEnemiesInRange(float range)
+        void DamageEnemiesInRange(float range, bool frontArcOnly)
         {
             var stats = GetComponent<PlayerStats>();
-            foreach (var enemy in FindEnemiesInRange(range))
-                CombatDamage.Apply(stats, enemy, canApplyFrost: true);
+            foreach (var enemy in FindEnemiesInRange(range, frontArcOnly))
+                CombatDamage.Apply(stats, enemy, DamageMultiplier, canApplyFrost: true);
         }
 
-        bool HasEnemyInRange(float range) => FindEnemiesInRange(range).Count > 0;
+        bool HasEnemyInRange(float range) => FindEnemiesInRange(range, frontArcOnly: false).Count > 0;
 
-        List<EnemyActor> FindEnemiesInRange(float range)
+        List<EnemyActor> FindEnemiesInRange(float range, bool frontArcOnly)
         {
             var hits = new List<EnemyActor>();
             foreach (var enemy in Object.FindObjectsByType<EnemyActor>())
             {
                 if (enemy == null || !enemy.IsAlive) continue;
-                if (Vector2.Distance(transform.position, enemy.transform.position) > range) continue;
+                var offset = (Vector2)enemy.transform.position - (Vector2)transform.position;
+                if (offset.sqrMagnitude > range * range) continue;
+
+                if (frontArcOnly)
+                {
+                    var dir = offset.sqrMagnitude > 0.0001f ? offset.normalized : Vector2.right;
+                    if (Vector2.Dot(dir, _thrustDir) < FrontArcDot) continue;
+                }
+
                 hits.Add(enemy);
             }
 
