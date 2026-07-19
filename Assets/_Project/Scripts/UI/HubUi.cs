@@ -259,9 +259,10 @@ namespace ProjectZx.UI
         {
             var panel = CreateDialogPanel(parent, "LoadoutPanel", Vector2.zero, new Vector2(960, 900), ArtLibrary.ShopUi);
             CreateText(panel.transform, "Build Loadout", 38, TextAnchor.MiddleCenter, new Vector2(0, 390), new Vector2(620, 52));
+            CreateText(panel.transform, "Class is saved per hero. Swap heroes at camp to set the companion build.", 18, TextAnchor.MiddleCenter, new Vector2(0, 348), new Vector2(820, 36));
 
             // Class section
-            _loadoutClassPicker = BuildClassPicker(panel.transform, 320f, 275f, 200f);
+            _loadoutClassPicker = BuildClassPicker(panel.transform, 300f, 255f, 180f);
 
             // Technique section (clear gap under class buttons at ~190-132)
             CreateText(panel.transform, "Attack Technique", 28, TextAnchor.MiddleCenter, new Vector2(0, 70), new Vector2(620, 40));
@@ -308,9 +309,9 @@ namespace ProjectZx.UI
             var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, new Vector2(860, 560), ArtLibrary.ChallengeBoardUi);
             CreateText(panel.transform, "Survival Challenge", 40, TextAnchor.MiddleCenter, new Vector2(0, 200), new Vector2(700, 56));
             CreateText(panel.transform, "Set class & technique at the Wizard shop first.\nUnlocked maps start fresh at round 1.", 24, TextAnchor.MiddleCenter, new Vector2(0, 120), new Vector2(760, 72));
-            CreateButton(panel.transform, "Outside Survival (R1)", new Vector2(0, 30), () => EnterSurvival(SurvivalMapKind.Outside), large: true);
-            CreateButton(panel.transform, "Inside Survival (R1)", new Vector2(0, -50), () => EnterSurvival(SurvivalMapKind.Inside), large: true);
-            CreateButton(panel.transform, "Dungeon Survival (R1)", new Vector2(0, -130), () => EnterSurvival(SurvivalMapKind.Dungeon), large: true);
+            CreateButton(panel.transform, "Outside Survival", new Vector2(0, 30), () => EnterSurvival(SurvivalMapKind.Outside), large: true);
+            CreateButton(panel.transform, "Inside Survival", new Vector2(0, -50), () => EnterSurvival(SurvivalMapKind.Inside), large: true);
+            CreateButton(panel.transform, "Dungeon Survival", new Vector2(0, -130), () => EnterSurvival(SurvivalMapKind.Dungeon), large: true);
             CreateButton(panel.transform, "Close", new Vector2(0, -220), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
@@ -321,9 +322,9 @@ namespace ProjectZx.UI
             var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, new Vector2(760, 560), ArtLibrary.ChallengeBoardUi);
             CreateText(panel.transform, "Campfire Travel", 34, TextAnchor.MiddleCenter, new Vector2(0, 200), new Vector2(640, 48));
             CreateText(panel.transform, "Choose an unlocked map. Each run starts at round 1.", 20, TextAnchor.MiddleCenter, new Vector2(0, 140), new Vector2(680, 48));
-            CreateButton(panel.transform, "Outside Survival (R1)", new Vector2(0, 50), () => EnterSurvival(SurvivalMapKind.Outside));
-            CreateButton(panel.transform, "Inside Survival (R1)", new Vector2(0, -30), () => EnterSurvival(SurvivalMapKind.Inside));
-            CreateButton(panel.transform, "Dungeon Survival (R1)", new Vector2(0, -110), () => EnterSurvival(SurvivalMapKind.Dungeon));
+            CreateButton(panel.transform, "Outside Survival", new Vector2(0, 50), () => EnterSurvival(SurvivalMapKind.Outside));
+            CreateButton(panel.transform, "Inside Survival", new Vector2(0, -30), () => EnterSurvival(SurvivalMapKind.Inside));
+            CreateButton(panel.transform, "Dungeon Survival", new Vector2(0, -110), () => EnterSurvival(SurvivalMapKind.Dungeon));
             CreateButton(panel.transform, "Close", new Vector2(0, -200), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
@@ -459,8 +460,8 @@ namespace ProjectZx.UI
         {
             return selected switch
             {
-                PlayerClass.Spearman => "Spearman — long reach, 360° whirlwind",
-                PlayerClass.Bowman => "Bowman — ranged arrows, piercing upgrade",
+                PlayerClass.Spearman => "Spearman — 180° arc thrust, 360° whirlwind",
+                PlayerClass.Bowman => "Bowman — strong ranged arrows, piercing upgrade",
                 PlayerClass.Magician => "Magician — splash spells",
                 _ => "Batter — melee bat, 360° whirlwind"
             };
@@ -516,8 +517,8 @@ namespace ProjectZx.UI
             if (mapKind == SurvivalMapKind.Dungeon && !GameSave.DungeonMapUnlocked) return;
 
             GameSessionContext.SurvivalMap = mapKind;
-            GameSessionContext.SelectedClass = GameSave.SelectedClass;
             GameSessionContext.SelectedHero = GameSave.SanitizeHero(GameSave.SelectedHero);
+            GameSessionContext.SelectedClass = GameSave.GetHeroClass(GameSessionContext.SelectedHero);
             GameSessionContext.FreshSurvivalRun = true;
             GameSessionContext.CarryRound = 0;
             // Every map starts a fresh run at round 1 (StartingRound 0 → ++).
@@ -731,7 +732,7 @@ namespace ProjectZx.UI
         static void SetOwnedRow(UpgradeRowRefs row, string label)
         {
             if (row.Label != null)
-                row.Label.text = $"{label} — Owned";
+                row.Label.text = label;
 
             if (row.BuyButton != null)
             {
@@ -847,18 +848,24 @@ namespace ProjectZx.UI
             var selected = GameSave.SelectedClass;
             var className = GetClassDisplayName(selected);
             var baseDamage = 10f * GameSave.DamageMultiplier;
-            if (selected == PlayerClass.Bowman) baseDamage *= 0.9f;
+            if (selected == PlayerClass.Bowman) baseDamage *= 1.26f;
+            else if (selected == PlayerClass.Spearman) baseDamage *= 1.15f;
             var moveSpeed = 4.5f * GameSave.SpeedMultiplier;
             var movementLabel = GameSave.UsesJoystickMovement ? "Joystick" : "Tap / Hold";
 
             var attackMode = GameSave.GetSelectedAttackMode(selected);
             var technique = AttackModeCatalog.GetLabel(attackMode, selected);
+            var standby = GameSave.GetStandbyHero();
+            var companionLine = standby.HasValue
+                ? $"Companion: {GameSave.GetHeroDisplayName(standby.Value)} ({GetClassDisplayName(GameSave.GetHeroClass(standby.Value))}, 20% dmg)\n"
+                : "Companion: Unlock RowZi at R20 door\n";
 
             _statsBodyText.text =
                 "CURRENT BUILD\n" +
                 $"Hero: {GameSave.GetHeroDisplayName(GameSave.SelectedHero)}\n" +
                 $"Class: {className}\n" +
                 $"Technique: {technique}\n" +
+                companionLine +
                 $"Movement: {movementLabel}\n" +
                 $"Max HP: {GameSave.MaxHp}\n" +
                 $"Base Damage: {baseDamage:0.#}\n" +
@@ -909,13 +916,13 @@ namespace ProjectZx.UI
                 {
                     var unlocked = GameSave.InsideMapUnlocked;
                     button.interactable = unlocked;
-                    label.text = unlocked ? "Inside Survival (R1)" : "Inside Survival (Locked)";
+                    label.text = unlocked ? "Inside Survival" : "Inside Survival (Locked)";
                 }
                 else if (text.Contains("Dungeon Survival"))
                 {
                     var unlocked = GameSave.DungeonMapUnlocked;
                     button.interactable = unlocked;
-                    label.text = unlocked ? "Dungeon Survival (R1)" : "Dungeon Survival (Locked)";
+                    label.text = unlocked ? "Dungeon Survival" : "Dungeon Survival (Locked)";
                 }
             }
         }

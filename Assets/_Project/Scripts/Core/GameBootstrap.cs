@@ -117,15 +117,25 @@ namespace ProjectZx.Core
             else
                 GameFactory.ScatterArenaObstacles(arenaW, arenaH, 14, 10, 3);
 
+            var activeHero = GameSessionContext.SelectedHero;
+            var activeClass = GameSave.GetHeroClass(activeHero);
+            GameSessionContext.SelectedClass = activeClass;
+
             var player = GameFactory.CreatePlayer(
                 Vector3.zero,
                 true,
-                GameSessionContext.SelectedClass,
-                GameSessionContext.SelectedHero);
+                activeClass,
+                activeHero);
+            var playerStats = player.GetComponent<PlayerStats>();
             if (!GameSessionContext.FreshSurvivalRun)
+                playerStats?.RestoreSnapshot(GameSessionContext.RunSnapshot);
+
+            // After RowZi unlock, the standby hero follows and assists with their own loadout.
+            var standby = GameSave.GetStandbyHero();
+            if (standby.HasValue && playerStats != null)
             {
-                var stats = player.GetComponent<PlayerStats>();
-                stats?.RestoreSnapshot(GameSessionContext.RunSnapshot);
+                var companionClass = GameSave.GetHeroClass(standby.Value);
+                GameFactory.CreateCompanion(player.transform, playerStats, standby.Value, companionClass);
             }
 
             var hud = new GameObject("GameHud").AddComponent<GameHud>();

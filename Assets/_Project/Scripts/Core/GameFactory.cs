@@ -403,26 +403,75 @@ namespace ProjectZx.Core
             stats.ConfigureForRun(survivalMode);
 
             if (survivalMode)
-            {
-                var selected = GameSave.SanitizeClass(playerClass);
-                switch (selected)
-                {
-                    case PlayerClass.Spearman:
-                        go.AddComponent<SpearmanCombat>();
-                        break;
-                    case PlayerClass.Bowman:
-                        go.AddComponent<BowmanCombat>();
-                        break;
-                    case PlayerClass.Magician:
-                        go.AddComponent<MagicianCombat>();
-                        break;
-                    default:
-                        go.AddComponent<PlayerCombat>();
-                        break;
-                }
-            }
+                AttachCombatForClass(go, playerClass);
 
             return go;
+        }
+
+        /// <summary>
+        /// Inactive hero companion for survival — follows the player, uses that hero's loadout,
+        /// deals 20% damage, and collects loot for the leader.
+        /// </summary>
+        public static GameObject CreateCompanion(
+            Transform leader,
+            PlayerStats leaderStats,
+            PlayableHero hero,
+            PlayerClass playerClass,
+            float scale = 0.42f * 1.3f * 0.92f)
+        {
+            if (leader == null || leaderStats == null) return null;
+
+            var sanitizedHero = GameSave.SanitizeHero(hero);
+            var spawn = leader.position + Vector3.left * 1.5f;
+            var go = CreateSprite(
+                $"Companion_{GameSave.GetHeroDisplayName(sanitizedHero)}",
+                ArtLibrary.GetHeroIdleSprite(sanitizedHero),
+                spawn,
+                scale,
+                0);
+            // No Player tag — enemies only chase the main hero.
+            go.AddComponent<YSortRenderer>().Configure(2);
+
+            var rb = go.AddComponent<Rigidbody2D>();
+            rb.bodyType = RigidbodyType2D.Kinematic;
+            rb.gravityScale = 0f;
+            rb.freezeRotation = true;
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            rb.useFullKinematicContacts = false;
+
+            var col = go.AddComponent<CircleCollider2D>();
+            col.radius = 0.4f;
+            col.isTrigger = true;
+
+            go.AddComponent<HitFlash>();
+            var stats = go.AddComponent<PlayerStats>();
+            stats.ConfigureAsCompanion(leaderStats);
+
+            AttachCombatForClass(go, playerClass);
+
+            var follower = go.AddComponent<CompanionFollower>();
+            follower.Bind(leader, leaderStats, sanitizedHero);
+            return go;
+        }
+
+        static void AttachCombatForClass(GameObject go, PlayerClass playerClass)
+        {
+            var selected = GameSave.SanitizeClass(playerClass);
+            switch (selected)
+            {
+                case PlayerClass.Spearman:
+                    go.AddComponent<SpearmanCombat>();
+                    break;
+                case PlayerClass.Bowman:
+                    go.AddComponent<BowmanCombat>();
+                    break;
+                case PlayerClass.Magician:
+                    go.AddComponent<MagicianCombat>();
+                    break;
+                default:
+                    go.AddComponent<PlayerCombat>();
+                    break;
+            }
         }
 
         public static GameObject CreateEnemy(

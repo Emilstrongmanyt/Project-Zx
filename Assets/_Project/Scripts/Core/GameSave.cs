@@ -25,6 +25,8 @@ namespace ProjectZx.Core
         const string BowmanUnlockedKey = "zx_bowman_unlocked";
         const string MagicianUnlockedKey = "zx_magician_unlocked";
         const string SelectedClassKey = "zx_selected_class";
+        const string ClassRollZyKey = "zx_class_rollzy";
+        const string ClassRowZiKey = "zx_class_rowzi";
         const string SelectedHeroKey = "zx_selected_hero";
         const string MovementControlKey = "zx_movement_control";
         const string RowZiUnlockedKey = "zx_rowzi_unlocked";
@@ -194,18 +196,40 @@ namespace ProjectZx.Core
         /// <summary>Permanent gold pickup bonus from Gold Magnet.</summary>
         public static float GoldFindMultiplier => GoldMagnetUnlocked ? 1.25f : 1f;
 
+        /// <summary>Class loadout for the currently selected hero (edits that hero's build).</summary>
         public static PlayerClass SelectedClass
         {
-            get
-            {
-                var stored = (PlayerClass)PlayerPrefs.GetInt(SelectedClassKey, (int)PlayerClass.Batter);
-                return SanitizeClass(stored);
-            }
-            set
-            {
-                PlayerPrefs.SetInt(SelectedClassKey, (int)SanitizeClass(value));
-                PlayerPrefs.Save();
-            }
+            get => GetHeroClass(SelectedHero);
+            set => SetHeroClass(SelectedHero, value);
+        }
+
+        /// <summary>Per-hero class loadout used by the active player and companion.</summary>
+        public static PlayerClass GetHeroClass(PlayableHero hero)
+        {
+            EnsureHeroClassMigrated();
+            var key = HeroClassKey(hero);
+            var stored = (PlayerClass)PlayerPrefs.GetInt(key, (int)PlayerClass.Batter);
+            return SanitizeClass(stored);
+        }
+
+        public static void SetHeroClass(PlayableHero hero, PlayerClass playerClass)
+        {
+            EnsureHeroClassMigrated();
+            PlayerPrefs.SetInt(HeroClassKey(hero), (int)SanitizeClass(playerClass));
+            PlayerPrefs.Save();
+        }
+
+        static string HeroClassKey(PlayableHero hero) =>
+            hero == PlayableHero.RowZi ? ClassRowZiKey : ClassRollZyKey;
+
+        static void EnsureHeroClassMigrated()
+        {
+            if (PlayerPrefs.HasKey(ClassRollZyKey) || PlayerPrefs.HasKey(ClassRowZiKey)) return;
+            // One-time migrate from the old global class key into both heroes.
+            var legacy = SanitizeClass((PlayerClass)PlayerPrefs.GetInt(SelectedClassKey, (int)PlayerClass.Batter));
+            PlayerPrefs.SetInt(ClassRollZyKey, (int)legacy);
+            PlayerPrefs.SetInt(ClassRowZiKey, (int)legacy);
+            PlayerPrefs.Save();
         }
 
         public static PlayableHero SelectedHero

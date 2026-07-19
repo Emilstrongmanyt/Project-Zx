@@ -61,7 +61,7 @@ namespace ProjectZx.Core
                 AttackMode.Standard when playerClass == PlayerClass.Bowman =>
                     "Single focused arrow shot.",
                 AttackMode.Standard when playerClass == PlayerClass.Spearman =>
-                    "Single spear thrust.",
+                    "Spear swing — hits all enemies in a 180° arc.",
                 AttackMode.Standard when playerClass == PlayerClass.Magician =>
                     "Single splash spell (coming soon).",
                 _ => "Single-target bat swing."

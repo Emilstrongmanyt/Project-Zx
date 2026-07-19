@@ -10,7 +10,8 @@ namespace ProjectZx.Combat
     [RequireComponent(typeof(PlayerStats))]
     public class BowmanCombat : MonoBehaviour
     {
-        const float DamageMultiplier = 0.9f;
+        /// <summary>Base bow damage: prior 0.9 increased by 40% → 1.26.</summary>
+        const float DamageMultiplier = 1.26f;
         const float PierceSecondaryMultiplier = 0.5f;
 
         [SerializeField] float attackRange = 5.5f;
