@@ -24,6 +24,7 @@ namespace ProjectZx.Core
         const string SpearmanUnlockedKey = "zx_spearman_unlocked";
         const string BowmanUnlockedKey = "zx_bowman_unlocked";
         const string MagicianUnlockedKey = "zx_magician_unlocked";
+        const string SamuraiUnlockedKey = "zx_samurai_unlocked";
         const string SelectedClassKey = "zx_selected_class";
         const string ClassRollZyKey = "zx_class_rollzy";
         const string ClassRowZiKey = "zx_class_rowzi";
@@ -34,6 +35,7 @@ namespace ProjectZx.Core
         const string AttackModeSpearmanKey = "zx_attack_spearman";
         const string AttackModeBowmanKey = "zx_attack_bowman";
         const string AttackModeMagicianKey = "zx_attack_magician";
+        const string AttackModeSamuraiKey = "zx_attack_samurai";
         const string ZombieKillsKey = "zx_lifetime_zombie_kills";
         const string BossKillsKey = "zx_lifetime_boss_kills";
         const string DeathsKey = "zx_lifetime_deaths";
@@ -126,6 +128,16 @@ namespace ProjectZx.Core
             set
             {
                 PlayerPrefs.SetInt(MagicianUnlockedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool SamuraiUnlocked
+        {
+            get => PlayerPrefs.GetInt(SamuraiUnlockedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(SamuraiUnlockedKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
         }
@@ -297,6 +309,7 @@ namespace ProjectZx.Core
             if (playerClass == PlayerClass.Spearman && !SpearmanUnlocked) return PlayerClass.Batter;
             if (playerClass == PlayerClass.Bowman && !BowmanUnlocked) return PlayerClass.Batter;
             if (playerClass == PlayerClass.Magician && !MagicianUnlocked) return PlayerClass.Batter;
+            if (playerClass == PlayerClass.Samurai && !SamuraiUnlocked) return PlayerClass.Batter;
             return playerClass;
         }
 
@@ -325,6 +338,7 @@ namespace ProjectZx.Core
                 PlayerClass.Spearman => AttackModeSpearmanKey,
                 PlayerClass.Bowman => AttackModeBowmanKey,
                 PlayerClass.Magician => AttackModeMagicianKey,
+                PlayerClass.Samurai => AttackModeSamuraiKey,
                 _ => AttackModeBatterKey
             };
         }

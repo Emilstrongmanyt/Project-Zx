@@ -132,6 +132,7 @@ namespace ProjectZx.Waves
             var bossRound = round % 10 == 0;
             var roundTwentyBoss = round == 20 && MapKind == SurvivalMapKind.Outside;
             var roundThirtyBoss = round == 30 && MapKind == SurvivalMapKind.Inside;
+            var roundFortyBoss = round == 40 && MapKind == SurvivalMapKind.Dungeon;
             if (bossRound) total = Mathf.Max(total - 1, 1);
 
             var waveCount = GetWaveCount(round);
@@ -146,7 +147,7 @@ namespace ProjectZx.Waves
 
                 for (var i = 0; i < count; i++)
                 {
-                    SpawnEnemy(round, false, false, false);
+                    SpawnEnemy(round, false, false, false, false);
                     if (i % 3 == 0) yield return null;
                 }
 
@@ -157,8 +158,8 @@ namespace ProjectZx.Waves
             if (bossRound)
             {
                 yield return new WaitForSeconds(0.35f);
-                SpawnEnemy(round, true, roundTwentyBoss, roundThirtyBoss);
-                _hud?.ShowBossWarning(roundTwentyBoss || roundThirtyBoss);
+                SpawnEnemy(round, true, roundTwentyBoss, roundThirtyBoss, roundFortyBoss);
+                _hud?.ShowBossWarning(roundTwentyBoss || roundThirtyBoss || roundFortyBoss);
             }
 
             _spawning = false;
@@ -179,7 +180,7 @@ namespace ProjectZx.Waves
             Achievements.UnlockInsideArcher();
         }
 
-        void SpawnEnemy(int round, bool boss, bool roundTwentyBoss, bool roundThirtyBoss)
+        void SpawnEnemy(int round, bool boss, bool roundTwentyBoss, bool roundThirtyBoss, bool roundFortyBoss)
         {
             var origin = _player != null ? (Vector2)_player.position : Vector2.zero;
             var spawnPos = ArenaBounds.RandomSpawnAround(origin, 7f, 12f);
@@ -192,7 +193,7 @@ namespace ProjectZx.Waves
                 _ => EnemyZombieKind.Outside
             };
 
-            GameFactory.CreateEnemy(spawnPos, round, boss, roundTwentyBoss, zombieKind, roundThirtyBoss);
+            GameFactory.CreateEnemy(spawnPos, round, boss, roundTwentyBoss, zombieKind, roundThirtyBoss, roundFortyBoss);
             EnemiesRemaining++;
         }
 

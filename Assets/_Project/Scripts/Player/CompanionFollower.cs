@@ -135,6 +135,8 @@ namespace ProjectZx.Player
             if (batter != null && batter.IsSwinging) return true;
             var spearman = GetComponent<SpearmanCombat>();
             if (spearman != null && spearman.IsThrusting) return true;
+            var samurai = GetComponent<SamuraiCombat>();
+            if (samurai != null && samurai.IsSwiping) return true;
             var bowman = GetComponent<BowmanCombat>();
             if (bowman != null && bowman.IsDrawing) return true;
             var magician = GetComponent<MagicianCombat>();

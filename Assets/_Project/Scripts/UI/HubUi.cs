@@ -40,6 +40,7 @@ namespace ProjectZx.UI
             public Button BatterButton;
             public Button SpearmanButton;
             public Button BowmanButton;
+            public Button SamuraiButton;
             public Button MagicianButton;
         }
 
@@ -257,32 +258,32 @@ namespace ProjectZx.UI
 
         GameObject BuildLoadoutPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "LoadoutPanel", Vector2.zero, new Vector2(960, 900), ArtLibrary.ShopUi);
-            CreateText(panel.transform, "Build Loadout", 38, TextAnchor.MiddleCenter, new Vector2(0, 390), new Vector2(620, 52));
-            CreateText(panel.transform, "Class is saved per hero. Swap heroes at camp to set the companion build.", 18, TextAnchor.MiddleCenter, new Vector2(0, 348), new Vector2(820, 36));
+            var panel = CreateDialogPanel(parent, "LoadoutPanel", Vector2.zero, new Vector2(960, 980), ArtLibrary.ShopUi);
+            CreateText(panel.transform, "Build Loadout", 38, TextAnchor.MiddleCenter, new Vector2(0, 430), new Vector2(620, 52));
+            CreateText(panel.transform, "Class is saved per hero. Swap heroes at camp to set the companion build.", 18, TextAnchor.MiddleCenter, new Vector2(0, 388), new Vector2(820, 36));
 
-            // Class section
-            _loadoutClassPicker = BuildClassPicker(panel.transform, 300f, 255f, 180f);
+            // Class section (3 rows: Batter/Spearman, Bowman/Samurai, Magician)
+            _loadoutClassPicker = BuildClassPicker(panel.transform, 340f, 295f, 220f);
 
-            // Technique section (clear gap under class buttons at ~190-132)
-            CreateText(panel.transform, "Attack Technique", 28, TextAnchor.MiddleCenter, new Vector2(0, 70), new Vector2(620, 40));
-            _techniqueStatusText = CreateText(panel.transform, "", 20, TextAnchor.MiddleCenter, new Vector2(0, 24), new Vector2(780, 52));
+            // Technique section under Magician row (~220-152 = 68)
+            CreateText(panel.transform, "Attack Technique", 28, TextAnchor.MiddleCenter, new Vector2(0, 10), new Vector2(620, 40));
+            _techniqueStatusText = CreateText(panel.transform, "", 20, TextAnchor.MiddleCenter, new Vector2(0, -36), new Vector2(780, 52));
             _techniqueStatusText.alignment = TextAnchor.UpperCenter;
-            _techniqueStandardButton = CreateButton(panel.transform, "Standard", new Vector2(-160, -50), () => SelectAttackMode(AttackMode.Standard));
-            _techniqueSpecialButton = CreateButton(panel.transform, "Special", new Vector2(160, -50), SelectSpecialAttackMode);
+            _techniqueStandardButton = CreateButton(panel.transform, "Standard", new Vector2(-160, -110), () => SelectAttackMode(AttackMode.Standard));
+            _techniqueSpecialButton = CreateButton(panel.transform, "Special", new Vector2(160, -110), SelectSpecialAttackMode);
 
             // Movement control (mutually exclusive)
-            CreateText(panel.transform, "Movement Control", 28, TextAnchor.MiddleCenter, new Vector2(0, -140), new Vector2(620, 40));
-            CreateText(panel.transform, "Only one control style is active at a time.", 20, TextAnchor.MiddleCenter, new Vector2(0, -176), new Vector2(700, 32));
-            _movementJoystickButton = CreateButton(panel.transform, "Joystick", new Vector2(-160, -240), () => SelectMovementControl(MovementControlType.Joystick));
-            _movementTapHoldButton = CreateButton(panel.transform, "Tap / Hold", new Vector2(160, -240), () => SelectMovementControl(MovementControlType.TapHold));
+            CreateText(panel.transform, "Movement Control", 28, TextAnchor.MiddleCenter, new Vector2(0, -200), new Vector2(620, 40));
+            CreateText(panel.transform, "Only one control style is active at a time.", 20, TextAnchor.MiddleCenter, new Vector2(0, -236), new Vector2(700, 32));
+            _movementJoystickButton = CreateButton(panel.transform, "Joystick", new Vector2(-160, -300), () => SelectMovementControl(MovementControlType.Joystick));
+            _movementTapHoldButton = CreateButton(panel.transform, "Tap / Hold", new Vector2(160, -300), () => SelectMovementControl(MovementControlType.TapHold));
 
-            CreateButton(panel.transform, "Back to Shop", new Vector2(-160, -350), () =>
+            CreateButton(panel.transform, "Back to Shop", new Vector2(-160, -400), () =>
             {
                 panel.SetActive(false);
                 OpenShop();
             });
-            CreateButton(panel.transform, "Close", new Vector2(160, -350), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Close", new Vector2(160, -400), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
@@ -339,7 +340,8 @@ namespace ProjectZx.UI
                 BatterButton = CreateButton(parent, "Batter", new Vector2(-160, buttonY), () => SelectClass(PlayerClass.Batter)),
                 SpearmanButton = CreateButton(parent, "Spearman", new Vector2(160, buttonY), () => SelectClass(PlayerClass.Spearman)),
                 BowmanButton = CreateButton(parent, "Bowman", new Vector2(-160, buttonY - 76f), () => SelectClass(PlayerClass.Bowman)),
-                MagicianButton = CreateButton(parent, "Magician", new Vector2(160, buttonY - 76f), () => SelectClass(PlayerClass.Magician))
+                SamuraiButton = CreateButton(parent, "Samurai", new Vector2(160, buttonY - 76f), () => SelectClass(PlayerClass.Samurai)),
+                MagicianButton = CreateButton(parent, "Magician", new Vector2(0, buttonY - 152f), () => SelectClass(PlayerClass.Magician))
             };
         }
 
@@ -378,6 +380,7 @@ namespace ProjectZx.UI
         {
             if (playerClass == PlayerClass.Spearman && !GameSave.SpearmanUnlocked) return;
             if (playerClass == PlayerClass.Bowman && !GameSave.BowmanUnlocked) return;
+            if (playerClass == PlayerClass.Samurai && !GameSave.SamuraiUnlocked) return;
             if (playerClass == PlayerClass.Magician && !GameSave.MagicianUnlocked) return;
             GameSave.SelectedClass = playerClass;
             RefreshLoadoutPanel();
@@ -462,6 +465,7 @@ namespace ProjectZx.UI
             {
                 PlayerClass.Spearman => "Spearman — 180° arc thrust, 360° whirlwind",
                 PlayerClass.Bowman => "Bowman — strong ranged arrows, piercing upgrade",
+                PlayerClass.Samurai => "Samurai — double 180° katana swipe, triple with Whirlwind",
                 PlayerClass.Magician => "Magician — splash spells",
                 _ => "Batter — melee bat, 360° whirlwind"
             };
@@ -473,6 +477,7 @@ namespace ProjectZx.UI
             {
                 PlayerClass.Spearman => "Spearman",
                 PlayerClass.Bowman => "Bowman",
+                PlayerClass.Samurai => "Samurai",
                 PlayerClass.Magician => "Magician",
                 _ => "Batter"
             };
@@ -487,6 +492,7 @@ namespace ProjectZx.UI
             RefreshClassButton(picker.BatterButton, PlayerClass.Batter, true, "Batter");
             RefreshClassButton(picker.SpearmanButton, PlayerClass.Spearman, GameSave.SpearmanUnlocked, "Spearman (Beat R20 Boss)");
             RefreshClassButton(picker.BowmanButton, PlayerClass.Bowman, GameSave.BowmanUnlocked, "Bowman (Clear R50 Inside)");
+            RefreshClassButton(picker.SamuraiButton, PlayerClass.Samurai, GameSave.SamuraiUnlocked, "Samurai (Dungeon R40 Boss)");
             RefreshClassButton(picker.MagicianButton, PlayerClass.Magician, GameSave.MagicianUnlocked, "Magician (Coming Soon)");
         }
 
@@ -628,7 +634,7 @@ namespace ProjectZx.UI
         void BuyFrostTip()
         {
             if (GameSave.FrostTipUnlocked) return;
-            if (!GameSave.SpearmanUnlocked && !GameSave.BowmanUnlocked) return;
+            if (!GameSave.SpearmanUnlocked && !GameSave.BowmanUnlocked && !GameSave.SamuraiUnlocked) return;
             if (GameSave.TrySpendGold(ShopCosts.FrostTip)) GameSave.FrostTipUnlocked = true;
             RefreshGold();
             RefreshShopRows();
@@ -675,8 +681,8 @@ namespace ProjectZx.UI
 
             if (GameSave.FrostTipUnlocked)
                 SetOwnedRow(_frostTipRow, "Frost Tip (freeze zombies 0.5–1s)");
-            else if (!GameSave.SpearmanUnlocked && !GameSave.BowmanUnlocked)
-                SetLockedRow(_frostTipRow, "Frost Tip (freeze zombies 0.5–1s)", "Unlock Spearman or Bowman");
+            else if (!GameSave.SpearmanUnlocked && !GameSave.BowmanUnlocked && !GameSave.SamuraiUnlocked)
+                SetLockedRow(_frostTipRow, "Frost Tip (freeze zombies 0.5–1s)", "Unlock Spearman, Bowman, or Samurai");
             else
                 SetUpgradeRow(_frostTipRow, "Frost Tip (freeze zombies 0.5–1s)", ShopCosts.FrostTip, false, string.Empty);
         }
@@ -850,6 +856,7 @@ namespace ProjectZx.UI
             var baseDamage = 10f * GameSave.DamageMultiplier;
             if (selected == PlayerClass.Bowman) baseDamage *= 1.26f;
             else if (selected == PlayerClass.Spearman) baseDamage *= 1.15f;
+            else if (selected == PlayerClass.Samurai) baseDamage *= 0.7f;
             var moveSpeed = 4.5f * GameSave.SpeedMultiplier;
             var movementLabel = GameSave.UsesJoystickMovement ? "Joystick" : "Tap / Hold";
 
@@ -880,6 +887,7 @@ namespace ProjectZx.UI
                 $"Campfire Blessing: {(GameSave.CampfireBlessingUnlocked ? "Owned" : "Locked")}\n" +
                 $"Spearman: {(GameSave.SpearmanUnlocked ? "Unlocked" : "Locked")}\n" +
                 $"Bowman: {(GameSave.BowmanUnlocked ? "Unlocked" : "Locked")}\n" +
+                $"Samurai: {(GameSave.SamuraiUnlocked ? "Unlocked" : "Locked")}\n" +
                 $"Magician: {(GameSave.MagicianUnlocked ? "Unlocked" : "Coming Soon")}\n" +
                 $"RowZi: {(GameSave.RowZiUnlocked ? "Unlocked" : "Meet at R20 door")}\n\n" +
                 "LIFETIME RECORDS\n" +

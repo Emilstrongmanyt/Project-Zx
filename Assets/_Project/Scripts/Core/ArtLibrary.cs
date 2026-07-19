@@ -35,6 +35,7 @@ namespace ProjectZx.Core
             _campfire = null;
             _baseballBat = null;
             _spear = null;
+            _katana = null;
             _bow = null;
             _arrow = null;
             _gateway = null;
@@ -91,6 +92,7 @@ namespace ProjectZx.Core
         static Sprite _campfire;
         static Sprite _baseballBat;
         static Sprite _spear;
+        static Sprite _katana;
         static Sprite _bow;
         static Sprite _arrow;
         static Sprite _gateway;
@@ -163,6 +165,7 @@ namespace ProjectZx.Core
         public static Sprite Campfire => _campfire ??= CreateCampfireSprite();
         public static Sprite BaseballBat => _baseballBat ??= LoadOrCreateBat();
         public static Sprite Spear => _spear ??= CreateSpearSprite();
+        public static Sprite Katana => _katana ??= CreateKatanaSprite();
         public static Sprite Bow => _bow ??= LoadOrCreateBow();
         public static Sprite Arrow => _arrow ??= CreateArrowSprite();
         public static Sprite Gateway => _gateway ??= LoadOrCreateGateway();
@@ -1052,6 +1055,54 @@ namespace ProjectZx.Core
 
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.08f, 0.5f), 4f);
+        }
+
+        static Sprite CreateKatanaSprite()
+        {
+            const int w = 36;
+            const int h = 8;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+
+            void Set(int x, int y, Color c)
+            {
+                if (x >= 0 && x < w && y >= 0 && y < h) tex.SetPixel(x, y, c);
+            }
+
+            var clear = new Color(0, 0, 0, 0);
+            var blade = new Color(0.82f, 0.86f, 0.9f);
+            var bladeEdge = new Color(0.95f, 0.97f, 1f);
+            var guard = new Color(0.55f, 0.18f, 0.16f);
+            var hilt = new Color(0.22f, 0.16f, 0.12f);
+            var wrap = new Color(0.12f, 0.12f, 0.14f);
+
+            for (var y = 0; y < h; y++)
+            for (var x = 0; x < w; x++)
+                Set(x, y, clear);
+
+            // Hilt / wrap
+            for (var x = 0; x < 8; x++)
+            {
+                Set(x, 3, hilt);
+                Set(x, 4, x % 2 == 0 ? wrap : hilt);
+            }
+
+            // Tsuba (guard)
+            Set(8, 2, guard); Set(8, 3, guard); Set(8, 4, guard); Set(8, 5, guard);
+            Set(9, 1, guard); Set(9, 2, guard); Set(9, 5, guard); Set(9, 6, guard);
+
+            // Curved blade
+            for (var x = 10; x < 34; x++)
+            {
+                var rise = (x - 10) / 12;
+                Set(x, 3 + rise / 3, blade);
+                Set(x, 4 + rise / 3, bladeEdge);
+            }
+
+            Set(34, 4, bladeEdge); Set(35, 4, bladeEdge); Set(35, 5, bladeEdge);
+
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.1f, 0.5f), 4f);
         }
 
         static Sprite CreateBaseballBatSprite()
