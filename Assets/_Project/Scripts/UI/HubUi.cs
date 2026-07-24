@@ -33,6 +33,9 @@ namespace ProjectZx.UI
         GameObject _achievementsPanel;
         GameObject _mapPanel;
         GameObject _campfirePanel;
+        GameObject _equipmentPanel;
+        Text _equipmentStatusText;
+        readonly List<Button> _equipmentButtons = new();
 
         struct ClassPickerRefs
         {
@@ -96,6 +99,7 @@ namespace ProjectZx.UI
             _achievementsPanel = BuildAchievementsPanel(canvasGo.transform);
             _mapPanel = BuildMapPanel(canvasGo.transform);
             _campfirePanel = BuildCampfirePanel(canvasGo.transform);
+            _equipmentPanel = BuildEquipmentPanel(canvasGo.transform);
         }
 
         GameObject BuildShopPanel(Transform parent)
@@ -331,6 +335,156 @@ namespace ProjectZx.UI
             return panel;
         }
 
+        GameObject BuildEquipmentPanel(Transform parent)
+        {
+            var panel = CreateDialogPanel(parent, "EquipmentPanel", Vector2.zero, new Vector2(980, 820), ArtLibrary.ShopUi);
+            CreateText(panel.transform, "Treasure Chest", 38, TextAnchor.MiddleCenter, new Vector2(0, 350), new Vector2(700, 48));
+            CreateText(panel.transform, "Equip 1 ring and 1 necklace. Drops unlock here after you find them.", 20, TextAnchor.MiddleCenter, new Vector2(0, 300), new Vector2(860, 40));
+            _equipmentStatusText = CreateText(panel.transform, "", 22, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(860, 48));
+
+            CreateText(panel.transform, "Rings", 28, TextAnchor.MiddleCenter, new Vector2(0, 190), new Vector2(400, 36));
+            CreateText(panel.transform, "Necklaces", 28, TextAnchor.MiddleCenter, new Vector2(0, -10), new Vector2(400, 36));
+
+            _equipmentButtons.Clear();
+            var ringX = new[] { -280f, 0f, 280f };
+            var ringIndex = 0;
+            var neckX = new[] { -280f, 0f, 280f };
+            var neckIndex = 0;
+
+            // Unequip slots first.
+            _equipmentButtons.Add(CreateButton(panel.transform, "No Ring", new Vector2(ringX[ringIndex++], 120f), () =>
+            {
+                GameSave.UnequipSlot(EquipmentSlot.Ring);
+                RefreshEquipmentPanel();
+            }));
+            _equipmentButtons.Add(CreateButton(panel.transform, "No Necklace", new Vector2(neckX[neckIndex++], -80f), () =>
+            {
+                GameSave.UnequipSlot(EquipmentSlot.Necklace);
+                RefreshEquipmentPanel();
+            }));
+
+            foreach (var def in EquipmentCatalog.All)
+            {
+                var id = def.Id;
+                if (def.Slot == EquipmentSlot.Ring)
+                {
+                    var x = ringIndex < ringX.Length ? ringX[ringIndex++] : 0f;
+                    _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, new Vector2(x, 120f), () => SelectEquipment(id)));
+                }
+                else
+                {
+                    var x = neckIndex < neckX.Length ? neckX[neckIndex++] : 0f;
+                    _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, new Vector2(x, -80f), () => SelectEquipment(id)));
+                }
+            }
+
+            CreateButton(panel.transform, "Close", new Vector2(0, -300), () => panel.SetActive(false), large: true);
+            panel.SetActive(false);
+            return panel;
+        }
+
+        void SelectEquipment(EquipmentId id)
+        {
+            if (!GameSave.OwnsEquipment(id)) return;
+            GameSave.Equip(id);
+            RefreshEquipmentPanel();
+            SparkleBurst.Play(_equipmentPanel != null ? _equipmentPanel.transform : transform, Vector2.zero, 12);
+        }
+
+        void RefreshEquipmentPanel()
+        {
+            if (_equipmentStatusText != null)
+            {
+                var ring = EquipmentCatalog.Get(GameSave.EquippedRing);
+                var neck = EquipmentCatalog.Get(GameSave.EquippedNecklace);
+                var ringName = ring.Id != EquipmentId.None ? ring.DisplayName : "None";
+                var neckName = neck.Id != EquipmentId.None ? neck.DisplayName : "None";
+                _equipmentStatusText.text = $"Equipped: {ringName}  ·  {neckName}";
+            }
+
+            // Button order: No Ring, No Necklace, then catalog All in order.
+            var buttonIndex = 0;
+            RefreshEquipButton(GetEquipButton(buttonIndex++), EquipmentId.None, EquipmentSlot.Ring, "No Ring");
+            RefreshEquipButton(GetEquipButton(buttonIndex++), EquipmentId.None, EquipmentSlot.Necklace, "No Necklace");
+
+            foreach (var def in EquipmentCatalog.All)
+                RefreshEquipButton(GetEquipButton(buttonIndex++), def.Id, def.Slot, def.DisplayName);
+        }
+
+        Button GetEquipButton(int index)
+        {
+            if (index < 0 || index >= _equipmentButtons.Count) return null;
+            return _equipmentButtons[index];
+        }
+
+        static void RefreshEquipButton(Button button, EquipmentId id, EquipmentSlot slot, string baseLabel)
+        {
+            if (button == null) return;
+
+            var owned = id == EquipmentId.None || GameSave.OwnsEquipment(id);
+            var equipped = id == EquipmentId.None
+                ? (slot == EquipmentSlot.Ring ? GameSave.EquippedRing == EquipmentId.None : GameSave.EquippedNecklace == EquipmentId.None)
+                : (slot == EquipmentSlot.Ring ? GameSave.EquippedRing == id : GameSave.EquippedNecklace == id);
+
+            button.interactable = owned;
+            var image = button.GetComponent<Image>();
+            if (image != null)
+            {
+                if (!owned)
+                    image.color = new Color(0.25f, 0.25f, 0.28f, 0.7f);
+                else if (equipped)
+                    image.color = new Color(0.28f, 0.5f, 0.32f, 0.98f);
+                else
+                    image.color = new Color(0.2f, 0.35f, 0.55f, 0.95f);
+            }
+
+            var label = button.GetComponentInChildren<Text>();
+            if (label == null) return;
+
+            if (id == EquipmentId.None)
+            {
+                label.text = baseLabel;
+                return;
+            }
+
+            var def = EquipmentCatalog.Get(id);
+            if (!owned)
+                label.text = "??? (Find in survival)";
+            else
+                label.text = equipped ? $"{def.DisplayName} ✓" : $"{def.DisplayName}\n{def.Description}";
+            label.fontSize = owned ? 18 : 16;
+        }
+
+        public void OpenEquipmentChest()
+        {
+            CloseAllHubPanels();
+            RefreshEquipmentPanel();
+            if (_equipmentPanel != null)
+            {
+                _equipmentPanel.SetActive(true);
+                SparkleBurst.Play(_equipmentPanel.transform, new Vector2(0f, 200f), 10);
+            }
+        }
+
+        void CloseAllHubPanels()
+        {
+            if (_shopPanel != null) _shopPanel.SetActive(false);
+            if (_loadoutPanel != null) _loadoutPanel.SetActive(false);
+            if (_statsPanel != null) _statsPanel.SetActive(false);
+            if (_achievementsPanel != null) _achievementsPanel.SetActive(false);
+            if (_mapPanel != null) _mapPanel.SetActive(false);
+            if (_campfirePanel != null) _campfirePanel.SetActive(false);
+            if (_equipmentPanel != null) _equipmentPanel.SetActive(false);
+        }
+
+        void PlayUpgradeSparkles()
+        {
+            var parent = _shopPanel != null && _shopPanel.activeSelf
+                ? _shopPanel.transform
+                : transform;
+            SparkleBurst.Play(parent, Vector2.zero, 16);
+        }
+
         ClassPickerRefs BuildClassPicker(Transform parent, float titleY, float statusY, float buttonY)
         {
             CreateText(parent, "Choose Class", 28, TextAnchor.MiddleCenter, new Vector2(0, titleY), new Vector2(560, 40));
@@ -534,8 +688,7 @@ namespace ProjectZx.UI
             _loadoutPanel.SetActive(false);
             _statsPanel.SetActive(false);
             _achievementsPanel.SetActive(false);
-            _mapPanel.SetActive(false);
-            _campfirePanel.SetActive(false);
+            CloseAllHubPanels();
             GameFactory.LoadScene(GameScenes.SurvivalArena);
         }
 
@@ -578,67 +731,74 @@ namespace ProjectZx.UI
         void BuyHp()
         {
             if (GameSave.IsHpUpgradeMaxed) return;
-            if (GameSave.TrySpendGold(ShopCosts.HpUpgrade)) GameSave.HpUpgradeLevel++;
-            RefreshGold();
-            RefreshShopRows();
+            if (!GameSave.TrySpendGold(ShopCosts.HpUpgrade)) return;
+            GameSave.HpUpgradeLevel++;
+            OnShopUpgradePurchased();
         }
 
         void BuyDamage()
         {
             if (GameSave.IsDamageUpgradeMaxed) return;
-            if (GameSave.TrySpendGold(ShopCosts.DamageUpgrade)) GameSave.DamageUpgradeLevel++;
-            RefreshGold();
-            RefreshShopRows();
+            if (!GameSave.TrySpendGold(ShopCosts.DamageUpgrade)) return;
+            GameSave.DamageUpgradeLevel++;
+            OnShopUpgradePurchased();
         }
 
         void BuySpeed()
         {
             if (GameSave.IsSpeedUpgradeMaxed) return;
-            if (GameSave.TrySpendGold(ShopCosts.SpeedUpgrade)) GameSave.SpeedUpgradeLevel++;
-            RefreshGold();
-            RefreshShopRows();
+            if (!GameSave.TrySpendGold(ShopCosts.SpeedUpgrade)) return;
+            GameSave.SpeedUpgradeLevel++;
+            OnShopUpgradePurchased();
         }
 
         void BuyGoldMagnet()
         {
             if (GameSave.GoldMagnetUnlocked) return;
-            if (GameSave.TrySpendGold(ShopCosts.GoldMagnet)) GameSave.GoldMagnetUnlocked = true;
-            RefreshGold();
-            RefreshShopRows();
+            if (!GameSave.TrySpendGold(ShopCosts.GoldMagnet)) return;
+            GameSave.GoldMagnetUnlocked = true;
+            OnShopUpgradePurchased();
         }
 
         void BuyThickHide()
         {
             if (GameSave.ThickHideUnlocked) return;
-            if (GameSave.TrySpendGold(ShopCosts.ThickHide)) GameSave.ThickHideUnlocked = true;
-            RefreshGold();
-            RefreshShopRows();
+            if (!GameSave.TrySpendGold(ShopCosts.ThickHide)) return;
+            GameSave.ThickHideUnlocked = true;
+            OnShopUpgradePurchased();
         }
 
         void BuySecondWind()
         {
             if (GameSave.SecondWindUnlocked) return;
-            if (GameSave.TrySpendGold(ShopCosts.SecondWind)) GameSave.SecondWindUnlocked = true;
-            RefreshGold();
-            RefreshShopRows();
+            if (!GameSave.TrySpendGold(ShopCosts.SecondWind)) return;
+            GameSave.SecondWindUnlocked = true;
+            OnShopUpgradePurchased();
         }
 
         void BuyCampfireBlessing()
         {
             if (GameSave.CampfireBlessingUnlocked) return;
-            if (GameSave.TrySpendGold(ShopCosts.CampfireBlessing)) GameSave.CampfireBlessingUnlocked = true;
-            RefreshGold();
-            RefreshShopRows();
+            if (!GameSave.TrySpendGold(ShopCosts.CampfireBlessing)) return;
+            GameSave.CampfireBlessingUnlocked = true;
+            OnShopUpgradePurchased();
         }
 
         void BuyFrostTip()
         {
             if (GameSave.FrostTipUnlocked) return;
             if (!GameSave.SpearmanUnlocked && !GameSave.BowmanUnlocked && !GameSave.SamuraiUnlocked) return;
-            if (GameSave.TrySpendGold(ShopCosts.FrostTip)) GameSave.FrostTipUnlocked = true;
+            if (!GameSave.TrySpendGold(ShopCosts.FrostTip)) return;
+            GameSave.FrostTipUnlocked = true;
+            OnShopUpgradePurchased();
+            if (_loadoutPanel != null && _loadoutPanel.activeSelf) RefreshLoadoutPanel();
+        }
+
+        void OnShopUpgradePurchased()
+        {
             RefreshGold();
             RefreshShopRows();
-            if (_loadoutPanel != null && _loadoutPanel.activeSelf) RefreshLoadoutPanel();
+            PlayUpgradeSparkles();
         }
 
         void RefreshShopRows()
@@ -762,18 +922,18 @@ namespace ProjectZx.UI
         void BuyWhirlwind()
         {
             if (GameSave.WhirlwindUnlocked) return;
-            if (GameSave.TrySpendGold(ShopCosts.Whirlwind)) GameSave.WhirlwindUnlocked = true;
-            RefreshGold();
-            RefreshShopRows();
+            if (!GameSave.TrySpendGold(ShopCosts.Whirlwind)) return;
+            GameSave.WhirlwindUnlocked = true;
+            OnShopUpgradePurchased();
             if (_loadoutPanel != null && _loadoutPanel.activeSelf) RefreshLoadoutPanel();
         }
 
         void BuyPiercingShot()
         {
             if (GameSave.PiercingShotUnlocked || !GameSave.BowmanUnlocked) return;
-            if (GameSave.TrySpendGold(ShopCosts.PiercingShot)) GameSave.PiercingShotUnlocked = true;
-            RefreshGold();
-            RefreshShopRows();
+            if (!GameSave.TrySpendGold(ShopCosts.PiercingShot)) return;
+            GameSave.PiercingShotUnlocked = true;
+            OnShopUpgradePurchased();
             if (_loadoutPanel != null && _loadoutPanel.activeSelf) RefreshLoadoutPanel();
         }
 
@@ -781,36 +941,28 @@ namespace ProjectZx.UI
         {
             RefreshGold();
             RefreshShopRows();
-            _loadoutPanel.SetActive(false);
-            _statsPanel.SetActive(false);
-            _achievementsPanel.SetActive(false);
+            CloseAllHubPanels();
             _shopPanel.SetActive(true);
         }
 
         public void OpenLoadout()
         {
             RefreshLoadoutPanel();
-            _shopPanel.SetActive(false);
-            _statsPanel.SetActive(false);
-            _achievementsPanel.SetActive(false);
+            CloseAllHubPanels();
             _loadoutPanel.SetActive(true);
         }
 
         public void OpenStats()
         {
             RefreshStats();
-            _shopPanel.SetActive(false);
-            _loadoutPanel.SetActive(false);
-            _achievementsPanel.SetActive(false);
+            CloseAllHubPanels();
             _statsPanel.SetActive(true);
         }
 
         public void OpenAchievements()
         {
             RefreshAchievements();
-            _shopPanel.SetActive(false);
-            _loadoutPanel.SetActive(false);
-            _statsPanel.SetActive(false);
+            CloseAllHubPanels();
             _achievementsPanel.SetActive(true);
         }
 
@@ -853,11 +1005,12 @@ namespace ProjectZx.UI
 
             var selected = GameSave.SelectedClass;
             var className = GetClassDisplayName(selected);
-            var baseDamage = 10f * GameSave.DamageMultiplier;
+            var baseDamage = 10f * GameSave.DamageMultiplier * EquipmentCatalog.CombinedDamageMultiplier();
             if (selected == PlayerClass.Bowman) baseDamage *= 1.26f;
             else if (selected == PlayerClass.Spearman) baseDamage *= 1.15f;
             else if (selected == PlayerClass.Samurai) baseDamage *= 0.7f;
             var moveSpeed = 4.5f * GameSave.SpeedMultiplier;
+            var maxHp = GameSave.MaxHp + EquipmentCatalog.CombinedBonusMaxHp();
             var movementLabel = GameSave.UsesJoystickMovement ? "Joystick" : "Tap / Hold";
 
             var attackMode = GameSave.GetSelectedAttackMode(selected);
@@ -874,7 +1027,7 @@ namespace ProjectZx.UI
                 $"Technique: {technique}\n" +
                 companionLine +
                 $"Movement: {movementLabel}\n" +
-                $"Max HP: {GameSave.MaxHp}\n" +
+                $"Max HP: {maxHp}\n" +
                 $"Base Damage: {baseDamage:0.#}\n" +
                 $"Move Speed: {moveSpeed:0.##}\n" +
                 $"HP Upgrades: {GameSave.HpUpgradeLevel}   Damage: {GameSave.DamageUpgradeLevel}   Speed: {GameSave.SpeedUpgradeLevel}\n" +
@@ -885,6 +1038,8 @@ namespace ProjectZx.UI
                 $"Thick Hide: {(GameSave.ThickHideUnlocked ? "Owned" : "Locked")}\n" +
                 $"Second Wind: {(GameSave.SecondWindUnlocked ? "Owned" : "Locked")}\n" +
                 $"Campfire Blessing: {(GameSave.CampfireBlessingUnlocked ? "Owned" : "Locked")}\n" +
+                $"Ring: {EquipName(GameSave.EquippedRing)}\n" +
+                $"Necklace: {EquipName(GameSave.EquippedNecklace)}\n" +
                 $"Spearman: {(GameSave.SpearmanUnlocked ? "Unlocked" : "Locked")}\n" +
                 $"Bowman: {(GameSave.BowmanUnlocked ? "Unlocked" : "Locked")}\n" +
                 $"Samurai: {(GameSave.SamuraiUnlocked ? "Unlocked" : "Locked")}\n" +
@@ -898,14 +1053,23 @@ namespace ProjectZx.UI
                 $"Highest Round: {GameSave.HighestRoundReached}";
         }
 
+        static string EquipName(EquipmentId id)
+        {
+            if (id == EquipmentId.None) return "None";
+            var def = EquipmentCatalog.Get(id);
+            return def.Id != EquipmentId.None ? def.DisplayName : "None";
+        }
+
         public void OpenMapSelect()
         {
+            CloseAllHubPanels();
             RefreshMapButtons(_mapPanel);
             _mapPanel.SetActive(true);
         }
 
         public void OpenCampfireTravel()
         {
+            CloseAllHubPanels();
             RefreshMapButtons(_campfirePanel);
             _campfirePanel.SetActive(true);
         }

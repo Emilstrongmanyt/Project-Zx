@@ -570,6 +570,7 @@ namespace ProjectZx.Core
                 PickupType.Xp => "XpPickup",
                 PickupType.HpPotion => "HpPotionPickup",
                 PickupType.MapLoot => "MapLootPickup",
+                PickupType.Equipment => "EquipmentPickup",
                 _ => "GoldPickup"
             };
 
@@ -577,8 +578,17 @@ namespace ProjectZx.Core
             go.transform.position = position;
             var col = go.AddComponent<CircleCollider2D>();
             col.isTrigger = true;
-            col.radius = type == PickupType.Xp ? 0.55f : type == PickupType.MapLoot ? 0.75f : 0.85f;
+            col.radius = type == PickupType.Xp ? 0.55f
+                : type == PickupType.MapLoot ? 0.75f
+                : type == PickupType.Equipment ? 0.8f
+                : 0.85f;
             go.AddComponent<LootPickup>().Initialize(type, amount);
+            return go;
+        }
+
+        public static GameObject CreateEquipmentPickup(Vector3 position, EquipmentId equipmentId)
+        {
+            var go = CreatePickup(position, PickupType.Equipment, (int)equipmentId);
             return go;
         }
 

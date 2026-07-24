@@ -33,6 +33,9 @@ namespace ProjectZx.Enemies
         const float HpPotionDropChance = 0.05f;
         const float BossHpPotionDropChance = 0.12f;
         const float MapLootDropChance = 0.005f;
+        /// <summary>Very rare ring/necklace drops for the camp treasure chest.</summary>
+        const float EquipmentDropChance = 0.0035f;
+        const float BossEquipmentDropChance = 0.02f;
 
         public bool IsAlive { get; private set; } = true;
         public bool IsBoss { get; private set; }
@@ -645,6 +648,14 @@ namespace ProjectZx.Enemies
             // Rare pink crystal: vacuum every loot pile currently on the map.
             if (Random.value < MapLootDropChance)
                 GameFactory.CreatePickup(pos + Vector2.down * 0.3f, PickupType.MapLoot, 1);
+
+            // Very low chance for equipment (rings / necklaces) usable from the camp chest.
+            var equipmentChance = IsBoss ? BossEquipmentDropChance : EquipmentDropChance;
+            if (Random.value < equipmentChance)
+            {
+                var equipId = EquipmentCatalog.RollRandomDrop();
+                GameFactory.CreateEquipmentPickup(pos + Vector2.up * 0.45f + Vector2.left * 0.15f, equipId);
+            }
 
             var session = UnityEngine.Object.FindAnyObjectByType<SurvivalSession>();
             session?.NotifyEnemyKilled(this);

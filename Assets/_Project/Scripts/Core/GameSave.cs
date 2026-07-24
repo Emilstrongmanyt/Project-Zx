@@ -41,6 +41,9 @@ namespace ProjectZx.Core
         const string DeathsKey = "zx_lifetime_deaths";
         const string GoldEarnedKey = "zx_lifetime_gold_earned";
         const string HighestRoundKey = "zx_highest_round";
+        const string OwnedEquipmentKey = "zx_owned_equipment";
+        const string EquippedRingKey = "zx_equipped_ring";
+        const string EquippedNecklaceKey = "zx_equipped_necklace";
 
         public static int LastRunGoldBanked { get; set; }
 
@@ -205,8 +208,78 @@ namespace ProjectZx.Core
         /// <summary>Permanent pickup radius bonus from Gold Magnet.</summary>
         public static float LootRangeMultiplier => GoldMagnetUnlocked ? 1.25f : 1f;
 
-        /// <summary>Permanent gold pickup bonus from Gold Magnet.</summary>
-        public static float GoldFindMultiplier => GoldMagnetUnlocked ? 1.25f : 1f;
+        /// <summary>Permanent gold pickup bonus from Gold Magnet + equipped ring/necklace.</summary>
+        public static float GoldFindMultiplier =>
+            (GoldMagnetUnlocked ? 1.25f : 1f) * EquipmentCatalog.CombinedGoldFindMultiplier();
+
+        public static EquipmentId EquippedRing
+        {
+            get => SanitizeEquipped((EquipmentId)PlayerPrefs.GetInt(EquippedRingKey, 0), EquipmentSlot.Ring);
+            set
+            {
+                var id = SanitizeEquipped(value, EquipmentSlot.Ring);
+                PlayerPrefs.SetInt(EquippedRingKey, (int)id);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static EquipmentId EquippedNecklace
+        {
+            get => SanitizeEquipped((EquipmentId)PlayerPrefs.GetInt(EquippedNecklaceKey, 0), EquipmentSlot.Necklace);
+            set
+            {
+                var id = SanitizeEquipped(value, EquipmentSlot.Necklace);
+                PlayerPrefs.SetInt(EquippedNecklaceKey, (int)id);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool OwnsEquipment(EquipmentId id)
+        {
+            if (id == EquipmentId.None || !EquipmentCatalog.IsValid(id)) return false;
+            return (PlayerPrefs.GetInt(OwnedEquipmentKey, 0) & (1 << (int)id)) != 0;
+        }
+
+        public static bool UnlockEquipment(EquipmentId id)
+        {
+            if (id == EquipmentId.None || !EquipmentCatalog.IsValid(id)) return false;
+            if (OwnsEquipment(id)) return false;
+            var mask = PlayerPrefs.GetInt(OwnedEquipmentKey, 0) | (1 << (int)id);
+            PlayerPrefs.SetInt(OwnedEquipmentKey, mask);
+            PlayerPrefs.Save();
+            return true;
+        }
+
+        public static void Equip(EquipmentId id)
+        {
+            if (id == EquipmentId.None)
+                return;
+
+            var def = EquipmentCatalog.Get(id);
+            if (def.Id == EquipmentId.None || !OwnsEquipment(id)) return;
+
+            if (def.Slot == EquipmentSlot.Ring)
+                EquippedRing = id;
+            else
+                EquippedNecklace = id;
+        }
+
+        public static void UnequipSlot(EquipmentSlot slot)
+        {
+            if (slot == EquipmentSlot.Ring)
+                EquippedRing = EquipmentId.None;
+            else
+                EquippedNecklace = EquipmentId.None;
+        }
+
+        static EquipmentId SanitizeEquipped(EquipmentId id, EquipmentSlot slot)
+        {
+            if (id == EquipmentId.None) return EquipmentId.None;
+            var def = EquipmentCatalog.Get(id);
+            if (def.Id == EquipmentId.None || def.Slot != slot || !OwnsEquipment(id))
+                return EquipmentId.None;
+            return id;
+        }
 
         /// <summary>Class loadout for the currently selected hero (edits that hero's build).</summary>
         public static PlayerClass SelectedClass

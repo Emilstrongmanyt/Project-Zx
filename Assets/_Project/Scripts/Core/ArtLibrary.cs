@@ -38,6 +38,11 @@ namespace ProjectZx.Core
             _katana = null;
             _bow = null;
             _arrow = null;
+            _sparkles = null;
+            _sparkles2 = null;
+            _necklace = null;
+            _skullNecklace = null;
+            _treasureChest = null;
             _gateway = null;
             _stone = null;
             _tree = null;
@@ -95,6 +100,11 @@ namespace ProjectZx.Core
         static Sprite _katana;
         static Sprite _bow;
         static Sprite _arrow;
+        static Sprite _sparkles;
+        static Sprite _sparkles2;
+        static Sprite _necklace;
+        static Sprite _skullNecklace;
+        static Sprite _treasureChest;
         static Sprite _gateway;
         static Sprite _stone;
         static Sprite _tree;
@@ -164,10 +174,16 @@ namespace ProjectZx.Core
         public static Sprite GrassTile => _grassTile ??= LoadOrCreateGrass();
         public static Sprite Campfire => _campfire ??= CreateCampfireSprite();
         public static Sprite BaseballBat => _baseballBat ??= LoadOrCreateBat();
-        public static Sprite Spear => _spear ??= CreateSpearSprite();
-        public static Sprite Katana => _katana ??= CreateKatanaSprite();
+        public static Sprite Spear => _spear ??= TryLoadSprite("Spear", TilePixelsPerUnit) ?? CreateSpearSprite();
+        /// <summary>Samurai weapon — uploaded sword art (Hammer.png).</summary>
+        public static Sprite Katana => _katana ??= TryLoadSprite("Hammer", TilePixelsPerUnit) ?? CreateKatanaSprite();
         public static Sprite Bow => _bow ??= LoadOrCreateBow();
-        public static Sprite Arrow => _arrow ??= CreateArrowSprite();
+        public static Sprite Arrow => _arrow ??= TryLoadSprite("Arrow", TilePixelsPerUnit) ?? CreateArrowSprite();
+        public static Sprite Sparkles => _sparkles ??= TryLoadSprite("Sparkles", TilePixelsPerUnit);
+        public static Sprite Sparkles2 => _sparkles2 ??= TryLoadSprite("Sparkles2", TilePixelsPerUnit);
+        public static Sprite Necklace => _necklace ??= TryLoadSprite("Necklace", TilePixelsPerUnit);
+        public static Sprite SkullNecklace => _skullNecklace ??= TryLoadSprite("Skull Necklace", TilePixelsPerUnit);
+        public static Sprite TreasureChest => _treasureChest ??= CreateTreasureChestSprite();
         public static Sprite Gateway => _gateway ??= LoadOrCreateGateway();
         public static Sprite Stone => _stone ??= GetSheetVariant("RockSheet", 10, 0) ?? CreateStoneSprite();
         public static Sprite Tree => _tree ??= GetSheetVariant("TreeSheet", 9, 0) ?? CreateTreeSprite();
@@ -279,22 +295,39 @@ namespace ProjectZx.Core
 
         public static Sprite GetInsideTile(int index)
         {
-            _insideTiles ??= new[]
-            {
-                LoadTile("Art/tile1_inside", "tile1Inside"),
-                LoadTile("Art/tile2_inside", "tile2Inside")
-            };
+            _insideTiles ??= BuildTileSet(
+                "Diamond Checkerboard Tile",
+                "Rectangle Tile",
+                "Art/tile1_inside",
+                "tile1Inside",
+                "Art/tile2_inside",
+                "tile2Inside");
             return _insideTiles[Mathf.Abs(index) % _insideTiles.Length];
         }
 
         public static Sprite GetDungeonTile(int index)
         {
-            _dungeonTiles ??= new[]
-            {
-                CreateTileFallback("dungeon_cave_a"),
-                CreateTileFallback("dungeon_cave_b")
-            };
+            _dungeonTiles ??= BuildTileSet(
+                "Roof Tiles",
+                "Rectangle Tile",
+                "Diamond Checkerboard Tile",
+                "dungeon_cave_a",
+                "dungeon_cave_b");
             return _dungeonTiles[Mathf.Abs(index) % _dungeonTiles.Length];
+        }
+
+        static Sprite[] BuildTileSet(params string[] paths)
+        {
+            var list = new System.Collections.Generic.List<Sprite>(paths.Length);
+            for (var i = 0; i < paths.Length; i++)
+            {
+                var sprite = TryLoadSprite(paths[i], TilePixelsPerUnit);
+                if (sprite != null) list.Add(sprite);
+            }
+
+            if (list.Count == 0)
+                list.Add(CreateTileFallback("fallback_tile"));
+            return list.ToArray();
         }
 
         public static Sprite GetFireBreathFrame(int frame)
@@ -1055,6 +1088,46 @@ namespace ProjectZx.Core
 
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.08f, 0.5f), 4f);
+        }
+
+        static Sprite CreateTreasureChestSprite()
+        {
+            const int w = 28;
+            const int h = 24;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+
+            void Set(int x, int y, Color c)
+            {
+                if (x >= 0 && x < w && y >= 0 && y < h) tex.SetPixel(x, y, c);
+            }
+
+            var clear = new Color(0, 0, 0, 0);
+            var wood = new Color(0.45f, 0.28f, 0.12f);
+            var woodDark = new Color(0.28f, 0.16f, 0.07f);
+            var metal = new Color(0.78f, 0.68f, 0.22f);
+            var lid = new Color(0.55f, 0.34f, 0.14f);
+
+            for (var y = 0; y < h; y++)
+            for (var x = 0; x < w; x++)
+                Set(x, y, clear);
+
+            for (var y = 2; y < 14; y++)
+            for (var x = 3; x < 25; x++)
+                Set(x, y, y < 4 || y > 11 ? woodDark : wood);
+
+            for (var y = 14; y < 21; y++)
+            for (var x = 2; x < 26; x++)
+                Set(x, y, lid);
+
+            for (var y = 6; y < 12; y++)
+            for (var x = 12; x < 16; x++)
+                Set(x, y, metal);
+
+            Set(13, 8, woodDark); Set(14, 8, woodDark);
+
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.2f), 4f);
         }
 
         static Sprite CreateKatanaSprite()
