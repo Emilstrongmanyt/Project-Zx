@@ -70,12 +70,14 @@ namespace ProjectZx.Combat
 
             var spearGo = new GameObject("Spear");
             spearGo.transform.SetParent(_spearPivot, false);
-            spearGo.transform.localPosition = new Vector3(0.42f, 0.02f, 0f);
-            spearGo.transform.localScale = Vector3.one * 0.9f;
+            spearGo.transform.localPosition = new Vector3(0.38f, 0.02f, 0f);
+            // Weapon sprites are authored at combat world-length; keep near 1× under player scale.
+            spearGo.transform.localScale = Vector3.one;
 
             var spearRenderer = spearGo.AddComponent<SpriteRenderer>();
             spearRenderer.sprite = ArtLibrary.Spear;
-            spearGo.AddComponent<YSortRenderer>().Configure(1);
+            spearRenderer.sortingOrder = 20;
+            spearGo.AddComponent<YSortRenderer>().Configure(3);
 
             _spearTip = spearGo.transform;
             _spearPivot.localRotation = Quaternion.Euler(0f, 0f, RestAngle);

@@ -174,11 +174,13 @@ namespace ProjectZx.Core
         public static Sprite GrassTile => _grassTile ??= LoadOrCreateGrass();
         public static Sprite Campfire => _campfire ??= CreateCampfireSprite();
         public static Sprite BaseballBat => _baseballBat ??= LoadOrCreateBat();
-        public static Sprite Spear => _spear ??= TryLoadSprite("Spear", TilePixelsPerUnit) ?? CreateSpearSprite();
-        /// <summary>Samurai weapon — uploaded sword art (Hammer.png).</summary>
-        public static Sprite Katana => _katana ??= TryLoadSprite("Hammer", TilePixelsPerUnit) ?? CreateKatanaSprite();
+        // worldLength is in local sprite units; player root is ~0.55 scale so ~2.6 local ≈ 1.4 world.
+        /// <summary>Uploaded spear art scaled to a readable combat length (16px @ 100 PPU is invisible).</summary>
+        public static Sprite Spear => _spear ??= LoadWeaponSprite("Spear", new Vector2(0.1f, 0.5f), 2.75f) ?? CreateSpearSprite();
+        /// <summary>Samurai weapon — uploaded sword art (Hammer.png), scaled for combat.</summary>
+        public static Sprite Katana => _katana ??= LoadWeaponSprite("Hammer", new Vector2(0.1f, 0.5f), 2.5f) ?? CreateKatanaSprite();
         public static Sprite Bow => _bow ??= LoadOrCreateBow();
-        public static Sprite Arrow => _arrow ??= TryLoadSprite("Arrow", TilePixelsPerUnit) ?? CreateArrowSprite();
+        public static Sprite Arrow => _arrow ??= LoadWeaponSprite("Arrow", new Vector2(0.08f, 0.5f), 1.15f) ?? CreateArrowSprite();
         public static Sprite Sparkles => _sparkles ??= TryLoadSprite("Sparkles", TilePixelsPerUnit);
         public static Sprite Sparkles2 => _sparkles2 ??= TryLoadSprite("Sparkles2", TilePixelsPerUnit);
         public static Sprite Necklace => _necklace ??= TryLoadSprite("Necklace", TilePixelsPerUnit);
@@ -552,6 +554,55 @@ namespace ProjectZx.Core
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Loads a held weapon sprite and rebuilds it at a combat-readable world length.
+        /// Uploaded 16×16 art at 100 PPU is only ~0.16 units — effectively invisible on the hero.
+        /// </summary>
+        static Sprite LoadWeaponSprite(string resourceName, Vector2 pivot, float worldLength)
+        {
+            if (string.IsNullOrEmpty(resourceName) || worldLength < 0.05f) return null;
+
+            Sprite source = null;
+            var multi = Resources.LoadAll<Sprite>(resourceName);
+            if (multi != null && multi.Length > 0)
+                source = multi[0];
+            if (source == null)
+                source = Resources.Load<Sprite>(resourceName);
+
+            if (source != null)
+            {
+                var rect = source.textureRect;
+                var ppu = Mathf.Max(1f, rect.width / worldLength);
+                var rebuilt = Sprite.Create(
+                    source.texture,
+                    rect,
+                    pivot,
+                    ppu,
+                    0,
+                    SpriteMeshType.FullRect);
+                if (rebuilt != null)
+                {
+                    rebuilt.name = resourceName + "_Weapon";
+                    return rebuilt;
+                }
+
+                // If Create fails (platform/readability), fall back to the imported sprite.
+                return source;
+            }
+
+            var texture = Resources.Load<Texture2D>(resourceName);
+            if (texture == null) return null;
+
+            var fullPpu = Mathf.Max(1f, texture.width / worldLength);
+            return Sprite.Create(
+                texture,
+                new Rect(0f, 0f, texture.width, texture.height),
+                pivot,
+                fullPpu,
+                0,
+                SpriteMeshType.FullRect);
         }
 
         public static float GetTileScale(Sprite sprite, float tileSize = 1f)

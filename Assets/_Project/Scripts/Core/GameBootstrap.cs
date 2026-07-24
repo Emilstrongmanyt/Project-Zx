@@ -47,7 +47,8 @@ namespace ProjectZx.Core
             GameFactory.ReserveClearing(new Vector2(-2.1f, 1.1f), 3.6f);     // wizard shop
             GameFactory.ReserveClearing(new Vector2(2.1f, 1.1f), 3.6f);      // knight map
             GameFactory.ReserveClearing(new Vector2(0f, 2.8f), 3.6f);        // achievement board
-            GameFactory.ReserveClearing(new Vector2(-3.2f, -0.2f), 2.6f);    // treasure chest
+            // Chest sits far left of the wizard so it never overlaps the shop NPC.
+            GameFactory.ReserveClearing(new Vector2(-6.4f, -0.6f), 2.4f);    // treasure chest
             GameFactory.ReserveClearing(new Vector2(0f, -4.2f), 3.2f);       // player spawn
             GameFactory.ReserveClearing(new Vector2(2.6f, -3.4f), 3.0f);     // standby hero
             GameFactory.ReserveClearing(new Vector2(-2.6f, -3.4f), 2.8f);    // alternate hero slot
@@ -70,7 +71,8 @@ namespace ProjectZx.Core
             GameFactory.CreateNpc("WizardShop", ArtLibrary.Wizard, new Vector3(-2.1f, 1.1f), () => hub.OpenShop(), campNpcScale);
             GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(2.1f, 1.1f), () => hub.OpenMapSelect(), campNpcScale);
             GameFactory.CreateNpc("AchievementBoard", ArtLibrary.AchievementKeeper, new Vector3(0f, 2.8f), () => hub.OpenAchievements(), 0.72f);
-            GameFactory.CreateNpc("TreasureChest", ArtLibrary.TreasureChest, new Vector3(-3.2f, -0.2f), () => hub.OpenEquipmentChest(), 0.62f);
+            // Half prior scale (0.62 → 0.31), clear of the wizard shop.
+            GameFactory.CreateNpc("TreasureChest", ArtLibrary.TreasureChest, new Vector3(-6.4f, -0.6f), () => hub.OpenEquipmentChest(), 0.31f);
 
             var campfireNpc = campfire.AddComponent<NpcInteractable>();
             campfireNpc.Initialize(() => hub.OpenCampfireTravel());
