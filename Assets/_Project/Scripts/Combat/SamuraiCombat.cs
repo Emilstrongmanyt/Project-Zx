@@ -70,8 +70,9 @@ namespace ProjectZx.Combat
 
             var bladeGo = new GameObject("Katana");
             bladeGo.transform.SetParent(_katanaPivot, false);
-            bladeGo.transform.localPosition = new Vector3(0.28f, 0.02f, 0f);
-            bladeGo.transform.localScale = Vector3.one * 0.85f;
+            // Uploaded sword art (Hammer.png) — pivot near the hilt, slightly larger read.
+            bladeGo.transform.localPosition = new Vector3(0.32f, 0.02f, 0f);
+            bladeGo.transform.localScale = Vector3.one * 0.72f;
 
             var bladeRenderer = bladeGo.AddComponent<SpriteRenderer>();
             bladeRenderer.sprite = ArtLibrary.Katana;

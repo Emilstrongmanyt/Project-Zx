@@ -235,6 +235,7 @@ namespace ProjectZx.UI
             _levelUpTitle.text = remaining > 1 ? $"Level Up! ({remaining} picks)" : "Level Up!";
             PopulateChoiceButtons();
             _levelUpPanel.SetActive(true);
+            SparkleBurst.Play(_levelUpPanel.transform, new Vector2(0f, 180f), 18);
         }
 
         void PopulateChoiceButtons()
@@ -267,6 +268,8 @@ namespace ProjectZx.UI
             if (_stats == null) return;
 
             _stats.ApplyRunLevelChoice(choice);
+            if (_levelUpPanel != null)
+                SparkleBurst.Play(_levelUpPanel.transform, Vector2.zero, 14);
 
             if (_stats.PendingLevelUpChoices > 0)
             {

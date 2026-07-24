@@ -79,7 +79,7 @@ namespace ProjectZx.Player
             IsCompanion = false;
             CompanionLeader = null;
             DamageOutputScale = 1f;
-            MaxHp = GameSave.MaxHp;
+            MaxHp = GameSave.MaxHp + EquipmentCatalog.CombinedBonusMaxHp();
             CurrentHp = MaxHp;
             RunXp = 0;
             RunGold = 0;
@@ -416,6 +416,7 @@ namespace ProjectZx.Player
         public void AddRunGold(int amount)
         {
             if (!SurvivalMode || IsDead || amount <= 0 || _goldBanked) return;
+            // GameSave.GoldFindMultiplier already includes equipped jewelry.
             var mult = GameSave.GoldFindMultiplier * RunGoldFindMultiplier;
             RunGold += Mathf.Max(1, Mathf.RoundToInt(amount * mult));
         }
@@ -444,10 +445,13 @@ namespace ProjectZx.Player
             BankRunGoldToSave();
         }
 
-        public float Damage => 10f * GameSave.DamageMultiplier * RunDamageMultiplier * DamageOutputScale;
+        public float Damage =>
+            10f * GameSave.DamageMultiplier * EquipmentCatalog.CombinedDamageMultiplier()
+            * RunDamageMultiplier * DamageOutputScale;
 
         public float EffectiveAttackSpeed =>
-            RunAttackSpeedMultiplier * (IsBerserkActive ? 1f + RunBerserkBonus : 1f);
+            RunAttackSpeedMultiplier * EquipmentCatalog.CombinedAttackSpeedMultiplier()
+            * (IsBerserkActive ? 1f + RunBerserkBonus : 1f);
 
         public bool IsBerserkActive =>
             RunBerserkBonus > 0f && MaxHp > 0 && CurrentHp <= MaxHp * 0.4f;

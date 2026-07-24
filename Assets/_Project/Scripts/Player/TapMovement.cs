@@ -532,7 +532,7 @@ namespace ProjectZx.Player
                 var image = result.gameObject.GetComponent<Image>();
                 if (image == null || !image.raycastTarget) continue;
                 var name = result.gameObject.name;
-                if (name == "ShopPanel" || name == "LoadoutPanel" || name == "StatsPanel" || name == "AchievementsPanel" || name == "MapPanel" || name == "LevelUpPanel" || name == "CampfirePanel" || name == "RetreatPanel")
+                if (name == "ShopPanel" || name == "LoadoutPanel" || name == "StatsPanel" || name == "AchievementsPanel" || name == "MapPanel" || name == "LevelUpPanel" || name == "CampfirePanel" || name == "RetreatPanel" || name == "EquipmentPanel")
                     return true;
             }
 

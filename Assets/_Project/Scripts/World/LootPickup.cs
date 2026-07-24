@@ -1,10 +1,11 @@
 using ProjectZx.Core;
 using ProjectZx.Player;
+using ProjectZx.UI;
 using UnityEngine;
 
 namespace ProjectZx.World
 {
-    public enum PickupType { Xp, Gold, HpPotion, MapLoot }
+    public enum PickupType { Xp, Gold, HpPotion, MapLoot, Equipment }
 
     public class LootPickup : MonoBehaviour
     {
@@ -12,9 +13,11 @@ namespace ProjectZx.World
         const float XpPickupScale = 0.55f * 1.5f;
         const float DroppedPickupScale = 0.55f * 3f * 1.5f;
         const float MapLootScale = 0.7f;
+        const float EquipmentPickupScale = 0.85f;
 
         PickupType _type;
         int _amount;
+        EquipmentId _equipmentId;
         SpriteRenderer _renderer;
         bool _collected;
 
@@ -24,6 +27,7 @@ namespace ProjectZx.World
         {
             _type = type;
             _amount = amount;
+            _equipmentId = EquipmentId.None;
             _renderer = gameObject.AddComponent<SpriteRenderer>();
 
             switch (type)
@@ -40,13 +44,25 @@ namespace ProjectZx.World
                     _renderer.sprite = ArtLibrary.PinkCrystal;
                     transform.localScale = Vector3.one * MapLootScale;
                     break;
+                case PickupType.Equipment:
+                    _equipmentId = EquipmentCatalog.IsValid((EquipmentId)amount)
+                        ? (EquipmentId)amount
+                        : EquipmentCatalog.RollRandomDrop();
+                    _renderer.sprite = EquipmentCatalog.GetIcon(_equipmentId) ?? ArtLibrary.GoldCoin;
+                    transform.localScale = Vector3.one * EquipmentPickupScale;
+                    break;
                 default:
                     _renderer.sprite = ArtLibrary.GoldCoinDropped;
                     transform.localScale = Vector3.one * DroppedPickupScale;
                     break;
             }
 
-            _renderer.sortingOrder = type == PickupType.MapLoot ? 10 : 8;
+            _renderer.sortingOrder = type is PickupType.MapLoot or PickupType.Equipment ? 10 : 8;
+        }
+
+        public void InitializeEquipment(EquipmentId equipmentId)
+        {
+            Initialize(PickupType.Equipment, (int)equipmentId);
         }
 
         void Update()
@@ -124,12 +140,33 @@ namespace ProjectZx.World
                 case PickupType.MapLoot:
                     CollectAllMapLoot(stats);
                     break;
+                case PickupType.Equipment:
+                    CollectEquipment();
+                    break;
                 default:
                     stats.AddRunGold(_amount);
                     break;
             }
 
             Destroy(gameObject);
+        }
+
+        void CollectEquipment()
+        {
+            var id = EquipmentCatalog.IsValid(_equipmentId)
+                ? _equipmentId
+                : EquipmentCatalog.RollRandomDrop();
+            var def = EquipmentCatalog.Get(id);
+            if (def.Id == EquipmentId.None) return;
+
+            if (GameSave.UnlockEquipment(id))
+            {
+                GameHud.Instance?.ShowBanner($"Found {def.DisplayName}! Equip it at the camp chest.", 3.2f);
+            }
+            else
+            {
+                GameHud.Instance?.ShowBanner($"Already own {def.DisplayName}.", 2f);
+            }
         }
 
         static void CollectAllMapLoot(PlayerStats stats)
