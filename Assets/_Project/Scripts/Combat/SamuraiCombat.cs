@@ -70,7 +70,7 @@ namespace ProjectZx.Combat
 
             var bladeGo = new GameObject("Katana");
             bladeGo.transform.SetParent(_katanaPivot, false);
-            // Uploaded sword art (Hammer.png) — hilt pivot, combat-length sprite from ArtLibrary.
+            // Sword art (Sword.png) — hilt pivot, combat-length sprite from ArtLibrary.
             bladeGo.transform.localPosition = new Vector3(0.3f, 0.02f, 0f);
             bladeGo.transform.localScale = Vector3.one;
 

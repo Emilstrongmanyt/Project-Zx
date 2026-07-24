@@ -177,8 +177,8 @@ namespace ProjectZx.Core
         // worldLength is in local sprite units; player root is ~0.55 scale so ~2.6 local ≈ 1.4 world.
         /// <summary>Uploaded spear art scaled to a readable combat length (16px @ 100 PPU is invisible).</summary>
         public static Sprite Spear => _spear ??= LoadWeaponSprite("Spear", new Vector2(0.1f, 0.5f), 2.75f) ?? CreateSpearSprite();
-        /// <summary>Samurai weapon — uploaded sword art (Hammer.png), scaled for combat.</summary>
-        public static Sprite Katana => _katana ??= LoadWeaponSprite("Hammer", new Vector2(0.1f, 0.5f), 2.5f) ?? CreateKatanaSprite();
+        /// <summary>Samurai weapon — sword art scaled for combat (not the hammer asset).</summary>
+        public static Sprite Katana => _katana ??= LoadWeaponSprite("Sword", new Vector2(0.1f, 0.5f), 2.5f) ?? CreateKatanaSprite();
         public static Sprite Bow => _bow ??= LoadOrCreateBow();
         public static Sprite Arrow => _arrow ??= LoadWeaponSprite("Arrow", new Vector2(0.08f, 0.5f), 1.15f) ?? CreateArrowSprite();
         public static Sprite Sparkles => _sparkles ??= TryLoadSprite("Sparkles", TilePixelsPerUnit);
@@ -297,24 +297,15 @@ namespace ProjectZx.Core
 
         public static Sprite GetInsideTile(int index)
         {
-            _insideTiles ??= BuildTileSet(
-                "Diamond Checkerboard Tile",
-                "Rectangle Tile",
-                "Art/tile1_inside",
-                "tile1Inside",
-                "Art/tile2_inside",
-                "tile2Inside");
+            // Inside survival: single floor tile (no multi-tile checker pattern).
+            _insideTiles ??= BuildTileSet("Diamond Checkerboard Tile");
             return _insideTiles[Mathf.Abs(index) % _insideTiles.Length];
         }
 
         public static Sprite GetDungeonTile(int index)
         {
-            _dungeonTiles ??= BuildTileSet(
-                "Roof Tiles",
-                "Rectangle Tile",
-                "Diamond Checkerboard Tile",
-                "dungeon_cave_a",
-                "dungeon_cave_b");
+            // Dungeon survival: the other new floor tile only (no alternating set).
+            _dungeonTiles ??= BuildTileSet("Roof Tiles");
             return _dungeonTiles[Mathf.Abs(index) % _dungeonTiles.Length];
         }
 
