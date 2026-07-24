@@ -18,8 +18,9 @@ namespace ProjectZx.Combat
             target.TakeDamage(damage);
             attacker.OnDamageDealt(damage);
 
+            // Frost Tip: 1s chill (−60% move), not a hard freeze.
             if (canApplyFrost && GameSave.FrostTipUnlocked && !target.IsBoss)
-                target.ApplyFreeze(Random.Range(0.5f, 1f));
+                target.ApplyChill(1f);
         }
     }
 }

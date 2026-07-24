@@ -30,6 +30,8 @@ namespace ProjectZx.Core
         const string ClassRowZiKey = "zx_class_rowzi";
         const string SelectedHeroKey = "zx_selected_hero";
         const string MovementControlKey = "zx_movement_control";
+        const string BgmVolumeKey = "zx_bgm_volume";
+        const string SfxVolumeKey = "zx_sfx_volume";
         const string RowZiUnlockedKey = "zx_rowzi_unlocked";
         const string AttackModeBatterKey = "zx_attack_batter";
         const string AttackModeSpearmanKey = "zx_attack_spearman";
@@ -376,6 +378,28 @@ namespace ProjectZx.Core
 
         public static bool UsesJoystickMovement => SelectedMovementControl == MovementControlType.Joystick;
         public static bool UsesTapHoldMovement => SelectedMovementControl == MovementControlType.TapHold;
+
+        /// <summary>0–1 master BGM volume (camp settings).</summary>
+        public static float BgmVolume
+        {
+            get => Mathf.Clamp01(PlayerPrefs.GetFloat(BgmVolumeKey, 0.7f));
+            set
+            {
+                PlayerPrefs.SetFloat(BgmVolumeKey, Mathf.Clamp01(value));
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>0–1 master SFX volume (camp settings).</summary>
+        public static float SfxVolume
+        {
+            get => Mathf.Clamp01(PlayerPrefs.GetFloat(SfxVolumeKey, 0.85f));
+            set
+            {
+                PlayerPrefs.SetFloat(SfxVolumeKey, Mathf.Clamp01(value));
+                PlayerPrefs.Save();
+            }
+        }
 
         public static PlayerClass SanitizeClass(PlayerClass playerClass)
         {

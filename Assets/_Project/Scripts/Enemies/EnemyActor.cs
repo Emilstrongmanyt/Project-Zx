@@ -24,9 +24,10 @@ namespace ProjectZx.Enemies
         const float FireBreathHitPadding = 0.9f;
         /// <summary>Cosine of half-angle for breath damage cone (~55° half-angle).</summary>
         const float FireBreathConeDot = 0.55f;
-        const float EnemySeparationRadius = 1.15f;
-        const float EnemySeparationPush = 0.24f;
         const float CastSkin = 0.1f;
+        /// <summary>Frost Tip: keep 40% speed for 1 second (−60% move).</summary>
+        const float ChillSpeedMultiplier = 0.4f;
+        const float ChillDuration = 1f;
         const float SprintDuration = 2f;
         const float SprintCooldown = 10f;
         const float SprintSpeedMultiplier = 2.1f;
@@ -47,7 +48,7 @@ namespace ProjectZx.Enemies
         int _maxHp;
         int _attack;
         float _speed;
-        float _freezeTimer;
+        float _chillTimer;
         Color _baseColor = Color.white;
         int _round;
         Transform _player;
@@ -74,7 +75,6 @@ namespace ProjectZx.Enemies
         float _sprintTimer;
         float _sprintCooldown;
         readonly List<RaycastHit2D> _castHits = new();
-        readonly Collider2D[] _overlapBuffer = new Collider2D[12];
 
         public void Initialize(
             int round,
@@ -157,16 +157,20 @@ namespace ProjectZx.Enemies
         }
 
         public float HpRatio => _maxHp > 0 ? (float)_hp / _maxHp : 0f;
-        public bool IsFrozen => _freezeTimer > 0f;
+        public bool IsChilled => _chillTimer > 0f;
+        /// <summary>Legacy alias — Frost Tip now chills (slows) instead of hard-freezing.</summary>
+        public bool IsFrozen => IsChilled;
 
-        /// <summary>Freeze non-boss zombies in place for a short duration (frost tip).</summary>
-        public void ApplyFreeze(float duration)
+        /// <summary>Chill non-boss zombies: −60% move speed for 1 second (Frost Tip).</summary>
+        public void ApplyFreeze(float duration = ChillDuration)
         {
             if (!IsAlive || IsBoss || duration <= 0f) return;
-            _freezeTimer = Mathf.Max(_freezeTimer, duration);
+            _chillTimer = Mathf.Max(_chillTimer, duration);
             if (_renderer != null)
                 _renderer.color = new Color(0.55f, 0.82f, 1f, 1f);
         }
+
+        public void ApplyChill(float duration = ChillDuration) => ApplyFreeze(duration);
 
         void ApplySprites(bool isBoss, bool isRoundTwentyBoss, EnemyZombieKind zombieKind)
         {
@@ -240,17 +244,23 @@ namespace ProjectZx.Enemies
         void FixedUpdate()
         {
             if (!IsAlive || _player == null) return;
-            if (_fireBreathing || IsFrozen)
+            if (_fireBreathing)
             {
                 _rb.linearVelocity = Vector2.zero;
                 return;
             }
 
+            // Path straight at the player — no enemy-enemy separation so packs can stack and all hit.
             var toPlayer = (Vector2)_player.position - (Vector2)transform.position;
-            var dir = GetSteeredDirection(toPlayer).normalized;
+            if (toPlayer.sqrMagnitude < 0.0001f)
+            {
+                _rb.linearVelocity = Vector2.zero;
+                return;
+            }
+
+            var dir = toPlayer.normalized;
             MoveByDelta(dir * (GetMoveSpeed() * Time.fixedDeltaTime));
             UpdateFacingToward(_player.position);
-            ApplyEnemySeparation();
         }
 
         void MoveByDelta(Vector2 delta)
@@ -331,43 +341,15 @@ namespace ProjectZx.Enemies
             return true;
         }
 
-        Vector2 GetSteeredDirection(Vector2 toPlayer)
-        {
-            if (toPlayer.sqrMagnitude < 0.0001f) return Vector2.zero;
-
-            var desired = toPlayer.normalized;
-            var count = Physics2D.OverlapCircleNonAlloc(_rb.position, EnemySeparationRadius, _overlapBuffer);
-            var avoid = Vector2.zero;
-
-            for (var i = 0; i < count; i++)
-            {
-                var col = _overlapBuffer[i];
-                if (col == null) continue;
-
-                var otherEnemy = col.GetComponent<EnemyActor>();
-                if (otherEnemy == null || otherEnemy == this || !otherEnemy.IsAlive) continue;
-
-                var away = _rb.position - otherEnemy._rb.position;
-                if (away.sqrMagnitude < 0.0001f)
-                    away = Random.insideUnitCircle * 0.1f;
-
-                var overlap = EnemySeparationRadius - away.magnitude;
-                if (overlap <= 0f) continue;
-
-                avoid += away.normalized * (overlap / EnemySeparationRadius);
-            }
-
-            if (avoid.sqrMagnitude < 0.0001f) return desired;
-            return (desired + avoid * 1.8f).normalized;
-        }
-
         int FindFirstBlockingHit(int hitCount)
         {
             for (var i = 0; i < hitCount; i++)
             {
                 var col = _castHits[i].collider;
                 if (col == null) continue;
+                // Pass through other enemies and the player so packs can stack on the hero.
                 if (col.GetComponent<EnemyActor>() != null) continue;
+                if (col.CompareTag("Player")) continue;
                 // Large bosses clip through trees/rocks so R20 BossJ does not pin on trunks.
                 if (IsBoss && IsSoftWorldObstacle(col)) continue;
                 return i;
@@ -384,35 +366,12 @@ namespace ProjectZx.Enemies
                    || col.GetComponent<ArenaObstacle>() != null;
         }
 
-        void ApplyEnemySeparation()
-        {
-            var count = Physics2D.OverlapCircleNonAlloc(_rb.position, EnemySeparationRadius, _overlapBuffer);
-            for (var i = 0; i < count; i++)
-            {
-                var col = _overlapBuffer[i];
-                if (col == null) continue;
-
-                var otherEnemy = col.GetComponent<EnemyActor>();
-                if (otherEnemy == null || otherEnemy == this || !otherEnemy.IsAlive) continue;
-
-                var away = _rb.position - otherEnemy._rb.position;
-                if (away.sqrMagnitude < 0.0001f)
-                    away = Random.insideUnitCircle * 0.1f;
-
-                var overlap = EnemySeparationRadius - away.magnitude;
-                if (overlap <= 0f) continue;
-
-                var push = away.normalized * Mathf.Min(overlap * 0.75f, EnemySeparationPush);
-                TryMoveDelta(push);
-            }
-        }
-
         void Update()
         {
             if (!IsAlive || _player == null) return;
 
             UpdateHitSpriteTimer();
-            UpdateFreeze();
+            UpdateChill();
             UpdateSprint();
             _contactCooldown -= Time.deltaTime;
             _fireBreathCooldown -= Time.deltaTime;
@@ -423,7 +382,6 @@ namespace ProjectZx.Enemies
                 if (_fireBreathing) return;
             }
 
-            if (IsFrozen) return;
             if (_contactCooldown > 0f) return;
             if (Vector2.Distance(transform.position, _player.position) > 0.75f) return;
 
@@ -436,21 +394,27 @@ namespace ProjectZx.Enemies
             _contactCooldown = 0.8f;
         }
 
-        float GetMoveSpeed() => _speed * (_sprinting ? SprintSpeedMultiplier : 1f);
-
-        void UpdateFreeze()
+        float GetMoveSpeed()
         {
-            if (_freezeTimer <= 0f) return;
-            _freezeTimer -= Time.deltaTime;
-            if (_freezeTimer > 0f) return;
-            _freezeTimer = 0f;
+            var speed = _speed;
+            if (_sprinting) speed *= SprintSpeedMultiplier;
+            if (IsChilled) speed *= ChillSpeedMultiplier;
+            return speed;
+        }
+
+        void UpdateChill()
+        {
+            if (_chillTimer <= 0f) return;
+            _chillTimer -= Time.deltaTime;
+            if (_chillTimer > 0f) return;
+            _chillTimer = 0f;
             if (_renderer != null)
                 _renderer.color = _baseColor;
         }
 
         void UpdateSprint()
         {
-            if (!_canSprint || _fireBreathing || IsFrozen || _player == null) return;
+            if (!_canSprint || _fireBreathing || _player == null) return;
 
             _sprintCooldown -= Time.deltaTime;
             if (_sprinting)

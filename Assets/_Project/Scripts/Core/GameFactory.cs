@@ -507,10 +507,12 @@ namespace ProjectZx.Core
             rb.gravityScale = 0f;
             rb.freezeRotation = true;
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            rb.useFullKinematicContacts = true;
+            // No solid enemy-enemy contacts — swarms must stack so every zombie can reach the player.
+            rb.useFullKinematicContacts = false;
 
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = isStageBoss ? 1.1f : isBoss ? 0.7f : 0.4f;
+            col.isTrigger = true;
 
             go.AddComponent<HitFlash>();
             var enemy = go.AddComponent<EnemyActor>();

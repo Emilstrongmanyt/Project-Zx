@@ -34,7 +34,10 @@ namespace ProjectZx.UI
         GameObject _mapPanel;
         GameObject _campfirePanel;
         GameObject _equipmentPanel;
+        GameObject _settingsPanel;
         Text _equipmentStatusText;
+        Text _bgmVolumeLabel;
+        Text _sfxVolumeLabel;
         readonly List<Button> _equipmentButtons = new();
 
         struct ClassPickerRefs
@@ -93,6 +96,9 @@ namespace ProjectZx.UI
             _goldText = CreateText(canvasGo.transform, "0", 30, TextAnchor.UpperRight, new Vector2(-SafeRight + 80f, -SafeTop), new Vector2(120, 42));
             _goldText.alignment = TextAnchor.MiddleRight;
 
+            // Always available on the campfire map.
+            CreateTopRightButton(canvasGo.transform, "Settings", new Vector2(-SafeRight, -SafeTop - 70f), OpenSettings);
+
             _shopPanel = BuildShopPanel(canvasGo.transform);
             _loadoutPanel = BuildLoadoutPanel(canvasGo.transform);
             _statsPanel = BuildStatsPanel(canvasGo.transform);
@@ -100,6 +106,7 @@ namespace ProjectZx.UI
             _mapPanel = BuildMapPanel(canvasGo.transform);
             _campfirePanel = BuildCampfirePanel(canvasGo.transform);
             _equipmentPanel = BuildEquipmentPanel(canvasGo.transform);
+            _settingsPanel = BuildSettingsPanel(canvasGo.transform);
         }
 
         GameObject BuildShopPanel(Transform parent)
@@ -162,7 +169,7 @@ namespace ProjectZx.UI
             y += step;
             _piercingShotRow = CreateShopUpgradeRow(content.transform, "Piercing Shot (Bowman)", ShopCosts.PiercingShot, y, BuyPiercingShot);
             y += step;
-            _frostTipRow = CreateShopUpgradeRow(content.transform, "Frost Tip (freeze zombies 0.5–1s)", ShopCosts.FrostTip, y, BuyFrostTip);
+            _frostTipRow = CreateShopUpgradeRow(content.transform, "Frost Tip (1s chill, −60% move)", ShopCosts.FrostTip, y, BuyFrostTip);
 
             contentRect.sizeDelta = new Vector2(0f, Mathf.Abs(y) + 80f);
 
@@ -262,32 +269,51 @@ namespace ProjectZx.UI
 
         GameObject BuildLoadoutPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "LoadoutPanel", Vector2.zero, new Vector2(960, 980), ArtLibrary.ShopUi);
-            CreateText(panel.transform, "Build Loadout", 38, TextAnchor.MiddleCenter, new Vector2(0, 430), new Vector2(620, 52));
-            CreateText(panel.transform, "Class is saved per hero. Swap heroes at camp to set the companion build.", 18, TextAnchor.MiddleCenter, new Vector2(0, 388), new Vector2(820, 36));
+            var panel = CreateDialogPanel(parent, "LoadoutPanel", Vector2.zero, new Vector2(960, 820), ArtLibrary.ShopUi);
+            CreateText(panel.transform, "Build Loadout", 38, TextAnchor.MiddleCenter, new Vector2(0, 350), new Vector2(620, 52));
+            CreateText(panel.transform, "Class is saved per hero. Swap heroes at camp to set the companion build.\nMovement & audio live in Settings.", 18, TextAnchor.MiddleCenter, new Vector2(0, 300), new Vector2(820, 48));
 
             // Class section (3 rows: Batter/Spearman, Bowman/Samurai, Magician)
-            _loadoutClassPicker = BuildClassPicker(panel.transform, 340f, 295f, 220f);
+            _loadoutClassPicker = BuildClassPicker(panel.transform, 250f, 205f, 130f);
 
-            // Technique section under Magician row (~220-152 = 68)
-            CreateText(panel.transform, "Attack Technique", 28, TextAnchor.MiddleCenter, new Vector2(0, 10), new Vector2(620, 40));
-            _techniqueStatusText = CreateText(panel.transform, "", 20, TextAnchor.MiddleCenter, new Vector2(0, -36), new Vector2(780, 52));
+            // Technique section under Magician row
+            CreateText(panel.transform, "Attack Technique", 28, TextAnchor.MiddleCenter, new Vector2(0, -80), new Vector2(620, 40));
+            _techniqueStatusText = CreateText(panel.transform, "", 20, TextAnchor.MiddleCenter, new Vector2(0, -126), new Vector2(780, 52));
             _techniqueStatusText.alignment = TextAnchor.UpperCenter;
-            _techniqueStandardButton = CreateButton(panel.transform, "Standard", new Vector2(-160, -110), () => SelectAttackMode(AttackMode.Standard));
-            _techniqueSpecialButton = CreateButton(panel.transform, "Special", new Vector2(160, -110), SelectSpecialAttackMode);
+            _techniqueStandardButton = CreateButton(panel.transform, "Standard", new Vector2(-160, -200), () => SelectAttackMode(AttackMode.Standard));
+            _techniqueSpecialButton = CreateButton(panel.transform, "Special", new Vector2(160, -200), SelectSpecialAttackMode);
 
-            // Movement control (mutually exclusive)
-            CreateText(panel.transform, "Movement Control", 28, TextAnchor.MiddleCenter, new Vector2(0, -200), new Vector2(620, 40));
-            CreateText(panel.transform, "Only one control style is active at a time.", 20, TextAnchor.MiddleCenter, new Vector2(0, -236), new Vector2(700, 32));
-            _movementJoystickButton = CreateButton(panel.transform, "Joystick", new Vector2(-160, -300), () => SelectMovementControl(MovementControlType.Joystick));
-            _movementTapHoldButton = CreateButton(panel.transform, "Tap / Hold", new Vector2(160, -300), () => SelectMovementControl(MovementControlType.TapHold));
-
-            CreateButton(panel.transform, "Back to Shop", new Vector2(-160, -400), () =>
+            CreateButton(panel.transform, "Back to Shop", new Vector2(-160, -300), () =>
             {
                 panel.SetActive(false);
                 OpenShop();
             });
-            CreateButton(panel.transform, "Close", new Vector2(160, -400), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Close", new Vector2(160, -300), () => panel.SetActive(false));
+            panel.SetActive(false);
+            return panel;
+        }
+
+        GameObject BuildSettingsPanel(Transform parent)
+        {
+            var panel = CreateDialogPanel(parent, "SettingsPanel", Vector2.zero, new Vector2(860, 720), ArtLibrary.ShopUi);
+            CreateText(panel.transform, "Settings", 40, TextAnchor.MiddleCenter, new Vector2(0, 300), new Vector2(560, 52));
+
+            CreateText(panel.transform, "Movement Control", 28, TextAnchor.MiddleCenter, new Vector2(0, 220), new Vector2(620, 40));
+            CreateText(panel.transform, "Only one control style is active at a time.", 20, TextAnchor.MiddleCenter, new Vector2(0, 180), new Vector2(700, 32));
+            _movementJoystickButton = CreateButton(panel.transform, "Joystick", new Vector2(-160, 110), () => SelectMovementControl(MovementControlType.Joystick));
+            _movementTapHoldButton = CreateButton(panel.transform, "Tap / Hold", new Vector2(160, 110), () => SelectMovementControl(MovementControlType.TapHold));
+
+            CreateText(panel.transform, "Music Volume", 26, TextAnchor.MiddleCenter, new Vector2(0, 20), new Vector2(400, 36));
+            _bgmVolumeLabel = CreateText(panel.transform, "70%", 22, TextAnchor.MiddleCenter, new Vector2(0, -20), new Vector2(120, 32));
+            CreateButton(panel.transform, "−", new Vector2(-200, -20), () => AdjustBgmVolume(-0.1f));
+            CreateButton(panel.transform, "+", new Vector2(200, -20), () => AdjustBgmVolume(0.1f));
+
+            CreateText(panel.transform, "SFX Volume", 26, TextAnchor.MiddleCenter, new Vector2(0, -100), new Vector2(400, 36));
+            _sfxVolumeLabel = CreateText(panel.transform, "85%", 22, TextAnchor.MiddleCenter, new Vector2(0, -140), new Vector2(120, 32));
+            CreateButton(panel.transform, "−", new Vector2(-200, -140), () => AdjustSfxVolume(-0.1f));
+            CreateButton(panel.transform, "+", new Vector2(200, -140), () => AdjustSfxVolume(0.1f));
+
+            CreateButton(panel.transform, "Close", new Vector2(0, -260), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
         }
@@ -475,6 +501,45 @@ namespace ProjectZx.UI
             if (_mapPanel != null) _mapPanel.SetActive(false);
             if (_campfirePanel != null) _campfirePanel.SetActive(false);
             if (_equipmentPanel != null) _equipmentPanel.SetActive(false);
+            if (_settingsPanel != null) _settingsPanel.SetActive(false);
+        }
+
+        void OpenSettings()
+        {
+            CloseAllHubPanels();
+            RefreshSettingsPanel();
+            if (_settingsPanel != null)
+                _settingsPanel.SetActive(true);
+        }
+
+        void RefreshSettingsPanel()
+        {
+            RefreshMovementControlPicker();
+            RefreshVolumeLabels();
+        }
+
+        void AdjustBgmVolume(float delta)
+        {
+            GameSave.BgmVolume = Mathf.Clamp01(GameSave.BgmVolume + delta);
+            AudioManager.Instance?.ApplySavedVolumes();
+            RefreshVolumeLabels();
+        }
+
+        void AdjustSfxVolume(float delta)
+        {
+            GameSave.SfxVolume = Mathf.Clamp01(GameSave.SfxVolume + delta);
+            AudioManager.Instance?.ApplySavedVolumes();
+            RefreshVolumeLabels();
+            // Audible click feedback at the new SFX level.
+            AudioManager.Instance?.PlaySwingSfx();
+        }
+
+        void RefreshVolumeLabels()
+        {
+            if (_bgmVolumeLabel != null)
+                _bgmVolumeLabel.text = $"{Mathf.RoundToInt(GameSave.BgmVolume * 100f)}%";
+            if (_sfxVolumeLabel != null)
+                _sfxVolumeLabel.text = $"{Mathf.RoundToInt(GameSave.SfxVolume * 100f)}%";
         }
 
         void PlayUpgradeSparkles()
@@ -559,7 +624,6 @@ namespace ProjectZx.UI
         {
             RefreshClassPicker(_loadoutClassPicker);
             RefreshTechniquePicker();
-            RefreshMovementControlPicker();
         }
 
         void RefreshTechniquePicker()
@@ -840,11 +904,11 @@ namespace ProjectZx.UI
                 SetUpgradeRow(_piercingShotRow, "Piercing Shot (Bowman)", ShopCosts.PiercingShot, false, string.Empty);
 
             if (GameSave.FrostTipUnlocked)
-                SetOwnedRow(_frostTipRow, "Frost Tip (freeze zombies 0.5–1s)");
+                SetOwnedRow(_frostTipRow, "Frost Tip (1s chill, −60% move)");
             else if (!GameSave.SpearmanUnlocked && !GameSave.BowmanUnlocked && !GameSave.SamuraiUnlocked)
-                SetLockedRow(_frostTipRow, "Frost Tip (freeze zombies 0.5–1s)", "Unlock Spearman, Bowman, or Samurai");
+                SetLockedRow(_frostTipRow, "Frost Tip (1s chill, −60% move)", "Unlock Spearman, Bowman, or Samurai");
             else
-                SetUpgradeRow(_frostTipRow, "Frost Tip (freeze zombies 0.5–1s)", ShopCosts.FrostTip, false, string.Empty);
+                SetUpgradeRow(_frostTipRow, "Frost Tip (1s chill, −60% move)", ShopCosts.FrostTip, false, string.Empty);
         }
 
         static void SetLockedRow(UpgradeRowRefs row, string label, string reason)
@@ -1194,13 +1258,39 @@ namespace ProjectZx.UI
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = pos;
             var size = large ? new Vector2(300, 72) : new Vector2(240, 58);
+            // Compact +/- volume buttons
+            if (label == "−" || label == "+")
+                size = new Vector2(88, 58);
             rect.sizeDelta = size;
             var image = go.AddComponent<Image>();
             UiSprites.ApplyButtonSprite(image, size);
             var button = go.AddComponent<Button>();
             button.onClick.AddListener(() => onClick());
             var fontSize = large ? 30 : 24;
+            if (label == "−" || label == "+")
+                fontSize = 32;
             var labelText = CreateText(go.transform, label, fontSize, TextAnchor.MiddleCenter, Vector2.zero, new Vector2(size.x - 24f, size.y - 10f));
+            labelText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            labelText.verticalOverflow = VerticalWrapMode.Truncate;
+            return button;
+        }
+
+        static Button CreateTopRightButton(Transform parent, string label, Vector2 pos, Action onClick)
+        {
+            var go = new GameObject(label + "Button");
+            go.transform.SetParent(parent, false);
+            var rect = go.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(1f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f);
+            rect.anchoredPosition = pos;
+            var size = new Vector2(200, 56);
+            rect.sizeDelta = size;
+            var image = go.AddComponent<Image>();
+            UiSprites.ApplyButtonSprite(image, size);
+            var button = go.AddComponent<Button>();
+            button.onClick.AddListener(() => onClick());
+            var labelText = CreateText(go.transform, label, 24, TextAnchor.MiddleCenter, Vector2.zero, new Vector2(size.x - 20f, size.y - 10f));
             labelText.horizontalOverflow = HorizontalWrapMode.Wrap;
             labelText.verticalOverflow = VerticalWrapMode.Truncate;
             return button;

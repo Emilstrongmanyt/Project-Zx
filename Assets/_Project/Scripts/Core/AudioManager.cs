@@ -9,7 +9,10 @@ namespace ProjectZx.Core
         const float BossMaxHearDistance = 14f;
         const float BossMinVolume = 0.08f;
         const float BossMaxVolume = 0.95f;
-        const float BgmVolume = 0.45f;
+        /// <summary>Base mix level before user BGM slider (0–1) is applied.</summary>
+        const float BgmMix = 0.45f;
+        /// <summary>Base mix level before user SFX slider (0–1) is applied.</summary>
+        const float SfxMix = 0.7f;
 
         public static AudioManager Instance { get; private set; }
 
@@ -22,6 +25,7 @@ namespace ProjectZx.Core
         readonly List<AudioClip> _brothersPlaylist = new();
         int _playlistIndex = -1;
         bool _playlistActive;
+        float _bossProximityVolume;
 
         void Awake()
         {
@@ -37,7 +41,6 @@ namespace ProjectZx.Core
             _bgmSource = gameObject.AddComponent<AudioSource>();
             _bgmSource.loop = true;
             _bgmSource.playOnAwake = false;
-            _bgmSource.volume = BgmVolume;
 
             _bossSource = gameObject.AddComponent<AudioSource>();
             _bossSource.loop = true;
@@ -47,13 +50,27 @@ namespace ProjectZx.Core
             _sfxSource = gameObject.AddComponent<AudioSource>();
             _sfxSource.loop = false;
             _sfxSource.playOnAwake = false;
-            _sfxSource.volume = 0.7f;
 
             _bossClip = Resources.Load<AudioClip>("BossJ_SFX");
             _swing1 = Resources.Load<AudioClip>("SwingSFX1");
             _swing2 = Resources.Load<AudioClip>("SwingSFX2");
             BuildBrothersPlaylist();
+            ApplySavedVolumes();
         }
+
+        /// <summary>Re-apply BGM/SFX levels from GameSave (settings menu).</summary>
+        public void ApplySavedVolumes()
+        {
+            if (_bgmSource != null)
+                _bgmSource.volume = EffectiveBgmVolume();
+            if (_sfxSource != null)
+                _sfxSource.volume = EffectiveSfxVolume();
+            if (_bossSource != null && _bossSource.isPlaying)
+                _bossSource.volume = _bossProximityVolume * GameSave.SfxVolume;
+        }
+
+        float EffectiveBgmVolume() => BgmMix * GameSave.BgmVolume;
+        float EffectiveSfxVolume() => SfxMix * GameSave.SfxVolume;
 
         void OnDestroy()
         {
@@ -112,7 +129,7 @@ namespace ProjectZx.Core
 
             _bgmSource.loop = false;
             _bgmSource.clip = clip;
-            _bgmSource.volume = BgmVolume;
+            _bgmSource.volume = EffectiveBgmVolume();
             _bgmSource.Play();
         }
 
@@ -171,7 +188,7 @@ namespace ProjectZx.Core
 
             _bgmSource.loop = true;
             _bgmSource.clip = clip;
-            _bgmSource.volume = BgmVolume;
+            _bgmSource.volume = EffectiveBgmVolume();
             _bgmSource.Play();
         }
 
@@ -218,6 +235,7 @@ namespace ProjectZx.Core
 
             if (closestBoss == null)
             {
+                _bossProximityVolume = 0f;
                 StopBossSfx();
                 return;
             }
@@ -229,7 +247,8 @@ namespace ProjectZx.Core
                 _bossSource.Play();
 
             var t = 1f - Mathf.Clamp01(bestDist / BossMaxHearDistance);
-            _bossSource.volume = Mathf.Lerp(BossMinVolume, BossMaxVolume, t);
+            _bossProximityVolume = Mathf.Lerp(BossMinVolume, BossMaxVolume, t);
+            _bossSource.volume = _bossProximityVolume * GameSave.SfxVolume;
         }
 
         public void PlaySwingSfx()
@@ -238,7 +257,7 @@ namespace ProjectZx.Core
             var clip = Random.value < 0.5f ? _swing1 : _swing2;
             if (clip == null) clip = _swing1 ?? _swing2;
             if (clip == null) return;
-            _sfxSource.PlayOneShot(clip);
+            _sfxSource.PlayOneShot(clip, GameSave.SfxVolume);
         }
     }
 }
