@@ -48,8 +48,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          lfs: true
-          fetch-depth: 0
+          # Assets are normal Git blobs (not LFS) so checkout does not need LFS quota.
+          fetch-depth: 1
 
       - name: Cache Unity Library
         uses: actions/cache@v4
@@ -105,7 +105,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          lfs: true
+          fetch-depth: 1
 
       - name: Select Xcode 26
         run: |
