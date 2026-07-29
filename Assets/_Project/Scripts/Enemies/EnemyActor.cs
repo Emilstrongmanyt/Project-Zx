@@ -34,9 +34,11 @@ namespace ProjectZx.Enemies
         const float HpPotionDropChance = 0.05f;
         const float BossHpPotionDropChance = 0.12f;
         const float MapLootDropChance = 0.005f;
-        /// <summary>Very rare ring/necklace drops for the camp treasure chest.</summary>
-        const float EquipmentDropChance = 0.0035f;
-        const float BossEquipmentDropChance = 0.02f;
+        /// <summary>Very rare ring/necklace drops for the camp treasure chest (halved from original rates).</summary>
+        const float EquipmentDropChance = 0.00175f;
+        const float BossEquipmentDropChance = 0.01f;
+        /// <summary>Outside survival regular zombies: −25% HP and move speed.</summary>
+        const float OutsideZombieStatScale = 0.75f;
 
         public bool IsAlive { get; private set; } = true;
         public bool IsBoss { get; private set; }
@@ -132,6 +134,13 @@ namespace ProjectZx.Enemies
                 _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * roundScale));
                 _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * roundScale));
                 _speed *= roundScale;
+
+                // Outside map zombies only (base kind, not Inside/Dungeon scaled packs).
+                if (zombieKind == EnemyZombieKind.Outside)
+                {
+                    _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * OutsideZombieStatScale));
+                    _speed *= OutsideZombieStatScale;
+                }
             }
 
             _rb = GetComponent<Rigidbody2D>();
@@ -597,7 +606,8 @@ namespace ProjectZx.Enemies
             if (_fireBreathFx != null) _fireBreathFx.SetActive(false);
 
             var xp = 4 + _round + (IsBoss ? 25 : 0);
-            var gold = 2 + _round / 2 + (IsBoss ? 15 : 0);
+            // Gold coin yield halved from previous values.
+            var gold = Mathf.Max(1, (2 + _round / 2 + (IsBoss ? 15 : 0)) / 2);
             var pos = (Vector2)transform.position;
             GameFactory.CreatePickup(pos + Vector2.left * 0.2f, PickupType.Xp, xp);
             GameFactory.CreatePickup(pos + Vector2.right * 0.2f, PickupType.Gold, gold);

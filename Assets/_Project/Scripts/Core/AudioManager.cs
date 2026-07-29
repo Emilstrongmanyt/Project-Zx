@@ -92,15 +92,11 @@ namespace ProjectZx.Core
 
         public void PlayOutsideBgm()
         {
-            _playlistActive = false;
-            PlayBgm("Outside BGM1", "OutsideBGM");
-        }
-
-        public void PlayInsideBgm()
-        {
-            // Inside + Dungeon share the 2 Brothers playlist.
+            // All survival maps share the 2 Brothers playlist.
             PlayBrothersPlaylist();
         }
+
+        public void PlayInsideBgm() => PlayBrothersPlaylist();
 
         public void PlayDungeonBgm() => PlayBrothersPlaylist();
 

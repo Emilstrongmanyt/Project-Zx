@@ -79,6 +79,18 @@ namespace ProjectZx.UI
             Instance = this;
             Build();
             RefreshGold();
+            Achievements.OnUnlocked += OnAchievementUnlockedAtCamp;
+        }
+
+        void OnDestroy()
+        {
+            Achievements.OnUnlocked -= OnAchievementUnlockedAtCamp;
+            if (Instance == this) Instance = null;
+        }
+
+        void OnAchievementUnlockedAtCamp(AchievementDef _)
+        {
+            RefreshGold();
         }
 
         void Build()
@@ -184,7 +196,7 @@ namespace ProjectZx.UI
         {
             var panel = CreateDialogPanel(parent, "AchievementsPanel", Vector2.zero, new Vector2(1100, 880), ArtLibrary.ChallengeBoardUi);
             CreateText(panel.transform, "Achievements", 44, TextAnchor.MiddleCenter, new Vector2(0, 380), new Vector2(700, 58));
-            _achievementCountText = CreateText(panel.transform, "", 30, TextAnchor.MiddleCenter, new Vector2(0, 330), new Vector2(700, 44));
+            _achievementCountText = CreateText(panel.transform, "", 28, TextAnchor.MiddleCenter, new Vector2(0, 330), new Vector2(700, 40));
 
             var scrollGo = new GameObject("AchievementScroll");
             scrollGo.transform.SetParent(panel.transform, false);
@@ -1033,7 +1045,8 @@ namespace ProjectZx.UI
         void RefreshAchievements()
         {
             if (_achievementCountText != null)
-                _achievementCountText.text = $"Unlocked {Achievements.UnlockedCount}/{Achievements.All.Count}";
+                _achievementCountText.text =
+                    $"Unlocked {Achievements.UnlockedCount}/{Achievements.All.Count}  ·  +{Achievements.CompletionGoldReward} gold each";
 
             foreach (var row in _achievementRows)
             {

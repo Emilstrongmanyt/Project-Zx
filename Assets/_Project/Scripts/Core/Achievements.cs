@@ -49,6 +49,7 @@ namespace ProjectZx.Core
     public static class Achievements
     {
         const string UnlockPrefix = "zx_ach_";
+        public const int CompletionGoldReward = 250;
 
         static readonly AchievementDef[] Catalog =
         {
@@ -148,6 +149,9 @@ namespace ProjectZx.Core
             if (IsUnlocked(id)) return false;
             PlayerPrefs.SetInt(UnlockPrefix + id, 1);
             PlayerPrefs.Save();
+            // Permanent bank gold — available in camp even if unlocked mid-run.
+            GameSave.Gold += CompletionGoldReward;
+            GameSave.LifetimeGoldEarned += CompletionGoldReward;
             OnUnlocked?.Invoke(GetDef(id));
             return true;
         }
@@ -188,6 +192,7 @@ namespace ProjectZx.Core
         {
             var sb = new StringBuilder();
             sb.AppendLine($"Unlocked {UnlockedCount}/{Catalog.Length}");
+            sb.AppendLine($"Each unlock rewards {CompletionGoldReward} gold.");
             sb.AppendLine();
 
             foreach (var def in Catalog)

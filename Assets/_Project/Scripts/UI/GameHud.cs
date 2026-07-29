@@ -95,9 +95,11 @@ namespace ProjectZx.UI
             if (_achievementToastTitle != null)
                 _achievementToastTitle.text = "Achievement Unlocked!";
             if (_achievementToastBody != null)
-                _achievementToastBody.text = $"{def.Title}\n{def.Description}";
+                _achievementToastBody.text =
+                    $"{def.Title}\n{def.Description}\n+{Achievements.CompletionGoldReward} gold";
             _achievementToast.SetActive(true);
             _achievementToastTimer = 4f;
+            HubUi.Instance?.RefreshGold();
         }
 
         void CreateRetreatButton(Transform parent)
