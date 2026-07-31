@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ProjectZx.Combat;
 using ProjectZx.Core;
 using ProjectZx.Player;
 using ProjectZx.UI;
@@ -39,6 +40,12 @@ namespace ProjectZx.Enemies
         const float BossEquipmentDropChance = 0.01f;
         /// <summary>Outside survival regular zombies: −25% HP and move speed.</summary>
         const float OutsideZombieStatScale = 0.75f;
+        const float RoundFortyBossStatScale = 4.5f;
+        const float BossProjectileInterval = 1.5f;
+        const float BossProjectileLifetime = 5f;
+        const float BossProjectileSpeed = 2.2f;
+        const float IgniteDuration = 3f;
+        const int IgniteTickCount = 3;
 
         public bool IsAlive { get; private set; } = true;
         public bool IsBoss { get; private set; }
@@ -76,6 +83,11 @@ namespace ProjectZx.Enemies
         bool _sprinting;
         float _sprintTimer;
         float _sprintCooldown;
+        float _bossProjectileCooldown;
+        int _igniteTicksRemaining;
+        float _igniteTickTimer;
+        int _igniteDamageRemaining;
+        FlameEnchantVfx _burnVfx;
         readonly List<RaycastHit2D> _castHits = new();
 
         public void Initialize(
@@ -106,14 +118,14 @@ namespace ProjectZx.Enemies
                 _speed = outsideR20Speed;
             }
 
-            // Dungeon R40 final boss: same footprint, 4× Outside R20 stats.
+            // Dungeon R40 final boss: same footprint, 4.5× Outside R20 stats (no fire breath).
             if (isRoundFortyBoss)
             {
                 const int outsideR20Hp = 220 + 20 * 30;
                 const int outsideR20Attack = 18 + 20;
                 const float outsideR20Speed = 1.5f + 20 * 0.03f;
-                _hp = outsideR20Hp * 4;
-                _attack = outsideR20Attack * 4;
+                _hp = Mathf.RoundToInt(outsideR20Hp * RoundFortyBossStatScale);
+                _attack = Mathf.RoundToInt(outsideR20Attack * RoundFortyBossStatScale);
                 _speed = outsideR20Speed;
             }
 
@@ -146,6 +158,7 @@ namespace ProjectZx.Enemies
             _rb = GetComponent<Rigidbody2D>();
             _renderer = GetComponent<SpriteRenderer>();
             _player = GameObject.FindGameObjectWithTag("Player")?.transform;
+            _maxHp = Mathf.Max(1, _hp);
             ApplySprites(isBoss, isRoundTwentyBoss || isRoundThirtyBoss || isRoundFortyBoss, zombieKind);
 
             if (_renderer != null)
@@ -154,10 +167,12 @@ namespace ProjectZx.Enemies
                 _baseColor = _renderer.color;
             }
 
-            _maxHp = Mathf.Max(1, _hp);
-
-            if (isBoss)
+            // Classic bosses use fire breath; Dungeon R40 BossB uses fire projectiles only.
+            if (isBoss && !isRoundFortyBoss)
                 SetupFireBreathFx();
+
+            if (isRoundFortyBoss)
+                _bossProjectileCooldown = BossProjectileInterval * 0.5f;
 
             _attack = Mathf.Max(1, _attack * 2);
 
@@ -167,6 +182,20 @@ namespace ProjectZx.Enemies
 
         public float HpRatio => _maxHp > 0 ? (float)_hp / _maxHp : 0f;
         public bool IsChilled => _chillTimer > 0f;
+
+        /// <summary>
+        /// Flame Enchant: total burn = 40% of hit, dealt over 3 seconds (1 tick/sec). New hits refresh.
+        /// </summary>
+        public void ApplyIgnite(int hitDamage)
+        {
+            if (!IsAlive || hitDamage <= 0) return;
+
+            var totalBurn = Mathf.Max(1, Mathf.RoundToInt(hitDamage * 0.4f));
+            _igniteDamageRemaining = totalBurn;
+            _igniteTicksRemaining = IgniteTickCount;
+            _igniteTickTimer = 1f;
+            EnsureBurnVfx();
+        }
         /// <summary>Legacy alias — Frost Tip now chills (slows) instead of hard-freezing.</summary>
         public bool IsFrozen => IsChilled;
 
@@ -183,6 +212,12 @@ namespace ProjectZx.Enemies
 
         void ApplySprites(bool isBoss, bool isRoundTwentyBoss, EnemyZombieKind zombieKind)
         {
+            if (IsRoundFortyBoss)
+            {
+                ApplyBossBPhaseSprites();
+                return;
+            }
+
             if (isBoss)
             {
                 _idleSprite = ArtLibrary.Boss;
@@ -195,6 +230,30 @@ namespace ProjectZx.Enemies
             ArtLibrary.GetZombieSprites(zombieKind, out _idleSprite, out _hitSprite);
             _attackSprite = _idleSprite;
             _hitSpriteAttack = _hitSprite;
+        }
+
+        void ApplyBossBPhaseSprites()
+        {
+            var high = HpRatio > 0.5f;
+            var body = high ? ArtLibrary.BossB : ArtLibrary.BossB2;
+            _idleSprite = body;
+            _attackSprite = body;
+            _hitSprite = body;
+            _hitSpriteAttack = ArtLibrary.BossB2;
+        }
+
+        void EnsureBurnVfx()
+        {
+            if (_burnVfx == null)
+                _burnVfx = FlameEnchantVfx.Attach(transform, FlameEnchantVfx.FlameKind.EnemyBurn, new Vector3(0f, 0.35f, 0f), 0.85f);
+            else
+                _burnVfx.SetActive(true);
+        }
+
+        void ClearBurnVfx()
+        {
+            if (_burnVfx != null)
+                _burnVfx.SetActive(false);
         }
 
         void SetupFireBreathFx()
@@ -382,10 +441,14 @@ namespace ProjectZx.Enemies
             UpdateHitSpriteTimer();
             UpdateChill();
             UpdateSprint();
+            UpdateIgnite();
+            UpdateBossBPhase();
             _contactCooldown -= Time.deltaTime;
             _fireBreathCooldown -= Time.deltaTime;
 
-            if (IsBoss)
+            if (IsRoundFortyBoss)
+                UpdateBossProjectiles();
+            else if (IsBoss)
             {
                 UpdateFireBreath();
                 if (_fireBreathing) return;
@@ -550,7 +613,68 @@ namespace ProjectZx.Enemies
             ShowHitSprite();
             FloatingDamageNumber.Spawn(transform.position, amount, isHeroHit: false);
             _hp -= amount;
+            UpdateBossBPhase();
             if (_hp <= 0) Die();
+        }
+
+        void TakeBurnDamage(int amount)
+        {
+            if (!IsAlive || amount <= 0) return;
+            ShowHitSprite();
+            FloatingDamageNumber.SpawnBurn(transform.position, amount);
+            _hp -= amount;
+            UpdateBossBPhase();
+            if (_hp <= 0) Die();
+        }
+
+        void UpdateIgnite()
+        {
+            if (_igniteTicksRemaining <= 0)
+            {
+                ClearBurnVfx();
+                return;
+            }
+
+            _igniteTickTimer -= Time.deltaTime;
+            if (_igniteTickTimer > 0f) return;
+
+            _igniteTickTimer = 1f;
+            var ticksLeft = _igniteTicksRemaining;
+            var tickDamage = ticksLeft <= 1
+                ? _igniteDamageRemaining
+                : Mathf.Max(1, _igniteDamageRemaining / ticksLeft);
+            _igniteDamageRemaining = Mathf.Max(0, _igniteDamageRemaining - tickDamage);
+            _igniteTicksRemaining--;
+            TakeBurnDamage(tickDamage);
+            if (_igniteTicksRemaining <= 0)
+                ClearBurnVfx();
+        }
+
+        void UpdateBossBPhase()
+        {
+            if (!IsRoundFortyBoss || _renderer == null) return;
+            ApplyBossBPhaseSprites();
+            if (_hitSpriteTimer <= 0f)
+                _renderer.sprite = _idleSprite;
+        }
+
+        void UpdateBossProjectiles()
+        {
+            if (!IsAlive || _player == null) return;
+            UpdateFacingToward(_player.position);
+            _bossProjectileCooldown -= Time.deltaTime;
+            if (_bossProjectileCooldown > 0f) return;
+
+            _bossProjectileCooldown = BossProjectileInterval;
+            var aim = (Vector2)(_player.position - transform.position);
+            if (aim.sqrMagnitude < 0.0001f)
+                aim = _renderer != null && _renderer.flipX ? Vector2.right : Vector2.left;
+
+            // Leading hand: boss art faces left; flipX when player is to the right.
+            var leading = _renderer != null && _renderer.flipX ? 1f : -1f;
+            var hand = (Vector2)transform.position + new Vector2(leading * 0.85f, 0.45f);
+            var damage = Mathf.Max(1, Mathf.RoundToInt(_attack * 0.5f));
+            BossFireProjectile.Spawn(hand, aim, damage, BossProjectileSpeed, BossProjectileLifetime);
         }
 
         void ShowHitSprite()
@@ -648,7 +772,10 @@ namespace ProjectZx.Enemies
             }
 
             if (IsRoundFortyBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Dungeon)
+            {
                 GameSave.SamuraiUnlocked = true;
+                ArenaVictoryGate.Spawn(pos + Vector2.up * 0.5f);
+            }
 
             Destroy(gameObject);
         }

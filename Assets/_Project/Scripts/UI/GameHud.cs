@@ -326,6 +326,7 @@ namespace ProjectZx.UI
             {
                 SurvivalMapKind.Inside => "Inside",
                 SurvivalMapKind.Dungeon => "Dungeon",
+                SurvivalMapKind.Unlimited => "Unlimited",
                 _ => "Outside"
             };
             _roundText.text = $"{mapLabel} — Round {round}";

@@ -67,7 +67,7 @@ namespace ProjectZx.Player
         public event Action<int> LevelUpChoiceRequired;
 
         bool _goldBanked;
-        bool _secondWindUsed;
+        int _secondWindChargesUsed;
         bool _shieldReady;
         float _shieldCooldown;
         float _timeSinceDamaged = 99f;
@@ -86,7 +86,7 @@ namespace ProjectZx.Player
             Level = 1;
             IsDead = false;
             _goldBanked = false;
-            _secondWindUsed = false;
+            _secondWindChargesUsed = 0;
             _shieldReady = false;
             _shieldCooldown = 0f;
             _timeSinceDamaged = 99f;
@@ -195,16 +195,20 @@ namespace ProjectZx.Player
                 return;
             }
 
-            if (GameSave.ThickHideUnlocked)
-                amount = Mathf.Max(1, Mathf.RoundToInt(amount * 0.85f));
+            if (GameSave.ThickHideLevel > 0)
+                amount = Mathf.Max(1, Mathf.RoundToInt(amount * GameSave.ThickHideDamageTakenMultiplier));
 
             FloatingDamageNumber.Spawn(transform.position, amount, isHeroHit: true);
             CurrentHp = Mathf.Max(0, CurrentHp - amount);
             _timeSinceDamaged = 0f;
 
-            if (GameSave.SecondWindUnlocked && !_secondWindUsed && CurrentHp > 0 && CurrentHp <= MaxHp * 0.2f)
+            var maxCharges = GameSave.SecondWindMaxCharges;
+            if (maxCharges > 0
+                && _secondWindChargesUsed < maxCharges
+                && CurrentHp > 0
+                && CurrentHp <= MaxHp * 0.2f)
             {
-                _secondWindUsed = true;
+                _secondWindChargesUsed++;
                 Heal(Mathf.Max(1, Mathf.RoundToInt(MaxHp * 0.3f)));
             }
 
@@ -225,7 +229,8 @@ namespace ProjectZx.Player
             if (!SurvivalMode || IsDead || amount <= 0) return;
             if (Level >= StatCaps.MaxRunLevel) return;
 
-            amount = Mathf.Max(1, Mathf.RoundToInt(amount * RunXpMultiplier));
+            amount = Mathf.Max(1, Mathf.RoundToInt(
+                amount * RunXpMultiplier * Achievements.AchievementXpMultiplier));
             RunXp += amount;
 
             var leveled = false;
@@ -518,7 +523,8 @@ namespace ProjectZx.Player
                 RunRegenPerSecond = RunRegenPerSecond,
                 RunShieldUnlocked = RunShieldUnlocked,
                 RunBerserkBonus = RunBerserkBonus,
-                SecondWindUsed = _secondWindUsed
+                SecondWindChargesUsed = _secondWindChargesUsed,
+                SecondWindUsed = _secondWindChargesUsed > 0
             };
         }
 
@@ -556,7 +562,9 @@ namespace ProjectZx.Player
             RunRegenPerSecond = snapshot.RunRegenPerSecond;
             RunShieldUnlocked = snapshot.RunShieldUnlocked;
             RunBerserkBonus = snapshot.RunBerserkBonus;
-            _secondWindUsed = snapshot.SecondWindUsed;
+            _secondWindChargesUsed = snapshot.SecondWindChargesUsed > 0
+                ? snapshot.SecondWindChargesUsed
+                : snapshot.SecondWindUsed ? 1 : 0;
             if (RunShieldUnlocked)
             {
                 _shieldReady = true;

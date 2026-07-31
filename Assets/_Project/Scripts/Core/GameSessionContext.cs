@@ -4,7 +4,9 @@ namespace ProjectZx.Core
     {
         Outside,
         Inside,
-        Dungeon
+        Dungeon,
+        /// <summary>Post-Dungeon endless run: rounds 1–100 with shifting biomes.</summary>
+        Unlimited
     }
 
     public struct SurvivalRunSnapshot
@@ -32,6 +34,9 @@ namespace ProjectZx.Core
         public float RunRegenPerSecond;
         public bool RunShieldUnlocked;
         public float RunBerserkBonus;
+        /// <summary>How many Second Wind charges have been consumed this run.</summary>
+        public int SecondWindChargesUsed;
+        /// <summary>Legacy bool for old snapshots; prefer SecondWindChargesUsed.</summary>
         public bool SecondWindUsed;
     }
 
@@ -48,5 +53,19 @@ namespace ProjectZx.Core
         public static int StartingRound { get; set; }
         public static int CarryRound { get; set; }
         public static SurvivalRunSnapshot RunSnapshot;
+
+        /// <summary>
+        /// Visual / enemy biome for Unlimited mode by round.
+        /// R1–20 Outside, R21–50 Inside, R51–100 Dungeon.
+        /// </summary>
+        public static SurvivalMapKind GetUnlimitedBiome(int round)
+        {
+            if (round <= 20) return SurvivalMapKind.Outside;
+            if (round <= 50) return SurvivalMapKind.Inside;
+            return SurvivalMapKind.Dungeon;
+        }
+
+        public static SurvivalMapKind GetVisualBiome(SurvivalMapKind mapKind, int round) =>
+            mapKind == SurvivalMapKind.Unlimited ? GetUnlimitedBiome(round) : mapKind;
     }
 }

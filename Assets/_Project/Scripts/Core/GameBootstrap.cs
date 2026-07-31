@@ -83,7 +83,12 @@ namespace ProjectZx.Core
         static void BuildSurvival(SurvivalMapKind mapKind)
         {
             EnsureAudioManager();
-            switch (mapKind)
+            var startRound = GameSessionContext.FreshSurvivalRun
+                ? Mathf.Max(1, GameSessionContext.StartingRound + 1)
+                : Mathf.Max(1, GameSessionContext.CarryRound + 1);
+            var visualBiome = GameSessionContext.GetVisualBiome(mapKind, startRound);
+
+            switch (visualBiome)
             {
                 case SurvivalMapKind.Inside:
                     AudioManager.Instance?.PlayInsideBgm();
@@ -96,8 +101,8 @@ namespace ProjectZx.Core
                     break;
             }
 
-            var isInside = mapKind == SurvivalMapKind.Inside;
-            var isDungeon = mapKind == SurvivalMapKind.Dungeon;
+            var isInside = visualBiome == SurvivalMapKind.Inside;
+            var isDungeon = visualBiome == SurvivalMapKind.Dungeon;
             SetupCamera(isDungeon
                 ? new Color(0.08f, 0.07f, 0.1f)
                 : isInside
@@ -111,7 +116,7 @@ namespace ProjectZx.Core
                 isDungeon ? "DungeonFloor" : isInside ? "InsideFloor" : "OutsideFloor",
                 arenaW,
                 arenaH,
-                mapKind,
+                visualBiome == SurvivalMapKind.Unlimited ? SurvivalMapKind.Outside : visualBiome,
                 1f);
 
             GameFactory.ClearScatterReservations();

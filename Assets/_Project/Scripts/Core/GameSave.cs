@@ -21,6 +21,10 @@ namespace ProjectZx.Core
         const string ThickHideKey = "zx_thick_hide";
         const string SecondWindKey = "zx_second_wind";
         const string CampfireBlessingKey = "zx_campfire_blessing";
+        const string InsideClearedKey = "zx_inside_cleared";
+        const string DungeonClearedKey = "zx_dungeon_cleared";
+        const string FlameEnchantKey = "zx_flame_enchant";
+        const string UnlimitedUnlockedKey = "zx_unlimited_unlocked";
         const string SpearmanUnlockedKey = "zx_spearman_unlocked";
         const string BowmanUnlockedKey = "zx_bowman_unlocked";
         const string MagicianUnlockedKey = "zx_magician_unlocked";
@@ -177,22 +181,75 @@ namespace ProjectZx.Core
             }
         }
 
-        public static bool ThickHideUnlocked
+        /// <summary>0 = none, 1 = −15%, 2 = −30%, 3 = −45%. Migrates old bool save (0/1).</summary>
+        public static int ThickHideLevel
         {
-            get => PlayerPrefs.GetInt(ThickHideKey, 0) == 1;
+            get => Mathf.Clamp(PlayerPrefs.GetInt(ThickHideKey, 0), 0, 3);
             set
             {
-                PlayerPrefs.SetInt(ThickHideKey, value ? 1 : 0);
+                PlayerPrefs.SetInt(ThickHideKey, Mathf.Clamp(value, 0, 3));
                 PlayerPrefs.Save();
             }
         }
 
-        public static bool SecondWindUnlocked
+        public static bool ThickHideUnlocked => ThickHideLevel >= 1;
+
+        /// <summary>0 = none, 1 = one charge/run, 2 = two charges/run.</summary>
+        public static int SecondWindLevel
         {
-            get => PlayerPrefs.GetInt(SecondWindKey, 0) == 1;
+            get => Mathf.Clamp(PlayerPrefs.GetInt(SecondWindKey, 0), 0, 2);
             set
             {
-                PlayerPrefs.SetInt(SecondWindKey, value ? 1 : 0);
+                PlayerPrefs.SetInt(SecondWindKey, Mathf.Clamp(value, 0, 2));
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool SecondWindUnlocked => SecondWindLevel >= 1;
+
+        public static int SecondWindMaxCharges =>
+            SecondWindLevel >= 2 ? 2 : SecondWindLevel >= 1 ? 1 : 0;
+
+        /// <summary>Damage taken multiplier after Thick Hide (1, 0.85, 0.70, 0.55).</summary>
+        public static float ThickHideDamageTakenMultiplier =>
+            ThickHideLevel <= 0 ? 1f : Mathf.Max(0.1f, 1f - 0.15f * ThickHideLevel);
+
+        public static bool InsideSurvivalCleared
+        {
+            get => PlayerPrefs.GetInt(InsideClearedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(InsideClearedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool DungeonSurvivalCleared
+        {
+            get => PlayerPrefs.GetInt(DungeonClearedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(DungeonClearedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool FlameEnchantUnlocked
+        {
+            get => PlayerPrefs.GetInt(FlameEnchantKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(FlameEnchantKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool UnlimitedMapUnlocked
+        {
+            get => PlayerPrefs.GetInt(UnlimitedUnlockedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(UnlimitedUnlockedKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
         }

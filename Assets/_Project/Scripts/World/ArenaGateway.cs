@@ -24,6 +24,7 @@ namespace ProjectZx.World
 
             _used = true;
             GameSave.DungeonMapUnlocked = true;
+            GameSave.InsideSurvivalCleared = true;
             GameSessionContext.SurvivalMap = SurvivalMapKind.Dungeon;
             GameSessionContext.FreshSurvivalRun = true;
             GameSessionContext.StartingRound = 0;

@@ -6,7 +6,7 @@ namespace ProjectZx.UI
     /// <summary>
     /// Scrolling damage popup over a unit's head.
     /// Uses screen-space UI (not TextMesh) so numbers render correctly under URP 2D.
-    /// White for enemies, red for the hero. Always draws under modal HUD (level-up talents).
+    /// White for enemies, red for the hero, pink for burn DoT. Always draws under modal HUD.
     /// </summary>
     public class FloatingDamageNumber : MonoBehaviour
     {
@@ -14,11 +14,11 @@ namespace ProjectZx.UI
         const float RisePixelsPerSecond = 90f;
         const float HeadOffsetY = 0.95f;
         const int FontSize = 48;
-        // Below HudCanvas (100) and retreat/level-up panels so talents stay on top.
         const int CanvasSortOrder = 40;
 
         static readonly Color EnemyColor = Color.white;
         static readonly Color HeroColor = new Color(1f, 0.2f, 0.2f, 1f);
+        static readonly Color BurnColor = new Color(1f, 0.45f, 0.85f, 1f);
 
         static Canvas _canvas;
         static Font _font;
@@ -33,8 +33,17 @@ namespace ProjectZx.UI
 
         public static void Spawn(Vector3 worldPosition, int amount, bool isHeroHit)
         {
+            Spawn(worldPosition, amount, isHeroHit ? HeroColor : EnemyColor);
+        }
+
+        public static void SpawnBurn(Vector3 worldPosition, int amount)
+        {
+            Spawn(worldPosition, amount, BurnColor);
+        }
+
+        public static void Spawn(Vector3 worldPosition, int amount, Color color)
+        {
             if (amount <= 0) return;
-            // Never show combat floaters over level-up talent picks.
             if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade) return;
 
             EnsureCanvas();
@@ -44,10 +53,9 @@ namespace ProjectZx.UI
             go.transform.SetParent(_canvas.transform, false);
 
             var number = go.AddComponent<FloatingDamageNumber>();
-            number.Setup(worldPosition, amount, isHeroHit);
+            number.Setup(worldPosition, amount, color);
         }
 
-        /// <summary>Remove active floaters when opening modal UI (level-up, etc.).</summary>
         public static void ClearAll()
         {
             if (_canvas == null) return;
@@ -67,7 +75,6 @@ namespace ProjectZx.UI
             _canvas = go.AddComponent<Canvas>();
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             _canvas.sortingOrder = CanvasSortOrder;
-            // No GraphicRaycaster — numbers must never block taps.
 
             var scaler = go.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -77,10 +84,10 @@ namespace ProjectZx.UI
             _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         }
 
-        void Setup(Vector3 worldPosition, int amount, bool isHeroHit)
+        void Setup(Vector3 worldPosition, int amount, Color color)
         {
             _worldAnchor = worldPosition + Vector3.up * HeadOffsetY;
-            _baseColor = isHeroHit ? HeroColor : EnemyColor;
+            _baseColor = color;
             _xJitterPixels = Random.Range(-28f, 28f);
             _risePixels = 0f;
             _age = 0f;

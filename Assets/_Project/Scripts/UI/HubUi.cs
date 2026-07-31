@@ -349,26 +349,28 @@ namespace ProjectZx.UI
 
         GameObject BuildMapPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, new Vector2(860, 560), ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, "Survival Challenge", 40, TextAnchor.MiddleCenter, new Vector2(0, 200), new Vector2(700, 56));
-            CreateText(panel.transform, "Set class & technique at the Wizard shop first.\nUnlocked maps start fresh at round 1.", 24, TextAnchor.MiddleCenter, new Vector2(0, 120), new Vector2(760, 72));
-            CreateButton(panel.transform, "Outside Survival", new Vector2(0, 30), () => EnterSurvival(SurvivalMapKind.Outside), large: true);
-            CreateButton(panel.transform, "Inside Survival", new Vector2(0, -50), () => EnterSurvival(SurvivalMapKind.Inside), large: true);
-            CreateButton(panel.transform, "Dungeon Survival", new Vector2(0, -130), () => EnterSurvival(SurvivalMapKind.Dungeon), large: true);
-            CreateButton(panel.transform, "Close", new Vector2(0, -220), () => panel.SetActive(false), large: true);
+            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, new Vector2(860, 640), ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, "Survival Challenge", 40, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(700, 56));
+            CreateText(panel.transform, "Set class & technique at the Wizard shop first.\nUnlocked maps start fresh at round 1.", 24, TextAnchor.MiddleCenter, new Vector2(0, 175), new Vector2(760, 72));
+            CreateButton(panel.transform, "Outside Survival", new Vector2(0, 50), () => EnterSurvival(SurvivalMapKind.Outside), large: true);
+            CreateButton(panel.transform, "Inside Survival", new Vector2(0, -20), () => EnterSurvival(SurvivalMapKind.Inside), large: true);
+            CreateButton(panel.transform, "Dungeon Survival", new Vector2(0, -90), () => EnterSurvival(SurvivalMapKind.Dungeon), large: true);
+            CreateButton(panel.transform, "Unlimited Survival", new Vector2(0, -160), () => EnterSurvival(SurvivalMapKind.Unlimited), large: true);
+            CreateButton(panel.transform, "Close", new Vector2(0, -240), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
         }
 
         GameObject BuildCampfirePanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, new Vector2(760, 560), ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, "Campfire Travel", 34, TextAnchor.MiddleCenter, new Vector2(0, 200), new Vector2(640, 48));
-            CreateText(panel.transform, "Choose an unlocked map. Each run starts at round 1.", 20, TextAnchor.MiddleCenter, new Vector2(0, 140), new Vector2(680, 48));
-            CreateButton(panel.transform, "Outside Survival", new Vector2(0, 50), () => EnterSurvival(SurvivalMapKind.Outside));
-            CreateButton(panel.transform, "Inside Survival", new Vector2(0, -30), () => EnterSurvival(SurvivalMapKind.Inside));
-            CreateButton(panel.transform, "Dungeon Survival", new Vector2(0, -110), () => EnterSurvival(SurvivalMapKind.Dungeon));
-            CreateButton(panel.transform, "Close", new Vector2(0, -200), () => panel.SetActive(false));
+            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, new Vector2(760, 640), ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, "Campfire Travel", 34, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(640, 48));
+            CreateText(panel.transform, "Choose an unlocked map. Each run starts at round 1.", 20, TextAnchor.MiddleCenter, new Vector2(0, 185), new Vector2(680, 48));
+            CreateButton(panel.transform, "Outside Survival", new Vector2(0, 70), () => EnterSurvival(SurvivalMapKind.Outside));
+            CreateButton(panel.transform, "Inside Survival", new Vector2(0, 0), () => EnterSurvival(SurvivalMapKind.Inside));
+            CreateButton(panel.transform, "Dungeon Survival", new Vector2(0, -70), () => EnterSurvival(SurvivalMapKind.Dungeon));
+            CreateButton(panel.transform, "Unlimited Survival", new Vector2(0, -140), () => EnterSurvival(SurvivalMapKind.Unlimited));
+            CreateButton(panel.transform, "Close", new Vector2(0, -220), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
@@ -751,6 +753,7 @@ namespace ProjectZx.UI
         {
             if (mapKind == SurvivalMapKind.Inside && !GameSave.InsideMapUnlocked) return;
             if (mapKind == SurvivalMapKind.Dungeon && !GameSave.DungeonMapUnlocked) return;
+            if (mapKind == SurvivalMapKind.Unlimited && !GameSave.UnlimitedMapUnlocked) return;
 
             GameSessionContext.SurvivalMap = mapKind;
             GameSessionContext.SelectedHero = GameSave.SanitizeHero(GameSave.SelectedHero);
@@ -807,7 +810,7 @@ namespace ProjectZx.UI
         void BuyHp()
         {
             if (GameSave.IsHpUpgradeMaxed) return;
-            if (!GameSave.TrySpendGold(ShopCosts.HpUpgrade)) return;
+            if (!GameSave.TrySpendGold(ShopCosts.NextHpCost)) return;
             GameSave.HpUpgradeLevel++;
             OnShopUpgradePurchased();
         }
@@ -815,7 +818,7 @@ namespace ProjectZx.UI
         void BuyDamage()
         {
             if (GameSave.IsDamageUpgradeMaxed) return;
-            if (!GameSave.TrySpendGold(ShopCosts.DamageUpgrade)) return;
+            if (!GameSave.TrySpendGold(ShopCosts.NextDamageCost)) return;
             GameSave.DamageUpgradeLevel++;
             OnShopUpgradePurchased();
         }
@@ -823,7 +826,7 @@ namespace ProjectZx.UI
         void BuySpeed()
         {
             if (GameSave.IsSpeedUpgradeMaxed) return;
-            if (!GameSave.TrySpendGold(ShopCosts.SpeedUpgrade)) return;
+            if (!GameSave.TrySpendGold(ShopCosts.NextSpeedCost)) return;
             GameSave.SpeedUpgradeLevel++;
             OnShopUpgradePurchased();
         }
@@ -838,17 +841,22 @@ namespace ProjectZx.UI
 
         void BuyThickHide()
         {
-            if (GameSave.ThickHideUnlocked) return;
-            if (!GameSave.TrySpendGold(ShopCosts.ThickHide)) return;
-            GameSave.ThickHideUnlocked = true;
+            var level = GameSave.ThickHideLevel;
+            if (level >= 3) return;
+            if (level >= 1 && !GameSave.InsideSurvivalCleared) return;
+            if (level >= 2 && !GameSave.DungeonSurvivalCleared) return;
+            if (!GameSave.TrySpendGold(ShopCosts.NextThickHideCost)) return;
+            GameSave.ThickHideLevel = level + 1;
             OnShopUpgradePurchased();
         }
 
         void BuySecondWind()
         {
-            if (GameSave.SecondWindUnlocked) return;
-            if (!GameSave.TrySpendGold(ShopCosts.SecondWind)) return;
-            GameSave.SecondWindUnlocked = true;
+            var level = GameSave.SecondWindLevel;
+            if (level >= 2) return;
+            if (level >= 1 && !GameSave.InsideSurvivalCleared) return;
+            if (!GameSave.TrySpendGold(ShopCosts.NextSecondWindCost)) return;
+            GameSave.SecondWindLevel = level + 1;
             OnShopUpgradePurchased();
         }
 
@@ -879,24 +887,17 @@ namespace ProjectZx.UI
 
         void RefreshShopRows()
         {
-            SetUpgradeRow(_hpRow, "Max HP +15", ShopCosts.HpUpgrade, GameSave.IsHpUpgradeMaxed, $"Max HP {GameSave.MaxHp}/{StatCaps.PermanentMaxHp}");
-            SetUpgradeRow(_damageRow, "Damage +8%", ShopCosts.DamageUpgrade, GameSave.IsDamageUpgradeMaxed, $"Damage x{GameSave.DamageMultiplier:0.##} (max x{StatCaps.PermanentMaxDamageMultiplier:0.#})");
-            SetUpgradeRow(_speedRow, "Move Speed +6%", ShopCosts.SpeedUpgrade, GameSave.IsSpeedUpgradeMaxed, $"Speed x{GameSave.SpeedMultiplier:0.##} (max x{StatCaps.PermanentMaxSpeedMultiplier:0.#})");
+            SetUpgradeRow(_hpRow, "Max HP +15", ShopCosts.NextHpCost, GameSave.IsHpUpgradeMaxed, $"Max HP {GameSave.MaxHp}/{StatCaps.PermanentMaxHp}");
+            SetUpgradeRow(_damageRow, "Damage +8%", ShopCosts.NextDamageCost, GameSave.IsDamageUpgradeMaxed, $"Damage x{GameSave.DamageMultiplier:0.##} (max x{StatCaps.PermanentMaxDamageMultiplier:0.#})");
+            SetUpgradeRow(_speedRow, "Move Speed +6%", ShopCosts.NextSpeedCost, GameSave.IsSpeedUpgradeMaxed, $"Speed x{GameSave.SpeedMultiplier:0.##} (max x{StatCaps.PermanentMaxSpeedMultiplier:0.#})");
 
             if (GameSave.GoldMagnetUnlocked)
                 SetOwnedRow(_goldMagnetRow, "Gold Magnet (+25% gold & loot range)");
             else
                 SetUpgradeRow(_goldMagnetRow, "Gold Magnet (+25% gold & loot range)", ShopCosts.GoldMagnet, false, string.Empty);
 
-            if (GameSave.ThickHideUnlocked)
-                SetOwnedRow(_thickHideRow, "Thick Hide (−15% damage taken)");
-            else
-                SetUpgradeRow(_thickHideRow, "Thick Hide (−15% damage taken)", ShopCosts.ThickHide, false, string.Empty);
-
-            if (GameSave.SecondWindUnlocked)
-                SetOwnedRow(_secondWindRow, "Second Wind (heal 30% once under 20% HP)");
-            else
-                SetUpgradeRow(_secondWindRow, "Second Wind (heal 30% once under 20% HP)", ShopCosts.SecondWind, false, string.Empty);
+            RefreshThickHideRow();
+            RefreshSecondWindRow();
 
             if (GameSave.CampfireBlessingUnlocked)
                 SetOwnedRow(_campfireBlessingRow, "Campfire Blessing (free level-up at run start)");
@@ -921,6 +922,57 @@ namespace ProjectZx.UI
                 SetLockedRow(_frostTipRow, "Frost Tip (1s chill, −60% move)", "Unlock Spearman, Bowman, or Samurai");
             else
                 SetUpgradeRow(_frostTipRow, "Frost Tip (1s chill, −60% move)", ShopCosts.FrostTip, false, string.Empty);
+        }
+
+        void RefreshThickHideRow()
+        {
+            var level = GameSave.ThickHideLevel;
+            if (level >= 3)
+            {
+                SetOwnedRow(_thickHideRow, "Thick Hide III (−45% damage taken)");
+                return;
+            }
+
+            if (level == 0)
+            {
+                SetUpgradeRow(_thickHideRow, "Thick Hide I (−15% damage taken)", ShopCosts.NextThickHideCost, false, string.Empty);
+                return;
+            }
+
+            if (level == 1)
+            {
+                if (!GameSave.InsideSurvivalCleared)
+                    SetLockedRow(_thickHideRow, "Thick Hide II (−30% damage taken)", "Clear Inside Survival");
+                else
+                    SetUpgradeRow(_thickHideRow, "Thick Hide II (−30% damage taken)", ShopCosts.NextThickHideCost, false, "Owned: T1 (−15%)");
+                return;
+            }
+
+            if (!GameSave.DungeonSurvivalCleared)
+                SetLockedRow(_thickHideRow, "Thick Hide III (−45% damage taken)", "Clear Dungeon Survival");
+            else
+                SetUpgradeRow(_thickHideRow, "Thick Hide III (−45% damage taken)", ShopCosts.NextThickHideCost, false, "Owned: T2 (−30%)");
+        }
+
+        void RefreshSecondWindRow()
+        {
+            var level = GameSave.SecondWindLevel;
+            if (level >= 2)
+            {
+                SetOwnedRow(_secondWindRow, "Second Wind II (heal 30% twice under 20% HP)");
+                return;
+            }
+
+            if (level == 0)
+            {
+                SetUpgradeRow(_secondWindRow, "Second Wind I (heal 30% once under 20% HP)", ShopCosts.NextSecondWindCost, false, string.Empty);
+                return;
+            }
+
+            if (!GameSave.InsideSurvivalCleared)
+                SetLockedRow(_secondWindRow, "Second Wind II (2 uses/run)", "Clear Inside Survival");
+            else
+                SetUpgradeRow(_secondWindRow, "Second Wind II (2 uses/run)", ShopCosts.NextSecondWindCost, false, "Owned: 1 use/run");
         }
 
         static void SetLockedRow(UpgradeRowRefs row, string label, string reason)
@@ -1111,10 +1163,13 @@ namespace ProjectZx.UI
                 $"Whirlwind: {(GameSave.WhirlwindUnlocked ? "Owned" : "Locked")}\n" +
                 $"Piercing Shot: {(GameSave.PiercingShotUnlocked ? "Owned" : "Locked")}\n" +
                 $"Frost Tip: {(GameSave.FrostTipUnlocked ? "Owned" : "Locked")}\n" +
+                $"Flame Enchant: {(GameSave.FlameEnchantUnlocked ? "Owned" : "Clear Dungeon R40")}\n" +
                 $"Gold Magnet: {(GameSave.GoldMagnetUnlocked ? "Owned" : "Locked")}\n" +
-                $"Thick Hide: {(GameSave.ThickHideUnlocked ? "Owned" : "Locked")}\n" +
-                $"Second Wind: {(GameSave.SecondWindUnlocked ? "Owned" : "Locked")}\n" +
+                $"Thick Hide: T{GameSave.ThickHideLevel} ({(1f - GameSave.ThickHideDamageTakenMultiplier) * 100f:0}% DR)\n" +
+                $"Second Wind: {GameSave.SecondWindMaxCharges} charge(s)/run\n" +
                 $"Campfire Blessing: {(GameSave.CampfireBlessingUnlocked ? "Owned" : "Locked")}\n" +
+                $"Achievement XP: x{Achievements.AchievementXpMultiplier:0.##}\n" +
+                $"Unlimited Map: {(GameSave.UnlimitedMapUnlocked ? "Unlocked" : "Locked")}\n" +
                 $"Ring: {EquipName(GameSave.EquippedRing)}\n" +
                 $"Necklace: {EquipName(GameSave.EquippedNecklace)}\n" +
                 $"Spearman: {(GameSave.SpearmanUnlocked ? "Unlocked" : "Locked")}\n" +
@@ -1172,6 +1227,12 @@ namespace ProjectZx.UI
                     var unlocked = GameSave.DungeonMapUnlocked;
                     button.interactable = unlocked;
                     label.text = unlocked ? "Dungeon Survival" : "Dungeon Survival (Locked)";
+                }
+                else if (text.Contains("Unlimited Survival"))
+                {
+                    var unlocked = GameSave.UnlimitedMapUnlocked;
+                    button.interactable = unlocked;
+                    label.text = unlocked ? "Unlimited Survival" : "Unlimited Survival (Locked)";
                 }
             }
         }

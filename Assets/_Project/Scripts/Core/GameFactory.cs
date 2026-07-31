@@ -360,6 +360,71 @@ namespace ProjectZx.Core
             return go;
         }
 
+        public static GameObject CreateArenaVictoryGate(Vector3 position)
+        {
+            var go = CreateSprite("ArenaVictoryGate", ArtLibrary.Gateway, position, 1.2f, 10);
+            var col = go.AddComponent<BoxCollider2D>();
+            col.size = new Vector2(1.4f, 2.1f);
+            col.isTrigger = true;
+            // Slight gold tint so it reads as a return portal.
+            var sr = go.GetComponent<SpriteRenderer>();
+            if (sr != null)
+                sr.color = new Color(1f, 0.92f, 0.55f, 1f);
+            return go;
+        }
+
+        /// <summary>
+        /// Rebuild floor + obstacles for Unlimited mid-run biome transitions.
+        /// </summary>
+        public static void RebuildSurvivalEnvironment(SurvivalMapKind visualBiome)
+        {
+            DestroyNamed("OutsideFloor");
+            DestroyNamed("InsideFloor");
+            DestroyNamed("DungeonFloor");
+            DestroyNamed("UnlimitedFloor");
+            DestroyNamed("ArenaObstacles");
+            DestroyNamed("InsideObstacles");
+            DestroyNamed("CryptObstacles");
+
+            const float arenaW = ArenaBounds.ArenaWidth;
+            const float arenaH = ArenaBounds.ArenaHeight;
+            var isInside = visualBiome == SurvivalMapKind.Inside;
+            var isDungeon = visualBiome == SurvivalMapKind.Dungeon;
+
+            CreateTiledField(
+                isDungeon ? "DungeonFloor" : isInside ? "InsideFloor" : "OutsideFloor",
+                arenaW,
+                arenaH,
+                visualBiome == SurvivalMapKind.Unlimited ? SurvivalMapKind.Outside : visualBiome,
+                1f);
+
+            ClearScatterReservations();
+            ReserveClearing(Vector2.zero, 4.5f);
+            if (isInside)
+                ScatterInsideObstacles(arenaW, arenaH);
+            else if (isDungeon)
+                ScatterCryptObstacles(arenaW, arenaH);
+            else
+                ScatterArenaObstacles(arenaW, arenaH, 14, 10, 3);
+
+            var cam = Camera.main;
+            if (cam != null)
+            {
+                cam.backgroundColor = isDungeon
+                    ? new Color(0.08f, 0.07f, 0.1f)
+                    : isInside
+                        ? new Color(0.2f, 0.16f, 0.12f)
+                        : new Color(0.1f, 0.2f, 0.48f);
+            }
+        }
+
+        static void DestroyNamed(string name)
+        {
+            var go = GameObject.Find(name);
+            if (go != null)
+                Object.Destroy(go);
+        }
+
         /// <summary>
         /// Outdoor camp / hub ground with the same water ring as survival arenas.
         /// </summary>
@@ -403,7 +468,11 @@ namespace ProjectZx.Core
             stats.ConfigureForRun(survivalMode);
 
             if (survivalMode)
+            {
                 AttachCombatForClass(go, playerClass);
+                if (GameSave.FlameEnchantUnlocked)
+                    Combat.FlameEnchantVfx.Attach(go.transform, Combat.FlameEnchantVfx.FlameKind.Weapon, new Vector3(0.35f, 0.15f, 0f), 0.7f);
+            }
 
             return go;
         }
@@ -488,7 +557,9 @@ namespace ProjectZx.Core
             bool isRoundFortyBoss = false)
         {
             Sprite sprite;
-            if (isBoss)
+            if (isRoundFortyBoss)
+                sprite = ArtLibrary.BossB;
+            else if (isBoss)
                 sprite = ArtLibrary.Boss;
             else
                 ArtLibrary.GetZombieSprites(zombieKind, out sprite, out _);

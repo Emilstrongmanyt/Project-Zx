@@ -26,6 +26,11 @@ namespace ProjectZx.Core
             _zombie = null;
             _boss = null;
             _bossAttacking = null;
+            _bossB = null;
+            _bossB2 = null;
+            _weaponFireFrames = null;
+            _enemyBurnFrames = null;
+            _bossFireBoltFrames = null;
             _wizard = null;
             _knight = null;
             _achievementKeeper = null;
@@ -125,6 +130,9 @@ namespace ProjectZx.Core
         static Sprite[] _dungeonTiles;
         static Sprite _waterTile;
         static Sprite[] _fireBreathFrames;
+        static Sprite[] _weaponFireFrames;
+        static Sprite[] _enemyBurnFrames;
+        static Sprite[] _bossFireBoltFrames;
         static Sprite _zombieHit;
         static Sprite _zombieInside;
         static Sprite _zombieInsideHit;
@@ -132,6 +140,8 @@ namespace ProjectZx.Core
         static Sprite _zombieInside2Hit;
         static Sprite _bossHit;
         static Sprite _bossAttackingHit;
+        static Sprite _bossB;
+        static Sprite _bossB2;
         static Sprite _goldCoin;
         static Sprite _goldCoinDropped;
         static Sprite _hpHeart;
@@ -156,6 +166,8 @@ namespace ProjectZx.Core
         public static Sprite BossHit => _bossHit ??= Load("BossJHit", "BossJ");
         public static Sprite BossAttacking => _bossAttacking ??= Load("Art/boss_j_attacking", "BossJAttacking", "Art/boss_j", "BossJ", "Placeholders/boss");
         public static Sprite BossAttackingHit => _bossAttackingHit ??= Load("BossJAttackingHit", "BossJAttacking");
+        public static Sprite BossB => _bossB ??= Load("BossB", "Art/boss_j", "BossJ", "Placeholders/boss");
+        public static Sprite BossB2 => _bossB2 ??= Load("BossB2", "BossB", "Art/boss_j", "BossJ", "Placeholders/boss");
         public static Sprite GoldCoin => _goldCoin ??= Load("GoldCoin");
         public static Sprite GoldCoinDropped => _goldCoinDropped ??= Load("GoldCoinDropped", "GoldCoin");
         public static Sprite HpHeart => _hpHeart ??= Load("HeartHP", "HPHeart");
@@ -328,6 +340,79 @@ namespace ProjectZx.Core
             EnsureFireBreathFrames();
             var index = Mathf.Abs(frame) % _fireBreathFrames.Length;
             return _fireBreathFrames[index];
+        }
+
+        public static Sprite GetWeaponFireFrame(int frame)
+        {
+            EnsureWeaponFireFrames();
+            return _weaponFireFrames[Mathf.Abs(frame) % _weaponFireFrames.Length];
+        }
+
+        public static Sprite GetEnemyBurnFrame(int frame)
+        {
+            EnsureEnemyBurnFrames();
+            return _enemyBurnFrames[Mathf.Abs(frame) % _enemyBurnFrames.Length];
+        }
+
+        public static Sprite GetBossFireBoltFrame(int frame)
+        {
+            EnsureBossFireBoltFrames();
+            return _bossFireBoltFrames[Mathf.Abs(frame) % _bossFireBoltFrames.Length];
+        }
+
+        static void EnsureWeaponFireFrames()
+        {
+            if (_weaponFireFrames != null) return;
+            _weaponFireFrames = new Sprite[4];
+            for (var i = 0; i < 4; i++)
+                _weaponFireFrames[i] = Load($"WeaponFire{i + 1}") ?? CreateTinyFlameSprite(i, 12, 16);
+        }
+
+        static void EnsureEnemyBurnFrames()
+        {
+            if (_enemyBurnFrames != null) return;
+            _enemyBurnFrames = new Sprite[4];
+            for (var i = 0; i < 4; i++)
+                _enemyBurnFrames[i] = Load($"EnemyBurn{i + 1}") ?? CreateTinyFlameSprite(i, 14, 14);
+        }
+
+        static void EnsureBossFireBoltFrames()
+        {
+            if (_bossFireBoltFrames != null) return;
+            _bossFireBoltFrames = new Sprite[3];
+            for (var i = 0; i < 3; i++)
+                _bossFireBoltFrames[i] = Load($"BossFireBolt{i + 1}") ?? CreateTinyFlameSprite(i, 16, 10);
+        }
+
+        static Sprite CreateTinyFlameSprite(int frame, int w, int h)
+        {
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+            var clear = new Color(0, 0, 0, 0);
+            var core = new Color(1f, 0.95f, 0.55f, 1f);
+            var mid = new Color(1f, 0.55f, 0.12f, 1f);
+            var edge = new Color(0.95f, 0.2f, 0.05f, 0.9f);
+            for (var y = 0; y < h; y++)
+            for (var x = 0; x < w; x++)
+                tex.SetPixel(x, y, clear);
+
+            var cx = w / 2;
+            var flicker = frame % 4;
+            for (var y = 1; y < h - 1; y++)
+            {
+                var width = Mathf.Max(1, (h - y) / 3 + (flicker == y % 4 ? 1 : 0));
+                for (var dx = -width; dx <= width; dx++)
+                {
+                    var x = cx + dx;
+                    if (x < 0 || x >= w) continue;
+                    var t = (float)y / h;
+                    var c = t > 0.65f ? core : t > 0.35f ? mid : edge;
+                    tex.SetPixel(x, y, c);
+                }
+            }
+
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.15f), 8f);
         }
 
         /// <summary>

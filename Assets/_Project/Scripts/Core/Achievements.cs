@@ -29,7 +29,9 @@ namespace ProjectZx.Core
         RoundPioneer80,
         DungeonDelver,
         InsideArcher,
-        TogetherAgain
+        TogetherAgain,
+        DungeonClearer,
+        EndlessHorizon
     }
 
     public readonly struct AchievementDef
@@ -75,7 +77,9 @@ namespace ProjectZx.Core
             new(AchievementId.RoundPioneer80, "Round Pioneer LXXX", "Reach round 80."),
             new(AchievementId.DungeonDelver, "Dungeon Delver", "Clear Outside round 20 and enter the door to Inside Survival."),
             new(AchievementId.InsideArcher, "Inside Archer", "Clear round 50 on Inside survival."),
-            new(AchievementId.TogetherAgain, "Together Again", "Meet RowZi at the Outside round 20 door.")
+            new(AchievementId.TogetherAgain, "Together Again", "Meet RowZi at the Outside round 20 door."),
+            new(AchievementId.DungeonClearer, "Dungeon Clearer", "Defeat the Dungeon round 40 boss and enter the victory portal."),
+            new(AchievementId.EndlessHorizon, "Endless Horizon", "Unlock Unlimited Survival after clearing Dungeon.")
         };
 
         static readonly int[] ZombieThresholds = { 25, 100, 500, 1000, 5000, 10000 };
@@ -144,6 +148,9 @@ namespace ProjectZx.Core
             }
         }
 
+        /// <summary>+5% run XP permanently per completed achievement.</summary>
+        public static float AchievementXpMultiplier => 1f + UnlockedCount * 0.05f;
+
         public static bool TryUnlock(AchievementId id)
         {
             if (IsUnlocked(id)) return false;
@@ -188,11 +195,16 @@ namespace ProjectZx.Core
 
         public static void UnlockTogetherAgain() => TryUnlock(AchievementId.TogetherAgain);
 
+        public static void UnlockDungeonClearer() => TryUnlock(AchievementId.DungeonClearer);
+
+        public static void UnlockEndlessHorizon() => TryUnlock(AchievementId.EndlessHorizon);
+
         public static string BuildPanelText()
         {
             var sb = new StringBuilder();
             sb.AppendLine($"Unlocked {UnlockedCount}/{Catalog.Length}");
             sb.AppendLine($"Each unlock rewards {CompletionGoldReward} gold.");
+            sb.AppendLine($"+5% run XP per achievement (now x{AchievementXpMultiplier:0.##}).");
             sb.AppendLine();
 
             foreach (var def in Catalog)

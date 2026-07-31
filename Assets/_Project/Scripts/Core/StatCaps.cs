@@ -3,14 +3,50 @@ namespace ProjectZx.Core
     public static class StatCaps
     {
         public const int PermanentMaxHp = 600;
-        // 20% lower than original 2.0 cap.
-        public const float PermanentMaxSpeedMultiplier = 1.6f;
-        public const float PermanentMaxDamageMultiplier = 3f;
+
+        /// <summary>Base permanent caps (before Inside / Dungeon clear progression).</summary>
+        public const float BasePermanentMaxSpeedMultiplier = 1.6f;
+        public const float BasePermanentMaxDamageMultiplier = 3f;
+
+        public const float InsidePermanentMaxSpeedMultiplier = 2f;
+        public const float InsidePermanentMaxDamageMultiplier = 4f;
+
+        public const float DungeonPermanentMaxSpeedMultiplier = 2.5f;
+        public const float DungeonPermanentMaxDamageMultiplier = 5f;
 
         public const int MaxRunLevel = 100;
+        public const int UnlimitedMaxRound = 100;
 
-        public const int RunMaxHp = PermanentMaxHp * 2;
-        public const float RunMaxSpeedMultiplier = PermanentMaxSpeedMultiplier * 2f;
-        public const float RunMaxDamageMultiplier = PermanentMaxDamageMultiplier * 2f;
+        /// <summary>
+        /// 0 = default, 1 = Inside survival cleared (gateway entered),
+        /// 2 = Dungeon survival cleared (victory gate entered).
+        /// </summary>
+        public static int ProgressionTier
+        {
+            get
+            {
+                if (GameSave.DungeonSurvivalCleared) return 2;
+                if (GameSave.InsideSurvivalCleared) return 1;
+                return 0;
+            }
+        }
+
+        public static float PermanentMaxSpeedMultiplier => ProgressionTier switch
+        {
+            2 => DungeonPermanentMaxSpeedMultiplier,
+            1 => InsidePermanentMaxSpeedMultiplier,
+            _ => BasePermanentMaxSpeedMultiplier
+        };
+
+        public static float PermanentMaxDamageMultiplier => ProgressionTier switch
+        {
+            2 => DungeonPermanentMaxDamageMultiplier,
+            1 => InsidePermanentMaxDamageMultiplier,
+            _ => BasePermanentMaxDamageMultiplier
+        };
+
+        public static int RunMaxHp => PermanentMaxHp * 2;
+        public static float RunMaxSpeedMultiplier => PermanentMaxSpeedMultiplier * 2f;
+        public static float RunMaxDamageMultiplier => PermanentMaxDamageMultiplier * 2f;
     }
 }

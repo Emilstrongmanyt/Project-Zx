@@ -6,7 +6,7 @@ using UnityEngine;
 namespace ProjectZx.Combat
 {
     /// <summary>
-    /// Shared hit pipeline for crits, execute, boss hunter, lifesteal, and frost tip.
+    /// Shared hit pipeline for crits, execute, boss hunter, lifesteal, frost tip, and flame enchant.
     /// </summary>
     public static class CombatDamage
     {
@@ -18,9 +18,13 @@ namespace ProjectZx.Combat
             target.TakeDamage(damage);
             attacker.OnDamageDealt(damage);
 
-            // Frost Tip: 1s chill (−60% move), not a hard freeze.
+            // Frost Tip: 1s chill (−60% move), not a hard freeze. Bosses immune.
             if (canApplyFrost && GameSave.FrostTipUnlocked && !target.IsBoss)
                 target.ApplyChill(1f);
+
+            // Flame Enchant: ignite for +40% of hit damage over 3s (1 tick/sec). Refreshes on new hits.
+            if (GameSave.FlameEnchantUnlocked && damage > 0)
+                target.ApplyIgnite(damage);
         }
     }
 }
