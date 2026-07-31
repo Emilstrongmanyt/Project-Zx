@@ -7,9 +7,11 @@ namespace ProjectZx.Core
     /// </summary>
     public static class ShopCosts
     {
-        public const int HpUpgrade = 100;
-        public const int DamageUpgrade = 150;
+        // HP / Damage base costs reduced 40% for smoother early progression.
+        public const int HpUpgrade = 60;
+        public const int DamageUpgrade = 90;
         public const int SpeedUpgrade = 120;
+        public const int RangeUpgrade = 110;
         public const int Whirlwind = 1000;
         public const int PiercingShot = 4000;
         public const int FrostTip = 3000;
@@ -34,6 +36,7 @@ namespace ProjectZx.Core
         public static int NextHpCost => Exponential(HpUpgrade, GameSave.HpUpgradeLevel);
         public static int NextDamageCost => Exponential(DamageUpgrade, GameSave.DamageUpgradeLevel);
         public static int NextSpeedCost => Exponential(SpeedUpgrade, GameSave.SpeedUpgradeLevel);
+        public static int NextRangeCost => Exponential(RangeUpgrade, GameSave.RangeUpgradeLevel);
 
         /// <summary>Cost to buy the next Thick Hide tier (ownedLevel is current level 0–2).</summary>
         public static int NextThickHideCost => Exponential(ThickHide, GameSave.ThickHideLevel);

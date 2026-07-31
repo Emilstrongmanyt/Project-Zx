@@ -52,6 +52,8 @@ namespace ProjectZx.Player
         public float RunDamageMultiplier { get; private set; } = 1f;
         public float RunAttackSpeedMultiplier { get; private set; } = 1f;
         public float RunAttackRangeMultiplier { get; private set; } = 1f;
+        /// <summary>Permanent shop range × run talent range.</summary>
+        public float AttackRangeMultiplier => GameSave.AttackRangeMultiplier * RunAttackRangeMultiplier;
         public float RunLootRangeMultiplier { get; private set; } = 1f;
         public float RunCritChance { get; private set; }
         public float RunCritMultiplier { get; private set; } = 1.5f;
@@ -258,6 +260,8 @@ namespace ProjectZx.Player
 
         public bool CanOfferSpeedTalent => RunSpeedMultiplier * 1.1f <= StatCaps.RunMaxSpeedMultiplier + 0.001f;
         public bool CanOfferAttackTalent => RunDamageMultiplier * 1.12f <= StatCaps.RunMaxDamageMultiplier + 0.001f;
+        public bool CanOfferAttackRangeTalent =>
+            AttackRangeMultiplier * 1.1f <= StatCaps.RunMaxAttackRangeMultiplier + 0.001f;
         public bool CanOfferHpTalent => MaxHp + 15 <= StatCaps.RunMaxHp;
         public bool CanOfferCritChance => RunCritChance + 0.08f <= 0.55f;
         public bool CanOfferCritDamage => RunCritMultiplier + 0.25f <= 3f;
@@ -294,7 +298,7 @@ namespace ProjectZx.Player
                 if (stats.CanOfferHpTalent) pool.Add(RunLevelChoice.Hp);
                 if (stats.CanOfferAttackTalent) pool.Add(RunLevelChoice.Attack);
                 pool.Add(RunLevelChoice.AttackSpeed);
-                pool.Add(RunLevelChoice.AttackRange);
+                if (stats.CanOfferAttackRangeTalent) pool.Add(RunLevelChoice.AttackRange);
                 pool.Add(RunLevelChoice.LootRange);
                 if (stats.CanOfferCritChance) pool.Add(RunLevelChoice.CritChance);
                 if (stats.CanOfferCritDamage) pool.Add(RunLevelChoice.CritDamage);
@@ -364,7 +368,10 @@ namespace ProjectZx.Player
                     RunAttackSpeedMultiplier *= 1.12f;
                     break;
                 case RunLevelChoice.AttackRange:
-                    RunAttackRangeMultiplier *= 1.1f;
+                    if (!CanOfferAttackRangeTalent) break;
+                    RunAttackRangeMultiplier = Mathf.Min(
+                        StatCaps.RunMaxAttackRangeMultiplier / Mathf.Max(0.01f, GameSave.AttackRangeMultiplier),
+                        RunAttackRangeMultiplier * 1.1f);
                     break;
                 case RunLevelChoice.LootRange:
                     RunLootRangeMultiplier *= 1.15f;

@@ -29,7 +29,7 @@ namespace ProjectZx.Combat
             get
             {
                 var stats = GetComponent<PlayerStats>();
-                var rangeMul = stats != null ? stats.RunAttackRangeMultiplier : 1f;
+                var rangeMul = stats != null ? stats.AttackRangeMultiplier : GameSave.AttackRangeMultiplier;
                 return attackRange * rangeMul;
             }
         }

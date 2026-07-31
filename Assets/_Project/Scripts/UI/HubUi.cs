@@ -12,6 +12,8 @@ namespace ProjectZx.UI
 
         const float SafeRight = 140f;
         const float SafeTop = 36f;
+        /// <summary>Shared almost-full-screen size for shop, settings, loadout, stats, etc.</summary>
+        static readonly Vector2 HubMenuPanelSize = new Vector2(1100f, 980f);
 
         Text _goldText;
         Text _statsBodyText;
@@ -66,6 +68,7 @@ namespace ProjectZx.UI
         UpgradeRowRefs _hpRow;
         UpgradeRowRefs _damageRow;
         UpgradeRowRefs _speedRow;
+        UpgradeRowRefs _rangeRow;
         UpgradeRowRefs _whirlwindRow;
         UpgradeRowRefs _piercingShotRow;
         UpgradeRowRefs _frostTipRow;
@@ -123,7 +126,7 @@ namespace ProjectZx.UI
 
         GameObject BuildShopPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "ShopPanel", Vector2.zero, new Vector2(1100, 980), ArtLibrary.ShopUi);
+            var panel = CreateDialogPanel(parent, "ShopPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
             CreateText(panel.transform, "Wizard Shop", 40, TextAnchor.MiddleCenter, new Vector2(0, 430), new Vector2(620, 52));
 
             var scrollRoot = new GameObject("ShopScroll");
@@ -169,6 +172,8 @@ namespace ProjectZx.UI
             y += step;
             _speedRow = CreateShopUpgradeRow(content.transform, "Move Speed +6%", ShopCosts.SpeedUpgrade, y, BuySpeed);
             y += step;
+            _rangeRow = CreateShopUpgradeRow(content.transform, "Attack Range +5%", ShopCosts.RangeUpgrade, y, BuyRange);
+            y += step;
             _goldMagnetRow = CreateShopUpgradeRow(content.transform, "Gold Magnet (+25% gold & loot range)", ShopCosts.GoldMagnet, y, BuyGoldMagnet);
             y += step;
             _thickHideRow = CreateShopUpgradeRow(content.transform, "Thick Hide (−15% damage taken)", ShopCosts.ThickHide, y, BuyThickHide);
@@ -194,7 +199,7 @@ namespace ProjectZx.UI
 
         GameObject BuildAchievementsPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "AchievementsPanel", Vector2.zero, new Vector2(1100, 880), ArtLibrary.ChallengeBoardUi);
+            var panel = CreateDialogPanel(parent, "AchievementsPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ChallengeBoardUi);
             CreateText(panel.transform, "Achievements", 44, TextAnchor.MiddleCenter, new Vector2(0, 380), new Vector2(700, 58));
             _achievementCountText = CreateText(panel.transform, "", 28, TextAnchor.MiddleCenter, new Vector2(0, 330), new Vector2(700, 40));
 
@@ -281,7 +286,7 @@ namespace ProjectZx.UI
 
         GameObject BuildLoadoutPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "LoadoutPanel", Vector2.zero, new Vector2(960, 820), ArtLibrary.ShopUi);
+            var panel = CreateDialogPanel(parent, "LoadoutPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
             CreateText(panel.transform, "Build Loadout", 38, TextAnchor.MiddleCenter, new Vector2(0, 350), new Vector2(620, 52));
             CreateText(panel.transform, "Class is saved per hero. Swap heroes at camp to set the companion build.\nMovement & audio live in Settings.", 18, TextAnchor.MiddleCenter, new Vector2(0, 300), new Vector2(820, 48));
 
@@ -307,7 +312,7 @@ namespace ProjectZx.UI
 
         GameObject BuildSettingsPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "SettingsPanel", Vector2.zero, new Vector2(860, 720), ArtLibrary.ShopUi);
+            var panel = CreateDialogPanel(parent, "SettingsPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
             CreateText(panel.transform, "Settings", 40, TextAnchor.MiddleCenter, new Vector2(0, 300), new Vector2(560, 52));
 
             CreateText(panel.transform, "Movement Control", 28, TextAnchor.MiddleCenter, new Vector2(0, 220), new Vector2(620, 40));
@@ -332,7 +337,7 @@ namespace ProjectZx.UI
 
         GameObject BuildStatsPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "StatsPanel", Vector2.zero, new Vector2(860, 780), ArtLibrary.ShopUi);
+            var panel = CreateDialogPanel(parent, "StatsPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
             CreateText(panel.transform, "Character Stats", 36, TextAnchor.MiddleCenter, new Vector2(0, 330), new Vector2(560, 48));
             _statsBodyText = CreateText(panel.transform, "", 22, TextAnchor.MiddleCenter, new Vector2(0, -10), new Vector2(760, 580));
             _statsBodyText.alignment = TextAnchor.UpperLeft;
@@ -349,7 +354,7 @@ namespace ProjectZx.UI
 
         GameObject BuildMapPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, new Vector2(860, 640), ArtLibrary.ChallengeBoardUi);
+            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ChallengeBoardUi);
             CreateText(panel.transform, "Survival Challenge", 40, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(700, 56));
             CreateText(panel.transform, "Set class & technique at the Wizard shop first.\nUnlocked maps start fresh at round 1.", 24, TextAnchor.MiddleCenter, new Vector2(0, 175), new Vector2(760, 72));
             CreateButton(panel.transform, "Outside Survival", new Vector2(0, 50), () => EnterSurvival(SurvivalMapKind.Outside), large: true);
@@ -363,7 +368,7 @@ namespace ProjectZx.UI
 
         GameObject BuildCampfirePanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, new Vector2(760, 640), ArtLibrary.ChallengeBoardUi);
+            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ChallengeBoardUi);
             CreateText(panel.transform, "Campfire Travel", 34, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(640, 48));
             CreateText(panel.transform, "Choose an unlocked map. Each run starts at round 1.", 20, TextAnchor.MiddleCenter, new Vector2(0, 185), new Vector2(680, 48));
             CreateButton(panel.transform, "Outside Survival", new Vector2(0, 70), () => EnterSurvival(SurvivalMapKind.Outside));
@@ -377,7 +382,7 @@ namespace ProjectZx.UI
 
         GameObject BuildEquipmentPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "EquipmentPanel", Vector2.zero, new Vector2(980, 820), ArtLibrary.ShopUi);
+            var panel = CreateDialogPanel(parent, "EquipmentPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
             CreateText(panel.transform, "Treasure Chest", 38, TextAnchor.MiddleCenter, new Vector2(0, 350), new Vector2(700, 48));
             CreateText(panel.transform, "Equip 1 ring and 1 necklace. Drops unlock here after you find them.", 20, TextAnchor.MiddleCenter, new Vector2(0, 300), new Vector2(860, 40));
             _equipmentStatusText = CreateText(panel.transform, "", 22, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(860, 48));
@@ -831,6 +836,14 @@ namespace ProjectZx.UI
             OnShopUpgradePurchased();
         }
 
+        void BuyRange()
+        {
+            if (GameSave.IsRangeUpgradeMaxed) return;
+            if (!GameSave.TrySpendGold(ShopCosts.NextRangeCost)) return;
+            GameSave.RangeUpgradeLevel++;
+            OnShopUpgradePurchased();
+        }
+
         void BuyGoldMagnet()
         {
             if (GameSave.GoldMagnetUnlocked) return;
@@ -890,6 +903,7 @@ namespace ProjectZx.UI
             SetUpgradeRow(_hpRow, "Max HP +15", ShopCosts.NextHpCost, GameSave.IsHpUpgradeMaxed, $"Max HP {GameSave.MaxHp}/{StatCaps.PermanentMaxHp}");
             SetUpgradeRow(_damageRow, "Damage +8%", ShopCosts.NextDamageCost, GameSave.IsDamageUpgradeMaxed, $"Damage x{GameSave.DamageMultiplier:0.##} (max x{StatCaps.PermanentMaxDamageMultiplier:0.#})");
             SetUpgradeRow(_speedRow, "Move Speed +6%", ShopCosts.NextSpeedCost, GameSave.IsSpeedUpgradeMaxed, $"Speed x{GameSave.SpeedMultiplier:0.##} (max x{StatCaps.PermanentMaxSpeedMultiplier:0.#})");
+            SetUpgradeRow(_rangeRow, "Attack Range +5%", ShopCosts.NextRangeCost, GameSave.IsRangeUpgradeMaxed, $"Range x{GameSave.AttackRangeMultiplier:0.##} (max x{StatCaps.PermanentMaxAttackRangeMultiplier:0.#})");
 
             if (GameSave.GoldMagnetUnlocked)
                 SetOwnedRow(_goldMagnetRow, "Gold Magnet (+25% gold & loot range)");
@@ -1159,7 +1173,8 @@ namespace ProjectZx.UI
                 $"Max HP: {maxHp}\n" +
                 $"Base Damage: {baseDamage:0.#}\n" +
                 $"Move Speed: {moveSpeed:0.##}\n" +
-                $"HP Upgrades: {GameSave.HpUpgradeLevel}   Damage: {GameSave.DamageUpgradeLevel}   Speed: {GameSave.SpeedUpgradeLevel}\n" +
+                $"Attack Range: x{GameSave.AttackRangeMultiplier:0.##}\n" +
+                $"HP Upgrades: {GameSave.HpUpgradeLevel}   Damage: {GameSave.DamageUpgradeLevel}   Speed: {GameSave.SpeedUpgradeLevel}   Range: {GameSave.RangeUpgradeLevel}\n" +
                 $"Whirlwind: {(GameSave.WhirlwindUnlocked ? "Owned" : "Locked")}\n" +
                 $"Piercing Shot: {(GameSave.PiercingShotUnlocked ? "Owned" : "Locked")}\n" +
                 $"Frost Tip: {(GameSave.FrostTipUnlocked ? "Owned" : "Locked")}\n" +

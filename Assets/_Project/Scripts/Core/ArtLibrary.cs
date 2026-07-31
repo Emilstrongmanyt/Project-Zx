@@ -309,7 +309,7 @@ namespace ProjectZx.Core
 
         public static Sprite GetInsideTile(int index)
         {
-            // Inside survival: single floor tile (no multi-tile checker pattern).
+            // Inside survival: diamond checkerboard floor (Resources root asset).
             _insideTiles ??= BuildTileSet("Diamond Checkerboard Tile");
             return _insideTiles[Mathf.Abs(index) % _insideTiles.Length];
         }
@@ -326,13 +326,46 @@ namespace ProjectZx.Core
             var list = new System.Collections.Generic.List<Sprite>(paths.Length);
             for (var i = 0; i < paths.Length; i++)
             {
-                var sprite = TryLoadSprite(paths[i], TilePixelsPerUnit);
+                // Prefer full-texture rebuild at tile PPU so updated Resources art always applies.
+                var sprite = LoadFloorTileSprite(paths[i]) ?? TryLoadSprite(paths[i], TilePixelsPerUnit);
                 if (sprite != null) list.Add(sprite);
             }
 
             if (list.Count == 0)
                 list.Add(CreateTileFallback("fallback_tile"));
             return list.ToArray();
+        }
+
+        /// <summary>
+        /// Loads a floor tile from Resources as a full-rect sprite at <see cref="TilePixelsPerUnit"/>.
+        /// Uses the texture (not a cached multi-sprite sub-asset) so art swaps under the same name show up.
+        /// </summary>
+        static Sprite LoadFloorTileSprite(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return null;
+
+            var texture = Resources.Load<Texture2D>(path);
+            if (texture == null)
+            {
+                // Multi-sprite assets still expose the texture via LoadAll.
+                var sprites = Resources.LoadAll<Sprite>(path);
+                if (sprites != null && sprites.Length > 0 && sprites[0] != null && sprites[0].texture != null)
+                    texture = sprites[0].texture;
+            }
+
+            if (texture == null) return null;
+
+            texture.filterMode = FilterMode.Point;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            var sprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, texture.width, texture.height),
+                new Vector2(0.5f, 0.5f),
+                TilePixelsPerUnit,
+                0,
+                SpriteMeshType.FullRect);
+            sprite.name = path.Contains('/') ? path[(path.LastIndexOf('/') + 1)..] : path;
+            return sprite;
         }
 
         public static Sprite GetFireBreathFrame(int frame)

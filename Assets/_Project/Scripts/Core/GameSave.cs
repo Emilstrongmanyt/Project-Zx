@@ -12,6 +12,7 @@ namespace ProjectZx.Core
         const string HpLevelKey = "zx_up_hp";
         const string DmgLevelKey = "zx_up_dmg";
         const string SpdLevelKey = "zx_up_spd";
+        const string RangeLevelKey = "zx_up_range";
         const string InsideUnlockedKey = "zx_inside_unlocked";
         const string DungeonUnlockedKey = "zx_dungeon_unlocked";
         const string WhirlwindKey = "zx_whirlwind";
@@ -79,6 +80,12 @@ namespace ProjectZx.Core
         {
             get => PlayerPrefs.GetInt(SpdLevelKey, 0);
             set { PlayerPrefs.SetInt(SpdLevelKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
+        }
+
+        public static int RangeUpgradeLevel
+        {
+            get => PlayerPrefs.GetInt(RangeLevelKey, 0);
+            set { PlayerPrefs.SetInt(RangeLevelKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
         }
 
         public static bool InsideMapUnlocked
@@ -500,10 +507,13 @@ namespace ProjectZx.Core
         public static int MaxHp => Mathf.Min(StatCaps.PermanentMaxHp, 100 + HpUpgradeLevel * 15);
         public static float DamageMultiplier => Mathf.Min(StatCaps.PermanentMaxDamageMultiplier, 1f + DamageUpgradeLevel * 0.08f);
         public static float SpeedMultiplier => Mathf.Min(StatCaps.PermanentMaxSpeedMultiplier, 1f + SpeedUpgradeLevel * 0.06f);
+        /// <summary>Permanent shop attack range: +5% per upgrade level.</summary>
+        public static float AttackRangeMultiplier => Mathf.Min(StatCaps.PermanentMaxAttackRangeMultiplier, 1f + RangeUpgradeLevel * 0.05f);
 
         public static bool IsHpUpgradeMaxed => MaxHp >= StatCaps.PermanentMaxHp;
         public static bool IsDamageUpgradeMaxed => DamageMultiplier >= StatCaps.PermanentMaxDamageMultiplier - 0.001f;
         public static bool IsSpeedUpgradeMaxed => SpeedMultiplier >= StatCaps.PermanentMaxSpeedMultiplier - 0.001f;
+        public static bool IsRangeUpgradeMaxed => AttackRangeMultiplier >= StatCaps.PermanentMaxAttackRangeMultiplier - 0.001f;
 
         public static int LifetimeZombieKills
         {

@@ -7,12 +7,15 @@ namespace ProjectZx.Core
         /// <summary>Base permanent caps (before Inside / Dungeon clear progression).</summary>
         public const float BasePermanentMaxSpeedMultiplier = 1.6f;
         public const float BasePermanentMaxDamageMultiplier = 3f;
+        public const float BasePermanentMaxAttackRangeMultiplier = 1.6f;
 
         public const float InsidePermanentMaxSpeedMultiplier = 2f;
         public const float InsidePermanentMaxDamageMultiplier = 4f;
+        public const float InsidePermanentMaxAttackRangeMultiplier = 2f;
 
         public const float DungeonPermanentMaxSpeedMultiplier = 2.5f;
         public const float DungeonPermanentMaxDamageMultiplier = 5f;
+        public const float DungeonPermanentMaxAttackRangeMultiplier = 2.5f;
 
         public const int MaxRunLevel = 100;
         public const int UnlimitedMaxRound = 100;
@@ -45,8 +48,16 @@ namespace ProjectZx.Core
             _ => BasePermanentMaxDamageMultiplier
         };
 
+        public static float PermanentMaxAttackRangeMultiplier => ProgressionTier switch
+        {
+            2 => DungeonPermanentMaxAttackRangeMultiplier,
+            1 => InsidePermanentMaxAttackRangeMultiplier,
+            _ => BasePermanentMaxAttackRangeMultiplier
+        };
+
         public static int RunMaxHp => PermanentMaxHp * 2;
         public static float RunMaxSpeedMultiplier => PermanentMaxSpeedMultiplier * 2f;
         public static float RunMaxDamageMultiplier => PermanentMaxDamageMultiplier * 2f;
+        public static float RunMaxAttackRangeMultiplier => PermanentMaxAttackRangeMultiplier * 2f;
     }
 }
