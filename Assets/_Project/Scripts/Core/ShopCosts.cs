@@ -3,7 +3,7 @@ using UnityEngine;
 namespace ProjectZx.Core
 {
     /// <summary>
-    /// Permanent shop prices. Repeatable upgrades scale exponentially with owned level.
+    /// Permanent shop prices. Repeatable upgrades scale linearly with owned level.
     /// </summary>
     public static class ShopCosts
     {
@@ -21,27 +21,24 @@ namespace ProjectZx.Core
         public const int CampfireBlessing = 600;
 
         /// <summary>
-        /// Exponential cost for the next purchase of a level-based upgrade.
-        /// Level 0 → base, level 1 → base×2, level 2 → base×4, …
+        /// Linear cost for the next purchase of a level-based upgrade.
+        /// Level 0 → base×1, level 1 → base×2, level 2 → base×3, …
         /// </summary>
-        public static int Exponential(int baseCost, int ownedLevel)
+        public static int Linear(int baseCost, int ownedLevel)
         {
-            var level = Mathf.Max(0, ownedLevel);
-            // Cap exponent so int does not overflow absurd mid-game prices.
-            var exp = Mathf.Min(level, 20);
-            var mult = 1 << exp;
-            return Mathf.Max(1, baseCost * mult);
+            var tier = Mathf.Max(0, ownedLevel) + 1;
+            return Mathf.Max(1, baseCost * tier);
         }
 
-        public static int NextHpCost => Exponential(HpUpgrade, GameSave.HpUpgradeLevel);
-        public static int NextDamageCost => Exponential(DamageUpgrade, GameSave.DamageUpgradeLevel);
-        public static int NextSpeedCost => Exponential(SpeedUpgrade, GameSave.SpeedUpgradeLevel);
-        public static int NextRangeCost => Exponential(RangeUpgrade, GameSave.RangeUpgradeLevel);
+        public static int NextHpCost => Linear(HpUpgrade, GameSave.HpUpgradeLevel);
+        public static int NextDamageCost => Linear(DamageUpgrade, GameSave.DamageUpgradeLevel);
+        public static int NextSpeedCost => Linear(SpeedUpgrade, GameSave.SpeedUpgradeLevel);
+        public static int NextRangeCost => Linear(RangeUpgrade, GameSave.RangeUpgradeLevel);
 
         /// <summary>Cost to buy the next Thick Hide tier (ownedLevel is current level 0–2).</summary>
-        public static int NextThickHideCost => Exponential(ThickHide, GameSave.ThickHideLevel);
+        public static int NextThickHideCost => Linear(ThickHide, GameSave.ThickHideLevel);
 
         /// <summary>Cost to buy the next Second Wind tier (ownedLevel is current level 0–1).</summary>
-        public static int NextSecondWindCost => Exponential(SecondWind, GameSave.SecondWindLevel);
+        public static int NextSecondWindCost => Linear(SecondWind, GameSave.SecondWindLevel);
     }
 }

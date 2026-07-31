@@ -220,7 +220,7 @@ namespace ProjectZx.Waves
 
         void TryUnlockBowman(int round)
         {
-            if (MapKind != SurvivalMapKind.Inside || round < 50 || GameSave.BowmanUnlocked) return;
+            if (MapKind != SurvivalMapKind.Inside || round < 30 || GameSave.BowmanUnlocked) return;
             GameSave.BowmanUnlocked = true;
             Achievements.UnlockInsideArcher();
         }

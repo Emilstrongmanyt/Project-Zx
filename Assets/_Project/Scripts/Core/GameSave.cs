@@ -35,6 +35,8 @@ namespace ProjectZx.Core
         const string ClassRowZiKey = "zx_class_rowzi";
         const string SelectedHeroKey = "zx_selected_hero";
         const string MovementControlKey = "zx_movement_control";
+        const string JoystickPosXKey = "zx_joystick_pos_x";
+        const string JoystickPosYKey = "zx_joystick_pos_y";
         const string BgmVolumeKey = "zx_bgm_volume";
         const string SfxVolumeKey = "zx_sfx_volume";
         const string RowZiUnlockedKey = "zx_rowzi_unlocked";
@@ -442,6 +444,25 @@ namespace ProjectZx.Core
 
         public static bool UsesJoystickMovement => SelectedMovementControl == MovementControlType.Joystick;
         public static bool UsesTapHoldMovement => SelectedMovementControl == MovementControlType.TapHold;
+
+        /// <summary>
+        /// Saved joystick anchored position (bottom-right anchor space). Missing keys mean default placement.
+        /// </summary>
+        public static bool HasCustomJoystickPosition =>
+            PlayerPrefs.HasKey(JoystickPosXKey) && PlayerPrefs.HasKey(JoystickPosYKey);
+
+        public static Vector2 JoystickAnchoredPosition
+        {
+            get => new(
+                PlayerPrefs.GetFloat(JoystickPosXKey, 0f),
+                PlayerPrefs.GetFloat(JoystickPosYKey, 0f));
+            set
+            {
+                PlayerPrefs.SetFloat(JoystickPosXKey, value.x);
+                PlayerPrefs.SetFloat(JoystickPosYKey, value.y);
+                PlayerPrefs.Save();
+            }
+        }
 
         /// <summary>0–1 master BGM volume (camp settings).</summary>
         public static float BgmVolume

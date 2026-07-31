@@ -63,6 +63,7 @@ namespace ProjectZx.UI
         {
             public Text Label;
             public Button BuyButton;
+            public Image CoinIcon;
         }
 
         UpgradeRowRefs _hpRow;
@@ -88,6 +89,7 @@ namespace ProjectZx.UI
         void OnDestroy()
         {
             Achievements.OnUnlocked -= OnAchievementUnlockedAtCamp;
+            MovementJoystick.SetRepositionMode(false);
             if (Instance == this) Instance = null;
         }
 
@@ -108,7 +110,7 @@ namespace ProjectZx.UI
             canvasGo.AddComponent<GraphicRaycaster>();
 
             CreateUiIcon(canvasGo.transform, ArtLibrary.GoldCoin, new Vector2(-SafeRight, -SafeTop), new Vector2(40, 40), TextAnchor.UpperRight);
-            _goldText = CreateText(canvasGo.transform, "0", 30, TextAnchor.UpperRight, new Vector2(-SafeRight + 80f, -SafeTop), new Vector2(120, 42));
+            _goldText = CreateText(canvasGo.transform, "0", 30, TextAnchor.UpperRight, new Vector2(-SafeRight + 80f, -SafeTop), new Vector2(160, 42));
             _goldText.alignment = TextAnchor.MiddleRight;
 
             // Always available on the campfire map.
@@ -319,18 +321,19 @@ namespace ProjectZx.UI
             CreateText(panel.transform, "Only one control style is active at a time.", 20, TextAnchor.MiddleCenter, new Vector2(0, 180), new Vector2(700, 32));
             _movementJoystickButton = CreateButton(panel.transform, "Joystick", new Vector2(-160, 110), () => SelectMovementControl(MovementControlType.Joystick));
             _movementTapHoldButton = CreateButton(panel.transform, "Tap / Hold", new Vector2(160, 110), () => SelectMovementControl(MovementControlType.TapHold));
+            CreateText(panel.transform, "Drag the on-screen joystick to place it. Position locks when you close Settings.", 18, TextAnchor.MiddleCenter, new Vector2(0, 55), new Vector2(900, 40));
 
-            CreateText(panel.transform, "Music Volume", 26, TextAnchor.MiddleCenter, new Vector2(0, 20), new Vector2(400, 36));
-            _bgmVolumeLabel = CreateText(panel.transform, "70%", 22, TextAnchor.MiddleCenter, new Vector2(0, -20), new Vector2(120, 32));
-            CreateButton(panel.transform, "−", new Vector2(-200, -20), () => AdjustBgmVolume(-0.1f));
-            CreateButton(panel.transform, "+", new Vector2(200, -20), () => AdjustBgmVolume(0.1f));
+            CreateText(panel.transform, "Music Volume", 26, TextAnchor.MiddleCenter, new Vector2(0, -10), new Vector2(400, 36));
+            _bgmVolumeLabel = CreateText(panel.transform, "70%", 22, TextAnchor.MiddleCenter, new Vector2(0, -50), new Vector2(120, 32));
+            CreateButton(panel.transform, "−", new Vector2(-200, -50), () => AdjustBgmVolume(-0.1f));
+            CreateButton(panel.transform, "+", new Vector2(200, -50), () => AdjustBgmVolume(0.1f));
 
-            CreateText(panel.transform, "SFX Volume", 26, TextAnchor.MiddleCenter, new Vector2(0, -100), new Vector2(400, 36));
-            _sfxVolumeLabel = CreateText(panel.transform, "85%", 22, TextAnchor.MiddleCenter, new Vector2(0, -140), new Vector2(120, 32));
-            CreateButton(panel.transform, "−", new Vector2(-200, -140), () => AdjustSfxVolume(-0.1f));
-            CreateButton(panel.transform, "+", new Vector2(200, -140), () => AdjustSfxVolume(0.1f));
+            CreateText(panel.transform, "SFX Volume", 26, TextAnchor.MiddleCenter, new Vector2(0, -130), new Vector2(400, 36));
+            _sfxVolumeLabel = CreateText(panel.transform, "85%", 22, TextAnchor.MiddleCenter, new Vector2(0, -170), new Vector2(120, 32));
+            CreateButton(panel.transform, "−", new Vector2(-200, -170), () => AdjustSfxVolume(-0.1f));
+            CreateButton(panel.transform, "+", new Vector2(200, -170), () => AdjustSfxVolume(0.1f));
 
-            CreateButton(panel.transform, "Close", new Vector2(0, -260), () => panel.SetActive(false), large: true);
+            CreateButton(panel.transform, "Close", new Vector2(0, -280), () => CloseSettings(), large: true);
             panel.SetActive(false);
             return panel;
         }
@@ -520,7 +523,10 @@ namespace ProjectZx.UI
             if (_mapPanel != null) _mapPanel.SetActive(false);
             if (_campfirePanel != null) _campfirePanel.SetActive(false);
             if (_equipmentPanel != null) _equipmentPanel.SetActive(false);
-            if (_settingsPanel != null) _settingsPanel.SetActive(false);
+            if (_settingsPanel != null && _settingsPanel.activeSelf)
+                CloseSettings();
+            else if (_settingsPanel != null)
+                _settingsPanel.SetActive(false);
         }
 
         void OpenSettings()
@@ -529,6 +535,16 @@ namespace ProjectZx.UI
             RefreshSettingsPanel();
             if (_settingsPanel != null)
                 _settingsPanel.SetActive(true);
+            // Allow dragging the stick while Settings is open; lock on close.
+            MovementJoystick.EnsureExists();
+            MovementJoystick.SetRepositionMode(GameSave.UsesJoystickMovement);
+        }
+
+        void CloseSettings()
+        {
+            MovementJoystick.SetRepositionMode(false);
+            if (_settingsPanel != null)
+                _settingsPanel.SetActive(false);
         }
 
         void RefreshSettingsPanel()
@@ -587,6 +603,9 @@ namespace ProjectZx.UI
         {
             GameSave.SelectedMovementControl = controlType;
             MovementJoystick.ApplyControlMode();
+            // Keep reposition mode only while Settings is open and joystick is selected.
+            var settingsOpen = _settingsPanel != null && _settingsPanel.activeSelf;
+            MovementJoystick.SetRepositionMode(settingsOpen && controlType == MovementControlType.Joystick);
             RefreshMovementControlPicker();
         }
 
@@ -728,7 +747,7 @@ namespace ProjectZx.UI
 
             RefreshClassButton(picker.BatterButton, PlayerClass.Batter, true, "Batter");
             RefreshClassButton(picker.SpearmanButton, PlayerClass.Spearman, GameSave.SpearmanUnlocked, "Spearman (Beat R20 Boss)");
-            RefreshClassButton(picker.BowmanButton, PlayerClass.Bowman, GameSave.BowmanUnlocked, "Bowman (Clear R50 Inside)");
+            RefreshClassButton(picker.BowmanButton, PlayerClass.Bowman, GameSave.BowmanUnlocked, "Bowman (Clear R30 Inside)");
             RefreshClassButton(picker.SamuraiButton, PlayerClass.Samurai, GameSave.SamuraiUnlocked, "Samurai (Dungeon R40 Boss)");
             RefreshClassButton(picker.MagicianButton, PlayerClass.Magician, GameSave.MagicianUnlocked, "Magician (Coming Soon)");
         }
@@ -787,29 +806,58 @@ namespace ProjectZx.UI
 
         UpgradeRowRefs CreateShopUpgradeRow(Transform parent, string label, int cost, float y, Action onBuy)
         {
-            var labelText = CreateText(parent, $"{label} — {cost}g", 26, TextAnchor.MiddleLeft, new Vector2(-40f, y - 28f), new Vector2(620f, 52f));
+            var labelText = CreateText(parent, label, 26, TextAnchor.MiddleLeft, new Vector2(-40f, y - 28f), new Vector2(620f, 52f));
             var labelRect = labelText.GetComponent<RectTransform>();
             labelRect.anchorMin = new Vector2(0.5f, 1f);
             labelRect.anchorMax = new Vector2(0.5f, 1f);
             labelRect.pivot = new Vector2(0.5f, 1f);
-            labelRect.anchoredPosition = new Vector2(-100f, y);
+            labelRect.anchoredPosition = new Vector2(-120f, y);
             labelText.alignment = TextAnchor.MiddleLeft;
             labelText.horizontalOverflow = HorizontalWrapMode.Wrap;
             labelText.verticalOverflow = VerticalWrapMode.Truncate;
 
-            var buyButton = CreateButton(parent, "Buy", new Vector2(340f, y - 28f), onBuy, large: true);
+            var buyButton = CreateButton(parent, $"Buy for {GoldFormat.Abbreviate(cost)}", new Vector2(360f, y - 28f), onBuy, large: true);
             var buyRect = buyButton.GetComponent<RectTransform>();
             buyRect.anchorMin = new Vector2(0.5f, 1f);
             buyRect.anchorMax = new Vector2(0.5f, 1f);
             buyRect.pivot = new Vector2(0.5f, 1f);
-            buyRect.anchoredPosition = new Vector2(340f, y);
-            buyRect.sizeDelta = new Vector2(220f, 56f);
+            buyRect.anchoredPosition = new Vector2(360f, y);
+            buyRect.sizeDelta = new Vector2(280f, 56f);
+
+            // Price text sits slightly left so a gold coin icon can sit on the right.
+            var buyLabel = buyButton.GetComponentInChildren<Text>();
+            if (buyLabel != null)
+            {
+                var buyLabelRect = buyLabel.GetComponent<RectTransform>();
+                buyLabelRect.anchoredPosition = new Vector2(-10f, 0f);
+                buyLabelRect.sizeDelta = new Vector2(220f, 46f);
+                buyLabel.fontSize = 22;
+            }
+
+            var coinIcon = CreateBuyCoinIcon(buyButton.transform);
 
             return new UpgradeRowRefs
             {
                 Label = labelText,
-                BuyButton = buyButton
+                BuyButton = buyButton,
+                CoinIcon = coinIcon
             };
+        }
+
+        static Image CreateBuyCoinIcon(Transform buttonTransform)
+        {
+            var go = new GameObject("GoldCoinIcon");
+            go.transform.SetParent(buttonTransform, false);
+            var rect = go.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(1f, 0.5f);
+            rect.anchorMax = new Vector2(1f, 0.5f);
+            rect.pivot = new Vector2(1f, 0.5f);
+            rect.anchoredPosition = new Vector2(-14f, 0f);
+            rect.sizeDelta = new Vector2(28f, 28f);
+            var image = go.AddComponent<Image>();
+            image.sprite = ArtLibrary.GoldCoin;
+            image.raycastTarget = false;
+            return image;
         }
 
         void BuyHp()
@@ -1000,7 +1048,7 @@ namespace ProjectZx.UI
                 var image = row.BuyButton.GetComponent<Image>();
                 if (image != null)
                 {
-                    UiSprites.ApplyButtonSprite(image, new Vector2(240f, 56f));
+                    UiSprites.ApplyButtonSprite(image, new Vector2(280f, 56f));
                     image.color = new Color(0.32f, 0.34f, 0.38f, 0.75f);
                 }
 
@@ -1011,12 +1059,22 @@ namespace ProjectZx.UI
                     buyLabel.color = new Color(0.72f, 0.74f, 0.78f);
                 }
             }
+
+            if (row.CoinIcon != null)
+                row.CoinIcon.enabled = false;
         }
 
         static void SetUpgradeRow(UpgradeRowRefs row, string label, int cost, bool maxed, string maxLabel)
         {
             if (row.Label != null)
-                row.Label.text = maxed ? maxLabel : $"{label} — {cost}g";
+            {
+                if (maxed)
+                    row.Label.text = maxLabel;
+                else if (!string.IsNullOrEmpty(maxLabel))
+                    row.Label.text = $"{label}\n{maxLabel}";
+                else
+                    row.Label.text = label;
+            }
 
             if (row.BuyButton != null)
             {
@@ -1024,17 +1082,20 @@ namespace ProjectZx.UI
                 var image = row.BuyButton.GetComponent<Image>();
                 if (image != null)
                 {
-                    UiSprites.ApplyButtonSprite(image, new Vector2(240f, 56f));
+                    UiSprites.ApplyButtonSprite(image, new Vector2(280f, 56f));
                     image.color = Color.white;
                 }
 
                 var buyLabel = row.BuyButton.GetComponentInChildren<Text>();
                 if (buyLabel != null)
                 {
-                    buyLabel.text = maxed ? "MAX" : "Buy";
+                    buyLabel.text = maxed ? "MAX" : $"Buy for {GoldFormat.Abbreviate(cost)}";
                     buyLabel.color = Color.white;
                 }
             }
+
+            if (row.CoinIcon != null)
+                row.CoinIcon.enabled = !maxed;
         }
 
         static void SetOwnedRow(UpgradeRowRefs row, string label)
@@ -1048,7 +1109,7 @@ namespace ProjectZx.UI
                 var image = row.BuyButton.GetComponent<Image>();
                 if (image != null)
                 {
-                    UiSprites.ApplyButtonSprite(image, new Vector2(240f, 56f));
+                    UiSprites.ApplyButtonSprite(image, new Vector2(280f, 56f));
                     image.color = new Color(0.42f, 0.44f, 0.48f, 0.88f);
                 }
 
@@ -1059,6 +1120,9 @@ namespace ProjectZx.UI
                     buyLabel.color = new Color(0.82f, 0.84f, 0.88f);
                 }
             }
+
+            if (row.CoinIcon != null)
+                row.CoinIcon.enabled = false;
         }
 
         void BuyWhirlwind()
@@ -1254,7 +1318,7 @@ namespace ProjectZx.UI
 
         public void RefreshGold()
         {
-            if (_goldText != null) _goldText.text = GameSave.Gold.ToString();
+            if (_goldText != null) _goldText.text = GoldFormat.Abbreviate(GameSave.Gold);
         }
 
         static Text CreateText(Transform parent, string text, int size, TextAnchor anchor, Vector2 pos, Vector2 sizeDelta)

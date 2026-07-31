@@ -9,16 +9,22 @@ namespace ProjectZx.UI
     {
         const float Deadzone = 0.12f;
         const float UiScale = 1.3f;
+        const int NormalSortOrder = 50;
+        const int RepositionSortOrder = 220;
 
         public static MovementJoystick Instance { get; private set; }
 
         public Vector2 Direction { get; private set; }
         public bool IsHeld { get; private set; }
+        public bool RepositionMode { get; private set; }
 
         RectTransform _baseRect;
         RectTransform _knobRect;
+        Canvas _canvas;
         float _knobRange;
+        float _baseSize;
         int _pointerId = -1;
+        bool _draggingBase;
 
         static Sprite _circleSprite;
 
@@ -33,6 +39,15 @@ namespace ProjectZx.UI
         {
             if (Instance != null)
                 Instance.ApplyControlModeInternal();
+        }
+
+        /// <summary>
+        /// Settings menu: drag the whole stick to place it. Closing settings locks &amp; saves the position.
+        /// </summary>
+        public static void SetRepositionMode(bool enabled)
+        {
+            if (Instance != null)
+                Instance.SetRepositionModeInternal(enabled);
         }
 
         void Awake()
@@ -61,6 +76,8 @@ namespace ProjectZx.UI
                 return;
             }
 
+            if (RepositionMode) return;
+
             if (!IsHeld) return;
             if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade)
                 Release();
@@ -81,6 +98,29 @@ namespace ProjectZx.UI
             }
 
             if (_knobRect != null) _knobRect.anchoredPosition = Vector2.zero;
+
+            if (!enabled && RepositionMode)
+                SetRepositionModeInternal(false);
+        }
+
+        void SetRepositionModeInternal(bool enabled)
+        {
+            if (RepositionMode == enabled) return;
+
+            if (IsHeld) Release();
+            RepositionMode = enabled && GameSave.UsesJoystickMovement;
+            _draggingBase = false;
+            Direction = Vector2.zero;
+
+            if (_canvas != null)
+                _canvas.sortingOrder = RepositionMode ? RepositionSortOrder : NormalSortOrder;
+
+            if (!enabled && _baseRect != null)
+                GameSave.JoystickAnchoredPosition = _baseRect.anchoredPosition;
+
+            // Ensure stick is visible while placing it (camp settings).
+            if (RepositionMode && transform.childCount > 0)
+                transform.GetChild(0).gameObject.SetActive(true);
         }
 
         void BuildUi()
@@ -89,14 +129,14 @@ namespace ProjectZx.UI
 
             var canvasGo = new GameObject("JoystickCanvas");
             canvasGo.transform.SetParent(transform, false);
-            var canvas = canvasGo.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 50;
+            _canvas = canvasGo.AddComponent<Canvas>();
+            _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            _canvas.sortingOrder = NormalSortOrder;
             canvasGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             canvasGo.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            var baseSize = 170f * UiScale;
+            _baseSize = 170f * UiScale;
             var knobSize = 72f * UiScale;
             _knobRange = 54f * UiScale;
 
@@ -108,10 +148,8 @@ namespace ProjectZx.UI
             _baseRect.anchorMin = new Vector2(1f, 0f);
             _baseRect.anchorMax = new Vector2(1f, 0f);
             _baseRect.pivot = new Vector2(0.5f, 0.5f);
-            _baseRect.sizeDelta = new Vector2(baseSize, baseSize);
-            _baseRect.anchoredPosition = new Vector2(
-                -220f * UiScale - baseSize * 0.5f,
-                210f * UiScale + baseSize * 0.5f);
+            _baseRect.sizeDelta = new Vector2(_baseSize, _baseSize);
+            _baseRect.anchoredPosition = ResolveDefaultOrSavedPosition();
 
             var baseImage = baseGo.AddComponent<Image>();
             baseImage.sprite = GetCircleSprite();
@@ -133,12 +171,32 @@ namespace ProjectZx.UI
             knobImage.raycastTarget = false;
         }
 
+        Vector2 ResolveDefaultOrSavedPosition()
+        {
+            if (GameSave.HasCustomJoystickPosition)
+                return GameSave.JoystickAnchoredPosition;
+
+            return new Vector2(
+                -220f * UiScale - _baseSize * 0.5f,
+                210f * UiScale + _baseSize * 0.5f);
+        }
+
         public void OnPointerDown(PointerEventData eventData)
         {
             if (!GameSave.UsesJoystickMovement) return;
             if (IsHeld) return;
             _pointerId = eventData.pointerId;
             IsHeld = true;
+
+            if (RepositionMode)
+            {
+                _draggingBase = true;
+                Direction = Vector2.zero;
+                if (_knobRect != null) _knobRect.anchoredPosition = Vector2.zero;
+                MoveBaseToScreen(eventData.position);
+                return;
+            }
+
             // Stay centered until the player actually drags.
             if (_knobRect != null) _knobRect.anchoredPosition = Vector2.zero;
             Direction = Vector2.zero;
@@ -148,12 +206,23 @@ namespace ProjectZx.UI
         {
             if (!GameSave.UsesJoystickMovement) return;
             if (!IsHeld || eventData.pointerId != _pointerId) return;
+
+            if (RepositionMode && _draggingBase)
+            {
+                MoveBaseToScreen(eventData.position);
+                return;
+            }
+
             UpdateKnob(eventData.position);
         }
 
         public void OnPointerUp(PointerEventData eventData)
         {
             if (eventData.pointerId != _pointerId) return;
+
+            if (RepositionMode && _baseRect != null)
+                GameSave.JoystickAnchoredPosition = _baseRect.anchoredPosition;
+
             Release();
         }
 
@@ -161,6 +230,30 @@ namespace ProjectZx.UI
         {
             if (!GameSave.UsesJoystickMovement || _baseRect == null) return false;
             return RectTransformUtility.RectangleContainsScreenPoint(_baseRect, screenPos, null);
+        }
+
+        void MoveBaseToScreen(Vector2 screenPos)
+        {
+            if (_baseRect == null || _baseRect.parent == null) return;
+
+            var parent = _baseRect.parent as RectTransform;
+            if (parent == null) return;
+
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                    parent, screenPos, null, out var local))
+                return;
+
+            // Keep the stick fully on-screen with a small margin.
+            var half = _baseSize * 0.5f;
+            var margin = 24f;
+            var minX = -parent.rect.width + half + margin;
+            var maxX = -half - margin;
+            var minY = half + margin;
+            var maxY = parent.rect.height - half - margin;
+
+            local.x = Mathf.Clamp(local.x, minX, maxX);
+            local.y = Mathf.Clamp(local.y, minY, maxY);
+            _baseRect.anchoredPosition = local;
         }
 
         void UpdateKnob(Vector2 screenPos)
@@ -181,6 +274,7 @@ namespace ProjectZx.UI
         {
             IsHeld = false;
             _pointerId = -1;
+            _draggingBase = false;
             Direction = Vector2.zero;
             if (_knobRect != null) _knobRect.anchoredPosition = Vector2.zero;
         }
