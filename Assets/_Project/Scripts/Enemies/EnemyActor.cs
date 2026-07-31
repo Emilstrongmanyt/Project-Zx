@@ -40,6 +40,8 @@ namespace ProjectZx.Enemies
         const float BossEquipmentDropChance = 0.01f;
         /// <summary>Outside survival regular zombies: −25% HP and move speed.</summary>
         const float OutsideZombieStatScale = 0.75f;
+        /// <summary>All enemies on Inside Survival map: −15% move speed.</summary>
+        const float InsideMapSpeedScale = 0.85f;
         const float RoundFortyBossStatScale = 4.5f;
         const float BossProjectileInterval = 1.5f;
         const float BossProjectileLifetime = 5f;
@@ -154,6 +156,10 @@ namespace ProjectZx.Enemies
                     _speed *= OutsideZombieStatScale;
                 }
             }
+
+            // Inside Survival map: every enemy (including bosses) moves 15% slower.
+            if (GameSessionContext.SurvivalMap == SurvivalMapKind.Inside)
+                _speed *= InsideMapSpeedScale;
 
             _rb = GetComponent<Rigidbody2D>();
             _renderer = GetComponent<SpriteRenderer>();

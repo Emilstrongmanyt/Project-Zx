@@ -381,7 +381,33 @@ namespace ProjectZx.Core
             if (_bossFireBoltFrames != null) return;
             _bossFireBoltFrames = new Sprite[3];
             for (var i = 0; i < 3; i++)
-                _bossFireBoltFrames[i] = Load($"BossFireBolt{i + 1}") ?? CreateTinyFlameSprite(i, 16, 10);
+            {
+                // Prefer dedicated bolt art; fall back to FireBreath frames as a simple placeholder.
+                var dedicated = Load($"BossFireBolt{i + 1}");
+                if (dedicated != null)
+                {
+                    _bossFireBoltFrames[i] = dedicated;
+                    continue;
+                }
+
+                var breath = Load($"FireBreath{i + 1}");
+                if (breath != null && breath.texture != null)
+                {
+                    // Compact projectile: center pivot, slightly smaller visual.
+                    _bossFireBoltFrames[i] = Sprite.Create(
+                        breath.texture,
+                        breath.rect,
+                        new Vector2(0.5f, 0.5f),
+                        (breath.pixelsPerUnit > 0f ? breath.pixelsPerUnit : TilePixelsPerUnit) * 1.8f,
+                        0,
+                        SpriteMeshType.FullRect);
+                    _bossFireBoltFrames[i].name = $"BossFireBolt_placeholder_{i + 1}";
+                }
+                else
+                {
+                    _bossFireBoltFrames[i] = CreateTinyFlameSprite(i, 16, 10);
+                }
+            }
         }
 
         static Sprite CreateTinyFlameSprite(int frame, int w, int h)

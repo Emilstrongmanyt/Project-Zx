@@ -28,7 +28,8 @@ namespace ProjectZx.Combat
             var dir = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.left;
             var go = new GameObject("BossFireProjectile");
             go.transform.position = origin;
-            go.transform.localScale = Vector3.one * 0.55f;
+            // FireBreath-based placeholder is large; keep bolt readable but not huge.
+            go.transform.localScale = Vector3.one * 0.35f;
 
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = ArtLibrary.GetBossFireBoltFrame(0);

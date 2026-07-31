@@ -255,9 +255,12 @@ namespace ProjectZx.Waves
                 return EnemyZombieKind.InsideElite;
             }
 
+            // Inside Survival: mix Outside + Inside zombies so the map is less brutal than pure Inside packs.
+            if (MapKind == SurvivalMapKind.Inside)
+                return Random.value < 0.45f ? EnemyZombieKind.Outside : EnemyZombieKind.Inside;
+
             return MapKind switch
             {
-                SurvivalMapKind.Inside => EnemyZombieKind.Inside,
                 SurvivalMapKind.Dungeon => EnemyZombieKind.InsideElite,
                 _ => EnemyZombieKind.Outside
             };
