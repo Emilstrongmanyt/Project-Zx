@@ -17,6 +17,8 @@ namespace ProjectZx.UI
         Text _hpText;
         Text _xpText;
         Text _goldText;
+        Image _hpFill;
+        Image _xpFill;
         Text _bannerText;
         Text _levelUpTitle;
         Text _achievementToastTitle;
@@ -63,13 +65,32 @@ namespace ProjectZx.UI
             canvasGo.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            _roundText = CreateText(canvasGo.transform, "Round 1", 34, new Vector2(SafeLeft, -SafeTop), TextAnchor.UpperLeft);
-            CreateUiIcon(canvasGo.transform, ArtLibrary.HpHeart, new Vector2(SafeLeft, -SafeTop - 46f), new Vector2(34, 34), TextAnchor.UpperLeft);
-            _hpText = CreateText(canvasGo.transform, "HP 100/100", 28, new Vector2(SafeLeft + 42f, -SafeTop - 46f), TextAnchor.UpperLeft);
-            CreateUiIcon(canvasGo.transform, ArtLibrary.XpGem, new Vector2(SafeLeft, -SafeTop - 90f), new Vector2(32, 32), TextAnchor.UpperLeft);
-            _xpText = CreateText(canvasGo.transform, "Run XP 0/30", 28, new Vector2(SafeLeft + 42f, -SafeTop - 90f), TextAnchor.UpperLeft);
-            CreateUiIcon(canvasGo.transform, ArtLibrary.GoldCoin, new Vector2(SafeLeft, -SafeTop - 134f), new Vector2(32, 32), TextAnchor.UpperLeft);
-            _goldText = CreateText(canvasGo.transform, "Run Gold 0", 28, new Vector2(SafeLeft + 42f, -SafeTop - 134f), TextAnchor.UpperLeft);
+            _roundText = CreateText(canvasGo.transform, "Round 1", 30, new Vector2(SafeLeft, -SafeTop), TextAnchor.UpperLeft);
+            _roundText.color = new Color(1f, 0.94f, 0.78f);
+
+            // Stone-styled HP / XP bars + gold chip.
+            BuildHudStatBar(
+                canvasGo.transform,
+                "HpBar",
+                new Vector2(SafeLeft, -SafeTop - 42f),
+                StoneUi.Available && StoneUi.IconHp != null ? StoneUi.IconHp : ArtLibrary.HpHeart,
+                StoneUi.HudBarFillHp,
+                out _hpFill,
+                out _hpText,
+                "100/100");
+
+            BuildHudStatBar(
+                canvasGo.transform,
+                "XpBar",
+                new Vector2(SafeLeft, -SafeTop - 98f),
+                StoneUi.Available && StoneUi.IconXp != null ? StoneUi.IconXp : ArtLibrary.XpGem,
+                StoneUi.HudBarFillXp,
+                out _xpFill,
+                out _xpText,
+                "0/30");
+
+            BuildHudGoldChip(canvasGo.transform, new Vector2(SafeLeft, -SafeTop - 154f));
+
             _bannerText = CreateText(canvasGo.transform, "", 44, Vector2.zero, TextAnchor.MiddleCenter);
             _bannerText.color = new Color(1f, 0.85f, 0.3f);
 
@@ -292,11 +313,29 @@ namespace ProjectZx.UI
             var stats = _player.GetComponent<PlayerStats>();
             if (stats == null) return;
 
-            _hpText.text = $"HP {stats.CurrentHp}/{stats.MaxHp}";
-            _xpText.text = stats.Level >= StatCaps.MaxRunLevel
-                ? $"Run XP MAX  Lv {stats.Level}/{StatCaps.MaxRunLevel}"
-                : $"Run XP {stats.RunXp}/{stats.XpToNext}  Lv {stats.Level}";
-            _goldText.text = $"Gold {stats.RunGold}";
+            if (_hpText != null)
+                _hpText.text = $"{stats.CurrentHp}/{stats.MaxHp}";
+            if (_hpFill != null)
+                _hpFill.fillAmount = stats.MaxHp > 0
+                    ? Mathf.Clamp01((float)stats.CurrentHp / stats.MaxHp)
+                    : 0f;
+
+            if (stats.Level >= StatCaps.MaxRunLevel)
+            {
+                if (_xpText != null) _xpText.text = $"MAX Lv {stats.Level}";
+                if (_xpFill != null) _xpFill.fillAmount = 1f;
+            }
+            else
+            {
+                if (_xpText != null) _xpText.text = $"{stats.RunXp}/{stats.XpToNext}  Lv {stats.Level}";
+                if (_xpFill != null)
+                    _xpFill.fillAmount = stats.XpToNext > 0
+                        ? Mathf.Clamp01((float)stats.RunXp / stats.XpToNext)
+                        : 0f;
+            }
+
+            if (_goldText != null)
+                _goldText.text = GoldFormat.Abbreviate(stats.RunGold);
 
             if (IsChoosingUpgrade || (_retreatPanel != null && _retreatPanel.activeSelf)) return;
 
@@ -436,17 +475,159 @@ namespace ProjectZx.UI
             rect.anchoredPosition = pos;
             rect.sizeDelta = size;
             var image = go.AddComponent<Image>();
-            if (background != null)
+            UiSprites.ApplyPanelSprite(image, background, largeMenu: false);
+            return go;
+        }
+
+        static void BuildHudStatBar(
+            Transform parent,
+            string name,
+            Vector2 pos,
+            Sprite icon,
+            Sprite fillSprite,
+            out Image fillImage,
+            out Text label,
+            string initialText)
+        {
+            var root = new GameObject(name);
+            root.transform.SetParent(parent, false);
+            var rootRect = root.AddComponent<RectTransform>();
+            rootRect.anchorMin = new Vector2(0f, 1f);
+            rootRect.anchorMax = new Vector2(0f, 1f);
+            rootRect.pivot = new Vector2(0f, 1f);
+            rootRect.anchoredPosition = pos;
+            rootRect.sizeDelta = new Vector2(360f, 48f);
+
+            var iconGo = new GameObject("Icon");
+            iconGo.transform.SetParent(root.transform, false);
+            var iconRect = iconGo.AddComponent<RectTransform>();
+            iconRect.anchorMin = new Vector2(0f, 0.5f);
+            iconRect.anchorMax = new Vector2(0f, 0.5f);
+            iconRect.pivot = new Vector2(0f, 0.5f);
+            iconRect.anchoredPosition = new Vector2(0f, 0f);
+            iconRect.sizeDelta = new Vector2(40f, 40f);
+            var iconImage = iconGo.AddComponent<Image>();
+            iconImage.sprite = icon;
+            iconImage.raycastTarget = false;
+
+            var bar = new GameObject("Bar");
+            bar.transform.SetParent(root.transform, false);
+            var barRect = bar.AddComponent<RectTransform>();
+            barRect.anchorMin = new Vector2(0f, 0.5f);
+            barRect.anchorMax = new Vector2(0f, 0.5f);
+            barRect.pivot = new Vector2(0f, 0.5f);
+            barRect.anchoredPosition = new Vector2(48f, 0f);
+            barRect.sizeDelta = new Vector2(300f, 36f);
+
+            var track = bar.AddComponent<Image>();
+            if (StoneUi.Available && StoneUi.HudBarBorder != null)
             {
-                image.sprite = background;
-                image.type = Image.Type.Sliced;
-                image.color = Color.white;
+                track.sprite = StoneUi.HudBarBorder;
+                track.type = Image.Type.Sliced;
+                track.color = Color.white;
             }
             else
             {
-                image.color = new Color(0.04f, 0.06f, 0.1f, 0.94f);
+                track.color = new Color(0.08f, 0.1f, 0.14f, 0.82f);
             }
-            return go;
+
+            var fillGo = new GameObject("Fill");
+            fillGo.transform.SetParent(bar.transform, false);
+            var fillRect = fillGo.AddComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = new Vector2(8f, 7f);
+            fillRect.offsetMax = new Vector2(-8f, -7f);
+            fillImage = fillGo.AddComponent<Image>();
+            if (fillSprite != null)
+            {
+                fillImage.sprite = fillSprite;
+                fillImage.type = Image.Type.Filled;
+                fillImage.fillMethod = Image.FillMethod.Horizontal;
+                fillImage.fillOrigin = (int)Image.OriginHorizontal.Left;
+                fillImage.fillAmount = 1f;
+                fillImage.color = Color.white;
+            }
+            else
+            {
+                fillImage.color = new Color(0.35f, 0.78f, 0.42f, 0.95f);
+                fillImage.type = Image.Type.Filled;
+                fillImage.fillMethod = Image.FillMethod.Horizontal;
+                fillImage.fillAmount = 1f;
+            }
+            fillImage.raycastTarget = false;
+
+            var textGo = new GameObject("Label");
+            textGo.transform.SetParent(bar.transform, false);
+            var textRect = textGo.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(12f, 0f);
+            textRect.offsetMax = new Vector2(-12f, 0f);
+            label = textGo.AddComponent<Text>();
+            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            label.text = initialText;
+            label.fontSize = 20;
+            label.color = Color.white;
+            label.alignment = TextAnchor.MiddleCenter;
+            label.raycastTarget = false;
+        }
+
+        void BuildHudGoldChip(Transform parent, Vector2 pos)
+        {
+            var chip = new GameObject("GoldChip");
+            chip.transform.SetParent(parent, false);
+            var chipRect = chip.AddComponent<RectTransform>();
+            chipRect.anchorMin = new Vector2(0f, 1f);
+            chipRect.anchorMax = new Vector2(0f, 1f);
+            chipRect.pivot = new Vector2(0f, 1f);
+            chipRect.anchoredPosition = pos;
+            chipRect.sizeDelta = new Vector2(200f, 48f);
+
+            var bg = chip.AddComponent<Image>();
+            if (StoneUi.Available && StoneUi.ResourceBarBg != null)
+            {
+                bg.sprite = StoneUi.ResourceBarBg;
+                bg.type = Image.Type.Sliced;
+                bg.color = Color.white;
+            }
+            else
+            {
+                bg.color = new Color(0.08f, 0.1f, 0.14f, 0.82f);
+            }
+
+            var coinSprite = StoneUi.Available && StoneUi.ResourceIconCoin != null
+                ? StoneUi.ResourceIconCoin
+                : StoneUi.Available && StoneUi.IconGold != null
+                    ? StoneUi.IconGold
+                    : ArtLibrary.GoldCoin;
+
+            var coinGo = new GameObject("Coin");
+            coinGo.transform.SetParent(chip.transform, false);
+            var coinRect = coinGo.AddComponent<RectTransform>();
+            coinRect.anchorMin = new Vector2(0f, 0.5f);
+            coinRect.anchorMax = new Vector2(0f, 0.5f);
+            coinRect.pivot = new Vector2(0f, 0.5f);
+            coinRect.anchoredPosition = new Vector2(10f, 0f);
+            coinRect.sizeDelta = new Vector2(36f, 36f);
+            var coinImage = coinGo.AddComponent<Image>();
+            coinImage.sprite = coinSprite;
+            coinImage.raycastTarget = false;
+
+            var textGo = new GameObject("GoldText");
+            textGo.transform.SetParent(chip.transform, false);
+            var textRect = textGo.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(48f, 0f);
+            textRect.offsetMax = new Vector2(-10f, 0f);
+            _goldText = textGo.AddComponent<Text>();
+            _goldText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            _goldText.text = "0";
+            _goldText.fontSize = 24;
+            _goldText.color = new Color(1f, 0.94f, 0.72f);
+            _goldText.alignment = TextAnchor.MiddleLeft;
+            _goldText.raycastTarget = false;
         }
 
         void CreateChoiceButton(Transform parent, string label, Vector2 pos, System.Action onClick)

@@ -109,9 +109,7 @@ namespace ProjectZx.UI
             canvasGo.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            CreateUiIcon(canvasGo.transform, ArtLibrary.GoldCoin, new Vector2(-SafeRight, -SafeTop), new Vector2(40, 40), TextAnchor.UpperRight);
-            _goldText = CreateText(canvasGo.transform, "0", 30, TextAnchor.UpperRight, new Vector2(-SafeRight + 80f, -SafeTop), new Vector2(160, 42));
-            _goldText.alignment = TextAnchor.MiddleRight;
+            BuildHubGoldDisplay(canvasGo.transform);
 
             // Always available on the campfire map.
             CreateTopRightButton(canvasGo.transform, "Settings", new Vector2(-SafeRight, -SafeTop - 70f), OpenSettings);
@@ -823,6 +821,9 @@ namespace ProjectZx.UI
             buyRect.pivot = new Vector2(0.5f, 1f);
             buyRect.anchoredPosition = new Vector2(360f, y);
             buyRect.sizeDelta = new Vector2(280f, 56f);
+            var buyImage = buyButton.GetComponent<Image>();
+            if (buyImage != null)
+                UiSprites.ApplyButtonSprite(buyImage, buyRect.sizeDelta, StoneButtonStyle.Green);
 
             // Price text sits slightly left so a gold coin icon can sit on the right.
             var buyLabel = buyButton.GetComponentInChildren<Text>();
@@ -855,7 +856,11 @@ namespace ProjectZx.UI
             rect.anchoredPosition = new Vector2(-14f, 0f);
             rect.sizeDelta = new Vector2(28f, 28f);
             var image = go.AddComponent<Image>();
-            image.sprite = ArtLibrary.GoldCoin;
+            image.sprite = StoneUi.Available && StoneUi.ResourceIconCoin != null
+                ? StoneUi.ResourceIconCoin
+                : StoneUi.Available && StoneUi.IconGold != null
+                    ? StoneUi.IconGold
+                    : ArtLibrary.GoldCoin;
             image.raycastTarget = false;
             return image;
         }
@@ -1082,7 +1087,8 @@ namespace ProjectZx.UI
                 var image = row.BuyButton.GetComponent<Image>();
                 if (image != null)
                 {
-                    UiSprites.ApplyButtonSprite(image, new Vector2(280f, 56f));
+                    UiSprites.ApplyButtonSprite(image, new Vector2(280f, 56f),
+                        maxed ? StoneButtonStyle.Primary : StoneButtonStyle.Green);
                     image.color = Color.white;
                 }
 
@@ -1321,6 +1327,53 @@ namespace ProjectZx.UI
             if (_goldText != null) _goldText.text = GoldFormat.Abbreviate(GameSave.Gold);
         }
 
+        void BuildHubGoldDisplay(Transform parent)
+        {
+            // Stone resource chip: bar background + coin icon + abbreviated gold.
+            var chip = new GameObject("GoldChip");
+            chip.transform.SetParent(parent, false);
+            var chipRect = chip.AddComponent<RectTransform>();
+            chipRect.anchorMin = new Vector2(1f, 1f);
+            chipRect.anchorMax = new Vector2(1f, 1f);
+            chipRect.pivot = new Vector2(1f, 1f);
+            chipRect.anchoredPosition = new Vector2(-SafeRight + 40f, -SafeTop);
+            chipRect.sizeDelta = new Vector2(220f, 56f);
+
+            var bg = chip.AddComponent<Image>();
+            if (StoneUi.Available && StoneUi.ResourceBarBg != null)
+            {
+                bg.sprite = StoneUi.ResourceBarBg;
+                bg.type = Image.Type.Sliced;
+                bg.color = Color.white;
+            }
+            else
+            {
+                bg.color = new Color(0.08f, 0.1f, 0.14f, 0.72f);
+            }
+
+            var coinSprite = StoneUi.Available && StoneUi.ResourceIconCoin != null
+                ? StoneUi.ResourceIconCoin
+                : StoneUi.Available && StoneUi.IconGold != null
+                    ? StoneUi.IconGold
+                    : ArtLibrary.GoldCoin;
+
+            var coinGo = new GameObject("CoinIcon");
+            coinGo.transform.SetParent(chip.transform, false);
+            var coinRect = coinGo.AddComponent<RectTransform>();
+            coinRect.anchorMin = new Vector2(0f, 0.5f);
+            coinRect.anchorMax = new Vector2(0f, 0.5f);
+            coinRect.pivot = new Vector2(0f, 0.5f);
+            coinRect.anchoredPosition = new Vector2(14f, 0f);
+            coinRect.sizeDelta = new Vector2(40f, 40f);
+            var coinImage = coinGo.AddComponent<Image>();
+            coinImage.sprite = coinSprite;
+            coinImage.raycastTarget = false;
+
+            _goldText = CreateText(chip.transform, "0", 28, TextAnchor.MiddleCenter, new Vector2(18f, 0f), new Vector2(140f, 42f));
+            _goldText.alignment = TextAnchor.MiddleCenter;
+            _goldText.color = new Color(1f, 0.94f, 0.72f);
+        }
+
         static Text CreateText(Transform parent, string text, int size, TextAnchor anchor, Vector2 pos, Vector2 sizeDelta)
         {
             var go = new GameObject("Text");
@@ -1362,16 +1415,8 @@ namespace ProjectZx.UI
             rect.anchoredPosition = pos;
             rect.sizeDelta = size;
             var image = go.AddComponent<Image>();
-            if (background != null)
-            {
-                image.sprite = background;
-                image.type = Image.Type.Sliced;
-                image.color = Color.white;
-            }
-            else
-            {
-                image.color = new Color(0.05f, 0.08f, 0.12f, 0.92f);
-            }
+            // Prefer GUI - The Stone panels; fall back to legacy shop/challenge art.
+            UiSprites.ApplyPanelSprite(image, background, largeMenu: true);
             return go;
         }
 
