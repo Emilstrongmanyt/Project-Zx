@@ -180,8 +180,12 @@ namespace ProjectZx.Core
         public static Sprite GoldCoinDropped => _goldCoinDropped ??= Load(Admurin + "gold_bag", "GoldCoinDropped", "GoldCoin");
         public static Sprite HpHeart => _hpHeart ??= Load(Admurin + "hp_potion", "HeartHP", "HPHeart");
         public static Sprite HpHeartDropped => _hpHeartDropped ??= Load(Admurin + "hp_potion", "HPHeartDropped", "HeartHP", "HPHeart");
-        public static Sprite XpGem => _xpGem ??= TryLoadSprite(Admurin + "xp_gem", TilePixelsPerUnit) ?? LoadOrCreateXpGem();
-        public static Sprite PinkCrystal => _pinkCrystal ??= TryLoadSprite(Admurin + "pink_crystal", TilePixelsPerUnit) ?? CreatePinkCrystalSprite();
+        /// <summary>XP drop gem — Admurin sapphire sized for ground pickups (not tile PPU).</summary>
+        public static Sprite XpGem => _xpGem ??=
+            LoadLootSprite(Admurin + "xp_gem", 1.2f) ?? LoadOrCreateXpGem();
+        /// <summary>Map loot crystal — Admurin morganite sized for ground pickups.</summary>
+        public static Sprite PinkCrystal => _pinkCrystal ??=
+            LoadLootSprite(Admurin + "pink_crystal", 1.35f) ?? CreatePinkCrystalSprite();
         public static Sprite BtnPrimary => _btnPrimary ??= Load("btn_primary");
         public static Sprite Btn220x52 => _btn220x52 ??= Load("btn_220x52", "btn_primary");
         public static Sprite Btn200x52 => _btn200x52 ??= Load("btn_200x52", "btn_primary");
@@ -195,28 +199,28 @@ namespace ProjectZx.Core
         public static Sprite Campfire => _campfire ??= CreateCampfireSprite();
         /// <summary>Batter weapon — Admurin Wooden_Weapon2, combat-scaled.</summary>
         public static Sprite BaseballBat => _baseballBat ??=
-            LoadWeaponSprite(Admurin + "weapon_bat", new Vector2(0.12f, 0.5f), 2.4f) ?? LoadOrCreateBat();
+            LoadWeaponSprite(Admurin + "weapon_bat", new Vector2(0.12f, 0.5f), 3.6f) ?? LoadOrCreateBat();
         // worldLength is in local sprite units; player root is ~0.55 scale so ~2.6 local ≈ 1.4 world.
         /// <summary>Spearman weapon — Admurin Wooden_Weapon5, combat-scaled.</summary>
         public static Sprite Spear => _spear ??=
-            LoadWeaponSprite(Admurin + "weapon_spear", new Vector2(0.1f, 0.5f), 2.75f)
-            ?? LoadWeaponSprite("Spear", new Vector2(0.1f, 0.5f), 2.75f)
+            LoadWeaponSprite(Admurin + "weapon_spear", new Vector2(0.1f, 0.5f), 4.125f)
+            ?? LoadWeaponSprite("Spear", new Vector2(0.1f, 0.5f), 4.125f)
             ?? CreateSpearSprite();
         /// <summary>Samurai weapon — Admurin Iron_Weapon22, combat-scaled.</summary>
         public static Sprite Katana => _katana ??=
-            LoadWeaponSprite(Admurin + "weapon_katana", new Vector2(0.1f, 0.5f), 2.5f)
-            ?? LoadWeaponSprite("Sword", new Vector2(0.1f, 0.5f), 2.5f)
+            LoadWeaponSprite(Admurin + "weapon_katana", new Vector2(0.1f, 0.5f), 3.75f)
+            ?? LoadWeaponSprite("Sword", new Vector2(0.1f, 0.5f), 3.75f)
             ?? CreateKatanaSprite();
         /// <summary>Bowman weapon — Admurin Wooden_Weapon15, combat-scaled.</summary>
         public static Sprite Bow => _bow ??=
-            LoadWeaponSprite(Admurin + "weapon_bow", new Vector2(0.35f, 0.5f), 1.9f) ?? LoadOrCreateBow();
+            LoadWeaponSprite(Admurin + "weapon_bow", new Vector2(0.35f, 0.5f), 2.85f) ?? LoadOrCreateBow();
         public static Sprite Arrow => _arrow ??=
-            LoadWeaponSprite(Admurin + "arrow", new Vector2(0.08f, 0.5f), 1.15f)
-            ?? LoadWeaponSprite("Arrow", new Vector2(0.08f, 0.5f), 1.15f)
+            LoadWeaponSprite(Admurin + "arrow", new Vector2(0.08f, 0.5f), 1.725f)
+            ?? LoadWeaponSprite("Arrow", new Vector2(0.08f, 0.5f), 1.725f)
             ?? CreateArrowSprite();
         /// <summary>Magician weapon — Admurin Wooden_Weapon8, combat-scaled.</summary>
         public static Sprite Staff => _staff ??=
-            LoadWeaponSprite(Admurin + "weapon_staff", new Vector2(0.12f, 0.5f), 2.35f) ?? CreateSpearSprite();
+            LoadWeaponSprite(Admurin + "weapon_staff", new Vector2(0.12f, 0.5f), 3.525f) ?? CreateSpearSprite();
         public static Sprite Sparkles => _sparkles ??= TryLoadSprite("Sparkles", TilePixelsPerUnit);
         public static Sprite Sparkles2 => _sparkles2 ??= TryLoadSprite("Sparkles2", TilePixelsPerUnit);
         /// <summary>Fortune Ring icon — Admurin fortitude ring (Sparkles remain VFX-only).</summary>
@@ -721,6 +725,15 @@ namespace ProjectZx.Core
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Loads a ground-loot icon and rebuilds it at a readable world size.
+        /// Tiny Admurin singles at tile PPU (64) are nearly invisible as pickups.
+        /// </summary>
+        static Sprite LoadLootSprite(string resourceName, float worldSize)
+        {
+            return LoadWeaponSprite(resourceName, new Vector2(0.5f, 0.5f), worldSize);
         }
 
         /// <summary>
