@@ -21,20 +21,26 @@ namespace ProjectZx.UI
         Image _xpFill;
         Text _bannerText;
         Text _levelUpTitle;
+        Text _epicTitle;
         Text _achievementToastTitle;
         Text _achievementToastBody;
         GameObject _levelUpPanel;
+        GameObject _epicPanel;
         GameObject _retreatPanel;
         GameObject _achievementToast;
         Transform _choiceButtonRoot;
+        Transform _epicChoiceRoot;
         float _bannerTimer;
         float _achievementToastTimer;
         Transform _player;
         PlayerStats _stats;
         readonly List<GameObject> _choiceButtons = new();
+        readonly List<GameObject> _epicChoiceButtons = new();
+        bool _choosingLevelUp;
+        bool _choosingEpic;
 
         public static GameHud Instance { get; private set; }
-        public bool IsChoosingUpgrade { get; private set; }
+        public bool IsChoosingUpgrade => _choosingLevelUp || _choosingEpic;
 
         void Awake()
         {
@@ -47,7 +53,10 @@ namespace ProjectZx.UI
         {
             Achievements.OnUnlocked -= OnAchievementUnlocked;
             if (_stats != null)
+            {
                 _stats.LevelUpChoiceRequired -= OnLevelUpChoiceRequired;
+                _stats.EpicChoiceRequired -= OnEpicChoiceRequired;
+            }
             if (Instance == this) Instance = null;
             if (IsChoosingUpgrade) Time.timeScale = 1f;
         }
@@ -95,6 +104,7 @@ namespace ProjectZx.UI
             _bannerText.color = new Color(1f, 0.85f, 0.3f);
 
             _levelUpPanel = BuildLevelUpPanel(canvasGo.transform);
+            _epicPanel = BuildEpicTalentPanel(canvasGo.transform);
             _retreatPanel = BuildRetreatPanel(canvasGo.transform);
             _achievementToast = BuildAchievementToast(canvasGo.transform);
             CreateRetreatButton(canvasGo.transform);
@@ -231,10 +241,34 @@ namespace ProjectZx.UI
             return panel;
         }
 
+        GameObject BuildEpicTalentPanel(Transform parent)
+        {
+            var panel = CreateDialogPanel(parent, "EpicTalentPanel", Vector2.zero, new Vector2(680, 620), ArtLibrary.LevelUpUi);
+            _epicTitle = CreatePanelText(panel.transform, "Epic Talent!", 40, new Vector2(0, 240), new Vector2(620, 54));
+            _epicTitle.color = new Color(0.92f, 0.55f, 1f);
+            CreatePanelText(panel.transform, "Boss crystal — choose one powerful talent", 24, new Vector2(0, 185), new Vector2(620, 44));
+
+            var rootGo = new GameObject("EpicChoiceButtons");
+            rootGo.transform.SetParent(panel.transform, false);
+            var rootRect = rootGo.AddComponent<RectTransform>();
+            rootRect.anchorMin = new Vector2(0.5f, 0.5f);
+            rootRect.anchorMax = new Vector2(0.5f, 0.5f);
+            rootRect.pivot = new Vector2(0.5f, 0.5f);
+            rootRect.anchoredPosition = new Vector2(0f, -30f);
+            rootRect.sizeDelta = new Vector2(560f, 400f);
+            _epicChoiceRoot = rootGo.transform;
+
+            panel.SetActive(false);
+            return panel;
+        }
+
         public void BindPlayer(Transform player)
         {
             if (_stats != null)
+            {
                 _stats.LevelUpChoiceRequired -= OnLevelUpChoiceRequired;
+                _stats.EpicChoiceRequired -= OnEpicChoiceRequired;
+            }
 
             _player = player;
             _stats = player != null ? player.GetComponent<PlayerStats>() : null;
@@ -242,23 +276,60 @@ namespace ProjectZx.UI
             if (_stats != null)
             {
                 _stats.LevelUpChoiceRequired += OnLevelUpChoiceRequired;
+                _stats.EpicChoiceRequired += OnEpicChoiceRequired;
                 // Campfire Blessing grants a free pick at run start.
                 if (_stats.PendingLevelUpChoices > 0)
                     OnLevelUpChoiceRequired(_stats.PendingLevelUpChoices);
+                else if (_stats.PendingEpicChoices > 0)
+                    OnEpicChoiceRequired(_stats.PendingEpicChoices);
             }
         }
 
         void OnLevelUpChoiceRequired(int remaining)
         {
             if (_levelUpPanel == null || _stats == null) return;
+            // Epic panel takes priority if already open; level-up will resume after.
+            if (_choosingEpic) return;
 
-            IsChoosingUpgrade = true;
+            OpenLevelUpPanel(remaining);
+        }
+
+        void OpenLevelUpPanel(int remaining)
+        {
+            _choosingLevelUp = true;
             Time.timeScale = 0f;
             FloatingDamageNumber.ClearAll();
-            _levelUpTitle.text = remaining > 1 ? $"Level Up! ({remaining} picks)" : "Level Up!";
+            if (_levelUpTitle != null)
+                _levelUpTitle.text = remaining > 1 ? $"Level Up! ({remaining} picks)" : "Level Up!";
             PopulateChoiceButtons();
             _levelUpPanel.SetActive(true);
             SparkleBurst.Play(_levelUpPanel.transform, new Vector2(0f, 180f), 18);
+        }
+
+        void OnEpicChoiceRequired(int remaining)
+        {
+            if (_epicPanel == null || _stats == null) return;
+            // Finish level-up first if both are pending.
+            if (_choosingLevelUp) return;
+
+            OpenEpicPanel(remaining);
+        }
+
+        void OpenEpicPanel(int remaining)
+        {
+            _choosingEpic = true;
+            Time.timeScale = 0f;
+            FloatingDamageNumber.ClearAll();
+            if (_epicTitle != null)
+            {
+                _epicTitle.text = remaining > 1
+                    ? $"Epic Talent! ({remaining} picks)"
+                    : "Epic Talent!";
+            }
+
+            PopulateEpicChoiceButtons();
+            _epicPanel.SetActive(true);
+            SparkleBurst.Play(_epicPanel.transform, new Vector2(0f, 180f), 22);
         }
 
         void PopulateChoiceButtons()
@@ -273,7 +344,30 @@ namespace ProjectZx.UI
                 var choice = choices[i];
                 var label = PlayerStats.GetChoiceLabel(choice);
                 var y = yStart + yStep * i;
-                CreateChoiceButton(_choiceButtonRoot, label, new Vector2(0f, y), () => ChooseUpgrade(choice));
+                CreateChoiceButton(_choiceButtonRoot, label, new Vector2(0f, y), () => ChooseUpgrade(choice), _choiceButtons);
+            }
+        }
+
+        void PopulateEpicChoiceButtons()
+        {
+            ClearEpicChoiceButtons();
+            var choices = EpicTalentCatalog.RollChoices(_stats != null ? _stats.EpicOwnedMask : 0);
+            var yStart = 110f;
+            const float yStep = -108f;
+
+            for (var i = 0; i < choices.Count; i++)
+            {
+                var choice = choices[i];
+                var label = EpicTalentCatalog.GetButtonLabel(choice);
+                var y = yStart + yStep * i;
+                CreateChoiceButton(
+                    _epicChoiceRoot,
+                    label,
+                    new Vector2(0f, y),
+                    () => ChooseEpicTalent(choice),
+                    _epicChoiceButtons,
+                    new Vector2(520f, 92f),
+                    22);
             }
         }
 
@@ -286,6 +380,15 @@ namespace ProjectZx.UI
             _choiceButtons.Clear();
         }
 
+        void ClearEpicChoiceButtons()
+        {
+            foreach (var button in _epicChoiceButtons)
+            {
+                if (button != null) Destroy(button);
+            }
+            _epicChoiceButtons.Clear();
+        }
+
         void ChooseUpgrade(RunLevelChoice choice)
         {
             if (_stats == null) return;
@@ -296,14 +399,53 @@ namespace ProjectZx.UI
 
             if (_stats.PendingLevelUpChoices > 0)
             {
-                _levelUpTitle.text = $"Level Up! ({_stats.PendingLevelUpChoices} picks)";
+                if (_levelUpTitle != null)
+                    _levelUpTitle.text = $"Level Up! ({_stats.PendingLevelUpChoices} picks)";
                 PopulateChoiceButtons();
                 return;
             }
 
             ClearChoiceButtons();
             _levelUpPanel.SetActive(false);
-            IsChoosingUpgrade = false;
+            _choosingLevelUp = false;
+
+            if (_stats.PendingEpicChoices > 0)
+            {
+                OpenEpicPanel(_stats.PendingEpicChoices);
+                return;
+            }
+
+            Time.timeScale = 1f;
+        }
+
+        void ChooseEpicTalent(EpicTalentId choice)
+        {
+            if (_stats == null) return;
+
+            _stats.ApplyEpicTalent(choice);
+            if (_epicPanel != null)
+                SparkleBurst.Play(_epicPanel.transform, Vector2.zero, 16);
+
+            ShowBanner($"{EpicTalentCatalog.GetTitle(choice)}!", 2f);
+
+            if (_stats.PendingEpicChoices > 0)
+            {
+                if (_epicTitle != null)
+                    _epicTitle.text = $"Epic Talent! ({_stats.PendingEpicChoices} picks)";
+                PopulateEpicChoiceButtons();
+                return;
+            }
+
+            ClearEpicChoiceButtons();
+            _epicPanel.SetActive(false);
+            _choosingEpic = false;
+
+            if (_stats.PendingLevelUpChoices > 0)
+            {
+                OpenLevelUpPanel(_stats.PendingLevelUpChoices);
+                return;
+            }
+
             Time.timeScale = 1f;
         }
 
@@ -630,16 +772,23 @@ namespace ProjectZx.UI
             _goldText.raycastTarget = false;
         }
 
-        void CreateChoiceButton(Transform parent, string label, Vector2 pos, System.Action onClick)
+        void CreateChoiceButton(
+            Transform parent,
+            string label,
+            Vector2 pos,
+            System.Action onClick,
+            List<GameObject> trackList,
+            Vector2? sizeOverride = null,
+            int fontSize = 28)
         {
-            var go = new GameObject(label + "Button");
+            var go = new GameObject("ChoiceButton");
             go.transform.SetParent(parent, false);
             var rect = go.AddComponent<RectTransform>();
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = pos;
-            var size = new Vector2(420, 68);
+            var size = sizeOverride ?? new Vector2(420, 68);
             rect.sizeDelta = size;
             var image = go.AddComponent<Image>();
             UiSprites.ApplyButtonSprite(image, size);
@@ -656,14 +805,14 @@ namespace ProjectZx.UI
             var text = textGo.AddComponent<Text>();
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.text = label;
-            text.fontSize = 28;
+            text.fontSize = fontSize;
             text.color = Color.white;
             text.alignment = TextAnchor.MiddleCenter;
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
             text.verticalOverflow = VerticalWrapMode.Truncate;
             text.raycastTarget = false;
 
-            _choiceButtons.Add(go);
+            trackList.Add(go);
         }
     }
 }

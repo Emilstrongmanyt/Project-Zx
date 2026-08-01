@@ -66,7 +66,27 @@ namespace ProjectZx.Player
         public bool RunShieldUnlocked { get; private set; }
         public float RunBerserkBonus { get; private set; }
 
+        // --- Boss epic crystal talents (run-scoped) ---
+        public int EpicOwnedMask { get; private set; }
+        public int PendingEpicChoices { get; private set; }
+        public int EpicPicksTaken { get; private set; }
+        public float RunDamageTakenMultiplier { get; private set; } = 1f;
+        public float RunEpicBossDamageBonus { get; private set; }
+        public float RunEpicNormalDamageBonus { get; private set; }
+        public float RunExecutionEdgeBonus { get; private set; }
+        public bool RunArcaneEcho { get; private set; }
+        public bool RunBloodletting { get; private set; }
+        public bool RunPhoenixHeart { get; private set; }
+        public bool PhoenixHeartUsed { get; private set; }
+        public bool RunIronVeil { get; private set; }
+
         public event Action<int> LevelUpChoiceRequired;
+        public event Action<int> EpicChoiceRequired;
+
+        const float IronVeilCooldownSeconds = 20f;
+        const float IronVeilAbsorbFraction = 0.3f;
+        const float PhoenixInvulnSeconds = 2f;
+        const int SelfBleedTickCount = 2;
 
         bool _goldBanked;
         int _secondWindChargesUsed;
@@ -74,6 +94,12 @@ namespace ProjectZx.Player
         float _shieldCooldown;
         float _timeSinceDamaged = 99f;
         float _regenAccumulator;
+        float _ironVeilAbsorb;
+        float _ironVeilCooldown;
+        float _invulnTimer;
+        int _selfBleedDamageRemaining;
+        int _selfBleedTicksRemaining;
+        float _selfBleedTickTimer;
 
         public void ConfigureForRun(bool survivalMode)
         {
@@ -109,6 +135,24 @@ namespace ProjectZx.Player
             RunRegenPerSecond = 0f;
             RunShieldUnlocked = false;
             RunBerserkBonus = 0f;
+            EpicOwnedMask = 0;
+            PendingEpicChoices = 0;
+            EpicPicksTaken = 0;
+            RunDamageTakenMultiplier = 1f;
+            RunEpicBossDamageBonus = 0f;
+            RunEpicNormalDamageBonus = 0f;
+            RunExecutionEdgeBonus = 0f;
+            RunArcaneEcho = false;
+            RunBloodletting = false;
+            RunPhoenixHeart = false;
+            PhoenixHeartUsed = false;
+            RunIronVeil = false;
+            _ironVeilAbsorb = 0f;
+            _ironVeilCooldown = 0f;
+            _invulnTimer = 0f;
+            _selfBleedDamageRemaining = 0;
+            _selfBleedTicksRemaining = 0;
+            _selfBleedTickTimer = 0f;
         }
 
         /// <summary>
@@ -121,6 +165,7 @@ namespace ProjectZx.Player
             CompanionLeader = leader;
             DamageOutputScale = 0.2f;
             PendingLevelUpChoices = 0;
+            PendingEpicChoices = 0;
             MaxHp = 9999;
             CurrentHp = MaxHp;
             SyncRunBuffsFromLeader();
@@ -145,7 +190,30 @@ namespace ProjectZx.Player
             RunRegenPerSecond = 0f;
             RunShieldUnlocked = false;
             RunBerserkBonus = leader.RunBerserkBonus;
+            RunDamageTakenMultiplier = leader.RunDamageTakenMultiplier;
+            RunEpicBossDamageBonus = leader.RunEpicBossDamageBonus;
+            RunEpicNormalDamageBonus = leader.RunEpicNormalDamageBonus;
+            RunExecutionEdgeBonus = leader.RunExecutionEdgeBonus;
+            RunArcaneEcho = leader.RunArcaneEcho;
+            RunBloodletting = leader.RunBloodletting;
             Level = leader.Level;
+        }
+
+        public bool CanAcceptEpicCrystal =>
+            !IsCompanion
+            && SurvivalMode
+            && !IsDead
+            && EpicPicksTaken + PendingEpicChoices < EpicTalentCatalog.MaxPicksPerRun;
+
+        public bool HasEpicTalent(EpicTalentId id) =>
+            EpicTalentCatalog.HasTalent(EpicOwnedMask, id);
+
+        /// <summary>Boss crystal pickup — queues an epic talent choice panel.</summary>
+        public void OfferEpicTalentChoice()
+        {
+            if (!CanAcceptEpicCrystal) return;
+            PendingEpicChoices++;
+            EpicChoiceRequired?.Invoke(PendingEpicChoices);
         }
 
         void Update()
@@ -158,6 +226,9 @@ namespace ProjectZx.Player
                 return;
             }
 
+            if (_invulnTimer > 0f)
+                _invulnTimer -= Time.deltaTime;
+
             _timeSinceDamaged += Time.deltaTime;
 
             if (RunShieldUnlocked)
@@ -169,6 +240,18 @@ namespace ProjectZx.Player
                         _shieldReady = true;
                 }
             }
+
+            if (RunIronVeil)
+            {
+                if (_ironVeilAbsorb <= 0f)
+                {
+                    _ironVeilCooldown -= Time.deltaTime;
+                    if (_ironVeilCooldown <= 0f)
+                        RefreshIronVeilAbsorb();
+                }
+            }
+
+            UpdateSelfBleed();
 
             if (RunRegenPerSecond > 0f && _timeSinceDamaged >= RegenOutOfCombatDelay && CurrentHp < MaxHp)
             {
@@ -186,9 +269,43 @@ namespace ProjectZx.Player
             }
         }
 
+        void RefreshIronVeilAbsorb()
+        {
+            _ironVeilAbsorb = Mathf.Max(1f, MaxHp * IronVeilAbsorbFraction);
+            _ironVeilCooldown = IronVeilCooldownSeconds;
+        }
+
+        void UpdateSelfBleed()
+        {
+            if (_selfBleedTicksRemaining <= 0) return;
+
+            _selfBleedTickTimer -= Time.deltaTime;
+            if (_selfBleedTickTimer > 0f) return;
+
+            _selfBleedTickTimer = 1f;
+            var ticksLeft = _selfBleedTicksRemaining;
+            var tickDamage = ticksLeft <= 1
+                ? _selfBleedDamageRemaining
+                : Mathf.Max(1, _selfBleedDamageRemaining / ticksLeft);
+            _selfBleedDamageRemaining = Mathf.Max(0, _selfBleedDamageRemaining - tickDamage);
+            _selfBleedTicksRemaining--;
+            ApplyDirectHpLoss(tickDamage, isBleed: true);
+        }
+
+        /// <summary>Bloodletting: 20% of a hit as self-bleed over 2 seconds (2 ticks).</summary>
+        void ApplySelfBleedFromHit(int hitAmount)
+        {
+            if (!RunBloodletting || hitAmount <= 0 || IsDead) return;
+            var total = Mathf.Max(1, Mathf.RoundToInt(hitAmount * 0.2f));
+            _selfBleedDamageRemaining = total;
+            _selfBleedTicksRemaining = SelfBleedTickCount;
+            _selfBleedTickTimer = 1f;
+        }
+
         public void TakeDamage(int amount)
         {
             if (IsDead || amount <= 0 || IsCompanion) return;
+            if (_invulnTimer > 0f) return;
 
             if (RunShieldUnlocked && _shieldReady)
             {
@@ -200,7 +317,37 @@ namespace ProjectZx.Player
             if (GameSave.ThickHideLevel > 0)
                 amount = Mathf.Max(1, Mathf.RoundToInt(amount * GameSave.ThickHideDamageTakenMultiplier));
 
-            FloatingDamageNumber.Spawn(transform.position, amount, isHeroHit: true);
+            if (RunDamageTakenMultiplier > 1.001f)
+                amount = Mathf.Max(1, Mathf.RoundToInt(amount * RunDamageTakenMultiplier));
+
+            if (RunIronVeil && _ironVeilAbsorb > 0f)
+            {
+                var absorbed = Mathf.Min(_ironVeilAbsorb, amount);
+                _ironVeilAbsorb -= absorbed;
+                amount -= Mathf.RoundToInt(absorbed);
+                if (_ironVeilAbsorb <= 0f)
+                    _ironVeilCooldown = IronVeilCooldownSeconds;
+                if (amount <= 0)
+                {
+                    _timeSinceDamaged = 0f;
+                    return;
+                }
+            }
+
+            ApplyDirectHpLoss(amount, isBleed: false);
+            ApplySelfBleedFromHit(amount);
+        }
+
+        void ApplyDirectHpLoss(int amount, bool isBleed)
+        {
+            if (IsDead || amount <= 0 || IsCompanion) return;
+            if (_invulnTimer > 0f) return;
+
+            if (isBleed)
+                FloatingDamageNumber.SpawnBleed(transform.position, amount);
+            else
+                FloatingDamageNumber.Spawn(transform.position, amount, isHeroHit: true);
+
             CurrentHp = Mathf.Max(0, CurrentHp - amount);
             _timeSinceDamaged = 0f;
 
@@ -214,7 +361,24 @@ namespace ProjectZx.Player
                 Heal(Mathf.Max(1, Mathf.RoundToInt(MaxHp * 0.3f)));
             }
 
-            if (CurrentHp <= 0) Die();
+            if (CurrentHp <= 0)
+                TryPhoenixOrDie();
+        }
+
+        void TryPhoenixOrDie()
+        {
+            if (RunPhoenixHeart && !PhoenixHeartUsed)
+            {
+                PhoenixHeartUsed = true;
+                CurrentHp = Mathf.Max(1, Mathf.RoundToInt(MaxHp * 0.4f));
+                _invulnTimer = PhoenixInvulnSeconds;
+                _selfBleedDamageRemaining = 0;
+                _selfBleedTicksRemaining = 0;
+                GameHud.Instance?.ShowBanner("Phoenix Heart! Revived!", 2.5f);
+                return;
+            }
+
+            Die();
         }
 
         public void Heal(int amount)
@@ -425,6 +589,69 @@ namespace ProjectZx.Player
                 LevelUpChoiceRequired?.Invoke(PendingLevelUpChoices);
         }
 
+        public void ApplyEpicTalent(EpicTalentId id)
+        {
+            if (PendingEpicChoices <= 0 || id == EpicTalentId.None) return;
+            if (EpicTalentCatalog.IsUnique(id) && HasEpicTalent(id))
+            {
+                PendingEpicChoices--;
+                if (PendingEpicChoices > 0)
+                    EpicChoiceRequired?.Invoke(PendingEpicChoices);
+                return;
+            }
+
+            EpicOwnedMask = EpicTalentCatalog.WithTalent(EpicOwnedMask, id);
+            EpicPicksTaken++;
+
+            switch (id)
+            {
+                case EpicTalentId.Bloodforged:
+                    RunDamageMultiplier *= 1.25f;
+                    RunDamageTakenMultiplier *= 1.1f;
+                    break;
+                case EpicTalentId.IronVeil:
+                    RunIronVeil = true;
+                    RefreshIronVeilAbsorb();
+                    break;
+                case EpicTalentId.ExecutionersEdge:
+                    RunExecutionEdgeBonus = Mathf.Max(RunExecutionEdgeBonus, 0.4f);
+                    break;
+                case EpicTalentId.GildedGreed:
+                    RunGoldFindMultiplier *= 1.4f;
+                    RunXpMultiplier *= 1.2f;
+                    break;
+                case EpicTalentId.TempestStrikes:
+                    RunAttackSpeedMultiplier *= 1.25f;
+                    RunSpeedMultiplier *= 1.15f;
+                    break;
+                case EpicTalentId.SoulDrain:
+                    RunLifesteal = Mathf.Min(0.25f, RunLifesteal + 0.08f);
+                    MaxHp = Mathf.Min(StatCaps.RunMaxHp, MaxHp + 10);
+                    CurrentHp = Mathf.Min(MaxHp, CurrentHp + 10);
+                    break;
+                case EpicTalentId.BossBreaker:
+                    RunEpicBossDamageBonus = Mathf.Max(RunEpicBossDamageBonus, 0.35f);
+                    RunEpicNormalDamageBonus = Mathf.Max(RunEpicNormalDamageBonus, 0.1f);
+                    break;
+                case EpicTalentId.ArcaneEcho:
+                    RunArcaneEcho = true;
+                    break;
+                case EpicTalentId.PhoenixHeart:
+                    RunPhoenixHeart = true;
+                    break;
+                case EpicTalentId.TreasureMagnet:
+                    RunLootRangeMultiplier *= 1.5f;
+                    break;
+                case EpicTalentId.Bloodletting:
+                    RunBloodletting = true;
+                    break;
+            }
+
+            PendingEpicChoices--;
+            if (PendingEpicChoices > 0)
+                EpicChoiceRequired?.Invoke(PendingEpicChoices);
+        }
+
         public void AddRunGold(int amount)
         {
             if (!SurvivalMode || IsDead || amount <= 0 || _goldBanked) return;
@@ -477,10 +704,23 @@ namespace ProjectZx.Player
 
             if (target != null)
             {
-                if (target.IsBoss && RunBossDamageBonus > 0f)
-                    dmg *= 1f + RunBossDamageBonus;
-                else if (!target.IsBoss && RunExecuteBonus > 0f && target.HpRatio <= 0.25f)
-                    dmg *= 1f + RunExecuteBonus;
+                if (target.IsBoss)
+                {
+                    if (RunBossDamageBonus > 0f)
+                        dmg *= 1f + RunBossDamageBonus;
+                    if (RunEpicBossDamageBonus > 0f)
+                        dmg *= 1f + RunEpicBossDamageBonus;
+                }
+                else
+                {
+                    if (RunEpicNormalDamageBonus > 0f)
+                        dmg *= 1f + RunEpicNormalDamageBonus;
+                    if (RunExecuteBonus > 0f && target.HpRatio <= 0.25f)
+                        dmg *= 1f + RunExecuteBonus;
+                }
+
+                if (RunExecutionEdgeBonus > 0f && target.HpRatio <= 0.3f)
+                    dmg *= 1f + RunExecutionEdgeBonus;
             }
 
             if (RunCritChance > 0f && UnityEngine.Random.value < RunCritChance)
@@ -531,7 +771,22 @@ namespace ProjectZx.Player
                 RunShieldUnlocked = RunShieldUnlocked,
                 RunBerserkBonus = RunBerserkBonus,
                 SecondWindChargesUsed = _secondWindChargesUsed,
-                SecondWindUsed = _secondWindChargesUsed > 0
+                SecondWindUsed = _secondWindChargesUsed > 0,
+                EpicOwnedMask = EpicOwnedMask,
+                PendingEpicChoices = PendingEpicChoices,
+                EpicPicksTaken = EpicPicksTaken,
+                PhoenixHeartUsed = PhoenixHeartUsed,
+                RunIronVeil = RunIronVeil,
+                IronVeilAbsorb = _ironVeilAbsorb,
+                IronVeilCooldown = _ironVeilCooldown,
+                RunDamageTakenMultiplier = RunDamageTakenMultiplier,
+                RunEpicBossDamageBonus = RunEpicBossDamageBonus,
+                RunEpicNormalDamageBonus = RunEpicNormalDamageBonus,
+                RunExecutionEdgeBonus = RunExecutionEdgeBonus,
+                RunArcaneEcho = RunArcaneEcho,
+                RunBloodletting = RunBloodletting,
+                RunPhoenixHeart = RunPhoenixHeart,
+                InvulnTimer = _invulnTimer
             };
         }
 
@@ -577,6 +832,24 @@ namespace ProjectZx.Player
                 _shieldReady = true;
                 _shieldCooldown = 0f;
             }
+
+            EpicOwnedMask = snapshot.EpicOwnedMask;
+            PendingEpicChoices = snapshot.PendingEpicChoices;
+            EpicPicksTaken = snapshot.EpicPicksTaken;
+            PhoenixHeartUsed = snapshot.PhoenixHeartUsed;
+            RunIronVeil = snapshot.RunIronVeil;
+            _ironVeilAbsorb = snapshot.IronVeilAbsorb;
+            _ironVeilCooldown = snapshot.IronVeilCooldown;
+            RunDamageTakenMultiplier = snapshot.RunDamageTakenMultiplier > 0f
+                ? snapshot.RunDamageTakenMultiplier
+                : 1f;
+            RunEpicBossDamageBonus = snapshot.RunEpicBossDamageBonus;
+            RunEpicNormalDamageBonus = snapshot.RunEpicNormalDamageBonus;
+            RunExecutionEdgeBonus = snapshot.RunExecutionEdgeBonus;
+            RunArcaneEcho = snapshot.RunArcaneEcho;
+            RunBloodletting = snapshot.RunBloodletting;
+            RunPhoenixHeart = snapshot.RunPhoenixHeart;
+            _invulnTimer = snapshot.InvulnTimer;
 
             IsDead = CurrentHp <= 0;
         }

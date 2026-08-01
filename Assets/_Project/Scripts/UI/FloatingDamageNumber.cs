@@ -19,6 +19,7 @@ namespace ProjectZx.UI
         static readonly Color EnemyColor = Color.white;
         static readonly Color HeroColor = new Color(1f, 0.2f, 0.2f, 1f);
         static readonly Color BurnColor = new Color(1f, 0.45f, 0.85f, 1f);
+        static readonly Color BleedColor = new Color(0.85f, 0.08f, 0.12f, 1f);
 
         static Canvas _canvas;
         static Font _font;
@@ -39,6 +40,11 @@ namespace ProjectZx.UI
         public static void SpawnBurn(Vector3 worldPosition, int amount)
         {
             Spawn(worldPosition, amount, BurnColor);
+        }
+
+        public static void SpawnBleed(Vector3 worldPosition, int amount)
+        {
+            Spawn(worldPosition, amount, BleedColor);
         }
 
         public static void Spawn(Vector3 worldPosition, int amount, Color color)

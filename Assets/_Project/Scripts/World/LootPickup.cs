@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace ProjectZx.World
 {
-    public enum PickupType { Xp, Gold, HpPotion, MapLoot, Equipment }
+    public enum PickupType { Xp, Gold, HpPotion, MapLoot, Equipment, EpicCrystal }
 
     public class LootPickup : MonoBehaviour
     {
@@ -15,6 +15,7 @@ namespace ProjectZx.World
         const float DroppedPickupScale = 0.55f * 3f * 1.5f;
         const float MapLootScale = 1.55f / 2.5f;
         const float EquipmentPickupScale = 0.85f;
+        const float EpicCrystalScale = 0.72f;
 
         PickupType _type;
         int _amount;
@@ -52,13 +53,19 @@ namespace ProjectZx.World
                     _renderer.sprite = EquipmentCatalog.GetIcon(_equipmentId) ?? ArtLibrary.GoldCoin;
                     transform.localScale = Vector3.one * EquipmentPickupScale;
                     break;
+                case PickupType.EpicCrystal:
+                    _renderer.sprite = ArtLibrary.EpicCrystal;
+                    transform.localScale = Vector3.one * EpicCrystalScale;
+                    break;
                 default:
                     _renderer.sprite = ArtLibrary.GoldCoinDropped;
                     transform.localScale = Vector3.one * DroppedPickupScale;
                     break;
             }
 
-            _renderer.sortingOrder = type is PickupType.MapLoot or PickupType.Equipment ? 10 : 8;
+            _renderer.sortingOrder = type is PickupType.MapLoot or PickupType.Equipment or PickupType.EpicCrystal
+                ? 10
+                : 8;
         }
 
         public void InitializeEquipment(EquipmentId equipmentId)
@@ -109,8 +116,8 @@ namespace ProjectZx.World
         public void ForceCollect(PlayerStats stats)
         {
             if (_collected || stats == null) return;
-            // Map-loot crystals must not recursively vacuum other crystals.
-            if (_type == PickupType.MapLoot)
+            // Map-loot / epic crystals must not recursively vacuum other special pickups.
+            if (_type is PickupType.MapLoot or PickupType.EpicCrystal)
             {
                 _collected = true;
                 Destroy(gameObject);
@@ -144,12 +151,27 @@ namespace ProjectZx.World
                 case PickupType.Equipment:
                     CollectEquipment();
                     break;
+                case PickupType.EpicCrystal:
+                    CollectEpicCrystal(stats);
+                    break;
                 default:
                     stats.AddRunGold(_amount);
                     break;
             }
 
             Destroy(gameObject);
+        }
+
+        void CollectEpicCrystal(PlayerStats stats)
+        {
+            if (!stats.CanAcceptEpicCrystal)
+            {
+                GameHud.Instance?.ShowBanner("Epic talents full for this run.", 2f);
+                return;
+            }
+
+            stats.OfferEpicTalentChoice();
+            GameHud.Instance?.ShowBanner("Epic Crystal!", 1.6f);
         }
 
         void CollectEquipment()

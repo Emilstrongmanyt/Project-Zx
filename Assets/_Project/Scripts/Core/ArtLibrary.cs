@@ -86,6 +86,7 @@ namespace ProjectZx.Core
             _hpHeartDropped = null;
             _xpGem = null;
             _pinkCrystal = null;
+            _epicCrystal = null;
             _btnPrimary = null;
             _btn220x52 = null;
             _btn200x52 = null;
@@ -156,6 +157,7 @@ namespace ProjectZx.Core
         static Sprite _hpHeartDropped;
         static Sprite _xpGem;
         static Sprite _pinkCrystal;
+        static Sprite _epicCrystal;
         static Sprite _btnPrimary;
         static Sprite _btn220x52;
         static Sprite _btn200x52;
@@ -186,6 +188,9 @@ namespace ProjectZx.Core
         /// <summary>Map loot crystal — Admurin morganite sized for ground pickups.</summary>
         public static Sprite PinkCrystal => _pinkCrystal ??=
             LoadLootSprite(Admurin + "pink_crystal", 1.35f) ?? CreatePinkCrystalSprite();
+        /// <summary>Boss epic talent crystal — Admurin amethyst, slightly larger than pink loot.</summary>
+        public static Sprite EpicCrystal => _epicCrystal ??=
+            LoadLootSprite(Admurin + "epic_crystal", 1.25f) ?? PinkCrystal;
         public static Sprite BtnPrimary => _btnPrimary ??= Load("btn_primary");
         public static Sprite Btn220x52 => _btn220x52 ??= Load("btn_220x52", "btn_primary");
         public static Sprite Btn200x52 => _btn200x52 ??= Load("btn_200x52", "btn_primary");

@@ -644,6 +644,7 @@ namespace ProjectZx.Core
                 PickupType.HpPotion => "HpPotionPickup",
                 PickupType.MapLoot => "MapLootPickup",
                 PickupType.Equipment => "EquipmentPickup",
+                PickupType.EpicCrystal => "EpicCrystalPickup",
                 _ => "GoldPickup"
             };
 
@@ -654,6 +655,7 @@ namespace ProjectZx.Core
             col.radius = type == PickupType.Xp ? 0.55f
                 : type == PickupType.MapLoot ? 0.75f
                 : type == PickupType.Equipment ? 0.8f
+                : type == PickupType.EpicCrystal ? 0.85f
                 : 0.85f;
             go.AddComponent<LootPickup>().Initialize(type, amount);
             return go;

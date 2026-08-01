@@ -38,6 +38,22 @@ namespace ProjectZx.Core
         public int SecondWindChargesUsed;
         /// <summary>Legacy bool for old snapshots; prefer SecondWindChargesUsed.</summary>
         public bool SecondWindUsed;
+        /// <summary>Bitmask of owned <see cref="EpicTalentId"/> values for this run.</summary>
+        public int EpicOwnedMask;
+        public int PendingEpicChoices;
+        public int EpicPicksTaken;
+        public bool PhoenixHeartUsed;
+        public bool RunIronVeil;
+        public float IronVeilAbsorb;
+        public float IronVeilCooldown;
+        public float RunDamageTakenMultiplier;
+        public float RunEpicBossDamageBonus;
+        public float RunEpicNormalDamageBonus;
+        public float RunExecutionEdgeBonus;
+        public bool RunArcaneEcho;
+        public bool RunBloodletting;
+        public bool RunPhoenixHeart;
+        public float InvulnTimer;
     }
 
     public static class GameSessionContext

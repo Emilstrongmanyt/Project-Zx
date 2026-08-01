@@ -48,6 +48,9 @@ namespace ProjectZx.Enemies
         const float BossProjectileSpeed = 2.2f;
         const float IgniteDuration = 3f;
         const int IgniteTickCount = 3;
+        const int BleedTickCount = 2;
+        /// <summary>First boss crystal guaranteed when the player can still pick; later bosses 45%.</summary>
+        const float BossEpicCrystalDropChance = 0.45f;
 
         public bool IsAlive { get; private set; } = true;
         public bool IsBoss { get; private set; }
@@ -89,6 +92,9 @@ namespace ProjectZx.Enemies
         int _igniteTicksRemaining;
         float _igniteTickTimer;
         int _igniteDamageRemaining;
+        int _bleedTicksRemaining;
+        float _bleedTickTimer;
+        int _bleedDamageRemaining;
         FlameEnchantVfx _burnVfx;
         readonly List<RaycastHit2D> _castHits = new();
 
@@ -201,6 +207,21 @@ namespace ProjectZx.Enemies
             _igniteTicksRemaining = IgniteTickCount;
             _igniteTickTimer = 1f;
             EnsureBurnVfx();
+        }
+
+        /// <summary>
+        /// Bloodletting epic: 20% of hit as bleed over 2 seconds (1 tick/sec). Refreshes on new hits.
+        /// </summary>
+        public void ApplyBleed(int hitDamage)
+        {
+            if (!IsAlive || hitDamage <= 0) return;
+
+            var totalBleed = Mathf.Max(1, Mathf.RoundToInt(hitDamage * 0.2f));
+            _bleedDamageRemaining = totalBleed;
+            _bleedTicksRemaining = BleedTickCount;
+            _bleedTickTimer = 1f;
+            if (_renderer != null)
+                _renderer.color = new Color(1f, 0.45f, 0.45f, 1f);
         }
         /// <summary>Legacy alias — Frost Tip now chills (slows) instead of hard-freezing.</summary>
         public bool IsFrozen => IsChilled;
@@ -448,6 +469,7 @@ namespace ProjectZx.Enemies
             UpdateChill();
             UpdateSprint();
             UpdateIgnite();
+            UpdateBleed();
             UpdateBossBPhase();
             _contactCooldown -= Time.deltaTime;
             _fireBreathCooldown -= Time.deltaTime;
@@ -633,6 +655,16 @@ namespace ProjectZx.Enemies
             if (_hp <= 0) Die();
         }
 
+        void TakeBleedDamage(int amount)
+        {
+            if (!IsAlive || amount <= 0) return;
+            ShowHitSprite();
+            FloatingDamageNumber.SpawnBleed(transform.position, amount);
+            _hp -= amount;
+            UpdateBossBPhase();
+            if (_hp <= 0) Die();
+        }
+
         void UpdateIgnite()
         {
             if (_igniteTicksRemaining <= 0)
@@ -654,6 +686,30 @@ namespace ProjectZx.Enemies
             TakeBurnDamage(tickDamage);
             if (_igniteTicksRemaining <= 0)
                 ClearBurnVfx();
+        }
+
+        void UpdateBleed()
+        {
+            if (_bleedTicksRemaining <= 0)
+            {
+                if (_renderer != null && _chillTimer <= 0f)
+                    _renderer.color = _baseColor;
+                return;
+            }
+
+            _bleedTickTimer -= Time.deltaTime;
+            if (_bleedTickTimer > 0f) return;
+
+            _bleedTickTimer = 1f;
+            var ticksLeft = _bleedTicksRemaining;
+            var tickDamage = ticksLeft <= 1
+                ? _bleedDamageRemaining
+                : Mathf.Max(1, _bleedDamageRemaining / ticksLeft);
+            _bleedDamageRemaining = Mathf.Max(0, _bleedDamageRemaining - tickDamage);
+            _bleedTicksRemaining--;
+            TakeBleedDamage(tickDamage);
+            if (_bleedTicksRemaining <= 0 && _renderer != null && _chillTimer <= 0f)
+                _renderer.color = _baseColor;
         }
 
         void UpdateBossBPhase()
@@ -728,6 +784,18 @@ namespace ProjectZx.Enemies
             return stats != null ? stats.MaxHp : 100;
         }
 
+        void TryDropEpicCrystal(Vector2 pos)
+        {
+            var stats = _player != null ? _player.GetComponent<PlayerStats>() : null;
+            if (stats == null || !stats.CanAcceptEpicCrystal) return;
+
+            // First available pick of the run always drops; later bosses roll.
+            var guaranteed = stats.EpicPicksTaken + stats.PendingEpicChoices == 0;
+            if (!guaranteed && Random.value > BossEpicCrystalDropChance) return;
+
+            GameFactory.CreatePickup(pos + Vector2.up * 0.55f + Vector2.right * 0.2f, PickupType.EpicCrystal, 1);
+        }
+
         void Die()
         {
             if (!IsAlive) return;
@@ -760,6 +828,10 @@ namespace ProjectZx.Enemies
                 var equipId = EquipmentCatalog.RollRandomDrop();
                 GameFactory.CreateEquipmentPickup(pos + Vector2.up * 0.45f + Vector2.left * 0.15f, equipId);
             }
+
+            // Boss epic crystal → talent pick (capped per run on the player side).
+            if (IsBoss)
+                TryDropEpicCrystal(pos);
 
             var session = UnityEngine.Object.FindAnyObjectByType<SurvivalSession>();
             session?.NotifyEnemyKilled(this);

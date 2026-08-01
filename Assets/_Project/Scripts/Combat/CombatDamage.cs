@@ -25,6 +25,17 @@ namespace ProjectZx.Combat
             // Flame Enchant: ignite for +40% of hit damage over 3s (1 tick/sec). Refreshes on new hits.
             if (GameSave.FlameEnchantUnlocked && damage > 0)
                 target.ApplyIgnite(damage);
+
+            // Bloodletting epic: 20% of hit as bleed over 2s.
+            if (attacker.RunBloodletting && damage > 0)
+                target.ApplyBleed(damage);
+
+            // Arcane Echo epic: 25% chance to deal a half-damage echo (no further procs).
+            if (attacker.RunArcaneEcho && damage > 0 && Random.value < 0.25f && target.IsAlive)
+            {
+                var echo = Mathf.Max(1, Mathf.RoundToInt(damage * 0.5f));
+                target.TakeDamage(echo);
+            }
         }
     }
 }
