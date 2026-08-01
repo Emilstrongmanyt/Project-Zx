@@ -10,10 +10,10 @@ namespace ProjectZx.World
     public class LootPickup : MonoBehaviour
     {
         const float BaseCollectRange = 1.45f;
-        // Admurin loot sprites are sized in ArtLibrary; keep pickup scales generous for readability.
-        const float XpPickupScale = 1.45f;
+        // Admurin loot sprites are sized in ArtLibrary; XP/pink tuned for readability without dominating.
+        const float XpPickupScale = 1.45f / 2.5f;
         const float DroppedPickupScale = 0.55f * 3f * 1.5f;
-        const float MapLootScale = 1.55f;
+        const float MapLootScale = 1.55f / 2.5f;
         const float EquipmentPickupScale = 0.85f;
 
         PickupType _type;
