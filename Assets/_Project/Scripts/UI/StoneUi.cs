@@ -77,21 +77,25 @@ namespace ProjectZx.UI
         public static Sprite ListFrame => _listFrame ??= LoadSliced("list_frame", 16, 16, 16, 16);
         public static Sprite ItemFrame => _itemFrame ??= LoadSliced("item_frame", 20, 20, 20, 20);
 
-        /// <summary>Best panel sprite for large hub menus / shop dialogs.</summary>
-        public static Sprite MenuPanel => PanelFrame != null ? PanelFrame : PopupBg;
+        /// <summary>
+        /// Shared menu border used by talent pick, shop, loadout, map, and other dialogs.
+        /// Matches the in-run level-up / epic talent window (popup_bg).
+        /// </summary>
+        public static Sprite MenuPanel => PopupBg != null ? PopupBg : PanelFrame ?? PanelFrameAlt;
 
-        /// <summary>Best panel for smaller dialogs (level-up, retreat, toast).</summary>
-        public static Sprite DialogPanel => PopupBg != null ? PopupBg : PanelFrameAlt;
+        /// <summary>Alias of <see cref="MenuPanel"/> — all dialogs share one Stone border.</summary>
+        public static Sprite DialogPanel => MenuPanel;
 
         public static void ApplyPanel(Image image, bool largeMenu = true)
         {
             if (image == null) return;
-            var sprite = largeMenu ? MenuPanel : DialogPanel;
+            var sprite = MenuPanel;
             if (sprite == null) return;
             image.sprite = sprite;
             image.type = Image.Type.Sliced;
             image.color = Color.white;
-            image.pixelsPerUnitMultiplier = largeMenu ? 1.15f : 1f;
+            // Same slice scale as talent windows so the ornate border reads consistently.
+            image.pixelsPerUnitMultiplier = 1f;
         }
 
         public static void ApplyButton(Image image, StoneButtonStyle style = StoneButtonStyle.Primary)

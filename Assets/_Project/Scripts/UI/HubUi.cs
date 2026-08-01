@@ -1415,8 +1415,8 @@ namespace ProjectZx.UI
             rect.anchoredPosition = pos;
             rect.sizeDelta = size;
             var image = go.AddComponent<Image>();
-            // Prefer GUI - The Stone panels; fall back to legacy shop/challenge art.
-            UiSprites.ApplyPanelSprite(image, background, largeMenu: true);
+            // Same Stone border as talent pick windows (popup_bg); fall back to legacy art.
+            UiSprites.ApplyPanelSprite(image, background, largeMenu: false);
             return go;
         }
 

@@ -31,19 +31,25 @@ namespace ProjectZx.UI
             image.color = Color.white;
         }
 
+        /// <summary>
+        /// Applies the shared dialog border (Stone popup_bg / talent window style).
+        /// When Stone art is missing, uses the provided fallback (prefer LevelUpUi for match).
+        /// </summary>
         public static void ApplyPanelSprite(Image image, Sprite fallback, bool largeMenu = true)
         {
             if (image == null) return;
 
-            if (StoneUi.Available)
+            if (StoneUi.Available && StoneUi.MenuPanel != null)
             {
                 StoneUi.ApplyPanel(image, largeMenu);
                 return;
             }
 
-            if (fallback != null)
+            // Prefer level-up frame so shops match talent windows even without Stone pack.
+            var panel = ArtLibrary.LevelUpUi != null ? ArtLibrary.LevelUpUi : fallback;
+            if (panel != null)
             {
-                image.sprite = fallback;
+                image.sprite = panel;
                 image.type = Image.Type.Sliced;
                 image.color = Color.white;
             }
