@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using ProjectZx.Core;
 using ProjectZx.Enemies;
 using ProjectZx.Player;
+using ProjectZx.World;
 using UnityEngine;
 
 namespace ProjectZx.Combat
@@ -17,10 +18,14 @@ namespace ProjectZx.Combat
         [SerializeField] float attackInterval = 0.95f;
         [SerializeField] float castDuration = 0.32f;
 
+        const float StaffRestAngle = -28f;
+        const float StaffCastAngle = 18f;
+
         float _cooldown;
         float _castTimer;
         bool _casting;
         SpriteRenderer _bodyRenderer;
+        Transform _staffPivot;
 
         public bool IsCasting => _casting;
 
@@ -37,6 +42,27 @@ namespace ProjectZx.Combat
         void Awake()
         {
             _bodyRenderer = GetComponent<SpriteRenderer>();
+            SetupStaff();
+        }
+
+        void SetupStaff()
+        {
+            var pivotGo = new GameObject("StaffPivot");
+            pivotGo.transform.SetParent(transform, false);
+            pivotGo.transform.localPosition = new Vector3(0.08f, -0.22f, 0f);
+            _staffPivot = pivotGo.transform;
+
+            var staffGo = new GameObject("Staff");
+            staffGo.transform.SetParent(_staffPivot, false);
+            staffGo.transform.localPosition = new Vector3(0.28f, 0.04f, 0f);
+            staffGo.transform.localScale = Vector3.one;
+
+            var staffRenderer = staffGo.AddComponent<SpriteRenderer>();
+            staffRenderer.sprite = ArtLibrary.Staff;
+            staffRenderer.sortingOrder = 20;
+            staffGo.AddComponent<YSortRenderer>().Configure(3);
+
+            _staffPivot.localRotation = Quaternion.Euler(0f, 0f, StaffRestAngle);
         }
 
         void Update()
@@ -45,7 +71,11 @@ namespace ProjectZx.Combat
 
             _castTimer -= Time.deltaTime;
             if (_casting && _castTimer <= 0f)
+            {
                 _casting = false;
+                if (_staffPivot != null)
+                    _staffPivot.localRotation = Quaternion.Euler(0f, 0f, StaffRestAngle);
+            }
 
             if (_casting) return;
 
@@ -72,6 +102,9 @@ namespace ProjectZx.Combat
 
             if (_bodyRenderer != null)
                 _bodyRenderer.flipX = enemy.transform.position.x < transform.position.x;
+
+            if (_staffPivot != null)
+                _staffPivot.localRotation = Quaternion.Euler(0f, 0f, StaffCastAngle);
 
             var stats = GetComponent<PlayerStats>();
             CombatDamage.Apply(stats, enemy, PrimaryDamageMultiplier);

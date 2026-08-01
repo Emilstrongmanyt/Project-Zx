@@ -12,10 +12,12 @@ namespace ProjectZx.Core
 
     /// <summary>
     /// Loads NARt art from Resources/Art with procedural fallbacks for camp-specific tiles.
+    /// Curated Admurin item sprites live under Resources/Items/Admurin.
     /// </summary>
     public static class ArtLibrary
     {
         public const float TilePixelsPerUnit = 64f;
+        const string Admurin = "Items/Admurin/";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetCaches()
@@ -47,6 +49,9 @@ namespace ProjectZx.Core
             _sparkles2 = null;
             _necklace = null;
             _skullNecklace = null;
+            _fortuneRing = null;
+            _prismRing = null;
+            _staff = null;
             _treasureChest = null;
             _gateway = null;
             _stone = null;
@@ -109,6 +114,9 @@ namespace ProjectZx.Core
         static Sprite _sparkles2;
         static Sprite _necklace;
         static Sprite _skullNecklace;
+        static Sprite _fortuneRing;
+        static Sprite _prismRing;
+        static Sprite _staff;
         static Sprite _treasureChest;
         static Sprite _gateway;
         static Sprite _stone;
@@ -168,12 +176,12 @@ namespace ProjectZx.Core
         public static Sprite BossAttackingHit => _bossAttackingHit ??= Load("BossJAttackingHit", "BossJAttacking");
         public static Sprite BossB => _bossB ??= Load("BossB", "Art/boss_j", "BossJ", "Placeholders/boss");
         public static Sprite BossB2 => _bossB2 ??= Load("BossB2", "BossB", "Art/boss_j", "BossJ", "Placeholders/boss");
-        public static Sprite GoldCoin => _goldCoin ??= Load("GoldCoin");
-        public static Sprite GoldCoinDropped => _goldCoinDropped ??= Load("GoldCoinDropped", "GoldCoin");
-        public static Sprite HpHeart => _hpHeart ??= Load("HeartHP", "HPHeart");
-        public static Sprite HpHeartDropped => _hpHeartDropped ??= Load("HPHeartDropped", "HeartHP", "HPHeart");
-        public static Sprite XpGem => _xpGem ??= LoadOrCreateXpGem();
-        public static Sprite PinkCrystal => _pinkCrystal ??= CreatePinkCrystalSprite();
+        public static Sprite GoldCoin => _goldCoin ??= Load(Admurin + "gold_bag", "GoldCoin");
+        public static Sprite GoldCoinDropped => _goldCoinDropped ??= Load(Admurin + "gold_bag", "GoldCoinDropped", "GoldCoin");
+        public static Sprite HpHeart => _hpHeart ??= Load(Admurin + "hp_potion", "HeartHP", "HPHeart");
+        public static Sprite HpHeartDropped => _hpHeartDropped ??= Load(Admurin + "hp_potion", "HPHeartDropped", "HeartHP", "HPHeart");
+        public static Sprite XpGem => _xpGem ??= TryLoadSprite(Admurin + "xp_gem", TilePixelsPerUnit) ?? LoadOrCreateXpGem();
+        public static Sprite PinkCrystal => _pinkCrystal ??= TryLoadSprite(Admurin + "pink_crystal", TilePixelsPerUnit) ?? CreatePinkCrystalSprite();
         public static Sprite BtnPrimary => _btnPrimary ??= Load("btn_primary");
         public static Sprite Btn220x52 => _btn220x52 ??= Load("btn_220x52", "btn_primary");
         public static Sprite Btn200x52 => _btn200x52 ??= Load("btn_200x52", "btn_primary");
@@ -185,18 +193,42 @@ namespace ProjectZx.Core
         public static Sprite Ground => _ground ??= Load("Placeholders/ground");
         public static Sprite GrassTile => _grassTile ??= LoadOrCreateGrass();
         public static Sprite Campfire => _campfire ??= CreateCampfireSprite();
-        public static Sprite BaseballBat => _baseballBat ??= LoadOrCreateBat();
+        /// <summary>Batter weapon — Admurin Wooden_Weapon2, combat-scaled.</summary>
+        public static Sprite BaseballBat => _baseballBat ??=
+            LoadWeaponSprite(Admurin + "weapon_bat", new Vector2(0.12f, 0.5f), 2.4f) ?? LoadOrCreateBat();
         // worldLength is in local sprite units; player root is ~0.55 scale so ~2.6 local ≈ 1.4 world.
-        /// <summary>Uploaded spear art scaled to a readable combat length (16px @ 100 PPU is invisible).</summary>
-        public static Sprite Spear => _spear ??= LoadWeaponSprite("Spear", new Vector2(0.1f, 0.5f), 2.75f) ?? CreateSpearSprite();
-        /// <summary>Samurai weapon — sword art scaled for combat (not the hammer asset).</summary>
-        public static Sprite Katana => _katana ??= LoadWeaponSprite("Sword", new Vector2(0.1f, 0.5f), 2.5f) ?? CreateKatanaSprite();
-        public static Sprite Bow => _bow ??= LoadOrCreateBow();
-        public static Sprite Arrow => _arrow ??= LoadWeaponSprite("Arrow", new Vector2(0.08f, 0.5f), 1.15f) ?? CreateArrowSprite();
+        /// <summary>Spearman weapon — Admurin Wooden_Weapon5, combat-scaled.</summary>
+        public static Sprite Spear => _spear ??=
+            LoadWeaponSprite(Admurin + "weapon_spear", new Vector2(0.1f, 0.5f), 2.75f)
+            ?? LoadWeaponSprite("Spear", new Vector2(0.1f, 0.5f), 2.75f)
+            ?? CreateSpearSprite();
+        /// <summary>Samurai weapon — Admurin Iron_Weapon22, combat-scaled.</summary>
+        public static Sprite Katana => _katana ??=
+            LoadWeaponSprite(Admurin + "weapon_katana", new Vector2(0.1f, 0.5f), 2.5f)
+            ?? LoadWeaponSprite("Sword", new Vector2(0.1f, 0.5f), 2.5f)
+            ?? CreateKatanaSprite();
+        /// <summary>Bowman weapon — Admurin Wooden_Weapon15, combat-scaled.</summary>
+        public static Sprite Bow => _bow ??=
+            LoadWeaponSprite(Admurin + "weapon_bow", new Vector2(0.35f, 0.5f), 1.9f) ?? LoadOrCreateBow();
+        public static Sprite Arrow => _arrow ??=
+            LoadWeaponSprite(Admurin + "arrow", new Vector2(0.08f, 0.5f), 1.15f)
+            ?? LoadWeaponSprite("Arrow", new Vector2(0.08f, 0.5f), 1.15f)
+            ?? CreateArrowSprite();
+        /// <summary>Magician weapon — Admurin Wooden_Weapon8, combat-scaled.</summary>
+        public static Sprite Staff => _staff ??=
+            LoadWeaponSprite(Admurin + "weapon_staff", new Vector2(0.12f, 0.5f), 2.35f) ?? CreateSpearSprite();
         public static Sprite Sparkles => _sparkles ??= TryLoadSprite("Sparkles", TilePixelsPerUnit);
         public static Sprite Sparkles2 => _sparkles2 ??= TryLoadSprite("Sparkles2", TilePixelsPerUnit);
-        public static Sprite Necklace => _necklace ??= TryLoadSprite("Necklace", TilePixelsPerUnit);
-        public static Sprite SkullNecklace => _skullNecklace ??= TryLoadSprite("Skull Necklace", TilePixelsPerUnit);
+        /// <summary>Fortune Ring icon — Admurin fortitude ring (Sparkles remain VFX-only).</summary>
+        public static Sprite FortuneRing => _fortuneRing ??=
+            TryLoadSprite(Admurin + "fortune_ring", TilePixelsPerUnit) ?? Sparkles;
+        /// <summary>Prism Ring icon — Admurin triple gem ring.</summary>
+        public static Sprite PrismRing => _prismRing ??=
+            TryLoadSprite(Admurin + "prism_ring", TilePixelsPerUnit) ?? Sparkles2;
+        public static Sprite Necklace => _necklace ??=
+            TryLoadSprite(Admurin + "jade_necklace", TilePixelsPerUnit) ?? TryLoadSprite("Necklace", TilePixelsPerUnit);
+        public static Sprite SkullNecklace => _skullNecklace ??=
+            TryLoadSprite(Admurin + "skull_necklace", TilePixelsPerUnit) ?? TryLoadSprite("Skull Necklace", TilePixelsPerUnit);
         public static Sprite TreasureChest => _treasureChest ??= CreateTreasureChestSprite();
         public static Sprite Gateway => _gateway ??= LoadOrCreateGateway();
         public static Sprite Stone => _stone ??= GetSheetVariant("RockSheet", 10, 0) ?? CreateStoneSprite();

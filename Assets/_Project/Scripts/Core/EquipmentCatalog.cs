@@ -11,13 +11,13 @@ namespace ProjectZx.Core
     public enum EquipmentId
     {
         None = 0,
-        /// <summary>Sparkles.png — gold ring with gem.</summary>
+        /// <summary>Admurin fortitude ring — +gold find.</summary>
         FortuneRing = 1,
-        /// <summary>Sparkles2.png — multi-gem ring band.</summary>
+        /// <summary>Admurin triple gem ring — +damage.</summary>
         PrismRing = 2,
-        /// <summary>Necklace.png — jeweled amulet.</summary>
+        /// <summary>Admurin hearty necklace — +max HP.</summary>
         JadeNecklace = 3,
-        /// <summary>Skull Necklace.png — skull pendant.</summary>
+        /// <summary>Admurin skull charm necklace — +attack speed.</summary>
         SkullNecklace = 4
     }
 
@@ -83,8 +83,8 @@ namespace ProjectZx.Core
         {
             return id switch
             {
-                EquipmentId.FortuneRing => ArtLibrary.Sparkles,
-                EquipmentId.PrismRing => ArtLibrary.Sparkles2,
+                EquipmentId.FortuneRing => ArtLibrary.FortuneRing,
+                EquipmentId.PrismRing => ArtLibrary.PrismRing,
                 EquipmentId.JadeNecklace => ArtLibrary.Necklace,
                 EquipmentId.SkullNecklace => ArtLibrary.SkullNecklace,
                 _ => null
