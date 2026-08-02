@@ -68,7 +68,7 @@ namespace ProjectZx.Core
             EpicTalentId.SoulDrain => "+8% lifesteal, +10 Max HP",
             EpicTalentId.BossBreaker => "+35% vs bosses, +10% vs normals",
             EpicTalentId.ArcaneEcho => "25% chance to echo hit for 50% damage",
-            EpicTalentId.PhoenixHeart => "Once: revive at 40% HP with 2s i-frames",
+            EpicTalentId.PhoenixHeart => "Once: revive at 40% HP with 3.5s i-frames",
             EpicTalentId.TreasureMagnet => "+50% loot collect range",
             EpicTalentId.Bloodletting => "Hits and hits taken bleed 20% over 2s",
             _ => ""

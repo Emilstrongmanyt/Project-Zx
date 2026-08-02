@@ -422,11 +422,22 @@ namespace ProjectZx.UI
         {
             if (_stats == null) return;
 
-            _stats.ApplyEpicTalent(choice);
+            if (!_stats.ApplyEpicTalent(choice))
+            {
+                // Pick was ignored (no pending choices) — keep panel open if still needed.
+                if (_stats.PendingEpicChoices > 0)
+                    PopulateEpicChoiceButtons();
+                return;
+            }
+
             if (_epicPanel != null)
                 SparkleBurst.Play(_epicPanel.transform, Vector2.zero, 16);
 
-            ShowBanner($"{EpicTalentCatalog.GetTitle(choice)}!", 2f);
+            // Phoenix needs a clear "armed" signal so players know the revive is ready.
+            if (choice == EpicTalentId.PhoenixHeart)
+                ShowBanner("Phoenix Heart armed — first death revives you!", 2.8f);
+            else
+                ShowBanner($"{EpicTalentCatalog.GetTitle(choice)}!", 2f);
 
             if (_stats.PendingEpicChoices > 0)
             {

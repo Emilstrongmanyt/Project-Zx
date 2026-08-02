@@ -78,6 +78,8 @@ namespace ProjectZx.Player
         public bool RunBloodletting { get; private set; }
         public bool RunPhoenixHeart { get; private set; }
         public bool PhoenixHeartUsed { get; private set; }
+        /// <summary>Unused Phoenix revive charges this run (0 or 1).</summary>
+        public int PhoenixChargesRemaining => _phoenixChargesRemaining;
         public bool RunIronVeil { get; private set; }
 
         public event Action<int> LevelUpChoiceRequired;
@@ -85,7 +87,8 @@ namespace ProjectZx.Player
 
         const float IronVeilCooldownSeconds = 20f;
         const float IronVeilAbsorbFraction = 0.3f;
-        const float PhoenixInvulnSeconds = 2f;
+        /// <summary>Long enough to walk out of multi-enemy contact after revive.</summary>
+        const float PhoenixInvulnSeconds = 3.5f;
         const int SelfBleedTickCount = 2;
 
         bool _goldBanked;
@@ -97,6 +100,7 @@ namespace ProjectZx.Player
         float _ironVeilAbsorb;
         float _ironVeilCooldown;
         float _invulnTimer;
+        int _phoenixChargesRemaining;
         int _selfBleedDamageRemaining;
         int _selfBleedTicksRemaining;
         float _selfBleedTickTimer;
@@ -146,6 +150,7 @@ namespace ProjectZx.Player
             RunBloodletting = false;
             RunPhoenixHeart = false;
             PhoenixHeartUsed = false;
+            _phoenixChargesRemaining = 0;
             RunIronVeil = false;
             _ironVeilAbsorb = 0f;
             _ironVeilCooldown = 0f;
@@ -334,14 +339,19 @@ namespace ProjectZx.Player
                 }
             }
 
-            ApplyDirectHpLoss(amount, isBleed: false);
-            ApplySelfBleedFromHit(amount);
+            // If Phoenix consumed the lethal hit, do not re-apply Bloodletting from that blow.
+            var revived = ApplyDirectHpLoss(amount, isBleed: false);
+            if (!revived && !IsDead)
+                ApplySelfBleedFromHit(amount);
         }
 
-        void ApplyDirectHpLoss(int amount, bool isBleed)
+        /// <summary>
+        /// Applies HP loss. Returns true if Phoenix Heart prevented death on this hit.
+        /// </summary>
+        bool ApplyDirectHpLoss(int amount, bool isBleed)
         {
-            if (IsDead || amount <= 0 || IsCompanion) return;
-            if (_invulnTimer > 0f) return;
+            if (IsDead || amount <= 0 || IsCompanion) return false;
+            if (_invulnTimer > 0f) return false;
 
             if (isBleed)
                 FloatingDamageNumber.SpawnBleed(transform.position, amount);
@@ -355,11 +365,11 @@ namespace ProjectZx.Player
             if (nextHp <= 0)
             {
                 if (TryTriggerPhoenixHeart())
-                    return;
+                    return true;
 
                 CurrentHp = 0;
                 Die();
-                return;
+                return false;
             }
 
             CurrentHp = nextHp;
@@ -372,17 +382,34 @@ namespace ProjectZx.Player
                 _secondWindChargesUsed++;
                 Heal(Mathf.Max(1, Mathf.RoundToInt(MaxHp * 0.3f)));
             }
+
+            return false;
         }
 
         /// <summary>
-        /// True if the run still has an unused Phoenix Heart (flag and/or owned epic mask).
+        /// True if the run still has an unused Phoenix revive (charges, flag, or owned mask).
         /// </summary>
         bool CanUsePhoenixHeart()
         {
-            if (IsCompanion || PhoenixHeartUsed) return false;
-            if (RunPhoenixHeart) return true;
-            // Fallback: talent was applied via mask even if the bool was lost.
-            return HasEpicTalent(EpicTalentId.PhoenixHeart);
+            if (IsCompanion) return false;
+            if (_phoenixChargesRemaining > 0) return true;
+            // Recover from flag/mask desync (e.g. snapshot or partial apply).
+            if (!PhoenixHeartUsed && (RunPhoenixHeart || HasEpicTalent(EpicTalentId.PhoenixHeart)))
+            {
+                _phoenixChargesRemaining = 1;
+                RunPhoenixHeart = true;
+                return true;
+            }
+
+            return false;
+        }
+
+        void ArmPhoenixHeart()
+        {
+            RunPhoenixHeart = true;
+            PhoenixHeartUsed = false;
+            _phoenixChargesRemaining = 1;
+            EpicOwnedMask = EpicTalentCatalog.WithTalent(EpicOwnedMask, EpicTalentId.PhoenixHeart);
         }
 
         /// <summary>
@@ -392,15 +419,17 @@ namespace ProjectZx.Player
         {
             if (!CanUsePhoenixHeart()) return false;
 
+            // I-frames first so same-frame multi-hits cannot re-kill after revive.
+            _invulnTimer = PhoenixInvulnSeconds;
+            _phoenixChargesRemaining = 0;
             RunPhoenixHeart = true;
             PhoenixHeartUsed = true;
             IsDead = false;
             CurrentHp = Mathf.Max(1, Mathf.RoundToInt(Mathf.Max(1, MaxHp) * 0.4f));
-            _invulnTimer = PhoenixInvulnSeconds;
             _selfBleedDamageRemaining = 0;
             _selfBleedTicksRemaining = 0;
             _selfBleedTickTimer = 0f;
-            GameHud.Instance?.ShowBanner("Phoenix Heart! Revived!", 2.5f);
+            GameHud.Instance?.ShowBanner("Phoenix Heart! Revived!", 3f);
             return true;
         }
 
@@ -612,15 +641,20 @@ namespace ProjectZx.Player
                 LevelUpChoiceRequired?.Invoke(PendingLevelUpChoices);
         }
 
-        public void ApplyEpicTalent(EpicTalentId id)
+        /// <summary>Apply a boss-crystal talent. Returns false if the pick was ignored.</summary>
+        public bool ApplyEpicTalent(EpicTalentId id)
         {
-            if (PendingEpicChoices <= 0 || id == EpicTalentId.None) return;
+            if (PendingEpicChoices <= 0 || id == EpicTalentId.None) return false;
             if (EpicTalentCatalog.IsUnique(id) && HasEpicTalent(id))
             {
+                // Already owned: still consume the crystal pick so the UI can close.
                 PendingEpicChoices--;
                 if (PendingEpicChoices > 0)
                     EpicChoiceRequired?.Invoke(PendingEpicChoices);
-                return;
+                // Re-arm Phoenix if the mask says we own it but the charge was lost.
+                if (id == EpicTalentId.PhoenixHeart && !PhoenixHeartUsed)
+                    ArmPhoenixHeart();
+                return true;
             }
 
             EpicOwnedMask = EpicTalentCatalog.WithTalent(EpicOwnedMask, id);
@@ -660,8 +694,7 @@ namespace ProjectZx.Player
                     RunArcaneEcho = true;
                     break;
                 case EpicTalentId.PhoenixHeart:
-                    RunPhoenixHeart = true;
-                    PhoenixHeartUsed = false;
+                    ArmPhoenixHeart();
                     break;
                 case EpicTalentId.TreasureMagnet:
                     RunLootRangeMultiplier *= 1.5f;
@@ -674,6 +707,7 @@ namespace ProjectZx.Player
             PendingEpicChoices--;
             if (PendingEpicChoices > 0)
                 EpicChoiceRequired?.Invoke(PendingEpicChoices);
+            return true;
         }
 
         public void AddRunGold(int amount)
@@ -700,7 +734,19 @@ namespace ProjectZx.Player
             if (TryTriggerPhoenixHeart())
                 return;
 
+            // Last resort: mask says Phoenix is owned and unused — force arm + revive.
+            if (!IsCompanion
+                && !PhoenixHeartUsed
+                && HasEpicTalent(EpicTalentId.PhoenixHeart))
+            {
+                ArmPhoenixHeart();
+                if (TryTriggerPhoenixHeart())
+                    return;
+            }
+
             IsDead = true;
+            CurrentHp = 0;
+            _phoenixChargesRemaining = 0;
 
             if (SurvivalMode)
             {
@@ -880,7 +926,29 @@ namespace ProjectZx.Player
             RunPhoenixHeart = snapshot.RunPhoenixHeart;
             _invulnTimer = snapshot.InvulnTimer;
 
-            IsDead = CurrentHp <= 0;
+            // Rebuild Phoenix charge from snapshot flags / mask (never leave a silent desync).
+            if (!PhoenixHeartUsed
+                && (RunPhoenixHeart || HasEpicTalent(EpicTalentId.PhoenixHeart)))
+            {
+                RunPhoenixHeart = true;
+                _phoenixChargesRemaining = 1;
+            }
+            else
+            {
+                _phoenixChargesRemaining = 0;
+            }
+
+            // Do not mark dead if an unused Phoenix charge can still save this snapshot.
+            if (CurrentHp <= 0)
+            {
+                if (TryTriggerPhoenixHeart())
+                    return;
+                IsDead = true;
+            }
+            else
+            {
+                IsDead = false;
+            }
         }
     }
 }
