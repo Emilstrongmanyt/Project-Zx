@@ -14,6 +14,8 @@ namespace ProjectZx.UI
         const float SafeTop = 36f;
         /// <summary>Shared almost-full-screen size for shop, settings, loadout, stats, etc.</summary>
         static readonly Vector2 HubMenuPanelSize = new Vector2(1100f, 980f);
+        /// <summary>Uniform shrink so large Stone-bordered menus fit phone safe areas.</summary>
+        const float HubMenuScale = 0.85f;
 
         Text _goldText;
         Text _statsBodyText;
@@ -1414,6 +1416,8 @@ namespace ProjectZx.UI
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = pos;
             rect.sizeDelta = size;
+            // Scale whole panel (border + content) so layouts stay proportional and fit the screen.
+            go.transform.localScale = Vector3.one * HubMenuScale;
             var image = go.AddComponent<Image>();
             // Same Stone border as talent pick windows (popup_bg); fall back to legacy art.
             UiSprites.ApplyPanelSprite(image, background, largeMenu: false);
