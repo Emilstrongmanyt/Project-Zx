@@ -12,7 +12,7 @@ namespace ProjectZx.Core
         public const int DamageUpgrade = 90;
         public const int SpeedUpgrade = 120;
         public const int RangeUpgrade = 110;
-        public const int Whirlwind = 1000;
+        public const int Whirlwind = 750;
         public const int PiercingShot = 4000;
         public const int FrostTip = 3000;
         public const int GoldMagnet = 400;

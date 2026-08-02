@@ -1,4 +1,5 @@
 using ProjectZx.Core;
+using ProjectZx.Player;
 using UnityEngine;
 
 namespace ProjectZx.World
@@ -28,6 +29,10 @@ namespace ProjectZx.World
             _used = true;
             Achievements.UnlockDungeonDelver();
             GameSave.InsideMapUnlocked = true;
+
+            // Bank Outside run gold before wiping the run into a fresh Inside map.
+            var stats = player.GetComponent<PlayerStats>();
+            stats?.BankRunGoldToSave();
 
             // Fresh Inside run — round 1 / level 1, not a continuation of Outside.
             GameSessionContext.SurvivalMap = SurvivalMapKind.Inside;

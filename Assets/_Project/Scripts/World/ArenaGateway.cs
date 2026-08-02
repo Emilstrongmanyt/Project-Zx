@@ -1,4 +1,5 @@
 using ProjectZx.Core;
+using ProjectZx.Player;
 using UnityEngine;
 
 namespace ProjectZx.World
@@ -25,6 +26,11 @@ namespace ProjectZx.World
             _used = true;
             GameSave.DungeonMapUnlocked = true;
             GameSave.InsideSurvivalCleared = true;
+
+            // Bank Inside run gold before wiping the run into a fresh Dungeon map.
+            var stats = player.GetComponent<PlayerStats>();
+            stats?.BankRunGoldToSave();
+
             GameSessionContext.SurvivalMap = SurvivalMapKind.Dungeon;
             GameSessionContext.FreshSurvivalRun = true;
             GameSessionContext.StartingRound = 0;
