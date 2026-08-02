@@ -348,37 +348,60 @@ namespace ProjectZx.Player
             else
                 FloatingDamageNumber.Spawn(transform.position, amount, isHeroHit: true);
 
-            CurrentHp = Mathf.Max(0, CurrentHp - amount);
+            var nextHp = CurrentHp - amount;
             _timeSinceDamaged = 0f;
+
+            // Lethal hit: spend Phoenix Heart before ever marking the player dead.
+            if (nextHp <= 0)
+            {
+                if (TryTriggerPhoenixHeart())
+                    return;
+
+                CurrentHp = 0;
+                Die();
+                return;
+            }
+
+            CurrentHp = nextHp;
 
             var maxCharges = GameSave.SecondWindMaxCharges;
             if (maxCharges > 0
                 && _secondWindChargesUsed < maxCharges
-                && CurrentHp > 0
                 && CurrentHp <= MaxHp * 0.2f)
             {
                 _secondWindChargesUsed++;
                 Heal(Mathf.Max(1, Mathf.RoundToInt(MaxHp * 0.3f)));
             }
-
-            if (CurrentHp <= 0)
-                TryPhoenixOrDie();
         }
 
-        void TryPhoenixOrDie()
+        /// <summary>
+        /// True if the run still has an unused Phoenix Heart (flag and/or owned epic mask).
+        /// </summary>
+        bool CanUsePhoenixHeart()
         {
-            if (RunPhoenixHeart && !PhoenixHeartUsed)
-            {
-                PhoenixHeartUsed = true;
-                CurrentHp = Mathf.Max(1, Mathf.RoundToInt(MaxHp * 0.4f));
-                _invulnTimer = PhoenixInvulnSeconds;
-                _selfBleedDamageRemaining = 0;
-                _selfBleedTicksRemaining = 0;
-                GameHud.Instance?.ShowBanner("Phoenix Heart! Revived!", 2.5f);
-                return;
-            }
+            if (IsCompanion || PhoenixHeartUsed) return false;
+            if (RunPhoenixHeart) return true;
+            // Fallback: talent was applied via mask even if the bool was lost.
+            return HasEpicTalent(EpicTalentId.PhoenixHeart);
+        }
 
-            Die();
+        /// <summary>
+        /// Revive once at 40% HP with brief i-frames. Returns true if the death was prevented.
+        /// </summary>
+        bool TryTriggerPhoenixHeart()
+        {
+            if (!CanUsePhoenixHeart()) return false;
+
+            RunPhoenixHeart = true;
+            PhoenixHeartUsed = true;
+            IsDead = false;
+            CurrentHp = Mathf.Max(1, Mathf.RoundToInt(Mathf.Max(1, MaxHp) * 0.4f));
+            _invulnTimer = PhoenixInvulnSeconds;
+            _selfBleedDamageRemaining = 0;
+            _selfBleedTicksRemaining = 0;
+            _selfBleedTickTimer = 0f;
+            GameHud.Instance?.ShowBanner("Phoenix Heart! Revived!", 2.5f);
+            return true;
         }
 
         public void Heal(int amount)
@@ -638,6 +661,7 @@ namespace ProjectZx.Player
                     break;
                 case EpicTalentId.PhoenixHeart:
                     RunPhoenixHeart = true;
+                    PhoenixHeartUsed = false;
                     break;
                 case EpicTalentId.TreasureMagnet:
                     RunLootRangeMultiplier *= 1.5f;
@@ -671,6 +695,11 @@ namespace ProjectZx.Player
         void Die()
         {
             if (IsDead) return;
+
+            // Safety net: any death path still respects an unused Phoenix Heart.
+            if (TryTriggerPhoenixHeart())
+                return;
+
             IsDead = true;
 
             if (SurvivalMode)

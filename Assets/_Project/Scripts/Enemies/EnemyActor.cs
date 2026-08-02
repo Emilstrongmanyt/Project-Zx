@@ -220,8 +220,9 @@ namespace ProjectZx.Enemies
             _bleedDamageRemaining = totalBleed;
             _bleedTicksRemaining = BleedTickCount;
             _bleedTickTimer = 1f;
+            // Soft red tint (~50% strength) so bleed is readable without washing out the sprite.
             if (_renderer != null)
-                _renderer.color = new Color(1f, 0.45f, 0.45f, 1f);
+                _renderer.color = Color.Lerp(_baseColor, new Color(1f, 0.45f, 0.45f, 1f), 0.5f);
         }
         /// <summary>Legacy alias — Frost Tip now chills (slows) instead of hard-freezing.</summary>
         public bool IsFrozen => IsChilled;
