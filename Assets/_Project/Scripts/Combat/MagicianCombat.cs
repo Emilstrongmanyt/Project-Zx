@@ -11,6 +11,8 @@ namespace ProjectZx.Combat
     public class MagicianCombat : MonoBehaviour
     {
         const float PrimaryDamageMultiplier = 1.15f;
+        /// <summary>Standard single-target primary: +40% base damage.</summary>
+        const float StandardDamageBonus = 1.4f;
         const float SplashDamageMultiplier = 0.55f;
         const float SplashRadius = 1.6f;
 
@@ -107,7 +109,7 @@ namespace ProjectZx.Combat
                 _staffPivot.localRotation = Quaternion.Euler(0f, 0f, StaffCastAngle);
 
             var stats = GetComponent<PlayerStats>();
-            CombatDamage.Apply(stats, enemy, PrimaryDamageMultiplier);
+            CombatDamage.Apply(stats, enemy, PrimaryDamageMultiplier * StandardDamageBonus);
             foreach (var other in FindEnemiesInSplash(enemy.transform.position))
             {
                 if (other == enemy) continue;

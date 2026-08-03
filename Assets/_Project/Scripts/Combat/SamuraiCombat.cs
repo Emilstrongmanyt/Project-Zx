@@ -16,6 +16,8 @@ namespace ProjectZx.Combat
     {
         /// <summary>~30% less damage than Batter per attack line.</summary>
         const float DamageMultiplier = 0.7f;
+        /// <summary>Standard double-swipe technique: +40% base damage.</summary>
+        const float StandardDamageBonus = 1.4f;
         const float RestAngle = -70f;
         const float SwingAngle = 75f;
         /// <summary>Half-width of the slash cone (90° each side → 180° total).</summary>
@@ -180,10 +182,11 @@ namespace ProjectZx.Combat
                 AudioManager.Instance?.PlaySwingSfx();
 
             var stats = GetComponent<PlayerStats>();
+            var mul = DamageMultiplier * (_useTripleHits ? 1f : StandardDamageBonus);
             var hitPrimary = false;
             foreach (var enemy in FindEnemiesInArc(BaseAttackRange))
             {
-                CombatDamage.Apply(stats, enemy, DamageMultiplier, canApplyFrost: true);
+                CombatDamage.Apply(stats, enemy, mul, canApplyFrost: true);
                 if (enemy == _primaryTarget) hitPrimary = true;
             }
 
@@ -191,7 +194,7 @@ namespace ProjectZx.Combat
             {
                 var dist = Vector2.Distance(transform.position, _primaryTarget.transform.position);
                 if (dist <= BaseAttackRange)
-                    CombatDamage.Apply(stats, _primaryTarget, DamageMultiplier, canApplyFrost: true);
+                    CombatDamage.Apply(stats, _primaryTarget, mul, canApplyFrost: true);
             }
         }
 

@@ -583,6 +583,9 @@ namespace ProjectZx.Core
             if (isBoss) scale *= 1.5f;
             // Outside R20, Inside R30, and Dungeon R40 stage bosses share the same large scale.
             if (isStageBoss) scale *= 2.5f;
+            // R10 / R20 decade bosses were reading too small after the 4× pass.
+            if (isBoss && (round == 10 || round == 20))
+                scale *= 1.7f;
             var go = CreateSprite(isBoss ? "Boss" : isRanged ? "RangedDemon" : "Demon", sprite, position, scale, 0);
             go.tag = "Enemy";
             go.AddComponent<YSortRenderer>();
@@ -597,6 +600,8 @@ namespace ProjectZx.Core
 
             // Visual scale is large; keep WORLD hitboxes body-sized (local radius = world / scale).
             var worldHitRadius = isStageBoss ? 1.35f : isBoss ? 0.95f : 0.55f;
+            if (isBoss && (round == 10 || round == 20))
+                worldHitRadius *= 1.35f;
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = worldHitRadius / Mathf.Max(0.001f, scale);
             col.offset = new Vector2(0f, 0.05f);

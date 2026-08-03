@@ -47,6 +47,7 @@ namespace ProjectZx.Core
             return mode switch
             {
                 AttackMode.Whirlwind when playerClass == PlayerClass.Samurai => "Triple Slash",
+                AttackMode.Whirlwind when playerClass == PlayerClass.Spearman => "Whirlwind (180°)",
                 AttackMode.Whirlwind => "Whirlwind (360°)",
                 AttackMode.PiercingShot => "Piercing Shot",
                 _ => "Standard"
@@ -59,19 +60,21 @@ namespace ProjectZx.Core
             {
                 AttackMode.Whirlwind when playerClass == PlayerClass.Samurai =>
                     "Three 180° katana swipes per attack — buy Whirlwind in shop, then equip here.",
+                AttackMode.Whirlwind when playerClass == PlayerClass.Spearman =>
+                    "180° front-arc spear sweep — buy in shop, then equip here.",
                 AttackMode.Whirlwind =>
                     "Full 360° spin cleave — buy in shop, then equip here.",
                 AttackMode.PiercingShot =>
                     "Primary hit plus 50% damage to one enemy behind.",
                 AttackMode.Standard when playerClass == PlayerClass.Bowman =>
-                    "Single focused arrow shot.",
+                    "Single focused arrow shot (+40% damage).",
                 AttackMode.Standard when playerClass == PlayerClass.Spearman =>
-                    "Spear swing — hits all enemies in a 180° arc.",
+                    "Single-target spear jab (+40% damage).",
                 AttackMode.Standard when playerClass == PlayerClass.Samurai =>
-                    "Double katana swipe — two 180° arc hits per attack.",
+                    "Double katana swipe — two 180° arc hits per attack (+40% damage).",
                 AttackMode.Standard when playerClass == PlayerClass.Magician =>
-                    "Single splash spell (coming soon).",
-                _ => "Single-target bat swing."
+                    "Primary splash spell (+40% damage on main target).",
+                _ => "Single-target bat swing (+40% damage)."
             };
         }
 

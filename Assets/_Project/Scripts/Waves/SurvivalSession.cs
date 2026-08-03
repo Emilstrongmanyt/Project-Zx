@@ -73,6 +73,7 @@ namespace ProjectZx.Waves
                         _hud?.SetRoundComplete(CurrentRound);
                         GameSave.RecordHighestRound(CurrentRound);
                         TryUnlockBowman(CurrentRound);
+                        TryUnlockMagician(CurrentRound);
 
                         if (IsStageHoldRound(CurrentRound))
                         {
@@ -223,6 +224,13 @@ namespace ProjectZx.Waves
             if (MapKind != SurvivalMapKind.Inside || round < 30 || GameSave.BowmanUnlocked) return;
             GameSave.BowmanUnlocked = true;
             Achievements.UnlockInsideArcher();
+        }
+
+        void TryUnlockMagician(int round)
+        {
+            if (MapKind != SurvivalMapKind.Unlimited || round < 80 || GameSave.MagicianUnlocked) return;
+            GameSave.MagicianUnlocked = true;
+            _hud?.ShowBanner("Magician unlocked!", 3.5f);
         }
 
         void SpawnEnemy(int round, bool boss, bool roundTwentyBoss, bool roundThirtyBoss, bool roundFortyBoss)

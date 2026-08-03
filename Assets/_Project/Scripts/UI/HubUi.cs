@@ -749,7 +749,7 @@ namespace ProjectZx.UI
             RefreshClassButton(picker.SpearmanButton, PlayerClass.Spearman, GameSave.SpearmanUnlocked, "Spearman (Beat R20 Boss)");
             RefreshClassButton(picker.BowmanButton, PlayerClass.Bowman, GameSave.BowmanUnlocked, "Bowman (Clear R30 Inside)");
             RefreshClassButton(picker.SamuraiButton, PlayerClass.Samurai, GameSave.SamuraiUnlocked, "Samurai (Dungeon R40 Boss)");
-            RefreshClassButton(picker.MagicianButton, PlayerClass.Magician, GameSave.MagicianUnlocked, "Magician (Coming Soon)");
+            RefreshClassButton(picker.MagicianButton, PlayerClass.Magician, GameSave.MagicianUnlocked, "Magician (Clear Unlimited R80)");
         }
 
         static void RefreshClassButton(Button button, PlayerClass playerClass, bool unlocked, string lockedLabel)
@@ -1262,7 +1262,7 @@ namespace ProjectZx.UI
                 $"Spearman: {(GameSave.SpearmanUnlocked ? "Unlocked" : "Locked")}\n" +
                 $"Bowman: {(GameSave.BowmanUnlocked ? "Unlocked" : "Locked")}\n" +
                 $"Samurai: {(GameSave.SamuraiUnlocked ? "Unlocked" : "Locked")}\n" +
-                $"Magician: {(GameSave.MagicianUnlocked ? "Unlocked" : "Coming Soon")}\n" +
+                $"Magician: {(GameSave.MagicianUnlocked ? "Unlocked" : "Clear Unlimited R80")}\n" +
                 $"RowZi: {(GameSave.RowZiUnlocked ? "Unlocked" : "Meet at R20 door")}\n\n" +
                 "LIFETIME RECORDS\n" +
                 $"Zombie Kills: {GameSave.LifetimeZombieKills}\n" +

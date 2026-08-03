@@ -13,6 +13,8 @@ namespace ProjectZx.Combat
         const float RestAngle = -65f;
         const float SwingAngle = 75f;
         const float WhirlwindRangeMultiplier = 1.2f;
+        /// <summary>Standard single-target technique: +40% base damage.</summary>
+        const float StandardDamageMultiplier = 1.4f;
 
         [SerializeField] float attackRange = 2.15f;
         [SerializeField] float attackInterval = 0.5f;
@@ -112,7 +114,7 @@ namespace ProjectZx.Combat
             if (_bodyRenderer != null)
                 _bodyRenderer.flipX = !_swingFacingRight;
 
-            CombatDamage.Apply(GetComponent<PlayerStats>(), enemy);
+            CombatDamage.Apply(GetComponent<PlayerStats>(), enemy, StandardDamageMultiplier);
         }
 
         void PerformWhirlwind()

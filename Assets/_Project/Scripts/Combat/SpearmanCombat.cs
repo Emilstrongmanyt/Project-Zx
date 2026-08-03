@@ -12,12 +12,14 @@ namespace ProjectZx.Combat
     {
         /// <summary>~15% more base damage than Batter (1.0).</summary>
         const float DamageMultiplier = 1.15f;
+        /// <summary>Standard single-target jab: +40% base damage.</summary>
+        const float StandardDamageBonus = 1.4f;
         const float RestAngle = -8f;
         const float ThrustAngle = -4f;
         const float ThrustExtend = 0.55f;
         const float WhirlwindRangeMultiplier = 1.15f;
-        /// <summary>Half-width of the standard thrust cone (90° each side of target → 180° total).</summary>
-        const float StandardArcHalfDegrees = 90f;
+        /// <summary>Whirlwind: half-width of the 180° arc (90° each side of facing).</summary>
+        const float WhirlwindArcHalfDegrees = 90f;
 
         [SerializeField] float attackRange = 3.4f;
         [SerializeField] float attackInterval = 0.55f;
@@ -102,7 +104,7 @@ namespace ProjectZx.Combat
                 return;
             }
 
-            // Can lock any enemy in full range; damage only applies in the 180° facing arc.
+            // Standard: single-target jab on the closest enemy in range.
             var enemy = FindClosestEnemy();
             if (enemy == null) return;
 
@@ -138,10 +140,22 @@ namespace ProjectZx.Combat
             _whirlwindSwing = true;
             _whirlwindDamageApplied = false;
             _attackTimer = whirlwindDuration;
-            _attackFacingRight = true;
 
+            // Face the nearest enemy so the 180° arc sweeps the front.
+            var nearest = FindClosestEnemy();
+            if (nearest != null)
+            {
+                var to = (Vector2)nearest.transform.position - (Vector2)transform.position;
+                _thrustDir = to.sqrMagnitude > 0.0001f ? to.normalized : Vector2.right;
+            }
+            else
+            {
+                _thrustDir = Vector2.right;
+            }
+
+            _attackFacingRight = _thrustDir.x >= 0f;
             if (_bodyRenderer != null)
-                _bodyRenderer.flipX = false;
+                _bodyRenderer.flipX = !_attackFacingRight;
 
             if (_spearPivot != null)
                 _spearPivot.localScale = Vector3.one;
@@ -155,15 +169,17 @@ namespace ProjectZx.Combat
 
             if (_whirlwindSwing)
             {
+                // 180° sweep in front of the hero (not a full 360 spin).
                 var progress = 1f - Mathf.Clamp01(_attackTimer / whirlwindDuration);
-                var angle = Mathf.Lerp(0f, 360f, progress);
+                var faceAngle = Mathf.Atan2(_thrustDir.y, _thrustDir.x) * Mathf.Rad2Deg;
+                var angle = faceAngle + Mathf.Lerp(-90f, 90f, progress);
                 _spearPivot.localScale = Vector3.one;
                 _spearPivot.localRotation = Quaternion.Euler(0f, 0f, angle);
 
                 if (!_whirlwindDamageApplied && progress >= 0.5f)
                 {
                     _whirlwindDamageApplied = true;
-                    DamageEnemiesInFullRange(WhirlwindAttackRange);
+                    DamageEnemiesInWhirlwindArc(WhirlwindAttackRange);
                 }
             }
             else
@@ -184,7 +200,7 @@ namespace ProjectZx.Combat
                 if (!_standardDamageApplied && progress >= 0.45f)
                 {
                     _standardDamageApplied = true;
-                    DamageEnemiesInFrontArc(BaseAttackRange);
+                    DamagePrimaryTarget(BaseAttackRange);
                 }
             }
 
@@ -199,41 +215,23 @@ namespace ProjectZx.Combat
                 _spearTip.localPosition = new Vector3(0.42f, 0.02f, 0f);
         }
 
-        void DamageEnemiesInFullRange(float range)
+        /// <summary>Standard jab: only the locked primary target.</summary>
+        void DamagePrimaryTarget(float range)
         {
-            var stats = GetComponent<PlayerStats>();
-            foreach (var enemy in FindEnemiesInRange(range, useFrontArc: false))
-                CombatDamage.Apply(stats, enemy, DamageMultiplier, canApplyFrost: true);
+            if (_primaryTarget == null || !_primaryTarget.IsAlive) return;
+            var dist = Vector2.Distance(transform.position, _primaryTarget.transform.position);
+            if (dist > range) return;
+            CombatDamage.Apply(
+                GetComponent<PlayerStats>(),
+                _primaryTarget,
+                DamageMultiplier * StandardDamageBonus,
+                canApplyFrost: true);
         }
 
-        /// <summary>
-        /// Standard thrust: damages the locked target plus any other living enemies inside a
-        /// 180° cone (90° left/right of the thrust direction toward the primary target).
-        /// </summary>
-        void DamageEnemiesInFrontArc(float range)
+        /// <summary>Whirlwind: 180° front arc cleave.</summary>
+        void DamageEnemiesInWhirlwindArc(float range)
         {
             var stats = GetComponent<PlayerStats>();
-            var hitPrimary = false;
-            foreach (var enemy in FindEnemiesInRange(range, useFrontArc: true))
-            {
-                CombatDamage.Apply(stats, enemy, DamageMultiplier, canApplyFrost: true);
-                if (enemy == _primaryTarget) hitPrimary = true;
-            }
-
-            // Always credit the locked target if still in range (handles edge float error).
-            if (!hitPrimary && _primaryTarget != null && _primaryTarget.IsAlive)
-            {
-                var dist = Vector2.Distance(transform.position, _primaryTarget.transform.position);
-                if (dist <= range)
-                    CombatDamage.Apply(stats, _primaryTarget, DamageMultiplier, canApplyFrost: true);
-            }
-        }
-
-        bool HasEnemyInRange(float range) => FindEnemiesInRange(range, useFrontArc: false).Count > 0;
-
-        List<EnemyActor> FindEnemiesInRange(float range, bool useFrontArc)
-        {
-            var hits = new List<EnemyActor>();
             var rangeSq = range * range;
             var facing = _thrustDir.sqrMagnitude > 0.0001f ? _thrustDir.normalized : Vector2.right;
 
@@ -242,21 +240,23 @@ namespace ProjectZx.Combat
                 if (enemy == null || !enemy.IsAlive) continue;
                 var offset = (Vector2)enemy.transform.position - (Vector2)transform.position;
                 if (offset.sqrMagnitude > rangeSq) continue;
+                if (offset.sqrMagnitude > 0.0001f && Vector2.Angle(facing, offset) > WhirlwindArcHalfDegrees)
+                    continue;
+                CombatDamage.Apply(stats, enemy, DamageMultiplier, canApplyFrost: true);
+            }
+        }
 
-                if (useFrontArc)
-                {
-                    // Primary lock is always valid; others must sit inside the 180° facing cone.
-                    if (enemy != _primaryTarget)
-                    {
-                        if (offset.sqrMagnitude <= 0.0001f) continue;
-                        if (Vector2.Angle(facing, offset) > StandardArcHalfDegrees) continue;
-                    }
-                }
-
-                hits.Add(enemy);
+        bool HasEnemyInRange(float range)
+        {
+            var rangeSq = range * range;
+            foreach (var enemy in Object.FindObjectsByType<EnemyActor>())
+            {
+                if (enemy == null || !enemy.IsAlive) continue;
+                if (((Vector2)enemy.transform.position - (Vector2)transform.position).sqrMagnitude <= rangeSq)
+                    return true;
             }
 
-            return hits;
+            return false;
         }
 
         EnemyActor FindClosestEnemy()

@@ -24,6 +24,8 @@ namespace ProjectZx.Core
         public Sprite[] WalkFrames;
         public Sprite[] AttackFrames;
         public bool FacesRightByDefault;
+        /// <summary>Bats / winged demons — immune to chill/slow.</summary>
+        public bool IsFlying;
         public bool IsValid => Idle != null;
     }
 
@@ -281,13 +283,14 @@ namespace ProjectZx.Core
             LoadWeaponSprite(Admurin + "weapon_katana", new Vector2(0.1f, 0.5f), 3.75f)
             ?? LoadWeaponSprite("Sword", new Vector2(0.1f, 0.5f), 3.75f)
             ?? CreateKatanaSprite();
-        /// <summary>Bowman weapon — Admurin Wooden_Weapon15, combat-scaled (X-flipped for grip orientation).</summary>
+        /// <summary>Bowman weapon — Admurin Wooden_Weapon15 (−25% size, X-flipped for grip).</summary>
         public static Sprite Bow => _bow ??=
-            LoadWeaponSprite(Admurin + "weapon_bow", new Vector2(0.35f, 0.5f), 2.85f, flipHorizontal: true)
+            LoadWeaponSprite(Admurin + "weapon_bow", new Vector2(0.35f, 0.5f), 2.1375f, flipHorizontal: true)
             ?? LoadOrCreateBow();
+        /// <summary>Arrow projectile art (−25% size).</summary>
         public static Sprite Arrow => _arrow ??=
-            LoadWeaponSprite(Admurin + "arrow", new Vector2(0.08f, 0.5f), 1.725f)
-            ?? LoadWeaponSprite("Arrow", new Vector2(0.08f, 0.5f), 1.725f)
+            LoadWeaponSprite(Admurin + "arrow", new Vector2(0.08f, 0.5f), 1.29375f)
+            ?? LoadWeaponSprite("Arrow", new Vector2(0.08f, 0.5f), 1.29375f)
             ?? CreateArrowSprite();
         /// <summary>Magician weapon — Admurin Wooden_Weapon8, combat-scaled.</summary>
         public static Sprite Staff => _staff ??=
@@ -716,6 +719,7 @@ namespace ProjectZx.Core
             var hitAttack = attack.Length >= 5 ? attack[4] : hit;
             var attackPose = attack.Length >= 4 ? attack[3] : attack.Length > 0 ? attack[^1] : idle;
 
+            var folderKey = relativeFolder.ToLowerInvariant();
             var set = new MonsterAnimSet
             {
                 Idle = idle,
@@ -725,7 +729,8 @@ namespace ProjectZx.Core
                 StandFrames = stand.Length > 0 ? stand : new[] { idle },
                 WalkFrames = walk.Length > 0 ? walk : stand.Length > 0 ? stand : new[] { idle },
                 AttackFrames = attack.Length > 0 ? attack : new[] { attackPose },
-                FacesRightByDefault = true
+                FacesRightByDefault = true,
+                IsFlying = folderKey.Contains("bat") || folderKey.Contains("wing")
             };
             MonsterSetCache[relativeFolder] = set;
             return set;

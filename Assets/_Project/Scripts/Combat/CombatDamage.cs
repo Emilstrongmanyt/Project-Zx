@@ -18,8 +18,8 @@ namespace ProjectZx.Combat
             target.TakeDamage(damage);
             attacker.OnDamageDealt(damage);
 
-            // Frost Tip: 1s chill (−60% move), not a hard freeze. Bosses immune.
-            if (canApplyFrost && GameSave.FrostTipUnlocked && !target.IsBoss)
+            // Frost Tip: 1s chill (−60% move). Bosses + flying immune.
+            if (canApplyFrost && GameSave.FrostTipUnlocked && !target.IsSlowImmune)
                 target.ApplyChill(1f);
 
             // Flame Enchant: ignite for +40% of hit damage over 3s (1 tick/sec). Refreshes on new hits.

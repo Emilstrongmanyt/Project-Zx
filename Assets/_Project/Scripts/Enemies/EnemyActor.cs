@@ -12,20 +12,22 @@ namespace ProjectZx.Enemies
     [RequireComponent(typeof(Rigidbody2D))]
     public class EnemyActor : MonoBehaviour
     {
-        const float FireBreathRange = 6.75f;
+        /// <summary>Max distance to start / sustain fire breath (engagement).</summary>
+        const float FireBreathEngageRange = 6.75f;
+        /// <summary>Damage only within the visible stream length (matches VFX).</summary>
+        const float FireBreathDamageRange = 4.0f;
         const float FireBreathDuration = 3f;
         const float FireBreathCooldown = 12f;
         const float FireBreathTick = 0.45f;
         /// <summary>World-space breath size (independent of huge boss transform scale).</summary>
-        const float FireBreathWorldScale = 1.05f;
+        const float FireBreathWorldScale = 2.55f;
         /// <summary>World distance from boss center to the breath mouth along the aim direction.</summary>
-        const float FireBreathMouthWorldOffset = 1.15f;
+        const float FireBreathMouthWorldOffset = 1.35f;
         /// <summary>Slight vertical bias so breath leaves near the boss head (world units).</summary>
-        const float FireBreathMouthBiasWorldY = 0.45f;
+        const float FireBreathMouthBiasWorldY = 0.55f;
         const int FireBreathSortOffset = 40;
-        const float FireBreathHitPadding = 0.9f;
-        /// <summary>Cosine of half-angle for breath damage cone (~55° half-angle).</summary>
-        const float FireBreathConeDot = 0.55f;
+        /// <summary>Cosine of half-angle for breath damage cone (~35° half-angle — tighter to VFX).</summary>
+        const float FireBreathConeDot = 0.82f;
         const float CastSkin = 0.1f;
         /// <summary>Frost Tip: keep 40% speed for 1 second (−60% move).</summary>
         const float ChillSpeedMultiplier = 0.4f;
@@ -65,6 +67,9 @@ namespace ProjectZx.Enemies
         public bool IsAlive { get; private set; } = true;
         public bool IsBoss { get; private set; }
         public bool IsRanged { get; private set; }
+        /// <summary>Bats / winged demons — chill/slow immune with bosses.</summary>
+        public bool IsFlying { get; private set; }
+        public bool IsSlowImmune => IsBoss || IsFlying;
         public bool IsRoundTwentyBoss { get; private set; }
         public bool IsRoundThirtyBoss { get; private set; }
         public bool IsRoundFortyBoss { get; private set; }
@@ -274,10 +279,10 @@ namespace ProjectZx.Enemies
         /// <summary>Legacy alias — Frost Tip now chills (slows) instead of hard-freezing.</summary>
         public bool IsFrozen => IsChilled;
 
-        /// <summary>Chill non-boss zombies: −60% move speed for 1 second (Frost Tip).</summary>
+        /// <summary>Chill: −60% move for 1s (Frost Tip). Bosses + flying immune.</summary>
         public void ApplyFreeze(float duration = ChillDuration)
         {
-            if (!IsAlive || IsBoss || duration <= 0f) return;
+            if (!IsAlive || IsSlowImmune || duration <= 0f) return;
             _chillTimer = Mathf.Max(_chillTimer, duration);
             if (_renderer != null)
                 _renderer.color = new Color(0.55f, 0.82f, 1f, 1f);
@@ -322,6 +327,7 @@ namespace ProjectZx.Enemies
                 _walkFrames = _standFrames;
                 _attackFrames = _standFrames;
                 _facesRightByDefault = true;
+                IsFlying = false;
                 return;
             }
 
@@ -339,6 +345,7 @@ namespace ProjectZx.Enemies
                 ? set.AttackFrames
                 : new[] { _attackSprite };
             _facesRightByDefault = set.FacesRightByDefault;
+            IsFlying = set.IsFlying;
             _bodyAnimFrame = 0;
             _bodyAnimTimer = BodyAnimFrameSeconds;
         }
@@ -417,10 +424,14 @@ namespace ProjectZx.Enemies
         bool IsPlayerInFireBreathCone(float maxRange)
         {
             if (_player == null) return false;
-            var toPlayer = (Vector2)_player.position - (Vector2)transform.position;
+            // Measure from the breath mouth so side/back hits outside the stream do not damage.
+            var mouthWorld = (Vector2)transform.position
+                             + _fireBreathAim * FireBreathMouthWorldOffset
+                             + new Vector2(0f, FireBreathMouthBiasWorldY);
+            var toPlayer = (Vector2)_player.position - mouthWorld;
             var dist = toPlayer.magnitude;
             if (dist > maxRange) return false;
-            if (dist < 0.35f) return true;
+            if (dist < 0.2f) return true;
             return Vector2.Dot(toPlayer / dist, _fireBreathAim) >= FireBreathConeDot;
         }
 
@@ -682,22 +693,30 @@ namespace ProjectZx.Enemies
             return _renderer == null || _renderer.flipX == wantsFlip;
         }
 
+        bool IsPlayingAttackAnim()
+        {
+            return _fireBreathing
+                   || _rangedAttackAnimTimer > 0f
+                   || _meleeAttackAnimTimer > 0f
+                   || IsInMeleeAttackPoseRange()
+                   || IsInBossAttackPoseRange();
+        }
+
         void UpdateBodyAnimation()
         {
-            if (_renderer == null || _hitSpriteTimer > 0f) return;
+            if (_renderer == null) return;
 
-            // Fire breath / wind-up / ranged cast / melee swing: cycle attack frames.
-            if (_fireBreathing
-                || _rangedAttackAnimTimer > 0f
-                || _meleeAttackAnimTimer > 0f
-                || IsInMeleeAttackPoseRange()
-                || (IsBoss && !_fireBreathing && IsInBossAttackPoseRange()))
+            // Attack anims always win over hit flash so brief player hits do not cancel swings.
+            if (IsPlayingAttackAnim())
             {
+                _hitSpriteTimer = 0f;
                 AdvanceAnimFrames(_attackFrames, ref _bodyAnimFrame, ref _bodyAnimTimer);
                 if (_attackFrames.Length > 0)
                     _renderer.sprite = _attackFrames[Mathf.Clamp(_bodyAnimFrame, 0, _attackFrames.Length - 1)];
                 return;
             }
+
+            if (_hitSpriteTimer > 0f) return;
 
             var moving = _rb != null && _rb.linearVelocity.sqrMagnitude > 0.0004f;
             if (moving != _wasMoving)
@@ -718,24 +737,26 @@ namespace ProjectZx.Enemies
         void BeginMeleeAttackAnim()
         {
             _meleeAttackAnimTimer = MeleeAttackAnimSeconds;
+            _hitSpriteTimer = 0f;
             _bodyAnimFrame = 0;
             _bodyAnimTimer = 0f;
         }
 
-        /// <summary>Near / in touch range — play attack loop (melee grunts + Lord contact).</summary>
+        /// <summary>Near / in touch range — play attack loop (melee grunts, casters, Lord, golems).</summary>
         bool IsInMeleeAttackPoseRange()
         {
             if (_player == null || _fireBreathing) return false;
-            // Bosses use fire-breath wind-up pose; R40 Lord still swings when in contact.
-            if (IsBoss && !IsRoundFortyBoss) return false;
             var dist = Vector2.Distance(transform.position, _player.position);
-            return dist <= _contactRange * 1.15f;
+            return dist <= _contactRange * 1.25f;
         }
 
+        /// <summary>Boss wind-up only while breathing, about to breathe, or in melee — not the whole engage range.</summary>
         bool IsInBossAttackPoseRange()
         {
-            if (!IsBoss || IsRoundFortyBoss || _player == null) return false;
-            return Vector2.Distance(transform.position, _player.position) <= FireBreathRange;
+            if (!IsBoss || IsRoundFortyBoss || _player == null || _fireBreathing) return false;
+            var dist = Vector2.Distance(transform.position, _player.position);
+            if (dist <= _contactRange * 1.25f) return true;
+            return dist <= FireBreathEngageRange && _fireBreathCooldown <= 0.35f;
         }
 
         static void AdvanceAnimFrames(Sprite[] frames, ref int frame, ref float timer)
@@ -775,7 +796,7 @@ namespace ProjectZx.Enemies
                     _fireBreathDamageTimer = FireBreathTick;
                     var stats = _player.GetComponent<PlayerStats>();
                     if (stats != null && !stats.IsDead
-                        && IsPlayerInFireBreathCone(FireBreathRange + FireBreathHitPadding))
+                        && IsPlayerInFireBreathCone(FireBreathDamageRange))
                     {
                         stats.TakeDamage(Mathf.RoundToInt(_attack * 0.55f));
                         HitFlash.FlashSprite(_player.gameObject);
@@ -788,13 +809,8 @@ namespace ProjectZx.Enemies
                 return;
             }
 
-            if (dist > FireBreathRange)
-            {
-                if (_renderer != null) _renderer.sprite = _idleSprite;
+            if (dist > FireBreathEngageRange)
                 return;
-            }
-
-            if (_renderer != null) _renderer.sprite = _attackSprite;
 
             if (_fireBreathCooldown > 0f) return;
 
@@ -961,9 +977,11 @@ namespace ProjectZx.Enemies
         void ShowHitSprite()
         {
             if (_renderer == null || _hitSprite == null) return;
+            // Do not interrupt an active attack pose — flash only via HitFlash color.
+            if (IsPlayingAttackAnim()) return;
             var useAttackHit = _fireBreathing || _renderer.sprite == _attackSprite;
             _renderer.sprite = useAttackHit && _hitSpriteAttack != null ? _hitSpriteAttack : _hitSprite;
-            _hitSpriteTimer = 0.5f;
+            _hitSpriteTimer = 0.35f;
         }
 
         void UpdateHitSpriteTimer()
@@ -984,14 +1002,10 @@ namespace ProjectZx.Enemies
                 return;
             }
 
-            if (IsBoss && _player != null)
+            if (IsPlayingAttackAnim() && _attackFrames.Length > 0)
             {
-                var dist = Vector2.Distance(transform.position, _player.position);
-                if (dist <= FireBreathRange)
-                {
-                    _renderer.sprite = _attackSprite;
-                    return;
-                }
+                _renderer.sprite = _attackFrames[Mathf.Clamp(_bodyAnimFrame, 0, _attackFrames.Length - 1)];
+                return;
             }
 
             _renderer.sprite = _idleSprite;
@@ -1008,8 +1022,10 @@ namespace ProjectZx.Enemies
             var stats = _player != null ? _player.GetComponent<PlayerStats>() : null;
             if (stats == null || !stats.CanAcceptEpicCrystal) return;
 
+            // R10 / R20 bosses always drop elite talents when the player can still pick.
+            var guaranteedDecade = _round == 10 || _round == 20 || IsRoundTwentyBoss;
             // First available pick of the run always drops; later bosses roll.
-            var guaranteed = stats.EpicPicksTaken + stats.PendingEpicChoices == 0;
+            var guaranteed = guaranteedDecade || stats.EpicPicksTaken + stats.PendingEpicChoices == 0;
             if (!guaranteed && Random.value > BossEpicCrystalDropChance) return;
 
             GameFactory.CreatePickup(pos + Vector2.up * 0.55f + Vector2.right * 0.2f, PickupType.EpicCrystal, 1);

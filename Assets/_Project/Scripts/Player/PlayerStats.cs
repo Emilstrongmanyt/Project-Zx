@@ -477,13 +477,13 @@ namespace ProjectZx.Player
         public bool CanOfferSpeedTalent => RunSpeedMultiplier * 1.1f <= StatCaps.RunMaxSpeedMultiplier + 0.001f;
         public bool CanOfferAttackTalent => RunDamageMultiplier * 1.12f <= StatCaps.RunMaxDamageMultiplier + 0.001f;
         public bool CanOfferAttackRangeTalent =>
-            AttackRangeMultiplier * 1.1f <= StatCaps.RunMaxAttackRangeMultiplier + 0.001f;
-        public bool CanOfferHpTalent => MaxHp + 15 <= StatCaps.RunMaxHp;
+            AttackRangeMultiplier * 1.06f <= StatCaps.RunMaxAttackRangeMultiplier + 0.001f;
+        public bool CanOfferHpTalent => MaxHp + 30 <= StatCaps.RunMaxHp;
         public bool CanOfferCritChance => RunCritChance + 0.08f <= 0.55f;
         public bool CanOfferCritDamage => RunCritMultiplier + 0.25f <= 3f;
-        public bool CanOfferLifesteal => RunLifesteal + 0.04f <= 0.2f;
+        public bool CanOfferLifesteal => RunLifesteal + 0.03f <= 0.2f;
         public bool CanOfferBossHunter => RunBossDamageBonus + 0.2f <= 0.8f;
-        public bool CanOfferExecute => RunExecuteBonus + 0.3f <= 0.9f;
+        public bool CanOfferExecute => RunExecuteBonus + 0.5f <= 1.5f;
         public bool CanOfferGoldFind => RunGoldFindMultiplier * 1.15f <= 2f;
         public bool CanOfferRegen => RunRegenPerSecond + 2f <= 8f;
         public bool CanOfferShield => !RunShieldUnlocked;
@@ -542,16 +542,16 @@ namespace ProjectZx.Player
             return choice switch
             {
                 RunLevelChoice.Speed => "+10% Move Speed",
-                RunLevelChoice.Hp => "+15 Max HP",
+                RunLevelChoice.Hp => "+30 Max HP",
                 RunLevelChoice.Attack => "+12% Attack Damage",
                 RunLevelChoice.AttackSpeed => "+12% Attack Speed",
-                RunLevelChoice.AttackRange => "+10% Attack Range",
+                RunLevelChoice.AttackRange => "+6% Attack Range",
                 RunLevelChoice.LootRange => "+15% Loot Range",
                 RunLevelChoice.CritChance => "+8% Crit Chance",
                 RunLevelChoice.CritDamage => "+25% Crit Damage",
-                RunLevelChoice.Lifesteal => "+4% Lifesteal",
+                RunLevelChoice.Lifesteal => "+3% Lifesteal",
                 RunLevelChoice.BossHunter => "+20% Damage vs Bosses",
-                RunLevelChoice.Execute => "+30% Damage under 25% HP",
+                RunLevelChoice.Execute => "+50% Damage under 25% HP",
                 RunLevelChoice.GoldFind => "+15% Gold Find",
                 RunLevelChoice.Regen => "+2 HP/sec out of combat",
                 RunLevelChoice.Shield => "Block 1 hit every 12s",
@@ -573,8 +573,8 @@ namespace ProjectZx.Player
                     break;
                 case RunLevelChoice.Hp:
                     if (!CanOfferHpTalent) break;
-                    MaxHp = Mathf.Min(StatCaps.RunMaxHp, MaxHp + 15);
-                    CurrentHp = Mathf.Min(MaxHp, CurrentHp + 15);
+                    MaxHp = Mathf.Min(StatCaps.RunMaxHp, MaxHp + 30);
+                    CurrentHp = Mathf.Min(MaxHp, CurrentHp + 30);
                     break;
                 case RunLevelChoice.Attack:
                     if (!CanOfferAttackTalent) break;
@@ -587,7 +587,7 @@ namespace ProjectZx.Player
                     if (!CanOfferAttackRangeTalent) break;
                     RunAttackRangeMultiplier = Mathf.Min(
                         StatCaps.RunMaxAttackRangeMultiplier / Mathf.Max(0.01f, GameSave.AttackRangeMultiplier),
-                        RunAttackRangeMultiplier * 1.1f);
+                        RunAttackRangeMultiplier * 1.06f);
                     break;
                 case RunLevelChoice.LootRange:
                     RunLootRangeMultiplier *= 1.15f;
@@ -602,7 +602,7 @@ namespace ProjectZx.Player
                     break;
                 case RunLevelChoice.Lifesteal:
                     if (!CanOfferLifesteal) break;
-                    RunLifesteal = Mathf.Min(0.2f, RunLifesteal + 0.04f);
+                    RunLifesteal = Mathf.Min(0.2f, RunLifesteal + 0.03f);
                     break;
                 case RunLevelChoice.BossHunter:
                     if (!CanOfferBossHunter) break;
@@ -610,7 +610,7 @@ namespace ProjectZx.Player
                     break;
                 case RunLevelChoice.Execute:
                     if (!CanOfferExecute) break;
-                    RunExecuteBonus = Mathf.Min(0.9f, RunExecuteBonus + 0.3f);
+                    RunExecuteBonus = Mathf.Min(1.5f, RunExecuteBonus + 0.5f);
                     break;
                 case RunLevelChoice.GoldFind:
                     if (!CanOfferGoldFind) break;

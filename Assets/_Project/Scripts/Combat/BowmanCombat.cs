@@ -10,8 +10,10 @@ namespace ProjectZx.Combat
     [RequireComponent(typeof(PlayerStats))]
     public class BowmanCombat : MonoBehaviour
     {
-        /// <summary>Base bow damage: prior 0.9 increased by 40% → 1.26.</summary>
+        /// <summary>Base bow damage (pre-standard bonus).</summary>
         const float DamageMultiplier = 1.26f;
+        /// <summary>Standard single-target technique: +40% base damage.</summary>
+        const float StandardDamageBonus = 1.4f;
         const float PierceSecondaryMultiplier = 0.5f;
 
         [SerializeField] float attackRange = 5.5f;
@@ -54,8 +56,8 @@ namespace ProjectZx.Combat
             var bowGo = new GameObject("Bow");
             bowGo.transform.SetParent(_bowPivot, false);
             bowGo.transform.localPosition = new Vector3(0.22f, 0.06f, 0f);
-            // Large enough to read clearly over the hero sprite.
-            bowGo.transform.localScale = Vector3.one * 1.55f;
+            // −25% vs prior 1.55 so the bow matches the smaller sprite.
+            bowGo.transform.localScale = Vector3.one * 1.1625f;
             _bowVisual = bowGo.transform;
 
             var bowRenderer = bowGo.AddComponent<SpriteRenderer>();
@@ -99,25 +101,30 @@ namespace ProjectZx.Combat
                 _bodyRenderer.flipX = !_drawFacingRight;
 
             var stats = GetComponent<PlayerStats>();
-            var origin = GetArrowSpawnPoint();
+            var origin = GetArrowSpawnPoint(enemy);
             var pierce = GameSave.GetSelectedAttackMode(PlayerClass.Bowman) == AttackMode.PiercingShot
                          && GameSave.PiercingShotUnlocked;
+            var dmgMul = pierce ? DamageMultiplier : DamageMultiplier * StandardDamageBonus;
 
             ArrowProjectile.Spawn(
                 origin,
                 enemy,
                 stats,
-                DamageMultiplier,
+                dmgMul,
                 canApplyFrost: true,
                 pierce: pierce,
                 pierceMultiplier: PierceSecondaryMultiplier);
         }
 
-        Vector3 GetArrowSpawnPoint()
+        Vector3 GetArrowSpawnPoint(EnemyActor target)
         {
-            if (_bowVisual != null)
-                return _bowVisual.position + (_drawFacingRight ? Vector3.right : Vector3.left) * 0.35f;
-            return transform.position + new Vector3(_drawFacingRight ? 0.45f : -0.45f, 0.1f, 0f);
+            // Spawn from chest height toward the target so the first frame is already on-line.
+            var chest = transform.position + new Vector3(0f, 0.12f, 0f);
+            if (target == null) return chest;
+            var to = ((Vector2)target.transform.position + Vector2.up * 0.25f) - (Vector2)chest;
+            if (to.sqrMagnitude < 0.0001f)
+                return chest + new Vector3(_drawFacingRight ? 0.35f : -0.35f, 0f, 0f);
+            return chest + (Vector3)(to.normalized * 0.4f);
         }
 
         void UpdateDrawAnimation()
