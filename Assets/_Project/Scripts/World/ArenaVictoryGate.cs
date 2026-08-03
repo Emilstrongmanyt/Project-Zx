@@ -31,6 +31,7 @@ namespace ProjectZx.World
             GameSave.SamuraiUnlocked = true;
             Achievements.UnlockDungeonClearer();
             Achievements.UnlockEndlessHorizon();
+            // RollZy_two sheet is selected automatically via DungeonSurvivalCleared.
 
             var stats = player.GetComponent<PlayerStats>();
             stats?.BankRunGoldToSave();

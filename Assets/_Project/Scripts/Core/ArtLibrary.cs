@@ -114,6 +114,7 @@ namespace ProjectZx.Core
             _warheadVariants = null;
             _cryptVariants = null;
             _rollZySprites = null;
+            _rollZyUpgradedSprites = null;
             _rowZiSprites = null;
             _door = null;
             _shopUi = null;
@@ -180,6 +181,7 @@ namespace ProjectZx.Core
         static Sprite[] _warheadVariants;
         static Sprite[] _cryptVariants;
         static Sprite[] _rollZySprites;
+        static Sprite[] _rollZyUpgradedSprites;
         static Sprite[] _rowZiSprites;
         static Sprite _door;
         static Sprite _shopUi;
@@ -287,11 +289,12 @@ namespace ProjectZx.Core
         public static Sprite Bow => _bow ??=
             LoadWeaponSprite(Admurin + "weapon_bow", new Vector2(0.35f, 0.5f), 2.1375f, flipHorizontal: true)
             ?? LoadOrCreateBow();
-        /// <summary>Arrow projectile art (−25% size).</summary>
-        public static Sprite Arrow => _arrow ??=
-            LoadWeaponSprite(Admurin + "arrow", new Vector2(0.08f, 0.5f), 1.29375f)
-            ?? LoadWeaponSprite("Arrow", new Vector2(0.08f, 0.5f), 1.29375f)
-            ?? CreateArrowSprite();
+        /// <summary>
+        /// Arrow projectile (−25% size). Always a horizontal tip-on-+X sprite: both
+        /// Admurin and Resources/Arrow.png are authored ~45° diagonal and would make
+        /// Atan2 flight look permanently skewed.
+        /// </summary>
+        public static Sprite Arrow => _arrow ??= CreateHorizontalCombatArrow(1.29375f);
         /// <summary>Magician weapon — Admurin Wooden_Weapon8, combat-scaled.</summary>
         public static Sprite Staff => _staff ??=
             LoadWeaponSprite(Admurin + "weapon_staff", new Vector2(0.12f, 0.5f), 3.525f) ?? CreateSpearSprite();
@@ -339,23 +342,43 @@ namespace ProjectZx.Core
         {
             if (hero == PlayableHero.RowZi)
             {
-                _rowZiSprites ??= LoadHeroSheetSprites("RowZi", 8);
-                return new HeroSpriteSet
-                {
-                    Idle = _rowZiSprites[0],
-                    WalkA = _rowZiSprites[2],
-                    WalkB = _rowZiSprites[3],
-                    FacesRightByDefault = false
-                };
+                // RowZi_new matches RollZy sheet layout/style (8 frames, faces right).
+                _rowZiSprites ??= LoadOrderedHeroSheet("RowZi_new")
+                                  ?? LoadOrderedHeroSheet("RowZi")
+                                  ?? LoadHeroSheetSprites("RowZi", 8);
+                return BuildHeroSet(_rowZiSprites, facesRightByDefault: true);
             }
 
-            _rollZySprites ??= LoadHeroSheetSprites("RollZy", 8);
+            // Upgraded RollZy after clearing Dungeon survival (Dungeon Clearer achievement path).
+            if (GameSave.DungeonSurvivalCleared)
+            {
+                _rollZyUpgradedSprites ??= LoadOrderedHeroSheet("RollZy_two")
+                                           ?? LoadHeroSheetSprites("RollZy_two", 8);
+                if (_rollZyUpgradedSprites != null && _rollZyUpgradedSprites.Length > 0
+                    && _rollZyUpgradedSprites[0] != null)
+                    return BuildHeroSet(_rollZyUpgradedSprites, facesRightByDefault: true);
+            }
+
+            _rollZySprites ??= LoadOrderedHeroSheet("RollZy")
+                               ?? LoadHeroSheetSprites("RollZy", 8);
+            return BuildHeroSet(_rollZySprites, facesRightByDefault: true);
+        }
+
+        static HeroSpriteSet BuildHeroSet(Sprite[] frames, bool facesRightByDefault)
+        {
+            Sprite Frame(int i)
+            {
+                if (frames == null || frames.Length == 0) return null;
+                if (i >= 0 && i < frames.Length && frames[i] != null) return frames[i];
+                return frames[0];
+            }
+
             return new HeroSpriteSet
             {
-                Idle = _rollZySprites[0],
-                WalkA = _rollZySprites[1],
-                WalkB = _rollZySprites[2],
-                FacesRightByDefault = true
+                Idle = Frame(0),
+                WalkA = Frame(1) ?? Frame(0),
+                WalkB = Frame(2) ?? Frame(1) ?? Frame(0),
+                FacesRightByDefault = facesRightByDefault
             };
         }
 
@@ -799,28 +822,40 @@ namespace ProjectZx.Core
             return loaded > 0 ? sprites : null;
         }
 
-        static Sprite[] LoadSheetSprites(string sheetName, int expectedCount)
+        /// <summary>
+        /// Loads a multi-sprite sheet from Resources and sorts by trailing frame index
+        /// (supports "RollZy_0", "RollZy_two_3", "RowZi 1_0", etc.).
+        /// </summary>
+        static Sprite[] LoadOrderedHeroSheet(string sheetName)
         {
+            if (string.IsNullOrEmpty(sheetName)) return null;
             var fromSheet = Resources.LoadAll<Sprite>(sheetName);
-            if (fromSheet != null && fromSheet.Length > 0)
-            {
-                var prefix = sheetName + "_";
-                var filtered = new System.Collections.Generic.List<Sprite>();
-                foreach (var sprite in fromSheet)
-                {
-                    if (sprite == null) continue;
-                    if (!sprite.name.StartsWith(prefix, System.StringComparison.Ordinal)) continue;
-                    filtered.Add(sprite);
-                }
+            if (fromSheet == null || fromSheet.Length == 0) return null;
 
-                if (filtered.Count > 0)
-                {
-                    filtered.Sort((a, b) => GetSheetSpriteIndex(a.name, prefix).CompareTo(GetSheetSpriteIndex(b.name, prefix)));
-                    return filtered.ToArray();
-                }
+            var filtered = new System.Collections.Generic.List<Sprite>(fromSheet.Length);
+            foreach (var sprite in fromSheet)
+            {
+                if (sprite != null) filtered.Add(sprite);
             }
 
+            if (filtered.Count == 0) return null;
+            filtered.Sort((a, b) => GetTrailingFrameIndex(a.name).CompareTo(GetTrailingFrameIndex(b.name)));
+            return filtered.ToArray();
+        }
+
+        static Sprite[] LoadSheetSprites(string sheetName, int expectedCount)
+        {
+            var ordered = LoadOrderedHeroSheet(sheetName);
+            if (ordered != null && ordered.Length > 0) return ordered;
             return LoadHeroSheetSprites(sheetName, expectedCount);
+        }
+
+        static int GetTrailingFrameIndex(string spriteName)
+        {
+            if (string.IsNullOrEmpty(spriteName)) return int.MaxValue;
+            var underscore = spriteName.LastIndexOf('_');
+            if (underscore < 0 || underscore >= spriteName.Length - 1) return int.MaxValue;
+            return int.TryParse(spriteName[(underscore + 1)..], out var index) ? index : int.MaxValue;
         }
 
         static int GetSheetSpriteIndex(string spriteName, string prefix)
@@ -1141,13 +1176,17 @@ namespace ProjectZx.Core
             return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.12f, 0.5f), 16f);
         }
 
-        /// <summary>Bright arrow projectile — wood shaft, metal tip, red fletching.</summary>
-        static Sprite CreateArrowSprite()
+        /// <summary>Bright arrow projectile — wood shaft, metal tip on +X, red fletching.</summary>
+        static Sprite CreateArrowSprite() => CreateHorizontalCombatArrow(2.25f);
+
+        /// <summary>Horizontal combat arrow: tip on +X, sized to worldLength units.</summary>
+        static Sprite CreateHorizontalCombatArrow(float worldLength)
         {
-            const int w = 36;
+            const int w = 40;
             const int h = 12;
             var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
             tex.filterMode = FilterMode.Point;
+            tex.wrapMode = TextureWrapMode.Clamp;
 
             void Set(int x, int y, Color c)
             {
@@ -1167,7 +1206,7 @@ namespace ProjectZx.Core
                 Set(x, y, clear);
 
             // Shaft (horizontal, tip on +X).
-            for (var x = 4; x <= 28; x++)
+            for (var x = 5; x <= 30; x++)
             {
                 Set(x, 4, shaftEdge);
                 Set(x, 5, shaft);
@@ -1176,15 +1215,15 @@ namespace ProjectZx.Core
             }
 
             // Metal tip.
-            for (var i = 0; i < 6; i++)
+            for (var i = 0; i < 7; i++)
             {
-                var x = 29 + i;
-                var half = Mathf.Max(0, 3 - i);
+                var x = 31 + i;
+                var half = Mathf.Max(0, 3 - i / 2);
                 for (var dy = -half; dy <= half; dy++)
-                    Set(x, 5 + dy + 1, i >= 4 ? tipEdge : tip);
+                    Set(x, 5 + dy + 1, i >= 5 ? tipEdge : tip);
             }
 
-            // Fletching on the nock.
+            // Fletching on the nock (−X).
             for (var x = 1; x <= 6; x++)
             {
                 Set(x, 2, fletchDark);
@@ -1194,7 +1233,16 @@ namespace ProjectZx.Core
             }
 
             tex.Apply();
-            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.15f, 0.5f), 16f);
+            var ppu = Mathf.Max(1f, w / Mathf.Max(0.05f, worldLength));
+            var sprite = Sprite.Create(
+                tex,
+                new Rect(0, 0, w, h),
+                new Vector2(0.12f, 0.5f),
+                ppu,
+                0,
+                SpriteMeshType.FullRect);
+            if (sprite != null) sprite.name = "Arrow_Horizontal";
+            return sprite;
         }
 
         static Sprite CreateGatewayFallbackSprite()

@@ -118,13 +118,13 @@ namespace ProjectZx.Combat
 
         Vector3 GetArrowSpawnPoint(EnemyActor target)
         {
-            // Spawn from chest height toward the target so the first frame is already on-line.
+            // Chest height, offset toward the target on X only (keeps flight level).
             var chest = transform.position + new Vector3(0f, 0.12f, 0f);
-            if (target == null) return chest;
-            var to = ((Vector2)target.transform.position + Vector2.up * 0.25f) - (Vector2)chest;
-            if (to.sqrMagnitude < 0.0001f)
-                return chest + new Vector3(_drawFacingRight ? 0.35f : -0.35f, 0f, 0f);
-            return chest + (Vector3)(to.normalized * 0.4f);
+            if (target == null)
+                return chest + new Vector3(_drawFacingRight ? 0.4f : -0.4f, 0f, 0f);
+
+            var side = target.transform.position.x >= transform.position.x ? 1f : -1f;
+            return chest + new Vector3(side * 0.4f, 0f, 0f);
         }
 
         void UpdateDrawAnimation()
