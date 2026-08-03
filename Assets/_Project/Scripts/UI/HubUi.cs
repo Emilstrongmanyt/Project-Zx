@@ -1175,6 +1175,8 @@ namespace ProjectZx.UI
 
         public void OpenAchievements()
         {
+            // Retroactively grant arsenal achievements if progress already unlocked the tiers.
+            Achievements.EvaluateWeaponTierAchievements();
             RefreshAchievements();
             CloseAllHubPanels();
             _achievementsPanel.SetActive(true);

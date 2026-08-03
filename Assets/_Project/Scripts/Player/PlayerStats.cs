@@ -760,6 +760,7 @@ namespace ProjectZx.Player
                         GameSave.RecordUnlimitedRound(session.CurrentRound);
                     else if (session.MapKind == SurvivalMapKind.Dungeon)
                         GameSave.RecordDungeonRound(session.CurrentRound);
+                    Achievements.EvaluateWeaponTierAchievements();
                 }
             }
 

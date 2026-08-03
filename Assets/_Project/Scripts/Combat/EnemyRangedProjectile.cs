@@ -6,19 +6,18 @@ using UnityEngine;
 namespace ProjectZx.Combat
 {
     /// <summary>
-    /// Straight-line bolt from late-map ranged demons. No tracking; dies on hit or lifetime.
+    /// Straight-line skull bolt from late-map ranged demons. No tracking; dies on hit or lifetime.
     /// </summary>
     public class EnemyRangedProjectile : MonoBehaviour
     {
         const float DefaultSpeed = 5.5f;
         const float DefaultLifetime = 3.2f;
-        const float HitRadius = 0.4f;
+        const float HitRadius = 0.42f;
+        const float SpinDegreesPerSecond = 220f;
 
         Vector2 _velocity;
         float _life;
         int _damage;
-        float _animTimer;
-        int _frame;
         SpriteRenderer _renderer;
         Transform _player;
         bool _hit;
@@ -33,11 +32,12 @@ namespace ProjectZx.Combat
             var dir = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.left;
             var go = new GameObject("EnemyRangedProjectile");
             go.transform.position = origin;
-            go.transform.localScale = Vector3.one * 0.28f;
+            // Size is baked into the ArtLibrary skull PPU (~0.55 world units).
+            go.transform.localScale = Vector3.one;
 
             var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = ArtLibrary.GetBossFireBoltFrame(0);
-            sr.color = new Color(0.75f, 0.55f, 1f, 1f);
+            sr.sprite = ArtLibrary.GetRandomSkullProjectile();
+            sr.color = Color.white;
             sr.sortingOrder = 20;
             go.AddComponent<YSortRenderer>().Configure(12);
 
@@ -47,9 +47,6 @@ namespace ProjectZx.Combat
             proj._damage = Mathf.Max(1, damage);
             proj._renderer = sr;
             proj._player = GameObject.FindGameObjectWithTag("Player")?.transform;
-
-            var angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
-            go.transform.rotation = Quaternion.Euler(0f, 0f, angle);
         }
 
         void Update()
@@ -62,14 +59,8 @@ namespace ProjectZx.Combat
             }
 
             transform.position += (Vector3)(_velocity * Time.deltaTime);
-
-            _animTimer -= Time.deltaTime;
-            if (_animTimer <= 0f && _renderer != null)
-            {
-                _animTimer = 0.1f;
-                _frame++;
-                _renderer.sprite = ArtLibrary.GetBossFireBoltFrame(_frame);
-            }
+            // Gentle spin so skulls read as thrown projectiles without flight-angle skew.
+            transform.Rotate(0f, 0f, SpinDegreesPerSecond * Time.deltaTime);
 
             if (_hit || _player == null) return;
             if (Vector2.Distance(transform.position, _player.position) > HitRadius) return;

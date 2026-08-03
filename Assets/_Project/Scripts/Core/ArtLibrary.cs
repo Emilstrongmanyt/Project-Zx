@@ -92,6 +92,7 @@ namespace ProjectZx.Core
             _grassVariants = null;
             _campfire = null;
             _weaponSpriteCache.Clear();
+            _skullProjectiles = null;
             _arrow = null;
             _sparkles = null;
             _sparkles2 = null;
@@ -156,6 +157,7 @@ namespace ProjectZx.Core
         static Sprite[] _grassVariants;
         static Sprite _campfire;
         static readonly Dictionary<string, Sprite> _weaponSpriteCache = new();
+        static Sprite[] _skullProjectiles;
         static Sprite _arrow;
         static Sprite _sparkles;
         static Sprite _sparkles2;
@@ -280,6 +282,45 @@ namespace ProjectZx.Core
         /// Atan2 flight look permanently skewed.
         /// </summary>
         public static Sprite Arrow => _arrow ??= CreateHorizontalCombatArrow(1.29375f);
+
+        /// <summary>
+        /// Admurin skull projectiles for enemy/boss bolts (human → demon → titan sets).
+        /// Sized for combat readability (~0.55 world units).
+        /// </summary>
+        public static Sprite GetSkullProjectile(int index)
+        {
+            EnsureSkullProjectiles();
+            if (_skullProjectiles == null || _skullProjectiles.Length == 0)
+                return GetBossFireBoltFrame(index);
+            return _skullProjectiles[Mathf.Abs(index) % _skullProjectiles.Length];
+        }
+
+        public static Sprite GetRandomSkullProjectile() =>
+            GetSkullProjectile(Random.Range(0, 12));
+
+        static void EnsureSkullProjectiles()
+        {
+            if (_skullProjectiles != null) return;
+
+            // Prefer combat-scaled Resources copies; fall back to full Admurin path names.
+            var names = new[]
+            {
+                "skull_human", "skull_horned", "skull_demon", "skull_cyclops",
+                "skull_canine", "skull_aquatic", "skull_titan_orc", "skull_orc_horned",
+                "skull_orc_horned_b", "skull_titan_cyclops", "skull_titan_foureyed", "skull_titan_aquatic"
+            };
+
+            var list = new List<Sprite>(names.Length);
+            for (var i = 0; i < names.Length; i++)
+            {
+                // ~0.55 world units — readable without covering the player.
+                var sprite = LoadWeaponSprite(Admurin + names[i], new Vector2(0.5f, 0.5f), 0.55f)
+                             ?? LoadWeaponSprite(names[i], new Vector2(0.5f, 0.5f), 0.55f);
+                if (sprite != null) list.Add(sprite);
+            }
+
+            _skullProjectiles = list.Count > 0 ? list.ToArray() : System.Array.Empty<Sprite>();
+        }
         /// <summary>Magician weapon — material tier from Unlimited Survival unlocks.</summary>
         public static Sprite Staff => GetClassWeaponSprite(PlayerClass.Magician);
 

@@ -6,19 +6,20 @@ using UnityEngine;
 namespace ProjectZx.Combat
 {
     /// <summary>
-    /// Slow fire bolt from the Dungeon R40 BossB. No mid-flight tracking; dies after lifetime.
+    /// Slow skull bolt from the Dungeon R40 BossB. No mid-flight tracking; dies after lifetime.
     /// </summary>
     public class BossFireProjectile : MonoBehaviour
     {
         const float DefaultSpeed = 2.2f;
         const float DefaultLifetime = 5f;
-        const float HitRadius = 0.45f;
+        const float HitRadius = 0.5f;
+        const float SpinDegreesPerSecond = 140f;
+        /// <summary>Boss skulls are slightly larger than regular caster bolts.</summary>
+        const float BossSkullScale = 1.35f;
 
         Vector2 _velocity;
         float _life;
         int _damage;
-        float _animTimer;
-        int _frame;
         SpriteRenderer _renderer;
         Transform _player;
         bool _hit;
@@ -28,11 +29,12 @@ namespace ProjectZx.Combat
             var dir = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.left;
             var go = new GameObject("BossFireProjectile");
             go.transform.position = origin;
-            // FireBreath-based placeholder is large; keep bolt readable but not huge.
-            go.transform.localScale = Vector3.one * 0.35f;
+            go.transform.localScale = Vector3.one * BossSkullScale;
 
             var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = ArtLibrary.GetBossFireBoltFrame(0);
+            // Prefer the more menacing skulls (demon / titan) for boss bolts.
+            sr.sprite = ArtLibrary.GetSkullProjectile(2 + Random.Range(0, 4));
+            sr.color = Color.white;
             sr.sortingOrder = 20;
             go.AddComponent<YSortRenderer>().Configure(12);
 
@@ -42,9 +44,6 @@ namespace ProjectZx.Combat
             proj._damage = Mathf.Max(1, damage);
             proj._renderer = sr;
             proj._player = GameObject.FindGameObjectWithTag("Player")?.transform;
-
-            var angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
-            go.transform.rotation = Quaternion.Euler(0f, 0f, angle);
         }
 
         void Update()
@@ -57,14 +56,7 @@ namespace ProjectZx.Combat
             }
 
             transform.position += (Vector3)(_velocity * Time.deltaTime);
-
-            _animTimer -= Time.deltaTime;
-            if (_animTimer <= 0f && _renderer != null)
-            {
-                _animTimer = 0.1f;
-                _frame++;
-                _renderer.sprite = ArtLibrary.GetBossFireBoltFrame(_frame);
-            }
+            transform.Rotate(0f, 0f, -SpinDegreesPerSecond * Time.deltaTime);
 
             if (_hit || _player == null) return;
             if (Vector2.Distance(transform.position, _player.position) > HitRadius) return;

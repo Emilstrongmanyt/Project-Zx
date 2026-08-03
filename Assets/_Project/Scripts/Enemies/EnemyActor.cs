@@ -212,6 +212,13 @@ namespace ProjectZx.Enemies
                 _attack = Mathf.Max(1, _attack * 2);
             }
 
+            // Unlimited Survival bosses: 5× HP and damage (every 10th-round boss + R100).
+            if (isBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Unlimited)
+            {
+                _hp = Mathf.Max(1, _hp * 5);
+                _attack = Mathf.Max(1, _attack * 5);
+            }
+
             _rb = GetComponent<Rigidbody2D>();
             _renderer = GetComponent<SpriteRenderer>();
             _player = GameObject.FindGameObjectWithTag("Player")?.transform;

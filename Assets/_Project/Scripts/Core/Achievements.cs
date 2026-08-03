@@ -31,7 +31,18 @@ namespace ProjectZx.Core
         InsideArcher,
         TogetherAgain,
         DungeonClearer,
-        EndlessHorizon
+        EndlessHorizon,
+        // Weapon material tier unlocks (matches WeaponCatalog progression).
+        IronArsenal,
+        SteelArsenal,
+        CopperArsenal,
+        SilverArsenal,
+        GoldArsenal,
+        CobaltArsenal,
+        PlatinumArsenal,
+        AdamantineArsenal,
+        CrimsonArsenal,
+        FatefulArsenal
     }
 
     public readonly struct AchievementDef
@@ -79,7 +90,17 @@ namespace ProjectZx.Core
             new(AchievementId.InsideArcher, "Inside Archer", "Clear round 30 on Inside survival."),
             new(AchievementId.TogetherAgain, "Together Again", "Meet RowZi at the Outside round 20 door."),
             new(AchievementId.DungeonClearer, "Dungeon Clearer", "Defeat the Dungeon round 40 boss and enter the victory portal."),
-            new(AchievementId.EndlessHorizon, "Endless Horizon", "Unlock Unlimited Survival after clearing Dungeon.")
+            new(AchievementId.EndlessHorizon, "Endless Horizon", "Unlock Unlimited Survival after clearing Dungeon."),
+            new(AchievementId.IronArsenal, "Iron Arsenal", "Unlock Iron weapons (Dungeon Survival round 30)."),
+            new(AchievementId.SteelArsenal, "Steel Arsenal", "Unlock Steel weapons (Unlimited Survival round 20)."),
+            new(AchievementId.CopperArsenal, "Copper Arsenal", "Unlock Copper weapons (Unlimited Survival round 30)."),
+            new(AchievementId.SilverArsenal, "Silver Arsenal", "Unlock Silver weapons (Unlimited Survival round 40)."),
+            new(AchievementId.GoldArsenal, "Gold Arsenal", "Unlock Gold weapons (Unlimited Survival round 50)."),
+            new(AchievementId.CobaltArsenal, "Cobalt Arsenal", "Unlock Cobalt weapons (Unlimited Survival round 60)."),
+            new(AchievementId.PlatinumArsenal, "Platinum Arsenal", "Unlock Platinum weapons (Unlimited Survival round 70)."),
+            new(AchievementId.AdamantineArsenal, "Adamantine Arsenal", "Unlock Adamantine weapons (Unlimited Survival round 80)."),
+            new(AchievementId.CrimsonArsenal, "Crimson Arsenal", "Unlock Crimson weapons (Unlimited Survival round 90)."),
+            new(AchievementId.FatefulArsenal, "Fateful Arsenal", "Unlock Fateful weapons with AOE splash (Unlimited Survival round 100).")
         };
 
         static readonly int[] ZombieThresholds = { 25, 100, 500, 1000, 5000, 10000 };
@@ -198,6 +219,27 @@ namespace ProjectZx.Core
         public static void UnlockDungeonClearer() => TryUnlock(AchievementId.DungeonClearer);
 
         public static void UnlockEndlessHorizon() => TryUnlock(AchievementId.EndlessHorizon);
+
+        /// <summary>
+        /// Unlocks arsenal achievements for any weapon tier the player has already earned.
+        /// Safe to call repeatedly (TryUnlock is idempotent).
+        /// </summary>
+        public static void EvaluateWeaponTierAchievements()
+        {
+            if (WeaponCatalog.IsIronUnlocked())
+                TryUnlock(AchievementId.IronArsenal);
+
+            var unlimited = GameSave.UnlimitedHighestRoundReached;
+            if (unlimited >= 20) TryUnlock(AchievementId.SteelArsenal);
+            if (unlimited >= 30) TryUnlock(AchievementId.CopperArsenal);
+            if (unlimited >= 40) TryUnlock(AchievementId.SilverArsenal);
+            if (unlimited >= 50) TryUnlock(AchievementId.GoldArsenal);
+            if (unlimited >= 60) TryUnlock(AchievementId.CobaltArsenal);
+            if (unlimited >= 70) TryUnlock(AchievementId.PlatinumArsenal);
+            if (unlimited >= 80) TryUnlock(AchievementId.AdamantineArsenal);
+            if (unlimited >= 90) TryUnlock(AchievementId.CrimsonArsenal);
+            if (unlimited >= 100) TryUnlock(AchievementId.FatefulArsenal);
+        }
 
         public static string BuildPanelText()
         {

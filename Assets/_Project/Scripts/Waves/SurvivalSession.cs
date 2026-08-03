@@ -261,8 +261,8 @@ namespace ProjectZx.Waves
             if (MapKind == SurvivalMapKind.Dungeon)
             {
                 if (round < 12) return false;
-                // R12 ~12%, R25 ~32%, R40 ~48% (capped).
-                var chance = Mathf.Clamp(0.12f + (round - 12) * 0.015f, 0.12f, 0.48f);
+                // Half prior rates: R12 ~6%, R25 ~16%, R40 ~24% (capped).
+                var chance = Mathf.Clamp(0.06f + (round - 12) * 0.0075f, 0.06f, 0.24f);
                 return Random.value < chance;
             }
 
@@ -347,21 +347,30 @@ namespace ProjectZx.Waves
             if (MapKind == SurvivalMapKind.Dungeon)
             {
                 var previous = GameSave.DungeonHighestRoundReached;
-                if (!GameSave.RecordDungeonRound(round)) return;
-                var banner = WeaponCatalog.TryNotifyDungeonIronUnlock(previous, GameSave.DungeonHighestRoundReached);
-                if (!string.IsNullOrEmpty(banner))
-                    _hud?.ShowBanner(banner, 4.5f);
+                if (GameSave.RecordDungeonRound(round))
+                {
+                    var banner = WeaponCatalog.TryNotifyDungeonIronUnlock(
+                        previous, GameSave.DungeonHighestRoundReached);
+                    if (!string.IsNullOrEmpty(banner))
+                        _hud?.ShowBanner(banner, 4.5f);
+                }
+
+                Achievements.EvaluateWeaponTierAchievements();
                 return;
             }
 
             if (MapKind != SurvivalMapKind.Unlimited) return;
 
             var prevUnlimited = GameSave.UnlimitedHighestRoundReached;
-            if (!GameSave.RecordUnlimitedRound(round)) return;
-            var unlimitedBanner = WeaponCatalog.TryNotifyUnlimitedTierUnlock(
-                prevUnlimited, GameSave.UnlimitedHighestRoundReached);
-            if (!string.IsNullOrEmpty(unlimitedBanner))
-                _hud?.ShowBanner(unlimitedBanner, 4.5f);
+            if (GameSave.RecordUnlimitedRound(round))
+            {
+                var unlimitedBanner = WeaponCatalog.TryNotifyUnlimitedTierUnlock(
+                    prevUnlimited, GameSave.UnlimitedHighestRoundReached);
+                if (!string.IsNullOrEmpty(unlimitedBanner))
+                    _hud?.ShowBanner(unlimitedBanner, 4.5f);
+            }
+
+            Achievements.EvaluateWeaponTierAchievements();
         }
     }
 }
