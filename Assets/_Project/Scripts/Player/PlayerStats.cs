@@ -52,9 +52,9 @@ namespace ProjectZx.Player
         public float RunDamageMultiplier { get; private set; } = 1f;
         public float RunAttackSpeedMultiplier { get; private set; } = 1f;
         public float RunAttackRangeMultiplier { get; private set; } = 1f;
-        /// <summary>Permanent shop range × run talent range × weapon material tier.</summary>
+        /// <summary>Permanent shop range × run talent range (weapon materials do not add range).</summary>
         public float AttackRangeMultiplier =>
-            GameSave.AttackRangeMultiplier * RunAttackRangeMultiplier * WeaponCatalog.AttackRangeMultiplier();
+            GameSave.AttackRangeMultiplier * RunAttackRangeMultiplier;
         public float RunLootRangeMultiplier { get; private set; } = 1f;
         public float RunCritChance { get; private set; }
         public float RunCritMultiplier { get; private set; } = 1.5f;
@@ -758,6 +758,8 @@ namespace ProjectZx.Player
                     GameSave.RecordHighestRound(session.CurrentRound);
                     if (session.MapKind == SurvivalMapKind.Unlimited)
                         GameSave.RecordUnlimitedRound(session.CurrentRound);
+                    else if (session.MapKind == SurvivalMapKind.Dungeon)
+                        GameSave.RecordDungeonRound(session.CurrentRound);
                 }
             }
 

@@ -72,7 +72,7 @@ namespace ProjectZx.Waves
                         _roundActive = false;
                         _hud?.SetRoundComplete(CurrentRound);
                         GameSave.RecordHighestRound(CurrentRound);
-                        TryRecordUnlimitedWeaponProgress(CurrentRound);
+                        TryRecordWeaponProgress(CurrentRound);
                         TryUnlockBowman(CurrentRound);
                         TryUnlockMagician(CurrentRound);
 
@@ -190,7 +190,6 @@ namespace ProjectZx.Waves
             for (var wave = 0; wave < waveCount; wave++)
             {
                 var count = basePerWave + (wave < remainder ? 1 : 0) + waveBonus;
-                _hud?.ShowWaveIncoming(wave + 1, waveCount);
 
                 for (var i = 0; i < count; i++)
                 {
@@ -327,7 +326,7 @@ namespace ProjectZx.Waves
             if (stats != null && !stats.IsDead)
             {
                 GameSave.RecordHighestRound(CurrentRound);
-                TryRecordUnlimitedWeaponProgress(CurrentRound);
+                TryRecordWeaponProgress(CurrentRound);
                 stats.BankRunGoldToSave();
             }
 
@@ -339,18 +338,30 @@ namespace ProjectZx.Waves
         }
 
         /// <summary>
-        /// Tracks Unlimited depth for iron/steel weapon unlocks and shows a banner on first unlock.
+        /// Tracks Dungeon / Unlimited depth for weapon material unlocks and banners.
         /// </summary>
-        void TryRecordUnlimitedWeaponProgress(int round)
+        void TryRecordWeaponProgress(int round)
         {
-            if (MapKind != SurvivalMapKind.Unlimited || round <= 0) return;
+            if (round <= 0) return;
 
-            var previous = GameSave.UnlimitedHighestRoundReached;
+            if (MapKind == SurvivalMapKind.Dungeon)
+            {
+                var previous = GameSave.DungeonHighestRoundReached;
+                if (!GameSave.RecordDungeonRound(round)) return;
+                var banner = WeaponCatalog.TryNotifyDungeonIronUnlock(previous, GameSave.DungeonHighestRoundReached);
+                if (!string.IsNullOrEmpty(banner))
+                    _hud?.ShowBanner(banner, 4.5f);
+                return;
+            }
+
+            if (MapKind != SurvivalMapKind.Unlimited) return;
+
+            var prevUnlimited = GameSave.UnlimitedHighestRoundReached;
             if (!GameSave.RecordUnlimitedRound(round)) return;
-
-            var banner = WeaponCatalog.TryNotifyTierUnlock(previous, GameSave.UnlimitedHighestRoundReached);
-            if (!string.IsNullOrEmpty(banner))
-                _hud?.ShowBanner(banner, 4.5f);
+            var unlimitedBanner = WeaponCatalog.TryNotifyUnlimitedTierUnlock(
+                prevUnlimited, GameSave.UnlimitedHighestRoundReached);
+            if (!string.IsNullOrEmpty(unlimitedBanner))
+                _hud?.ShowBanner(unlimitedBanner, 4.5f);
         }
     }
 }

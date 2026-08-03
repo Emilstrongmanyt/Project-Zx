@@ -6,7 +6,8 @@ using UnityEngine;
 namespace ProjectZx.Combat
 {
     /// <summary>
-    /// Shared hit pipeline for crits, execute, boss hunter, lifesteal, frost tip, and flame enchant.
+    /// Shared hit pipeline for crits, execute, boss hunter, lifesteal, frost tip, flame enchant,
+    /// and Fateful weapon AOE splash.
     /// </summary>
     public static class CombatDamage
     {
@@ -35,6 +36,28 @@ namespace ProjectZx.Combat
             {
                 var echo = Mathf.Max(1, Mathf.RoundToInt(damage * 0.5f));
                 target.TakeDamage(echo);
+            }
+
+            // Fateful (Unlimited R100) weapons: splash damage to nearby enemies (no recursive splash).
+            if (WeaponCatalog.HasAoeSplash() && damage > 0)
+                ApplyAoeSplash(attacker, target, damage);
+        }
+
+        static void ApplyAoeSplash(PlayerStats attacker, EnemyActor primary, int primaryDamage)
+        {
+            var splash = Mathf.Max(1, Mathf.RoundToInt(primaryDamage * WeaponCatalog.AoeSplashDamageFraction));
+            var origin = primary.transform.position;
+            var radius = WeaponCatalog.AoeSplashRadius;
+            var radiusSq = radius * radius;
+
+            var enemies = Object.FindObjectsByType<EnemyActor>(FindObjectsSortMode.None);
+            for (var i = 0; i < enemies.Length; i++)
+            {
+                var enemy = enemies[i];
+                if (enemy == null || enemy == primary || !enemy.IsAlive) continue;
+                var delta = enemy.transform.position - origin;
+                if (delta.sqrMagnitude > radiusSq) continue;
+                enemy.TakeDamage(splash);
             }
         }
     }

@@ -26,6 +26,7 @@ namespace ProjectZx.World
             _used = true;
 
             GameSave.DungeonSurvivalCleared = true;
+            GameSave.RecordDungeonRound(40);
             GameSave.FlameEnchantUnlocked = true;
             GameSave.UnlimitedMapUnlocked = true;
             GameSave.SamuraiUnlocked = true;

@@ -1229,7 +1229,7 @@ namespace ProjectZx.UI
             var moveSpeed = 4.5f * GameSave.SpeedMultiplier;
             var maxHp = GameSave.MaxHp + EquipmentCatalog.CombinedBonusMaxHp();
             var movementLabel = GameSave.UsesJoystickMovement ? "Joystick" : "Tap / Hold";
-            var rangeMul = GameSave.AttackRangeMultiplier * WeaponCatalog.AttackRangeMultiplier();
+            var rangeMul = GameSave.AttackRangeMultiplier;
 
             var attackMode = GameSave.GetSelectedAttackMode(selected);
             var technique = AttackModeCatalog.GetLabel(attackMode, selected);
@@ -1274,7 +1274,9 @@ namespace ProjectZx.UI
                 $"Deaths: {GameSave.LifetimeDeaths}\n" +
                 $"Gold Earned: {GameSave.LifetimeGoldEarned}\n" +
                 $"Highest Round: {GameSave.HighestRoundReached}\n" +
-                $"Unlimited Best: {GameSave.UnlimitedHighestRoundReached} (Iron R{WeaponCatalog.IronUnlockUnlimitedRound}, Steel R{WeaponCatalog.SteelUnlockUnlimitedRound})";
+                $"Dungeon Best: {GameSave.DungeonHighestRoundReached}\n" +
+                $"Unlimited Best: {GameSave.UnlimitedHighestRoundReached}\n" +
+                $"Weapons: {WeaponCatalog.GetUnlockProgressSummary()}";
         }
 
         static string EquipName(EquipmentId id)

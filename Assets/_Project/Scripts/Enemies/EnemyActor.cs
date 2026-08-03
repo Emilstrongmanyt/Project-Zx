@@ -198,6 +198,20 @@ namespace ProjectZx.Enemies
             if (GameSessionContext.SurvivalMap == SurvivalMapKind.Inside)
                 _speed *= InsideMapSpeedScale;
 
+            // Inside Survival bosses: 1.5× HP and damage (including R30 stage boss).
+            if (isBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Inside)
+            {
+                _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * 1.5f));
+                _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * 1.5f));
+            }
+
+            // Dungeon Survival bosses: 2× HP and damage (including R40 stage boss).
+            if (isBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Dungeon)
+            {
+                _hp = Mathf.Max(1, _hp * 2);
+                _attack = Mathf.Max(1, _attack * 2);
+            }
+
             _rb = GetComponent<Rigidbody2D>();
             _renderer = GetComponent<SpriteRenderer>();
             _player = GameObject.FindGameObjectWithTag("Player")?.transform;

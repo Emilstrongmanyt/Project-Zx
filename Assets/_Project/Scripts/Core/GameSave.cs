@@ -51,6 +51,7 @@ namespace ProjectZx.Core
         const string GoldEarnedKey = "zx_lifetime_gold_earned";
         const string HighestRoundKey = "zx_highest_round";
         const string UnlimitedHighestRoundKey = "zx_unlimited_highest_round";
+        const string DungeonHighestRoundKey = "zx_dungeon_highest_round";
         const string OwnedEquipmentKey = "zx_owned_equipment";
         const string EquippedRingKey = "zx_equipped_ring";
         const string EquippedNecklaceKey = "zx_equipped_necklace";
@@ -567,11 +568,18 @@ namespace ProjectZx.Core
             set { PlayerPrefs.SetInt(HighestRoundKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
         }
 
-        /// <summary>Best Unlimited Survival round reached (drives weapon material unlocks).</summary>
+        /// <summary>Best Unlimited Survival round reached (drives Steel+ weapon unlocks).</summary>
         public static int UnlimitedHighestRoundReached
         {
             get => PlayerPrefs.GetInt(UnlimitedHighestRoundKey, 0);
             set { PlayerPrefs.SetInt(UnlimitedHighestRoundKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
+        }
+
+        /// <summary>Best Dungeon Survival round reached (Iron weapons at R30).</summary>
+        public static int DungeonHighestRoundReached
+        {
+            get => PlayerPrefs.GetInt(DungeonHighestRoundKey, 0);
+            set { PlayerPrefs.SetInt(DungeonHighestRoundKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
         }
 
         public static void RecordEnemyKill(bool isBoss)
@@ -601,6 +609,16 @@ namespace ProjectZx.Core
         {
             if (round <= UnlimitedHighestRoundReached) return false;
             UnlimitedHighestRoundReached = round;
+            return true;
+        }
+
+        /// <summary>
+        /// Records Dungeon Survival depth. Returns true if a new personal best was set.
+        /// </summary>
+        public static bool RecordDungeonRound(int round)
+        {
+            if (round <= DungeonHighestRoundReached) return false;
+            DungeonHighestRoundReached = round;
             return true;
         }
 
