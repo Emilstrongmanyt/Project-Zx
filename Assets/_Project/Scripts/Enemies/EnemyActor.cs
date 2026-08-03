@@ -16,11 +16,12 @@ namespace ProjectZx.Enemies
         const float FireBreathDuration = 3f;
         const float FireBreathCooldown = 12f;
         const float FireBreathTick = 0.45f;
-        const float FireBreathScale = 3f;
-        /// <summary>Distance from boss center to the breath mouth along the aim direction.</summary>
-        const float FireBreathMouthOffset = 0.95f;
-        /// <summary>Slight vertical bias so breath leaves near the boss head.</summary>
-        const float FireBreathMouthBiasY = 0.35f;
+        /// <summary>World-space breath size (independent of huge boss transform scale).</summary>
+        const float FireBreathWorldScale = 1.05f;
+        /// <summary>World distance from boss center to the breath mouth along the aim direction.</summary>
+        const float FireBreathMouthWorldOffset = 1.15f;
+        /// <summary>Slight vertical bias so breath leaves near the boss head (world units).</summary>
+        const float FireBreathMouthBiasWorldY = 0.45f;
         const int FireBreathSortOffset = 40;
         const float FireBreathHitPadding = 0.9f;
         /// <summary>Cosine of half-angle for breath damage cone (~55° half-angle).</summary>
@@ -53,6 +54,7 @@ namespace ProjectZx.Enemies
         const float RangedProjectileLifetime = 3.2f;
         const float RangedProjectileSpeed = 5.5f;
         const float RangedAttackAnimSeconds = 0.45f;
+        const float MeleeAttackAnimSeconds = 0.5f;
         const float BaseContactRange = 0.75f;
         const float IgniteDuration = 3f;
         const int IgniteTickCount = 3;
@@ -108,6 +110,7 @@ namespace ProjectZx.Enemies
         float _bossProjectileCooldown;
         float _rangedProjectileCooldown;
         float _rangedAttackAnimTimer;
+        float _meleeAttackAnimTimer;
         float _contactRange = BaseContactRange;
         int _igniteTicksRemaining;
         float _igniteTickTimer;
@@ -220,12 +223,16 @@ namespace ProjectZx.Enemies
 
             _attack = Mathf.Max(1, _attack * 2);
 
-            // Contact range tracks world collider size after the 4× enemy scale.
+            // Melee touch range follows the body-sized world collider (not full sprite extent).
             var col = GetComponent<CircleCollider2D>();
             if (col != null)
             {
                 var worldRadius = col.radius * Mathf.Abs(transform.lossyScale.x);
-                _contactRange = Mathf.Max(BaseContactRange, worldRadius + 0.2f);
+                _contactRange = Mathf.Max(BaseContactRange, worldRadius + 0.25f);
+            }
+            else
+            {
+                _contactRange = IsBoss ? 1.2f : BaseContactRange;
             }
 
             _canSprint = !isBoss && !IsRanged && round >= 10;
@@ -391,10 +398,13 @@ namespace ProjectZx.Enemies
 
             _fireBreathAim = GetFireBreathAim(target);
 
-            var mouth = _fireBreathAim * FireBreathMouthOffset
-                        + new Vector2(0f, FireBreathMouthBiasY);
+            // Boss transform is huge; convert world mouth offset / breath size into local space.
+            var parentScale = Mathf.Max(0.001f, Mathf.Abs(transform.lossyScale.x));
+            var inv = 1f / parentScale;
+            var mouth = (_fireBreathAim * FireBreathMouthWorldOffset
+                         + new Vector2(0f, FireBreathMouthBiasWorldY)) * inv;
             _fireBreathFx.transform.localPosition = new Vector3(mouth.x, mouth.y, 0f);
-            _fireBreathFx.transform.localScale = Vector3.one * FireBreathScale;
+            _fireBreathFx.transform.localScale = Vector3.one * (FireBreathWorldScale * inv);
 
             // Unity 2D: 0° = +X. Authored tip points left (-X), so add 180° to aim at the player.
             var angle = Mathf.Atan2(_fireBreathAim.y, _fireBreathAim.x) * Mathf.Rad2Deg + 180f;
@@ -423,8 +433,8 @@ namespace ProjectZx.Enemies
                 return;
             }
 
-            // Hold still while casting a ranged bolt.
-            if (IsRanged && _rangedAttackAnimTimer > 0f)
+            // Hold still while casting a ranged bolt or swinging in melee.
+            if ((IsRanged && _rangedAttackAnimTimer > 0f) || _meleeAttackAnimTimer > 0f)
             {
                 _rb.linearVelocity = Vector2.zero;
                 UpdateFacingToward(_player.position);
@@ -582,6 +592,8 @@ namespace ProjectZx.Enemies
             _fireBreathCooldown -= Time.deltaTime;
             if (_rangedAttackAnimTimer > 0f)
                 _rangedAttackAnimTimer -= Time.deltaTime;
+            if (_meleeAttackAnimTimer > 0f)
+                _meleeAttackAnimTimer -= Time.deltaTime;
 
             if (IsRoundFortyBoss)
                 UpdateBossProjectiles();
@@ -601,6 +613,8 @@ namespace ProjectZx.Enemies
             var stats = _player.GetComponent<PlayerStats>();
             if (stats == null || stats.IsDead) return;
 
+            // Melee touch: play attack anim and apply contact damage.
+            BeginMeleeAttackAnim();
             stats.TakeDamage(_attack);
             HitFlash.FlashSprite(gameObject);
             HitFlash.FlashSprite(_player.gameObject);
@@ -672,9 +686,11 @@ namespace ProjectZx.Enemies
         {
             if (_renderer == null || _hitSpriteTimer > 0f) return;
 
-            // Fire breath / wind-up / ranged cast: cycle attack frames.
+            // Fire breath / wind-up / ranged cast / melee swing: cycle attack frames.
             if (_fireBreathing
                 || _rangedAttackAnimTimer > 0f
+                || _meleeAttackAnimTimer > 0f
+                || IsInMeleeAttackPoseRange()
                 || (IsBoss && !_fireBreathing && IsInBossAttackPoseRange()))
             {
                 AdvanceAnimFrames(_attackFrames, ref _bodyAnimFrame, ref _bodyAnimTimer);
@@ -697,6 +713,23 @@ namespace ProjectZx.Enemies
                 _renderer.sprite = frames[Mathf.Clamp(_bodyAnimFrame, 0, frames.Length - 1)];
             else if (_idleSprite != null)
                 _renderer.sprite = _idleSprite;
+        }
+
+        void BeginMeleeAttackAnim()
+        {
+            _meleeAttackAnimTimer = MeleeAttackAnimSeconds;
+            _bodyAnimFrame = 0;
+            _bodyAnimTimer = 0f;
+        }
+
+        /// <summary>Near / in touch range — play attack loop (melee grunts + Lord contact).</summary>
+        bool IsInMeleeAttackPoseRange()
+        {
+            if (_player == null || _fireBreathing) return false;
+            // Bosses use fire-breath wind-up pose; R40 Lord still swings when in contact.
+            if (IsBoss && !IsRoundFortyBoss) return false;
+            var dist = Vector2.Distance(transform.position, _player.position);
+            return dist <= _contactRange * 1.15f;
         }
 
         bool IsInBossAttackPoseRange()

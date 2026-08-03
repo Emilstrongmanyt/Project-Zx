@@ -595,8 +595,11 @@ namespace ProjectZx.Core
             // No solid enemy-enemy contacts — swarms must stack so every zombie can reach the player.
             rb.useFullKinematicContacts = false;
 
+            // Visual scale is large; keep WORLD hitboxes body-sized (local radius = world / scale).
+            var worldHitRadius = isStageBoss ? 1.35f : isBoss ? 0.95f : 0.55f;
             var col = go.AddComponent<CircleCollider2D>();
-            col.radius = isStageBoss ? 1.1f : isBoss ? 0.7f : 0.4f;
+            col.radius = worldHitRadius / Mathf.Max(0.001f, scale);
+            col.offset = new Vector2(0f, 0.05f);
             col.isTrigger = true;
 
             go.AddComponent<HitFlash>();
