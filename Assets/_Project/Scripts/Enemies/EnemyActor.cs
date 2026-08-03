@@ -46,6 +46,14 @@ namespace ProjectZx.Enemies
         const float BossProjectileInterval = 1.5f;
         const float BossProjectileLifetime = 5f;
         const float BossProjectileSpeed = 2.2f;
+        const float RangedPreferredMin = 4.2f;
+        const float RangedPreferredMax = 7.5f;
+        const float RangedShootRange = 9f;
+        const float RangedProjectileInterval = 2.1f;
+        const float RangedProjectileLifetime = 3.2f;
+        const float RangedProjectileSpeed = 5.5f;
+        const float RangedAttackAnimSeconds = 0.45f;
+        const float BaseContactRange = 0.75f;
         const float IgniteDuration = 3f;
         const int IgniteTickCount = 3;
         const int BleedTickCount = 2;
@@ -54,6 +62,7 @@ namespace ProjectZx.Enemies
 
         public bool IsAlive { get; private set; } = true;
         public bool IsBoss { get; private set; }
+        public bool IsRanged { get; private set; }
         public bool IsRoundTwentyBoss { get; private set; }
         public bool IsRoundThirtyBoss { get; private set; }
         public bool IsRoundFortyBoss { get; private set; }
@@ -97,6 +106,9 @@ namespace ProjectZx.Enemies
         float _sprintTimer;
         float _sprintCooldown;
         float _bossProjectileCooldown;
+        float _rangedProjectileCooldown;
+        float _rangedAttackAnimTimer;
+        float _contactRange = BaseContactRange;
         int _igniteTicksRemaining;
         float _igniteTickTimer;
         int _igniteDamageRemaining;
@@ -113,10 +125,12 @@ namespace ProjectZx.Enemies
             bool isRoundTwentyBoss = false,
             EnemyZombieKind zombieKind = EnemyZombieKind.Outside,
             bool isRoundThirtyBoss = false,
-            bool isRoundFortyBoss = false)
+            bool isRoundFortyBoss = false,
+            bool isRanged = false)
         {
             _round = round;
             IsBoss = isBoss;
+            IsRanged = isRanged && !isBoss;
             IsRoundTwentyBoss = isRoundTwentyBoss;
             IsRoundThirtyBoss = isRoundThirtyBoss;
             IsRoundFortyBoss = isRoundFortyBoss;
@@ -180,7 +194,7 @@ namespace ProjectZx.Enemies
             _renderer = GetComponent<SpriteRenderer>();
             _player = GameObject.FindGameObjectWithTag("Player")?.transform;
             _maxHp = Mathf.Max(1, _hp);
-            ApplySprites(isBoss, isRoundTwentyBoss || isRoundThirtyBoss || isRoundFortyBoss, zombieKind);
+            ApplySprites(isBoss, isRoundTwentyBoss || isRoundThirtyBoss || isRoundFortyBoss, zombieKind, IsRanged);
 
             if (_renderer != null)
             {
@@ -195,9 +209,26 @@ namespace ProjectZx.Enemies
             if (isRoundFortyBoss)
                 _bossProjectileCooldown = BossProjectileInterval * 0.5f;
 
+            if (IsRanged)
+            {
+                // Slightly squishier casters that hang back and shoot.
+                _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * 0.85f));
+                _maxHp = Mathf.Max(1, _hp);
+                _speed *= 0.9f;
+                _rangedProjectileCooldown = Random.Range(0.4f, RangedProjectileInterval * 0.6f);
+            }
+
             _attack = Mathf.Max(1, _attack * 2);
 
-            _canSprint = !isBoss && round >= 10;
+            // Contact range tracks world collider size after the 4× enemy scale.
+            var col = GetComponent<CircleCollider2D>();
+            if (col != null)
+            {
+                var worldRadius = col.radius * Mathf.Abs(transform.lossyScale.x);
+                _contactRange = Mathf.Max(BaseContactRange, worldRadius + 0.2f);
+            }
+
+            _canSprint = !isBoss && !IsRanged && round >= 10;
             _sprintCooldown = Random.Range(2f, SprintCooldown);
         }
 
@@ -247,7 +278,7 @@ namespace ProjectZx.Enemies
 
         public void ApplyChill(float duration = ChillDuration) => ApplyFreeze(duration);
 
-        void ApplySprites(bool isBoss, bool isRoundTwentyBoss, EnemyZombieKind zombieKind)
+        void ApplySprites(bool isBoss, bool isRoundTwentyBoss, EnemyZombieKind zombieKind, bool isRanged = false)
         {
             if (IsRoundFortyBoss)
             {
@@ -263,8 +294,11 @@ namespace ProjectZx.Enemies
                 return;
             }
 
-            // Regular enemies → Demon packs by map tier.
-            ApplyAnimSet(ArtLibrary.GetEnemyAnimSet(zombieKind));
+            // Ranged casters prefer warlock/bat/wing packs; melee use map-tier demons.
+            if (isRanged)
+                ApplyAnimSet(ArtLibrary.GetRangedEnemyAnimSet());
+            else
+                ApplyAnimSet(ArtLibrary.GetEnemyAnimSet(zombieKind));
         }
 
         void ApplyAnimSet(MonsterAnimSet set)
@@ -389,7 +423,14 @@ namespace ProjectZx.Enemies
                 return;
             }
 
-            // Path straight at the player — no enemy-enemy separation so packs can stack and all hit.
+            // Hold still while casting a ranged bolt.
+            if (IsRanged && _rangedAttackAnimTimer > 0f)
+            {
+                _rb.linearVelocity = Vector2.zero;
+                UpdateFacingToward(_player.position);
+                return;
+            }
+
             var toPlayer = (Vector2)_player.position - (Vector2)transform.position;
             if (toPlayer.sqrMagnitude < 0.0001f)
             {
@@ -397,7 +438,28 @@ namespace ProjectZx.Enemies
                 return;
             }
 
-            var dir = toPlayer.normalized;
+            var dist = toPlayer.magnitude;
+            Vector2 dir;
+            if (IsRanged)
+            {
+                // Kite: close if too far, back off if too close, hold preferred band.
+                if (dist > RangedPreferredMax)
+                    dir = toPlayer.normalized;
+                else if (dist < RangedPreferredMin)
+                    dir = -toPlayer.normalized;
+                else
+                {
+                    _rb.linearVelocity = Vector2.zero;
+                    UpdateFacingToward(_player.position);
+                    return;
+                }
+            }
+            else
+            {
+                // Path straight at the player — packs stack so every melee can hit.
+                dir = toPlayer.normalized;
+            }
+
             MoveByDelta(dir * (GetMoveSpeed() * Time.fixedDeltaTime));
             UpdateFacingToward(_player.position);
         }
@@ -518,6 +580,8 @@ namespace ProjectZx.Enemies
             UpdateBossBPhase();
             _contactCooldown -= Time.deltaTime;
             _fireBreathCooldown -= Time.deltaTime;
+            if (_rangedAttackAnimTimer > 0f)
+                _rangedAttackAnimTimer -= Time.deltaTime;
 
             if (IsRoundFortyBoss)
                 UpdateBossProjectiles();
@@ -526,9 +590,13 @@ namespace ProjectZx.Enemies
                 UpdateFireBreath();
                 if (_fireBreathing) return;
             }
+            else if (IsRanged)
+            {
+                UpdateRangedAttack();
+            }
 
             if (_contactCooldown > 0f) return;
-            if (Vector2.Distance(transform.position, _player.position) > 0.75f) return;
+            if (Vector2.Distance(transform.position, _player.position) > _contactRange) return;
 
             var stats = _player.GetComponent<PlayerStats>();
             if (stats == null || stats.IsDead) return;
@@ -604,8 +672,10 @@ namespace ProjectZx.Enemies
         {
             if (_renderer == null || _hitSpriteTimer > 0f) return;
 
-            // Fire breath / wind-up: cycle attack frames.
-            if (_fireBreathing || (IsBoss && !_fireBreathing && IsInBossAttackPoseRange()))
+            // Fire breath / wind-up / ranged cast: cycle attack frames.
+            if (_fireBreathing
+                || _rangedAttackAnimTimer > 0f
+                || (IsBoss && !_fireBreathing && IsInBossAttackPoseRange()))
             {
                 AdvanceAnimFrames(_attackFrames, ref _bodyAnimFrame, ref _bodyAnimTimer);
                 if (_attackFrames.Length > 0)
@@ -825,6 +895,34 @@ namespace ProjectZx.Enemies
             var hand = (Vector2)transform.position + new Vector2(leading * 0.85f, 0.45f);
             var damage = Mathf.Max(1, Mathf.RoundToInt(_attack * 0.5f));
             BossFireProjectile.Spawn(hand, aim, damage, BossProjectileSpeed, BossProjectileLifetime);
+        }
+
+        void UpdateRangedAttack()
+        {
+            if (!IsAlive || _player == null) return;
+            UpdateFacingToward(_player.position);
+
+            _rangedProjectileCooldown -= Time.deltaTime;
+            if (_rangedProjectileCooldown > 0f) return;
+
+            var dist = Vector2.Distance(transform.position, _player.position);
+            if (dist > RangedShootRange || dist < 0.6f) return;
+
+            _rangedProjectileCooldown = RangedProjectileInterval + Random.Range(-0.25f, 0.35f);
+            _rangedAttackAnimTimer = RangedAttackAnimSeconds;
+            _bodyAnimFrame = 0;
+            _bodyAnimTimer = 0f;
+
+            var aim = (Vector2)(_player.position - transform.position);
+            if (aim.sqrMagnitude < 0.0001f)
+                aim = _renderer != null && _renderer.flipX ? Vector2.right : Vector2.left;
+
+            var leading = _renderer != null && _renderer.flipX ? -1f : 1f;
+            // Hand offset scales with large demon footprint so bolts leave the sprite, not the center.
+            var handScale = Mathf.Max(1f, Mathf.Abs(transform.lossyScale.x) * 0.22f);
+            var hand = (Vector2)transform.position + new Vector2(leading * 0.55f * handScale, 0.35f * handScale);
+            var damage = Mathf.Max(1, Mathf.RoundToInt(_attack * 0.65f));
+            EnemyRangedProjectile.Spawn(hand, aim, damage, RangedProjectileSpeed, RangedProjectileLifetime);
         }
 
         void ShowHitSprite()

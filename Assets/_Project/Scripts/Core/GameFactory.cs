@@ -554,13 +554,21 @@ namespace ProjectZx.Core
             bool isRoundTwentyBoss = false,
             EnemyZombieKind zombieKind = EnemyZombieKind.Outside,
             bool isRoundThirtyBoss = false,
-            bool isRoundFortyBoss = false)
+            bool isRoundFortyBoss = false,
+            bool isRanged = false)
         {
             Sprite sprite;
             if (isRoundFortyBoss)
                 sprite = ArtLibrary.GetLordBossAnimSet(highPhase: true).Idle ?? ArtLibrary.BossB;
             else if (isBoss)
                 sprite = ArtLibrary.GetGolemBossAnimSet().Idle ?? ArtLibrary.Boss;
+            else if (isRanged)
+            {
+                var set = ArtLibrary.GetRangedEnemyAnimSet();
+                sprite = set.Idle;
+                if (sprite == null)
+                    ArtLibrary.GetZombieSprites(zombieKind, out sprite, out _);
+            }
             else
             {
                 var set = ArtLibrary.GetEnemyAnimSet(zombieKind);
@@ -570,12 +578,12 @@ namespace ProjectZx.Core
             }
 
             var isStageBoss = isRoundTwentyBoss || isRoundThirtyBoss || isRoundFortyBoss;
-            // Sanctum 96–128px sprites: keep previous on-screen footprint.
-            var scale = (isBoss ? 0.55f : 0.32f * 2.5f) * 1.5f;
+            // Sanctum 96–128px sprites: previous footprint ×4 so demons read at combat scale.
+            var scale = (isBoss ? 0.55f : 0.32f * 2.5f) * 1.5f * 4f;
             if (isBoss) scale *= 1.5f;
             // Outside R20, Inside R30, and Dungeon R40 stage bosses share the same large scale.
             if (isStageBoss) scale *= 2.5f;
-            var go = CreateSprite(isBoss ? "Boss" : "Demon", sprite, position, scale, 0);
+            var go = CreateSprite(isBoss ? "Boss" : isRanged ? "RangedDemon" : "Demon", sprite, position, scale, 0);
             go.tag = "Enemy";
             go.AddComponent<YSortRenderer>();
 
@@ -593,7 +601,7 @@ namespace ProjectZx.Core
 
             go.AddComponent<HitFlash>();
             var enemy = go.AddComponent<EnemyActor>();
-            enemy.Initialize(round, isBoss, isRoundTwentyBoss, zombieKind, isRoundThirtyBoss, isRoundFortyBoss);
+            enemy.Initialize(round, isBoss, isRoundTwentyBoss, zombieKind, isRoundThirtyBoss, isRoundFortyBoss, isRanged);
             return go;
         }
 

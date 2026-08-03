@@ -230,9 +230,43 @@ namespace ProjectZx.Waves
             var origin = _player != null ? (Vector2)_player.position : Vector2.zero;
             var spawnPos = ArenaBounds.RandomSpawnAround(origin, 7f, 12f);
             var zombieKind = ResolveZombieKind(round);
+            var ranged = !boss && ShouldSpawnRanged(round);
 
-            GameFactory.CreateEnemy(spawnPos, round, boss, roundTwentyBoss, zombieKind, roundThirtyBoss, roundFortyBoss);
+            GameFactory.CreateEnemy(
+                spawnPos,
+                round,
+                boss,
+                roundTwentyBoss,
+                zombieKind,
+                roundThirtyBoss,
+                roundFortyBoss,
+                isRanged: ranged);
             EnemiesRemaining++;
+        }
+
+        /// <summary>
+        /// Late Dungeon + Unlimited: mix in warlock/bat casters that fire projectiles.
+        /// Chance ramps with round so early dungeon stays melee-heavy.
+        /// </summary>
+        bool ShouldSpawnRanged(int round)
+        {
+            if (MapKind == SurvivalMapKind.Dungeon)
+            {
+                if (round < 12) return false;
+                // R12 ~12%, R25 ~32%, R40 ~48% (capped).
+                var chance = Mathf.Clamp(0.12f + (round - 12) * 0.015f, 0.12f, 0.48f);
+                return Random.value < chance;
+            }
+
+            if (MapKind == SurvivalMapKind.Unlimited)
+            {
+                if (round < 20) return false;
+                // R20 ~15%, R50 ~36%, R80+ ~50%.
+                var chance = Mathf.Clamp(0.15f + (round - 20) * 0.007f, 0.15f, 0.5f);
+                return Random.value < chance;
+            }
+
+            return false;
         }
 
         EnemyZombieKind ResolveZombieKind(int round)

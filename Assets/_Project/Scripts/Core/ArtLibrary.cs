@@ -59,6 +59,11 @@ namespace ProjectZx.Core
         static readonly string[] GolemBossSets = { "boss/golem_1", "boss/golem_2", "boss/golem_3" };
         static readonly string[] LordBossHighSets = { "boss/lord_1", "boss/lord_3" };
         static readonly string[] LordBossLowSets = { "boss/lord_5", "boss/lord_3" };
+        /// <summary>Caster / flier packs used for ranged projectile enemies.</summary>
+        static readonly string[] RangedDemonSets =
+        {
+            "inside/warlock_1", "inside/demon_bat_1", "elite/demon_wing_1"
+        };
 
         static readonly Dictionary<string, MonsterAnimSet> MonsterSetCache = new();
 
@@ -276,9 +281,10 @@ namespace ProjectZx.Core
             LoadWeaponSprite(Admurin + "weapon_katana", new Vector2(0.1f, 0.5f), 3.75f)
             ?? LoadWeaponSprite("Sword", new Vector2(0.1f, 0.5f), 3.75f)
             ?? CreateKatanaSprite();
-        /// <summary>Bowman weapon — Admurin Wooden_Weapon15, combat-scaled.</summary>
+        /// <summary>Bowman weapon — Admurin Wooden_Weapon15, combat-scaled (X-flipped for grip orientation).</summary>
         public static Sprite Bow => _bow ??=
-            LoadWeaponSprite(Admurin + "weapon_bow", new Vector2(0.35f, 0.5f), 2.85f) ?? LoadOrCreateBow();
+            LoadWeaponSprite(Admurin + "weapon_bow", new Vector2(0.35f, 0.5f), 2.85f, flipHorizontal: true)
+            ?? LoadOrCreateBow();
         public static Sprite Arrow => _arrow ??=
             LoadWeaponSprite(Admurin + "arrow", new Vector2(0.08f, 0.5f), 1.725f)
             ?? LoadWeaponSprite("Arrow", new Vector2(0.08f, 0.5f), 1.725f)
@@ -650,6 +656,10 @@ namespace ProjectZx.Core
             return LoadRandomMonsterSet(pool);
         }
 
+        /// <summary>Warlock / bat / wing packs for late-map ranged enemies.</summary>
+        public static MonsterAnimSet GetRangedEnemyAnimSet() =>
+            LoadRandomMonsterSet(RangedDemonSets);
+
         /// <summary>Golem boss set (Outside R20 / Inside R30 / regular bosses).</summary>
         public static MonsterAnimSet GetGolemBossAnimSet() =>
             LoadRandomMonsterSet(GolemBossSets);
@@ -924,10 +934,9 @@ namespace ProjectZx.Core
         /// <summary>
         /// Loads a held weapon sprite and rebuilds it at a combat-readable world length.
         /// Uploaded 16×16 art at 100 PPU is only ~0.16 units — effectively invisible on the hero.
-        /// Admurin singles face the wrong way for combat (tip should extend +X from the grip pivot),
-        /// so they are flipped horizontally by default.
+        /// Optional horizontal flip (bow only) when grip/tip orientation needs correction.
         /// </summary>
-        static Sprite LoadWeaponSprite(string resourceName, Vector2 pivot, float worldLength, bool flipHorizontal = true)
+        static Sprite LoadWeaponSprite(string resourceName, Vector2 pivot, float worldLength, bool flipHorizontal = false)
         {
             if (string.IsNullOrEmpty(resourceName) || worldLength < 0.05f) return null;
 
