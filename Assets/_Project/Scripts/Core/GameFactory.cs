@@ -586,6 +586,9 @@ namespace ProjectZx.Core
             // R10 / R20 decade bosses were reading too small after the 4× pass.
             if (isBoss && (round == 10 || round == 20))
                 scale *= 1.7f;
+            // Outside survival R20 stage boss was still ~2× too large in TestFlight.
+            if (isRoundTwentyBoss)
+                scale *= 0.5f;
             var go = CreateSprite(isBoss ? "Boss" : isRanged ? "RangedDemon" : "Demon", sprite, position, scale, 0);
             go.tag = "Enemy";
             go.AddComponent<YSortRenderer>();

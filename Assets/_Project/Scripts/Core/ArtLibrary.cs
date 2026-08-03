@@ -339,13 +339,11 @@ namespace ProjectZx.Core
             variants == null ? 0 : System.Array.FindAll(variants, sprite => sprite != null).Length;
 
         /// <summary>
-        /// Classic RollZy movement cycle only: idle=0, walkA=1, walkB=2.
-        /// Frames 3–7 on the 8-frame sheets are arm / attack poses — never use them for walking.
-        /// RowZi_new matches this same layout, so both heroes share these indices.
+        /// Neutral body pose only (sheet frame 0). Frames 1–7 raise/extend arms with tools —
+        /// never use those for idle or movement (matches classic RollZy handling: Idle + WalkA/B
+        /// slots only, with WalkA identical to idle).
         /// </summary>
-        const int HeroIdleFrame = 0;
-        const int HeroWalkAFrame = 1;
-        const int HeroWalkBFrame = 2;
+        const int HeroNeutralFrame = 0;
 
         public static HeroSpriteSet GetHeroSprites(PlayableHero hero)
         {
@@ -354,8 +352,7 @@ namespace ProjectZx.Core
                 _rowZiSprites ??= LoadOrderedHeroSheet("RowZi_new")
                                   ?? LoadOrderedHeroSheet("RowZi")
                                   ?? LoadHeroSheetSprites("RowZi", 8);
-                // Same walk frames as classic RollZy (not old RowZi 0/2/3 arm poses).
-                return BuildHeroSet(_rowZiSprites, facesRightByDefault: true);
+                return BuildHeroMovementSet(_rowZiSprites, facesRightByDefault: true);
             }
 
             // Upgraded RollZy after clearing Dungeon survival (Dungeon Clearer achievement path).
@@ -365,15 +362,19 @@ namespace ProjectZx.Core
                                            ?? LoadHeroSheetSprites("RollZy_two", 8);
                 if (_rollZyUpgradedSprites != null && _rollZyUpgradedSprites.Length > 0
                     && _rollZyUpgradedSprites[0] != null)
-                    return BuildHeroSet(_rollZyUpgradedSprites, facesRightByDefault: true);
+                    return BuildHeroMovementSet(_rollZyUpgradedSprites, facesRightByDefault: true);
             }
 
             _rollZySprites ??= LoadOrderedHeroSheet("RollZy")
                                ?? LoadHeroSheetSprites("RollZy", 8);
-            return BuildHeroSet(_rollZySprites, facesRightByDefault: true);
+            return BuildHeroMovementSet(_rollZySprites, facesRightByDefault: true);
         }
 
-        static HeroSpriteSet BuildHeroSet(Sprite[] frames, bool facesRightByDefault)
+        /// <summary>
+        /// Classic RollZy method: only Idle + WalkA + WalkB. WalkA is the same sprite as idle;
+        /// WalkB is the same neutral pose (no arm-up / arm-out frames from the 8-frame sheet).
+        /// </summary>
+        static HeroSpriteSet BuildHeroMovementSet(Sprite[] frames, bool facesRightByDefault)
         {
             Sprite Frame(int i)
             {
@@ -382,11 +383,12 @@ namespace ProjectZx.Core
                 return frames[0];
             }
 
+            var neutral = Frame(HeroNeutralFrame);
             return new HeroSpriteSet
             {
-                Idle = Frame(HeroIdleFrame),
-                WalkA = Frame(HeroWalkAFrame) ?? Frame(HeroIdleFrame),
-                WalkB = Frame(HeroWalkBFrame) ?? Frame(HeroWalkAFrame) ?? Frame(HeroIdleFrame),
+                Idle = neutral,
+                WalkA = neutral,
+                WalkB = neutral,
                 FacesRightByDefault = facesRightByDefault
             };
         }
