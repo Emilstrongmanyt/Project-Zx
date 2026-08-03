@@ -118,13 +118,18 @@ namespace ProjectZx.Combat
 
         Vector3 GetArrowSpawnPoint(EnemyActor target)
         {
-            // Chest height, offset toward the target on X only (keeps flight level).
+            // Chest height, slight offset toward the enemy (full aim direction).
             var chest = transform.position + new Vector3(0f, 0.12f, 0f);
             if (target == null)
                 return chest + new Vector3(_drawFacingRight ? 0.4f : -0.4f, 0f, 0f);
 
-            var side = target.transform.position.x >= transform.position.x ? 1f : -1f;
-            return chest + new Vector3(side * 0.4f, 0f, 0f);
+            var aim = target.transform.position + Vector3.up * 0.28f;
+            var dir = aim - chest;
+            if (dir.sqrMagnitude < 0.01f)
+                dir = new Vector3(_drawFacingRight ? 1f : -1f, 0f, 0f);
+            else
+                dir.Normalize();
+            return chest + dir * 0.4f;
         }
 
         void UpdateDrawAnimation()

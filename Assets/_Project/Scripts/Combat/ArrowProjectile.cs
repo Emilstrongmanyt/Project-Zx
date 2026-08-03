@@ -7,15 +7,18 @@ using UnityEngine;
 namespace ProjectZx.Combat
 {
     /// <summary>
-    /// Straight-line bowman arrow. Sprite is horizontal tip-on-+X; rotation follows velocity only.
+    /// Straight-line bowman arrow (no mid-air homing). Horizontal tip-+X art; rotation
+    /// follows velocity so slight aim angles look natural rather than permanently diagonal.
     /// </summary>
     public class ArrowProjectile : MonoBehaviour
     {
         const float DefaultSpeed = 16f;
         const float MaxLifetime = 1.6f;
-        const float HitDistance = 0.45f;
+        /// <summary>Generous enough for scaled sanctum demons; aim point is torso, not feet.</summary>
+        const float HitDistance = 0.7f;
         /// <summary>−25% visual size vs previous 0.72.</summary>
         const float VisualScale = 0.54f;
+        const float TorsoOffsetY = 0.28f;
 
         PlayerStats _source;
         EnemyActor _target;
@@ -24,7 +27,9 @@ namespace ProjectZx.Combat
         bool _pierce;
         float _pierceMultiplier;
         float _life;
+        float _distanceLeft;
         Vector2 _velocity = Vector2.right;
+        Vector2 _aimPoint;
         SpriteRenderer _renderer;
 
         public static void Spawn(
@@ -38,17 +43,19 @@ namespace ProjectZx.Combat
         {
             if (target == null || source == null) return;
 
-            // Flat aim at same Y as spawn so shots do not read as “always diagonal”
-            // when the enemy center sits below chest height.
-            var spawn = origin;
-            var aim = new Vector2(target.transform.position.x, spawn.y);
-            var dir = aim - (Vector2)spawn;
+            // Aim at torso so shots track enemies above/below the hero, not only same-Y X.
+            var spawn = (Vector2)origin;
+            var aim = (Vector2)target.transform.position + Vector2.up * TorsoOffsetY;
+            var dir = aim - spawn;
             if (dir.sqrMagnitude < 0.0001f)
                 dir = target.transform.position.x >= spawn.x ? Vector2.right : Vector2.left;
-            dir.Normalize();
+            else
+                dir.Normalize();
+
+            var dist = Vector2.Distance(spawn, aim);
 
             var go = new GameObject("ArrowProjectile");
-            go.transform.position = spawn;
+            go.transform.position = origin;
             go.transform.localScale = Vector3.one * VisualScale;
             go.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
 
@@ -64,8 +71,10 @@ namespace ProjectZx.Combat
             proj._canApplyFrost = canApplyFrost;
             proj._pierce = pierce;
             proj._pierceMultiplier = pierceMultiplier;
-            proj._life = MaxLifetime;
+            proj._life = Mathf.Clamp(dist / DefaultSpeed + 0.35f, 0.35f, MaxLifetime);
             proj._velocity = dir * DefaultSpeed;
+            proj._aimPoint = aim;
+            proj._distanceLeft = dist;
             proj._renderer = sr;
         }
 
@@ -78,9 +87,20 @@ namespace ProjectZx.Combat
                 return;
             }
 
-            transform.position += (Vector3)(_velocity * Time.deltaTime);
+            var step = _velocity * Time.deltaTime;
+            var stepLen = step.magnitude;
 
-            // Keep tip aligned with velocity (horizontal art ⇒ Atan2 is correct).
+            // Reach / pass aim point this frame → impact (avoids overshoot misses).
+            if (stepLen >= _distanceLeft)
+            {
+                transform.position = _aimPoint;
+                OnImpact();
+                return;
+            }
+
+            transform.position += (Vector3)step;
+            _distanceLeft -= stepLen;
+
             if (_velocity.sqrMagnitude > 0.0001f)
             {
                 var angle = Mathf.Atan2(_velocity.y, _velocity.x) * Mathf.Rad2Deg;
@@ -90,10 +110,13 @@ namespace ProjectZx.Combat
             if (_target == null || !_target.IsAlive)
                 return;
 
-            // Hit when near the target’s X/Y (slight vertical forgiveness for body size).
-            var to = (Vector2)_target.transform.position - (Vector2)transform.position;
-            if (to.sqrMagnitude <= HitDistance * HitDistance)
+            // Live aim follows a moving target; still straight-line velocity (no homing turn).
+            var liveAim = (Vector2)_target.transform.position + Vector2.up * TorsoOffsetY;
+            if (Vector2.Distance(transform.position, liveAim) <= HitDistance
+                || Vector2.Distance(transform.position, _aimPoint) <= HitDistance * 0.65f)
+            {
                 OnImpact();
+            }
         }
 
         void OnImpact()

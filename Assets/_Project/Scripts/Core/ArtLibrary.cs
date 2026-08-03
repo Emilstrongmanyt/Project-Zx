@@ -342,11 +342,11 @@ namespace ProjectZx.Core
         {
             if (hero == PlayableHero.RowZi)
             {
-                // RowZi_new matches RollZy sheet layout/style (8 frames, faces right).
+                // Same walk cycle as before the sheet swap: idle=0 walkA=2 walkB=3, art faces left.
                 _rowZiSprites ??= LoadOrderedHeroSheet("RowZi_new")
                                   ?? LoadOrderedHeroSheet("RowZi")
                                   ?? LoadHeroSheetSprites("RowZi", 8);
-                return BuildHeroSet(_rowZiSprites, facesRightByDefault: true);
+                return BuildHeroSet(_rowZiSprites, idle: 0, walkA: 2, walkB: 3, facesRightByDefault: false);
             }
 
             // Upgraded RollZy after clearing Dungeon survival (Dungeon Clearer achievement path).
@@ -356,15 +356,24 @@ namespace ProjectZx.Core
                                            ?? LoadHeroSheetSprites("RollZy_two", 8);
                 if (_rollZyUpgradedSprites != null && _rollZyUpgradedSprites.Length > 0
                     && _rollZyUpgradedSprites[0] != null)
-                    return BuildHeroSet(_rollZyUpgradedSprites, facesRightByDefault: true);
+                    return BuildHeroSet(_rollZyUpgradedSprites, idle: 0, walkA: 1, walkB: 2, facesRightByDefault: true);
             }
 
             _rollZySprites ??= LoadOrderedHeroSheet("RollZy")
                                ?? LoadHeroSheetSprites("RollZy", 8);
-            return BuildHeroSet(_rollZySprites, facesRightByDefault: true);
+            return BuildHeroSet(_rollZySprites, idle: 0, walkA: 1, walkB: 2, facesRightByDefault: true);
         }
 
-        static HeroSpriteSet BuildHeroSet(Sprite[] frames, bool facesRightByDefault)
+        /// <summary>
+        /// Frame indices match the pre-upgrade layout that looked correct in TestFlight.
+        /// RowZi: 0/2/3 faces left. RollZy / RollZy_two: 0/1/2 faces right.
+        /// </summary>
+        static HeroSpriteSet BuildHeroSet(
+            Sprite[] frames,
+            int idle,
+            int walkA,
+            int walkB,
+            bool facesRightByDefault)
         {
             Sprite Frame(int i)
             {
@@ -375,9 +384,9 @@ namespace ProjectZx.Core
 
             return new HeroSpriteSet
             {
-                Idle = Frame(0),
-                WalkA = Frame(1) ?? Frame(0),
-                WalkB = Frame(2) ?? Frame(1) ?? Frame(0),
+                Idle = Frame(idle),
+                WalkA = Frame(walkA) ?? Frame(idle),
+                WalkB = Frame(walkB) ?? Frame(walkA) ?? Frame(idle),
                 FacesRightByDefault = facesRightByDefault
             };
         }
