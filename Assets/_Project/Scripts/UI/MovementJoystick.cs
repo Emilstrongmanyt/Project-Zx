@@ -83,7 +83,7 @@ namespace ProjectZx.UI
             if (RepositionMode) return;
 
             if (!IsHeld) return;
-            if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade)
+            if (GameHud.Instance != null && GameHud.Instance.IsGamePaused)
                 Release();
         }
 

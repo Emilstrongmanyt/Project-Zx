@@ -72,6 +72,7 @@ namespace ProjectZx.Waves
                         _roundActive = false;
                         _hud?.SetRoundComplete(CurrentRound);
                         GameSave.RecordHighestRound(CurrentRound);
+                        TryRecordUnlimitedWeaponProgress(CurrentRound);
                         TryUnlockBowman(CurrentRound);
                         TryUnlockMagician(CurrentRound);
 
@@ -326,6 +327,7 @@ namespace ProjectZx.Waves
             if (stats != null && !stats.IsDead)
             {
                 GameSave.RecordHighestRound(CurrentRound);
+                TryRecordUnlimitedWeaponProgress(CurrentRound);
                 stats.BankRunGoldToSave();
             }
 
@@ -334,6 +336,21 @@ namespace ProjectZx.Waves
             GameSessionContext.CarryRound = 0;
             GameSessionContext.RunSnapshot = default;
             GameFactory.LoadScene(GameScenes.MainMenuMap);
+        }
+
+        /// <summary>
+        /// Tracks Unlimited depth for iron/steel weapon unlocks and shows a banner on first unlock.
+        /// </summary>
+        void TryRecordUnlimitedWeaponProgress(int round)
+        {
+            if (MapKind != SurvivalMapKind.Unlimited || round <= 0) return;
+
+            var previous = GameSave.UnlimitedHighestRoundReached;
+            if (!GameSave.RecordUnlimitedRound(round)) return;
+
+            var banner = WeaponCatalog.TryNotifyTierUnlock(previous, GameSave.UnlimitedHighestRoundReached);
+            if (!string.IsNullOrEmpty(banner))
+                _hud?.ShowBanner(banner, 4.5f);
         }
     }
 }

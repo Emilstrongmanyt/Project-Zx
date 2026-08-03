@@ -91,10 +91,7 @@ namespace ProjectZx.Core
             _grassTile = null;
             _grassVariants = null;
             _campfire = null;
-            _baseballBat = null;
-            _spear = null;
-            _katana = null;
-            _bow = null;
+            _weaponSpriteCache.Clear();
             _arrow = null;
             _sparkles = null;
             _sparkles2 = null;
@@ -158,10 +155,7 @@ namespace ProjectZx.Core
         static Sprite _grassTile;
         static Sprite[] _grassVariants;
         static Sprite _campfire;
-        static Sprite _baseballBat;
-        static Sprite _spear;
-        static Sprite _katana;
-        static Sprite _bow;
+        static readonly Dictionary<string, Sprite> _weaponSpriteCache = new();
         static Sprite _arrow;
         static Sprite _sparkles;
         static Sprite _sparkles2;
@@ -271,33 +265,71 @@ namespace ProjectZx.Core
         public static Sprite Ground => _ground ??= Load("Placeholders/ground");
         public static Sprite GrassTile => _grassTile ??= LoadOrCreateGrass();
         public static Sprite Campfire => _campfire ??= CreateCampfireSprite();
-        /// <summary>Batter weapon — Admurin Wooden_Weapon2, combat-scaled.</summary>
-        public static Sprite BaseballBat => _baseballBat ??=
-            LoadWeaponSprite(Admurin + "weapon_bat", new Vector2(0.12f, 0.5f), 3.6f) ?? LoadOrCreateBat();
+        /// <summary>Batter weapon — material tier from Unlimited Survival unlocks.</summary>
+        public static Sprite BaseballBat => GetClassWeaponSprite(PlayerClass.Batter);
         // worldLength is in local sprite units; player root is ~0.55 scale so ~2.6 local ≈ 1.4 world.
-        /// <summary>Spearman weapon — Admurin Wooden_Weapon5, combat-scaled.</summary>
-        public static Sprite Spear => _spear ??=
-            LoadWeaponSprite(Admurin + "weapon_spear", new Vector2(0.1f, 0.5f), 4.125f)
-            ?? LoadWeaponSprite("Spear", new Vector2(0.1f, 0.5f), 4.125f)
-            ?? CreateSpearSprite();
-        /// <summary>Samurai weapon — Admurin Iron_Weapon22, combat-scaled.</summary>
-        public static Sprite Katana => _katana ??=
-            LoadWeaponSprite(Admurin + "weapon_katana", new Vector2(0.1f, 0.5f), 3.75f)
-            ?? LoadWeaponSprite("Sword", new Vector2(0.1f, 0.5f), 3.75f)
-            ?? CreateKatanaSprite();
-        /// <summary>Bowman weapon — Admurin Wooden_Weapon15 (−25% size, X-flipped for grip).</summary>
-        public static Sprite Bow => _bow ??=
-            LoadWeaponSprite(Admurin + "weapon_bow", new Vector2(0.35f, 0.5f), 2.1375f, flipHorizontal: true)
-            ?? LoadOrCreateBow();
+        /// <summary>Spearman weapon — material tier from Unlimited Survival unlocks.</summary>
+        public static Sprite Spear => GetClassWeaponSprite(PlayerClass.Spearman);
+        /// <summary>Samurai weapon — Iron base, Steel from Unlimited Survival.</summary>
+        public static Sprite Katana => GetClassWeaponSprite(PlayerClass.Samurai);
+        /// <summary>Bowman weapon — material tier from Unlimited Survival unlocks.</summary>
+        public static Sprite Bow => GetClassWeaponSprite(PlayerClass.Bowman);
         /// <summary>
         /// Arrow projectile (−25% size). Always a horizontal tip-on-+X sprite: both
         /// Admurin and Resources/Arrow.png are authored ~45° diagonal and would make
         /// Atan2 flight look permanently skewed.
         /// </summary>
         public static Sprite Arrow => _arrow ??= CreateHorizontalCombatArrow(1.29375f);
-        /// <summary>Magician weapon — Admurin Wooden_Weapon8, combat-scaled.</summary>
-        public static Sprite Staff => _staff ??=
-            LoadWeaponSprite(Admurin + "weapon_staff", new Vector2(0.12f, 0.5f), 3.525f) ?? CreateSpearSprite();
+        /// <summary>Magician weapon — material tier from Unlimited Survival unlocks.</summary>
+        public static Sprite Staff => GetClassWeaponSprite(PlayerClass.Magician);
+
+        /// <summary>
+        /// Loads the held weapon for the current material tier (Iron/Steel from Unlimited depth).
+        /// Falls back to wooden/base art if a higher-tier asset is missing.
+        /// </summary>
+        public static Sprite GetClassWeaponSprite(PlayerClass playerClass)
+        {
+            var path = WeaponCatalog.GetResourceName(playerClass);
+            var sprite = LoadClassWeaponFromPath(playerClass, path);
+            if (sprite != null) return sprite;
+
+            var wooden = WeaponCatalog.GetResourceName(playerClass, WeaponMaterialTier.Wooden);
+            if (wooden != path)
+                sprite = LoadClassWeaponFromPath(playerClass, wooden);
+            return sprite ?? CreateClassWeaponFallback(playerClass);
+        }
+
+        static Sprite LoadClassWeaponFromPath(PlayerClass playerClass, string resourcePath)
+        {
+            if (string.IsNullOrEmpty(resourcePath)) return null;
+            if (_weaponSpriteCache.TryGetValue(resourcePath, out var cached) && cached != null)
+                return cached;
+
+            Sprite loaded = playerClass switch
+            {
+                PlayerClass.Batter => LoadWeaponSprite(resourcePath, new Vector2(0.12f, 0.5f), 3.6f),
+                PlayerClass.Spearman => LoadWeaponSprite(resourcePath, new Vector2(0.1f, 0.5f), 4.125f)
+                    ?? LoadWeaponSprite("Spear", new Vector2(0.1f, 0.5f), 4.125f),
+                PlayerClass.Bowman => LoadWeaponSprite(resourcePath, new Vector2(0.35f, 0.5f), 2.1375f, flipHorizontal: true),
+                PlayerClass.Magician => LoadWeaponSprite(resourcePath, new Vector2(0.12f, 0.5f), 3.525f),
+                PlayerClass.Samurai => LoadWeaponSprite(resourcePath, new Vector2(0.1f, 0.5f), 3.75f)
+                    ?? LoadWeaponSprite("Sword", new Vector2(0.1f, 0.5f), 3.75f),
+                _ => LoadWeaponSprite(resourcePath, new Vector2(0.12f, 0.5f), 3.6f)
+            };
+
+            if (loaded != null)
+                _weaponSpriteCache[resourcePath] = loaded;
+            return loaded;
+        }
+
+        static Sprite CreateClassWeaponFallback(PlayerClass playerClass) => playerClass switch
+        {
+            PlayerClass.Spearman => CreateSpearSprite(),
+            PlayerClass.Bowman => LoadOrCreateBow(),
+            PlayerClass.Magician => CreateSpearSprite(),
+            PlayerClass.Samurai => CreateKatanaSprite(),
+            _ => LoadOrCreateBat()
+        };
         public static Sprite Sparkles => _sparkles ??= TryLoadSprite("Sparkles", TilePixelsPerUnit);
         public static Sprite Sparkles2 => _sparkles2 ??= TryLoadSprite("Sparkles2", TilePixelsPerUnit);
         /// <summary>Fortune Ring icon — Admurin fortitude ring (Sparkles remain VFX-only).</summary>

@@ -52,8 +52,9 @@ namespace ProjectZx.Player
         public float RunDamageMultiplier { get; private set; } = 1f;
         public float RunAttackSpeedMultiplier { get; private set; } = 1f;
         public float RunAttackRangeMultiplier { get; private set; } = 1f;
-        /// <summary>Permanent shop range × run talent range.</summary>
-        public float AttackRangeMultiplier => GameSave.AttackRangeMultiplier * RunAttackRangeMultiplier;
+        /// <summary>Permanent shop range × run talent range × weapon material tier.</summary>
+        public float AttackRangeMultiplier =>
+            GameSave.AttackRangeMultiplier * RunAttackRangeMultiplier * WeaponCatalog.AttackRangeMultiplier();
         public float RunLootRangeMultiplier { get; private set; } = 1f;
         public float RunCritChance { get; private set; }
         public float RunCritMultiplier { get; private set; } = 1.5f;
@@ -753,7 +754,11 @@ namespace ProjectZx.Player
                 GameSave.RecordDeath();
                 var session = UnityEngine.Object.FindAnyObjectByType<SurvivalSession>();
                 if (session != null)
+                {
                     GameSave.RecordHighestRound(session.CurrentRound);
+                    if (session.MapKind == SurvivalMapKind.Unlimited)
+                        GameSave.RecordUnlimitedRound(session.CurrentRound);
+                }
             }
 
             BankRunGoldToSave();
@@ -761,11 +766,19 @@ namespace ProjectZx.Player
 
         public float Damage =>
             10f * GameSave.DamageMultiplier * EquipmentCatalog.CombinedDamageMultiplier()
-            * RunDamageMultiplier * DamageOutputScale;
+            * WeaponCatalog.DamageMultiplier() * RunDamageMultiplier * DamageOutputScale;
 
         public float EffectiveAttackSpeed =>
             RunAttackSpeedMultiplier * EquipmentCatalog.CombinedAttackSpeedMultiplier()
+            * WeaponCatalog.AttackSpeedMultiplier()
             * (IsBerserkActive ? 1f + RunBerserkBonus : 1f);
+
+        /// <summary>Brief i-frames after talent/epic picks so the player can reposition safely.</summary>
+        public void GrantTalentSelectionIFrames(float seconds = 1f)
+        {
+            if (seconds > 0f)
+                _invulnTimer = Mathf.Max(_invulnTimer, seconds);
+        }
 
         public bool IsBerserkActive =>
             RunBerserkBonus > 0f && MaxHp > 0 && CurrentHp <= MaxHp * 0.4f;

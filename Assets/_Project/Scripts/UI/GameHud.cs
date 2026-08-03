@@ -41,6 +41,9 @@ namespace ProjectZx.UI
 
         public static GameHud Instance { get; private set; }
         public bool IsChoosingUpgrade => _choosingLevelUp || _choosingEpic;
+        public bool IsRetreatMenuOpen => _retreatPanel != null && _retreatPanel.activeSelf;
+        /// <summary>Talent pick or retreat confirm — freezes combat and blocks movement.</summary>
+        public bool IsGamePaused => IsChoosingUpgrade || IsRetreatMenuOpen;
 
         void Awake()
         {
@@ -58,7 +61,7 @@ namespace ProjectZx.UI
                 _stats.EpicChoiceRequired -= OnEpicChoiceRequired;
             }
             if (Instance == this) Instance = null;
-            if (IsChoosingUpgrade) Time.timeScale = 1f;
+            if (IsGamePaused) Time.timeScale = 1f;
         }
 
         void Build()
@@ -172,7 +175,7 @@ namespace ProjectZx.UI
             CreatePanelText(panel.transform, "Run gold will be saved. Current progress ends.", 24, new Vector2(0, 22), new Vector2(500, 64));
 
             CreateHudButton(panel.transform, "Yes, Retreat", new Vector2(-130, -78), ConfirmRetreat);
-            CreateHudButton(panel.transform, "Keep Fighting", new Vector2(130, -78), () => _retreatPanel.SetActive(false));
+            CreateHudButton(panel.transform, "Keep Fighting", new Vector2(130, -78), CloseRetreatPanel);
             panel.SetActive(false);
             return panel;
         }
@@ -180,12 +183,24 @@ namespace ProjectZx.UI
         void ShowRetreatConfirm()
         {
             if (IsChoosingUpgrade || _stats == null || _stats.IsDead) return;
+            Time.timeScale = 0f;
+            FloatingDamageNumber.ClearAll();
             _retreatPanel.SetActive(true);
+        }
+
+        void CloseRetreatPanel()
+        {
+            if (_retreatPanel != null)
+                _retreatPanel.SetActive(false);
+            if (!IsChoosingUpgrade)
+                Time.timeScale = 1f;
         }
 
         void ConfirmRetreat()
         {
-            _retreatPanel.SetActive(false);
+            if (_retreatPanel != null)
+                _retreatPanel.SetActive(false);
+            Time.timeScale = 1f;
             SurvivalSession.Instance?.RetreatToCamp();
         }
 
@@ -415,7 +430,7 @@ namespace ProjectZx.UI
                 return;
             }
 
-            Time.timeScale = 1f;
+            ResumeAfterTalentSelection();
         }
 
         void ChooseEpicTalent(EpicTalentId choice)
@@ -457,7 +472,13 @@ namespace ProjectZx.UI
                 return;
             }
 
+            ResumeAfterTalentSelection();
+        }
+
+        void ResumeAfterTalentSelection()
+        {
             Time.timeScale = 1f;
+            _stats?.GrantTalentSelectionIFrames(1f);
         }
 
         void Update()
@@ -490,7 +511,7 @@ namespace ProjectZx.UI
             if (_goldText != null)
                 _goldText.text = GoldFormat.Abbreviate(stats.RunGold);
 
-            if (IsChoosingUpgrade || (_retreatPanel != null && _retreatPanel.activeSelf)) return;
+            if (IsGamePaused) return;
 
             if (_achievementToastTimer > 0f)
             {

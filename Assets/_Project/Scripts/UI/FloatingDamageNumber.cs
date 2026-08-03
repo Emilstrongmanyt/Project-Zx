@@ -50,7 +50,7 @@ namespace ProjectZx.UI
         public static void Spawn(Vector3 worldPosition, int amount, Color color)
         {
             if (amount <= 0) return;
-            if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade) return;
+            if (GameHud.Instance != null && GameHud.Instance.IsGamePaused) return;
 
             EnsureCanvas();
             if (_canvas == null) return;
@@ -126,7 +126,7 @@ namespace ProjectZx.UI
 
         void LateUpdate()
         {
-            if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade)
+            if (GameHud.Instance != null && GameHud.Instance.IsGamePaused)
             {
                 Destroy(gameObject);
                 return;

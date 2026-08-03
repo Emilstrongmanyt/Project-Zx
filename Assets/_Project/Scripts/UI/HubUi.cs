@@ -1220,13 +1220,16 @@ namespace ProjectZx.UI
 
             var selected = GameSave.SelectedClass;
             var className = GetClassDisplayName(selected);
-            var baseDamage = 10f * GameSave.DamageMultiplier * EquipmentCatalog.CombinedDamageMultiplier();
+            var weaponTier = WeaponCatalog.GetUnlockedTier();
+            var baseDamage = 10f * GameSave.DamageMultiplier * EquipmentCatalog.CombinedDamageMultiplier()
+                * WeaponCatalog.DamageMultiplier();
             if (selected == PlayerClass.Bowman) baseDamage *= 1.26f;
             else if (selected == PlayerClass.Spearman) baseDamage *= 1.15f;
             else if (selected == PlayerClass.Samurai) baseDamage *= 0.7f;
             var moveSpeed = 4.5f * GameSave.SpeedMultiplier;
             var maxHp = GameSave.MaxHp + EquipmentCatalog.CombinedBonusMaxHp();
             var movementLabel = GameSave.UsesJoystickMovement ? "Joystick" : "Tap / Hold";
+            var rangeMul = GameSave.AttackRangeMultiplier * WeaponCatalog.AttackRangeMultiplier();
 
             var attackMode = GameSave.GetSelectedAttackMode(selected);
             var technique = AttackModeCatalog.GetLabel(attackMode, selected);
@@ -1242,10 +1245,11 @@ namespace ProjectZx.UI
                 $"Technique: {technique}\n" +
                 companionLine +
                 $"Movement: {movementLabel}\n" +
+                $"Weapon: {WeaponCatalog.GetTierName(weaponTier)} ({WeaponCatalog.GetPerkSummary(weaponTier)})\n" +
                 $"Max HP: {maxHp}\n" +
                 $"Base Damage: {baseDamage:0.#}\n" +
                 $"Move Speed: {moveSpeed:0.##}\n" +
-                $"Attack Range: x{GameSave.AttackRangeMultiplier:0.##}\n" +
+                $"Attack Range: x{rangeMul:0.##}\n" +
                 $"HP Upgrades: {GameSave.HpUpgradeLevel}   Damage: {GameSave.DamageUpgradeLevel}   Speed: {GameSave.SpeedUpgradeLevel}   Range: {GameSave.RangeUpgradeLevel}\n" +
                 $"Whirlwind: {(GameSave.WhirlwindUnlocked ? "Owned" : "Locked")}\n" +
                 $"Piercing Shot: {(GameSave.PiercingShotUnlocked ? "Owned" : "Locked")}\n" +
@@ -1269,7 +1273,8 @@ namespace ProjectZx.UI
                 $"Boss Kills: {GameSave.LifetimeBossKills}\n" +
                 $"Deaths: {GameSave.LifetimeDeaths}\n" +
                 $"Gold Earned: {GameSave.LifetimeGoldEarned}\n" +
-                $"Highest Round: {GameSave.HighestRoundReached}";
+                $"Highest Round: {GameSave.HighestRoundReached}\n" +
+                $"Unlimited Best: {GameSave.UnlimitedHighestRoundReached} (Iron R{WeaponCatalog.IronUnlockUnlimitedRound}, Steel R{WeaponCatalog.SteelUnlockUnlimitedRound})";
         }
 
         static string EquipName(EquipmentId id)

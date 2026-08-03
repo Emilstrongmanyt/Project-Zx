@@ -298,7 +298,7 @@ namespace ProjectZx.Player
 
         void BeginPointer(Vector2 screenPos, int touchId)
         {
-            if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade) return;
+            if (GameHud.Instance != null && GameHud.Instance.IsGamePaused) return;
             if (MovementJoystick.Instance != null && MovementJoystick.Instance.IsPointerOver(screenPos)) return;
             if (IsPointerOverBlockingUi(screenPos)) return;
 
@@ -317,7 +317,7 @@ namespace ProjectZx.Player
         void UpdateChaseTarget(Vector2 screenPos)
         {
             if (!GameSave.UsesTapHoldMovement) return;
-            if (GameHud.Instance != null && GameHud.Instance.IsChoosingUpgrade) return;
+            if (GameHud.Instance != null && GameHud.Instance.IsGamePaused) return;
             if (MovementJoystick.Instance != null && MovementJoystick.Instance.IsPointerOver(screenPos)) return;
             if (IsPointerOverBlockingUi(screenPos)) return;
             TrySetMoveTarget(screenPos, true, movementAllowed: true);

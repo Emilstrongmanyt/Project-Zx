@@ -50,6 +50,7 @@ namespace ProjectZx.Core
         const string DeathsKey = "zx_lifetime_deaths";
         const string GoldEarnedKey = "zx_lifetime_gold_earned";
         const string HighestRoundKey = "zx_highest_round";
+        const string UnlimitedHighestRoundKey = "zx_unlimited_highest_round";
         const string OwnedEquipmentKey = "zx_owned_equipment";
         const string EquippedRingKey = "zx_equipped_ring";
         const string EquippedNecklaceKey = "zx_equipped_necklace";
@@ -566,6 +567,13 @@ namespace ProjectZx.Core
             set { PlayerPrefs.SetInt(HighestRoundKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
         }
 
+        /// <summary>Best Unlimited Survival round reached (drives weapon material unlocks).</summary>
+        public static int UnlimitedHighestRoundReached
+        {
+            get => PlayerPrefs.GetInt(UnlimitedHighestRoundKey, 0);
+            set { PlayerPrefs.SetInt(UnlimitedHighestRoundKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
+        }
+
         public static void RecordEnemyKill(bool isBoss)
         {
             if (isBoss)
@@ -584,6 +592,16 @@ namespace ProjectZx.Core
                 HighestRoundReached = round;
 
             Achievements.EvaluateRoundAchievements(round);
+        }
+
+        /// <summary>
+        /// Records Unlimited Survival depth. Returns true if a new personal best was set.
+        /// </summary>
+        public static bool RecordUnlimitedRound(int round)
+        {
+            if (round <= UnlimitedHighestRoundReached) return false;
+            UnlimitedHighestRoundReached = round;
+            return true;
         }
 
         public static void BankFromRun(int amount)
