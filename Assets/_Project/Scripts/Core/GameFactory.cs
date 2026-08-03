@@ -558,18 +558,24 @@ namespace ProjectZx.Core
         {
             Sprite sprite;
             if (isRoundFortyBoss)
-                sprite = ArtLibrary.BossB;
+                sprite = ArtLibrary.GetLordBossAnimSet(highPhase: true).Idle ?? ArtLibrary.BossB;
             else if (isBoss)
-                sprite = ArtLibrary.Boss;
+                sprite = ArtLibrary.GetGolemBossAnimSet().Idle ?? ArtLibrary.Boss;
             else
-                ArtLibrary.GetZombieSprites(zombieKind, out sprite, out _);
+            {
+                var set = ArtLibrary.GetEnemyAnimSet(zombieKind);
+                sprite = set.Idle;
+                if (sprite == null)
+                    ArtLibrary.GetZombieSprites(zombieKind, out sprite, out _);
+            }
 
             var isStageBoss = isRoundTwentyBoss || isRoundThirtyBoss || isRoundFortyBoss;
+            // Sanctum 96–128px sprites: keep previous on-screen footprint.
             var scale = (isBoss ? 0.55f : 0.32f * 2.5f) * 1.5f;
             if (isBoss) scale *= 1.5f;
             // Outside R20, Inside R30, and Dungeon R40 stage bosses share the same large scale.
             if (isStageBoss) scale *= 2.5f;
-            var go = CreateSprite(isBoss ? "Boss" : "Zombie", sprite, position, scale, 0);
+            var go = CreateSprite(isBoss ? "Boss" : "Demon", sprite, position, scale, 0);
             go.tag = "Enemy";
             go.AddComponent<YSortRenderer>();
 

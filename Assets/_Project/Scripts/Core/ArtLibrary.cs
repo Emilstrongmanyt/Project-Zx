@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ProjectZx.Core
@@ -11,17 +12,60 @@ namespace ProjectZx.Core
     }
 
     /// <summary>
+    /// Sanctum Pixel monster animation pack (stand / walk / attack / hit).
+    /// </summary>
+    public struct MonsterAnimSet
+    {
+        public Sprite Idle;
+        public Sprite Hit;
+        public Sprite Attack;
+        public Sprite HitAttack;
+        public Sprite[] StandFrames;
+        public Sprite[] WalkFrames;
+        public Sprite[] AttackFrames;
+        public bool FacesRightByDefault;
+        public bool IsValid => Idle != null;
+    }
+
+    /// <summary>
     /// Loads NARt art from Resources/Art with procedural fallbacks for camp-specific tiles.
     /// Curated Admurin item sprites live under Resources/Items/Admurin.
+    /// Demon / golem / lord packs live under Resources/Monsters.
     /// </summary>
     public static class ArtLibrary
     {
         public const float TilePixelsPerUnit = 64f;
         const string Admurin = "Items/Admurin/";
+        const string Monsters = "Monsters/";
+
+        static readonly string[] OutsideDemonSets =
+        {
+            "outside/warrior_1", "outside/warrior_2", "outside/warrior_3",
+            "outside/thin_demon_1", "outside/thin_demon_2", "outside/fat_demon_1"
+        };
+
+        static readonly string[] InsideDemonSets =
+        {
+            "inside/axe_1", "inside/axe_2", "inside/claw_1",
+            "inside/claw_2", "inside/demon_bat_1", "inside/warlock_1"
+        };
+
+        static readonly string[] EliteDemonSets =
+        {
+            "elite/big_spike_1", "elite/big_spike_2", "elite/demon_big_1",
+            "elite/demon_big_2", "elite/demon_wing_1", "elite/double_sword_1"
+        };
+
+        static readonly string[] GolemBossSets = { "boss/golem_1", "boss/golem_2", "boss/golem_3" };
+        static readonly string[] LordBossHighSets = { "boss/lord_1", "boss/lord_3" };
+        static readonly string[] LordBossLowSets = { "boss/lord_5", "boss/lord_3" };
+
+        static readonly Dictionary<string, MonsterAnimSet> MonsterSetCache = new();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetCaches()
         {
+            MonsterSetCache.Clear();
             _playerIdle = null;
             _playerWalk = null;
             _playerAttack = null;
@@ -166,18 +210,34 @@ namespace ProjectZx.Core
         public static Sprite PlayerIdle => _playerIdle ??= Load("Placeholders/player_idle");
         public static Sprite PlayerWalk => _playerWalk ??= Load("Placeholders/player_walk");
         public static Sprite PlayerAttack => _playerAttack ??= Load("Placeholders/player_attack");
-        public static Sprite Zombie => _zombie ??= Load("Art/zombie_j", "ZombieJ", "Placeholders/zombie");
-        public static Sprite ZombieHit => _zombieHit ??= Load("ZombieJHit", "Art/zombie_j_hit", "ZombieJ");
-        public static Sprite ZombieInside => _zombieInside ??= Load("ZombieJ_Inside");
-        public static Sprite ZombieInsideHit => _zombieInsideHit ??= Load("ZombieJ_InsideHit", "ZombieJ_Inside");
-        public static Sprite ZombieInside2 => _zombieInside2 ??= Load("ZombieJ_Inside2");
-        public static Sprite ZombieInside2Hit => _zombieInside2Hit ??= Load("ZombieJ_Inside2Hit", "ZombieJ_Inside2");
-        public static Sprite Boss => _boss ??= Load("Art/boss_j", "BossJ", "Placeholders/boss");
-        public static Sprite BossHit => _bossHit ??= Load("BossJHit", "BossJ");
-        public static Sprite BossAttacking => _bossAttacking ??= Load("Art/boss_j_attacking", "BossJAttacking", "Art/boss_j", "BossJ", "Placeholders/boss");
-        public static Sprite BossAttackingHit => _bossAttackingHit ??= Load("BossJAttackingHit", "BossJAttacking");
-        public static Sprite BossB => _bossB ??= Load("BossB", "Art/boss_j", "BossJ", "Placeholders/boss");
-        public static Sprite BossB2 => _bossB2 ??= Load("BossB2", "BossB", "Art/boss_j", "BossJ", "Placeholders/boss");
+        /// <summary>Outside demon idle (legacy name kept for callers).</summary>
+        public static Sprite Zombie => _zombie ??= GetEnemyAnimSet(EnemyZombieKind.Outside).Idle
+            ?? Load("Art/zombie_j", "ZombieJ", "Placeholders/zombie");
+        public static Sprite ZombieHit => _zombieHit ??= GetEnemyAnimSet(EnemyZombieKind.Outside).Hit
+            ?? Load("ZombieJHit", "Art/zombie_j_hit", "ZombieJ");
+        public static Sprite ZombieInside => _zombieInside ??= GetEnemyAnimSet(EnemyZombieKind.Inside).Idle
+            ?? Load("ZombieJ_Inside");
+        public static Sprite ZombieInsideHit => _zombieInsideHit ??= GetEnemyAnimSet(EnemyZombieKind.Inside).Hit
+            ?? Load("ZombieJ_InsideHit", "ZombieJ_Inside");
+        public static Sprite ZombieInside2 => _zombieInside2 ??= GetEnemyAnimSet(EnemyZombieKind.InsideElite).Idle
+            ?? Load("ZombieJ_Inside2");
+        public static Sprite ZombieInside2Hit => _zombieInside2Hit ??= GetEnemyAnimSet(EnemyZombieKind.InsideElite).Hit
+            ?? Load("ZombieJ_Inside2Hit", "ZombieJ_Inside2");
+        /// <summary>Stage boss — Golem pack.</summary>
+        public static Sprite Boss => _boss ??= GetGolemBossAnimSet().Idle
+            ?? Load("Art/boss_j", "BossJ", "Placeholders/boss");
+        public static Sprite BossHit => _bossHit ??= GetGolemBossAnimSet().Hit
+            ?? Load("BossJHit", "BossJ");
+        public static Sprite BossAttacking => _bossAttacking ??= GetGolemBossAnimSet().Attack
+            ?? Load("Art/boss_j_attacking", "BossJAttacking", "Art/boss_j", "BossJ", "Placeholders/boss");
+        public static Sprite BossAttackingHit => _bossAttackingHit ??= GetGolemBossAnimSet().HitAttack
+            ?? Load("BossJAttackingHit", "BossJAttacking");
+        /// <summary>Dungeon R40 Lord — high HP phase.</summary>
+        public static Sprite BossB => _bossB ??= GetLordBossAnimSet(highPhase: true).Idle
+            ?? Load("BossB", "Art/boss_j", "BossJ", "Placeholders/boss");
+        /// <summary>Dungeon R40 Lord — low HP phase.</summary>
+        public static Sprite BossB2 => _bossB2 ??= GetLordBossAnimSet(highPhase: false).Idle
+            ?? Load("BossB2", "BossB", "Art/boss_j", "BossJ", "Placeholders/boss");
         public static Sprite GoldCoin => _goldCoin ??= Load(Admurin + "gold_bag", "GoldCoin");
         public static Sprite GoldCoinDropped => _goldCoinDropped ??= Load(Admurin + "gold_bag", "GoldCoinDropped", "GoldCoin");
         public static Sprite HpHeart => _hpHeart ??= Load(Admurin + "hp_potion", "HeartHP", "HPHeart");
@@ -548,21 +608,141 @@ namespace ProjectZx.Core
 
         public static void GetZombieSprites(EnemyZombieKind kind, out Sprite idle, out Sprite hit)
         {
+            var set = GetEnemyAnimSet(kind);
+            if (set.IsValid)
+            {
+                idle = set.Idle;
+                hit = set.Hit ?? set.Idle;
+                return;
+            }
+
+            // Legacy ZombieJ fallbacks if Resources/Monsters is missing.
             switch (kind)
             {
                 case EnemyZombieKind.InsideElite:
-                    idle = ZombieInside2;
-                    hit = ZombieInside2Hit;
+                    idle = TryLoadSprite("ZombieJ_Inside2", TilePixelsPerUnit)
+                           ?? TryLoadSprite("Placeholders/zombie", TilePixelsPerUnit);
+                    hit = TryLoadSprite("ZombieJ_Inside2Hit", TilePixelsPerUnit) ?? idle;
                     break;
                 case EnemyZombieKind.Inside:
-                    idle = ZombieInside;
-                    hit = ZombieInsideHit;
+                    idle = TryLoadSprite("ZombieJ_Inside", TilePixelsPerUnit)
+                           ?? TryLoadSprite("Placeholders/zombie", TilePixelsPerUnit);
+                    hit = TryLoadSprite("ZombieJ_InsideHit", TilePixelsPerUnit) ?? idle;
                     break;
                 default:
-                    idle = Zombie;
-                    hit = ZombieHit;
+                    idle = TryLoadSprite("ZombieJ", TilePixelsPerUnit)
+                           ?? TryLoadSprite("Art/zombie_j", TilePixelsPerUnit)
+                           ?? TryLoadSprite("Placeholders/zombie", TilePixelsPerUnit);
+                    hit = TryLoadSprite("ZombieJHit", TilePixelsPerUnit) ?? idle;
                     break;
             }
+        }
+
+        /// <summary>Random demon pack for regular enemies by map tier.</summary>
+        public static MonsterAnimSet GetEnemyAnimSet(EnemyZombieKind kind)
+        {
+            var pool = kind switch
+            {
+                EnemyZombieKind.InsideElite => EliteDemonSets,
+                EnemyZombieKind.Inside => InsideDemonSets,
+                _ => OutsideDemonSets
+            };
+            return LoadRandomMonsterSet(pool);
+        }
+
+        /// <summary>Golem boss set (Outside R20 / Inside R30 / regular bosses).</summary>
+        public static MonsterAnimSet GetGolemBossAnimSet() =>
+            LoadRandomMonsterSet(GolemBossSets);
+
+        /// <summary>Lord boss set for Dungeon R40 (phase by HP).</summary>
+        public static MonsterAnimSet GetLordBossAnimSet(bool highPhase) =>
+            LoadRandomMonsterSet(highPhase ? LordBossHighSets : LordBossLowSets);
+
+        static MonsterAnimSet LoadRandomMonsterSet(string[] pool)
+        {
+            if (pool == null || pool.Length == 0)
+                return default;
+
+            // Prefer a random loaded set; fall through pool if a folder is missing.
+            var start = Random.Range(0, pool.Length);
+            for (var n = 0; n < pool.Length; n++)
+            {
+                var key = pool[(start + n) % pool.Length];
+                var set = LoadMonsterAnimSet(key);
+                if (set.IsValid) return set;
+            }
+
+            return default;
+        }
+
+        /// <summary>
+        /// Loads a curated Resources/Monsters/{relative} animation folder.
+        /// Frames: stand_*, walk_*, attack_* (hit uses mid attack frame).
+        /// </summary>
+        public static MonsterAnimSet LoadMonsterAnimSet(string relativeFolder)
+        {
+            if (string.IsNullOrEmpty(relativeFolder)) return default;
+            if (MonsterSetCache.TryGetValue(relativeFolder, out var cached) && cached.IsValid)
+                return cached;
+
+            var folder = Monsters + relativeFolder.Trim('/');
+            var stand = LoadFrameSequence(folder, "stand", 6);
+            var walk = LoadFrameSequence(folder, "walk", 6);
+            var attack = LoadFrameSequence(folder, "attack", 6);
+            // Lord packs also ship attack2 / sword — use as extra attack flair if main attack missing.
+            if (attack.Length == 0)
+                attack = LoadFrameSequence(folder, "attack2", 6);
+            if (attack.Length == 0)
+                attack = LoadFrameSequence(folder, "sword", 6);
+
+            var idle = FirstOrNull(stand) ?? FirstOrNull(walk) ?? FirstOrNull(attack);
+            if (idle == null)
+            {
+                MonsterSetCache[relativeFolder] = default;
+                return default;
+            }
+
+            var hit = attack.Length >= 3 ? attack[2] : attack.Length > 0 ? attack[0] : idle;
+            var hitAttack = attack.Length >= 5 ? attack[4] : hit;
+            var attackPose = attack.Length >= 4 ? attack[3] : attack.Length > 0 ? attack[^1] : idle;
+
+            var set = new MonsterAnimSet
+            {
+                Idle = idle,
+                Hit = hit,
+                Attack = attackPose,
+                HitAttack = hitAttack,
+                StandFrames = stand.Length > 0 ? stand : new[] { idle },
+                WalkFrames = walk.Length > 0 ? walk : stand.Length > 0 ? stand : new[] { idle },
+                AttackFrames = attack.Length > 0 ? attack : new[] { attackPose },
+                FacesRightByDefault = true
+            };
+            MonsterSetCache[relativeFolder] = set;
+            return set;
+        }
+
+        static Sprite[] LoadFrameSequence(string folder, string prefix, int maxFrames)
+        {
+            var frames = new List<Sprite>(maxFrames);
+            for (var i = 1; i <= maxFrames; i++)
+            {
+                var sprite = TryLoadSprite($"{folder}/{prefix}_{i}", TilePixelsPerUnit);
+                if (sprite == null) break;
+                frames.Add(sprite);
+            }
+
+            return frames.ToArray();
+        }
+
+        static Sprite FirstOrNull(Sprite[] frames)
+        {
+            if (frames == null) return null;
+            for (var i = 0; i < frames.Length; i++)
+            {
+                if (frames[i] != null) return frames[i];
+            }
+
+            return null;
         }
 
         static Sprite GetSheetVariant(string sheetName, int expectedCount, int index)
@@ -744,8 +924,10 @@ namespace ProjectZx.Core
         /// <summary>
         /// Loads a held weapon sprite and rebuilds it at a combat-readable world length.
         /// Uploaded 16×16 art at 100 PPU is only ~0.16 units — effectively invisible on the hero.
+        /// Admurin singles face the wrong way for combat (tip should extend +X from the grip pivot),
+        /// so they are flipped horizontally by default.
         /// </summary>
-        static Sprite LoadWeaponSprite(string resourceName, Vector2 pivot, float worldLength)
+        static Sprite LoadWeaponSprite(string resourceName, Vector2 pivot, float worldLength, bool flipHorizontal = true)
         {
             if (string.IsNullOrEmpty(resourceName) || worldLength < 0.05f) return null;
 
@@ -759,9 +941,20 @@ namespace ProjectZx.Core
             if (source != null)
             {
                 var rect = source.textureRect;
+                Texture2D tex = source.texture;
+                if (flipHorizontal)
+                {
+                    var flipped = CreateHorizontallyFlippedTexture(source.texture, rect);
+                    if (flipped != null)
+                    {
+                        tex = flipped;
+                        rect = new Rect(0f, 0f, flipped.width, flipped.height);
+                    }
+                }
+
                 var ppu = Mathf.Max(1f, rect.width / worldLength);
                 var rebuilt = Sprite.Create(
-                    source.texture,
+                    tex,
                     rect,
                     pivot,
                     ppu,
@@ -769,7 +962,7 @@ namespace ProjectZx.Core
                     SpriteMeshType.FullRect);
                 if (rebuilt != null)
                 {
-                    rebuilt.name = resourceName + "_Weapon";
+                    rebuilt.name = resourceName + (flipHorizontal ? "_WeaponFlip" : "_Weapon");
                     return rebuilt;
                 }
 
@@ -780,6 +973,15 @@ namespace ProjectZx.Core
             var texture = Resources.Load<Texture2D>(resourceName);
             if (texture == null) return null;
 
+            if (flipHorizontal)
+            {
+                var flipped = CreateHorizontallyFlippedTexture(
+                    texture,
+                    new Rect(0f, 0f, texture.width, texture.height));
+                if (flipped != null)
+                    texture = flipped;
+            }
+
             var fullPpu = Mathf.Max(1f, texture.width / worldLength);
             return Sprite.Create(
                 texture,
@@ -788,6 +990,48 @@ namespace ProjectZx.Core
                 fullPpu,
                 0,
                 SpriteMeshType.FullRect);
+        }
+
+        /// <summary>
+        /// Copies a texture rect and mirrors it on X so weapon tips point +X from the grip pivot.
+        /// </summary>
+        static Texture2D CreateHorizontallyFlippedTexture(Texture2D source, Rect rect)
+        {
+            if (source == null) return null;
+
+            var width = Mathf.Max(1, Mathf.RoundToInt(rect.width));
+            var height = Mathf.Max(1, Mathf.RoundToInt(rect.height));
+            var x = Mathf.RoundToInt(rect.x);
+            var y = Mathf.RoundToInt(rect.y);
+
+            Color[] pixels;
+            try
+            {
+                pixels = source.GetPixels(x, y, width, height);
+            }
+            catch
+            {
+                // Texture not readable — skip flip and keep original orientation.
+                return null;
+            }
+
+            var flipped = new Color[pixels.Length];
+            for (var row = 0; row < height; row++)
+            {
+                var rowStart = row * width;
+                for (var col = 0; col < width; col++)
+                    flipped[rowStart + col] = pixels[rowStart + (width - 1 - col)];
+            }
+
+            var tex = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp,
+                name = source.name + "_flipX"
+            };
+            tex.SetPixels(flipped);
+            tex.Apply(false, true);
+            return tex;
         }
 
         public static float GetTileScale(Sprite sprite, float tileSize = 1f)

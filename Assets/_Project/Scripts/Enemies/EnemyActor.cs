@@ -80,6 +80,14 @@ namespace ProjectZx.Enemies
         Sprite _hitSprite;
         Sprite _hitSpriteAttack;
         float _hitSpriteTimer;
+        Sprite[] _standFrames = System.Array.Empty<Sprite>();
+        Sprite[] _walkFrames = System.Array.Empty<Sprite>();
+        Sprite[] _attackFrames = System.Array.Empty<Sprite>();
+        int _bodyAnimFrame;
+        float _bodyAnimTimer;
+        bool _facesRightByDefault = true;
+        bool _bossBLowPhase;
+        bool _wasMoving;
         GameObject _fireBreathFx;
         SpriteRenderer _fireBreathRenderer;
         Vector2 _fireBreathAim = Vector2.left;
@@ -97,6 +105,7 @@ namespace ProjectZx.Enemies
         int _bleedDamageRemaining;
         FlameEnchantVfx _burnVfx;
         readonly List<RaycastHit2D> _castHits = new();
+        const float BodyAnimFrameSeconds = 0.1f;
 
         public void Initialize(
             int round,
@@ -242,32 +251,66 @@ namespace ProjectZx.Enemies
         {
             if (IsRoundFortyBoss)
             {
-                ApplyBossBPhaseSprites();
+                _bossBLowPhase = HpRatio <= 0.5f;
+                ApplyAnimSet(ArtLibrary.GetLordBossAnimSet(highPhase: !_bossBLowPhase));
                 return;
             }
 
             if (isBoss)
             {
-                _idleSprite = ArtLibrary.Boss;
-                _attackSprite = ArtLibrary.BossAttacking;
-                _hitSprite = ArtLibrary.BossHit;
-                _hitSpriteAttack = ArtLibrary.BossAttackingHit;
+                // Outside R20 / Inside R30 / wave bosses → Golem packs.
+                ApplyAnimSet(ArtLibrary.GetGolemBossAnimSet());
                 return;
             }
 
-            ArtLibrary.GetZombieSprites(zombieKind, out _idleSprite, out _hitSprite);
-            _attackSprite = _idleSprite;
-            _hitSpriteAttack = _hitSprite;
+            // Regular enemies → Demon packs by map tier.
+            ApplyAnimSet(ArtLibrary.GetEnemyAnimSet(zombieKind));
+        }
+
+        void ApplyAnimSet(MonsterAnimSet set)
+        {
+            if (!set.IsValid)
+            {
+                // Legacy fallback if Resources/Monsters is missing (avoid ArtLibrary.Boss recursion).
+                ArtLibrary.GetZombieSprites(EnemyZombieKind.Outside, out _idleSprite, out _hitSprite);
+                if (_idleSprite == null)
+                    _idleSprite = ArtLibrary.PlayerIdle;
+                _attackSprite = _idleSprite;
+                _hitSpriteAttack = _hitSprite ?? _idleSprite;
+                _standFrames = _idleSprite != null ? new[] { _idleSprite } : System.Array.Empty<Sprite>();
+                _walkFrames = _standFrames;
+                _attackFrames = _standFrames;
+                _facesRightByDefault = true;
+                return;
+            }
+
+            _idleSprite = set.Idle;
+            _attackSprite = set.Attack ?? set.Idle;
+            _hitSprite = set.Hit ?? set.Idle;
+            _hitSpriteAttack = set.HitAttack ?? _hitSprite;
+            _standFrames = set.StandFrames != null && set.StandFrames.Length > 0
+                ? set.StandFrames
+                : new[] { set.Idle };
+            _walkFrames = set.WalkFrames != null && set.WalkFrames.Length > 0
+                ? set.WalkFrames
+                : _standFrames;
+            _attackFrames = set.AttackFrames != null && set.AttackFrames.Length > 0
+                ? set.AttackFrames
+                : new[] { _attackSprite };
+            _facesRightByDefault = set.FacesRightByDefault;
+            _bodyAnimFrame = 0;
+            _bodyAnimTimer = BodyAnimFrameSeconds;
         }
 
         void ApplyBossBPhaseSprites()
         {
-            var high = HpRatio > 0.5f;
-            var body = high ? ArtLibrary.BossB : ArtLibrary.BossB2;
-            _idleSprite = body;
-            _attackSprite = body;
-            _hitSprite = body;
-            _hitSpriteAttack = ArtLibrary.BossB2;
+            if (!IsRoundFortyBoss) return;
+            var low = HpRatio <= 0.5f;
+            if (low == _bossBLowPhase && _idleSprite != null) return;
+            _bossBLowPhase = low;
+            ApplyAnimSet(ArtLibrary.GetLordBossAnimSet(highPhase: !low));
+            if (_renderer != null && _hitSpriteTimer <= 0f && !_fireBreathing)
+                _renderer.sprite = _idleSprite;
         }
 
         void EnsureBurnVfx()
@@ -467,6 +510,7 @@ namespace ProjectZx.Enemies
             if (!IsAlive || _player == null) return;
 
             UpdateHitSpriteTimer();
+            UpdateBodyAnimation();
             UpdateChill();
             UpdateSprint();
             UpdateIgnite();
@@ -544,15 +588,60 @@ namespace ProjectZx.Enemies
             if (_renderer == null) return;
             var dx = target.x - transform.position.x;
             if (Mathf.Abs(dx) < 0.02f) return;
-            // BossJ art faces left by default; zombies/player sprites face right.
-            _renderer.flipX = IsBoss ? dx > 0f : dx < 0f;
+            // Sanctum demon/golem/lord packs face right by default.
+            _renderer.flipX = _facesRightByDefault ? dx < 0f : dx > 0f;
         }
 
         bool IsFacingTarget(Vector3 target)
         {
             var dx = target.x - transform.position.x;
-            if (Mathf.Abs(dx) < 0.02f) return IsBoss;
-            return IsBoss ? dx > 0f : dx >= 0f;
+            if (Mathf.Abs(dx) < 0.02f) return true;
+            var wantsFlip = _facesRightByDefault ? dx < 0f : dx > 0f;
+            return _renderer == null || _renderer.flipX == wantsFlip;
+        }
+
+        void UpdateBodyAnimation()
+        {
+            if (_renderer == null || _hitSpriteTimer > 0f) return;
+
+            // Fire breath / wind-up: cycle attack frames.
+            if (_fireBreathing || (IsBoss && !_fireBreathing && IsInBossAttackPoseRange()))
+            {
+                AdvanceAnimFrames(_attackFrames, ref _bodyAnimFrame, ref _bodyAnimTimer);
+                if (_attackFrames.Length > 0)
+                    _renderer.sprite = _attackFrames[Mathf.Clamp(_bodyAnimFrame, 0, _attackFrames.Length - 1)];
+                return;
+            }
+
+            var moving = _rb != null && _rb.linearVelocity.sqrMagnitude > 0.0004f;
+            if (moving != _wasMoving)
+            {
+                _wasMoving = moving;
+                _bodyAnimFrame = 0;
+                _bodyAnimTimer = 0f;
+            }
+
+            var frames = moving ? _walkFrames : _standFrames;
+            AdvanceAnimFrames(frames, ref _bodyAnimFrame, ref _bodyAnimTimer);
+            if (frames.Length > 0)
+                _renderer.sprite = frames[Mathf.Clamp(_bodyAnimFrame, 0, frames.Length - 1)];
+            else if (_idleSprite != null)
+                _renderer.sprite = _idleSprite;
+        }
+
+        bool IsInBossAttackPoseRange()
+        {
+            if (!IsBoss || IsRoundFortyBoss || _player == null) return false;
+            return Vector2.Distance(transform.position, _player.position) <= FireBreathRange;
+        }
+
+        static void AdvanceAnimFrames(Sprite[] frames, ref int frame, ref float timer)
+        {
+            if (frames == null || frames.Length == 0) return;
+            timer -= Time.deltaTime;
+            if (timer > 0f) return;
+            timer = BodyAnimFrameSeconds;
+            frame = (frame + 1) % frames.Length;
         }
 
         void UpdateFireBreath()
@@ -570,9 +659,7 @@ namespace ProjectZx.Enemies
                     _fireAnimFrame++;
                 }
 
-                if (_renderer != null) _renderer.sprite = _attackSprite;
-
-                // Keep stream aimed at the player (up/down/left/right/diagonals).
+                // Body attack frames driven by UpdateBodyAnimation; keep breath VFX cycling.
                 if (_fireBreathRenderer != null && _fireBreathFx != null)
                 {
                     _fireBreathRenderer.sprite = ArtLibrary.GetFireBreathFrame(_fireAnimFrame);
@@ -733,8 +820,8 @@ namespace ProjectZx.Enemies
             if (aim.sqrMagnitude < 0.0001f)
                 aim = _renderer != null && _renderer.flipX ? Vector2.right : Vector2.left;
 
-            // Leading hand: boss art faces left; flipX when player is to the right.
-            var leading = _renderer != null && _renderer.flipX ? 1f : -1f;
+            // Leading hand follows facing (art faces right by default).
+            var leading = _renderer != null && _renderer.flipX ? -1f : 1f;
             var hand = (Vector2)transform.position + new Vector2(leading * 0.85f, 0.45f);
             var damage = Mathf.Max(1, Mathf.RoundToInt(_attack * 0.5f));
             BossFireProjectile.Spawn(hand, aim, damage, BossProjectileSpeed, BossProjectileLifetime);
