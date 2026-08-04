@@ -39,6 +39,8 @@ namespace ProjectZx.Core
         public const float TilePixelsPerUnit = 64f;
         const string Admurin = "Items/Admurin/";
         const string Monsters = "Monsters/";
+        /// <summary>Curated Rogue Adventure sheets under Resources/RogueAdventure/.</summary>
+        const string RogueAdventure = "RogueAdventure/";
 
         static readonly string[] OutsideDemonSets =
         {
@@ -390,17 +392,33 @@ namespace ProjectZx.Core
         public static Sprite Stone => _stone ??= GetSheetVariant("RockSheet", 10, 0) ?? CreateStoneSprite();
         public static Sprite Tree => _tree ??= GetSheetVariant("TreeSheet", 9, 0) ?? CreateTreeSprite();
 
-        public static Sprite[] TreeVariants => _treeVariants ??= LoadSheetSprites("TreeSheet", 9);
-        public static Sprite[] RockVariants => _rockVariants ??= LoadSheetSprites("RockSheet", 10);
+        /// <summary>Outside vegetation props — Rogue Adventure Overworld (fallback: TreeSheet).</summary>
+        public static Sprite[] TreeVariants => _treeVariants ??=
+            LoadRoguePropSprites("RA_Overworld", 28, seed: 0)
+            ?? LoadSheetSprites("TreeSheet", 9);
+
+        /// <summary>Outside rock/debris props — Rogue Adventure Overworld (fallback: RockSheet).</summary>
+        public static Sprite[] RockVariants => _rockVariants ??=
+            LoadRoguePropSprites("RA_Overworld", 28, seed: 1)
+            ?? LoadSheetSprites("RockSheet", 10);
+
         public static Sprite[] ComputerVariants => _computerVariants ??= LoadSheetSprites("ComputerSheet", 8);
-        public static Sprite[] InsidePropVariants => _insidePropVariants ??= LoadSheetSprites("Inside1Sheet", 9);
+
+        /// <summary>Inside furniture/props — Rogue Adventure Interior (fallback: Inside1Sheet).</summary>
+        public static Sprite[] InsidePropVariants => _insidePropVariants ??=
+            LoadRoguePropSprites("RA_Interior", 36, seed: 2)
+            ?? LoadSheetSprites("Inside1Sheet", 9);
+
         public static Sprite[] WarheadVariants => _warheadVariants ??= LoadSheetSprites("WarheadSheet", 8);
-        public static Sprite[] CryptVariants => _cryptVariants ??= LoadSheetSprites("CryptSheet", 9);
 
-        // Outside trees/rocks use sheet variants #1 and #2 only (indices 0 and 1).
-        public static Sprite GetRandomTreeSprite() => PickFromFirstTwo(TreeVariants) ?? CreateTreeSprite();
+        /// <summary>Dungeon crypt props — Rogue Adventure Crypt (fallback: CryptSheet).</summary>
+        public static Sprite[] CryptVariants => _cryptVariants ??=
+            LoadRoguePropSprites("RA_Crypt", 32, seed: 3)
+            ?? LoadSheetSprites("CryptSheet", 9);
 
-        public static Sprite GetRandomRockSprite() => PickFromFirstTwo(RockVariants) ?? CreateStoneSprite();
+        public static Sprite GetRandomTreeSprite() => PickRandom(TreeVariants) ?? CreateTreeSprite();
+
+        public static Sprite GetRandomRockSprite() => PickRandom(RockVariants) ?? CreateStoneSprite();
 
         public static Sprite GetRandomComputerSprite() => PickRandom(ComputerVariants);
 
@@ -517,34 +535,183 @@ namespace ProjectZx.Core
 
         public static Sprite GetOutsideTile(int index)
         {
-            _outsideTiles ??= new[]
-            {
-                LoadTile("Art/tile1_outside", "tile1Outside"),
-                LoadTile("Art/tile2_outside", "tile2Outside"),
-                LoadTile("Art/tile3_outside", "tile3Outside")
-            };
+            // Outside + Unlimited Outside-phase: Rogue Adventure Overworld ground.
+            _outsideTiles ??= LoadRogueFloorSprites("RA_Overworld_Ground", 24)
+                              ?? new[]
+                              {
+                                  LoadTile("Art/tile1_outside", "tile1Outside"),
+                                  LoadTile("Art/tile2_outside", "tile2Outside"),
+                                  LoadTile("Art/tile3_outside", "tile3Outside")
+                              };
             return _outsideTiles[Mathf.Abs(index) % _outsideTiles.Length];
         }
 
         public static Sprite GetInsideTile(int index)
         {
-            // Inside survival floor — Resources/Rectangle Tile.
-            _insideTiles ??= BuildTileSet("Rectangle Tile");
+            // Inside + Unlimited Inside-phase: Rogue Adventure Interior floors.
+            _insideTiles ??= LoadRogueFloorSprites("RA_Interior", 24)
+                             ?? BuildTileSet("Rectangle Tile");
             return _insideTiles[Mathf.Abs(index) % _insideTiles.Length];
         }
 
         public static Sprite GetDungeonTile(int index)
         {
-            // Dungeon survival floor — Resources/Dungeon_Tile.
-            _dungeonTiles ??= BuildTileSet("Dungeon_Tile");
+            // Dungeon + Unlimited Dungeon-phase: Rogue Adventure Crypt floors.
+            _dungeonTiles ??= LoadRogueFloorSprites("RA_Crypt", 24)
+                              ?? BuildTileSet("Dungeon_Tile");
             return _dungeonTiles[Mathf.Abs(index) % _dungeonTiles.Length];
         }
 
         public static Sprite GetSandTile(int index)
         {
-            // Unlimited survival floor — Resources/SandTile.
+            // Legacy Unlimited sand floor — kept as fallback; Unlimited now uses biome floors.
             _sandTiles ??= BuildTileSet("SandTile");
             return _sandTiles[Mathf.Abs(index) % _sandTiles.Length];
+        }
+
+        /// <summary>
+        /// Loads solid walkable floor tiles from a curated Rogue Adventure multi-sprite sheet.
+        /// Prefers high-fill cells (true ground); falls back to even sampling of the sheet.
+        /// </summary>
+        static Sprite[] LoadRogueFloorSprites(string sheetLeaf, int maxCount)
+        {
+            var all = LoadOrderedHeroSheet(RogueAdventure + sheetLeaf);
+            if (all == null || all.Length == 0) return null;
+
+            var solid = new List<Sprite>(all.Length);
+            for (var i = 0; i < all.Length; i++)
+            {
+                var sprite = all[i];
+                if (sprite == null) continue;
+                if (TryMeasureSpriteFill(sprite, out var fill, out var edgeFill))
+                {
+                    if (fill >= 0.82f && edgeFill >= 0.68f)
+                        solid.Add(sprite);
+                }
+                else
+                {
+                    solid.Add(sprite);
+                }
+            }
+
+            var source = solid.Count > 0 ? solid : new List<Sprite>(all);
+            return EvenSampleSprites(source, maxCount);
+        }
+
+        /// <summary>
+        /// Loads decorative / object-like sprites from a Rogue Adventure sheet for obstacles.
+        /// Prefers mid-fill silhouettes over solid floor blocks; samples with a seed for variety.
+        /// </summary>
+        static Sprite[] LoadRoguePropSprites(string sheetLeaf, int maxCount, int seed)
+        {
+            var all = LoadOrderedHeroSheet(RogueAdventure + sheetLeaf);
+            if (all == null || all.Length == 0) return null;
+
+            var props = new List<Sprite>(all.Length);
+            for (var i = 0; i < all.Length; i++)
+            {
+                var sprite = all[i];
+                if (sprite == null) continue;
+                if (TryMeasureSpriteFill(sprite, out var fill, out var edgeFill))
+                {
+                    // Object silhouettes: partial fill, not a full solid floor square.
+                    if (fill >= 0.12f && fill <= 0.88f && edgeFill < 0.94f)
+                        props.Add(sprite);
+                }
+                else if ((i + seed) % 3 != 0)
+                {
+                    props.Add(sprite);
+                }
+            }
+
+            if (props.Count == 0)
+                props.AddRange(all);
+
+            // Seeded shuffle so tree vs rock pools differ without hardcoding indices.
+            var rng = new System.Random(90210 + seed);
+            for (var i = props.Count - 1; i > 0; i--)
+            {
+                var j = rng.Next(i + 1);
+                (props[i], props[j]) = (props[j], props[i]);
+            }
+
+            return EvenSampleSprites(props, maxCount);
+        }
+
+        static Sprite[] EvenSampleSprites(IList<Sprite> source, int maxCount)
+        {
+            if (source == null || source.Count == 0) return null;
+            if (source.Count <= maxCount)
+            {
+                var copy = new Sprite[source.Count];
+                for (var i = 0; i < source.Count; i++) copy[i] = source[i];
+                return copy;
+            }
+
+            var result = new Sprite[maxCount];
+            for (var i = 0; i < maxCount; i++)
+            {
+                var idx = (int)((i + 0.5f) * source.Count / maxCount);
+                if (idx >= source.Count) idx = source.Count - 1;
+                result[i] = source[idx];
+            }
+
+            return result;
+        }
+
+        static bool TryMeasureSpriteFill(Sprite sprite, out float fill, out float edgeFill)
+        {
+            fill = 0f;
+            edgeFill = 0f;
+            if (sprite == null) return false;
+            var tex = sprite.texture;
+            if (tex == null || !tex.isReadable) return false;
+
+            var r = sprite.textureRect;
+            var x = Mathf.FloorToInt(r.x);
+            var y = Mathf.FloorToInt(r.y);
+            var w = Mathf.Max(1, Mathf.FloorToInt(r.width));
+            var h = Mathf.Max(1, Mathf.FloorToInt(r.height));
+            if (x < 0 || y < 0 || x + w > tex.width || y + h > tex.height) return false;
+
+            Color[] pixels;
+            try
+            {
+                pixels = tex.GetPixels(x, y, w, h);
+            }
+            catch
+            {
+                return false;
+            }
+
+            if (pixels == null || pixels.Length == 0) return false;
+
+            var opaque = 0;
+            for (var i = 0; i < pixels.Length; i++)
+            {
+                if (pixels[i].a > 0.78f) opaque++;
+            }
+
+            fill = opaque / (float)pixels.Length;
+
+            var edgeOpaque = 0;
+            var edgeCount = 0;
+            for (var col = 0; col < w; col++)
+            {
+                edgeCount += 2;
+                if (pixels[col].a > 0.78f) edgeOpaque++;
+                if (pixels[(h - 1) * w + col].a > 0.78f) edgeOpaque++;
+            }
+
+            for (var row = 0; row < h; row++)
+            {
+                edgeCount += 2;
+                if (pixels[row * w].a > 0.78f) edgeOpaque++;
+                if (pixels[row * w + (w - 1)].a > 0.78f) edgeOpaque++;
+            }
+
+            edgeFill = edgeCount > 0 ? edgeOpaque / (float)edgeCount : 0f;
+            return true;
         }
 
         static Sprite[] BuildTileSet(params string[] paths)

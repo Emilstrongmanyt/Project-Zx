@@ -104,21 +104,19 @@ namespace ProjectZx.Core
             var isInside = visualBiome == SurvivalMapKind.Inside;
             var isDungeon = visualBiome == SurvivalMapKind.Dungeon;
             var isUnlimited = mapKind == SurvivalMapKind.Unlimited;
-            SetupCamera(isUnlimited
-                ? new Color(0.55f, 0.45f, 0.28f) // sand-adjacent clear color
-                : isDungeon
+            SetupCamera(isDungeon
                 ? new Color(0.08f, 0.07f, 0.1f)
                 : isInside
-                    ? new Color(0.2f, 0.16f, 0.12f)
+                    ? new Color(0.18f, 0.12f, 0.1f)
                     // Match water tile so survival shores read as a continuous lake edge.
                     : new Color(0.1f, 0.2f, 0.48f));
 
             const float arenaW = ArenaBounds.ArenaWidth;
             const float arenaH = ArenaBounds.ArenaHeight;
-            // Dungeon → Dungeon_Tile; Unlimited → SandTile (props still use visual biome).
-            var floorKind = isUnlimited
-                ? SurvivalMapKind.Unlimited
-                : visualBiome == SurvivalMapKind.Unlimited ? SurvivalMapKind.Outside : visualBiome;
+            // Floors follow visual biome (Unlimited phases use Outside / Inside / Dungeon art).
+            var floorKind = visualBiome == SurvivalMapKind.Unlimited
+                ? SurvivalMapKind.Outside
+                : visualBiome;
             GameFactory.CreateTiledField(
                 isUnlimited ? "UnlimitedFloor" : isDungeon ? "DungeonFloor" : isInside ? "InsideFloor" : "OutsideFloor",
                 arenaW,

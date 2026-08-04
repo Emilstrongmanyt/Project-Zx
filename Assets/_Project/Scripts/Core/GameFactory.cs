@@ -63,13 +63,12 @@ namespace ProjectZx.Core
                 Sprite sprite;
                 if (isBorder)
                     sprite = waterSprite;
-                else if (mapKind == SurvivalMapKind.Unlimited)
-                    sprite = ArtLibrary.GetSandTile(tileIndex);
                 else if (mapKind == SurvivalMapKind.Dungeon)
                     sprite = ArtLibrary.GetDungeonTile(tileIndex);
                 else if (mapKind == SurvivalMapKind.Inside)
                     sprite = ArtLibrary.GetInsideTile(tileIndex);
                 else
+                    // Outside (and Unlimited phases that pass Outside as floor kind).
                     sprite = ArtLibrary.GetOutsideTile(tileIndex);
 
                 if (sprite == null) continue;
@@ -174,21 +173,12 @@ namespace ProjectZx.Core
             ReserveClearing(Vector2.zero, 4f);
             var root = new GameObject("InsideObstacles");
             var rng = new System.Random(90211);
+            // Rogue Adventure Interior props only (fantasy furniture / décor).
             var insideBag = new SpriteVariantBag(ArtLibrary.InsidePropVariants, rng);
-            var computerBag = new SpriteVariantBag(ArtLibrary.ComputerVariants, rng);
-            var warheadBag = new SpriteVariantBag(ArtLibrary.WarheadVariants, rng);
 
-            for (var i = 0; i < 12; i++)
-                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 2.6f, 5f, 1.8f,
-                    pos => CreatePropObstacle("InsideProp", insideBag.Pick(), new Vector3(pos.x, pos.y, 0f), 1f, 0.32f));
-
-            for (var i = 0; i < 8; i++)
-                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 2.8f, 5f, 1.6f,
-                    pos => CreatePropObstacle("Computer", computerBag.Pick(), new Vector3(pos.x, pos.y, 0f), 1f, 0.36f));
-
-            for (var i = 0; i < 6; i++)
-                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 3f, 6f, 1.7f,
-                    pos => CreatePropObstacle("Warhead", warheadBag.Pick(), new Vector3(pos.x, pos.y, 0f), 1f, 0.3f));
+            for (var i = 0; i < 26; i++)
+                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 2.6f, 5f, 1.7f,
+                    pos => CreatePropObstacle("InsideProp", insideBag.Pick(), new Vector3(pos.x, pos.y, 0f), 1.15f, 0.32f));
 
             return root;
         }
@@ -203,7 +193,7 @@ namespace ProjectZx.Core
 
             for (var i = 0; i < 22; i++)
                 TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 2.5f, 5f, 1.8f,
-                    pos => CreatePropObstacle("CryptProp", cryptBag.Pick(), new Vector3(pos.x, pos.y, 0f), 1f, 0.34f));
+                    pos => CreatePropObstacle("CryptProp", cryptBag.Pick(), new Vector3(pos.x, pos.y, 0f), 1.15f, 0.34f));
 
             return root;
         }
@@ -392,11 +382,12 @@ namespace ProjectZx.Core
             const float arenaH = ArenaBounds.ArenaHeight;
             var isInside = visualBiome == SurvivalMapKind.Inside;
             var isDungeon = visualBiome == SurvivalMapKind.Dungeon;
-            // Unlimited keeps SandTile for every biome phase; props still follow visualBiome.
-            var floorKind = GameSessionContext.SurvivalMap == SurvivalMapKind.Unlimited
-                ? SurvivalMapKind.Unlimited
+            // Unlimited floors follow the visual biome (Outside / Inside / Dungeon).
+            var floorKind = visualBiome == SurvivalMapKind.Unlimited
+                ? SurvivalMapKind.Outside
                 : visualBiome;
-            var floorName = floorKind == SurvivalMapKind.Unlimited
+            var isUnlimitedRun = GameSessionContext.SurvivalMap == SurvivalMapKind.Unlimited;
+            var floorName = isUnlimitedRun
                 ? "UnlimitedFloor"
                 : isDungeon ? "DungeonFloor" : isInside ? "InsideFloor" : "OutsideFloor";
 
@@ -414,14 +405,11 @@ namespace ProjectZx.Core
             var cam = Camera.main;
             if (cam != null)
             {
-                if (GameSessionContext.SurvivalMap == SurvivalMapKind.Unlimited)
-                    cam.backgroundColor = new Color(0.55f, 0.45f, 0.28f);
-                else
-                    cam.backgroundColor = isDungeon
-                        ? new Color(0.08f, 0.07f, 0.1f)
-                        : isInside
-                            ? new Color(0.2f, 0.16f, 0.12f)
-                            : new Color(0.1f, 0.2f, 0.48f);
+                cam.backgroundColor = isDungeon
+                    ? new Color(0.08f, 0.07f, 0.1f)
+                    : isInside
+                        ? new Color(0.18f, 0.12f, 0.1f)
+                        : new Color(0.1f, 0.2f, 0.48f);
             }
         }
 
