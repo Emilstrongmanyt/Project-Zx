@@ -528,8 +528,8 @@ namespace ProjectZx.Core
 
         public static Sprite GetInsideTile(int index)
         {
-            // Inside survival: diamond checkerboard floor (Resources root asset).
-            _insideTiles ??= BuildTileSet("Diamond Checkerboard Tile");
+            // Inside survival floor — Resources/Rectangle Tile.
+            _insideTiles ??= BuildTileSet("Rectangle Tile");
             return _insideTiles[Mathf.Abs(index) % _insideTiles.Length];
         }
 
