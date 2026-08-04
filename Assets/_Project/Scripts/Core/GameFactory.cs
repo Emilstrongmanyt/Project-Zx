@@ -63,6 +63,8 @@ namespace ProjectZx.Core
                 Sprite sprite;
                 if (isBorder)
                     sprite = waterSprite;
+                else if (mapKind == SurvivalMapKind.Unlimited)
+                    sprite = ArtLibrary.GetSandTile(tileIndex);
                 else if (mapKind == SurvivalMapKind.Dungeon)
                     sprite = ArtLibrary.GetDungeonTile(tileIndex);
                 else if (mapKind == SurvivalMapKind.Inside)
@@ -390,13 +392,15 @@ namespace ProjectZx.Core
             const float arenaH = ArenaBounds.ArenaHeight;
             var isInside = visualBiome == SurvivalMapKind.Inside;
             var isDungeon = visualBiome == SurvivalMapKind.Dungeon;
+            // Unlimited keeps SandTile for every biome phase; props still follow visualBiome.
+            var floorKind = GameSessionContext.SurvivalMap == SurvivalMapKind.Unlimited
+                ? SurvivalMapKind.Unlimited
+                : visualBiome;
+            var floorName = floorKind == SurvivalMapKind.Unlimited
+                ? "UnlimitedFloor"
+                : isDungeon ? "DungeonFloor" : isInside ? "InsideFloor" : "OutsideFloor";
 
-            CreateTiledField(
-                isDungeon ? "DungeonFloor" : isInside ? "InsideFloor" : "OutsideFloor",
-                arenaW,
-                arenaH,
-                visualBiome == SurvivalMapKind.Unlimited ? SurvivalMapKind.Outside : visualBiome,
-                1f);
+            CreateTiledField(floorName, arenaW, arenaH, floorKind, 1f);
 
             ClearScatterReservations();
             ReserveClearing(Vector2.zero, 4.5f);
@@ -410,11 +414,14 @@ namespace ProjectZx.Core
             var cam = Camera.main;
             if (cam != null)
             {
-                cam.backgroundColor = isDungeon
-                    ? new Color(0.08f, 0.07f, 0.1f)
-                    : isInside
-                        ? new Color(0.2f, 0.16f, 0.12f)
-                        : new Color(0.1f, 0.2f, 0.48f);
+                if (GameSessionContext.SurvivalMap == SurvivalMapKind.Unlimited)
+                    cam.backgroundColor = new Color(0.55f, 0.45f, 0.28f);
+                else
+                    cam.backgroundColor = isDungeon
+                        ? new Color(0.08f, 0.07f, 0.1f)
+                        : isInside
+                            ? new Color(0.2f, 0.16f, 0.12f)
+                            : new Color(0.1f, 0.2f, 0.48f);
             }
         }
 

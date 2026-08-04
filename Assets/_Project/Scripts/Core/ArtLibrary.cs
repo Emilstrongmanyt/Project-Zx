@@ -121,6 +121,7 @@ namespace ProjectZx.Core
             _outsideTiles = null;
             _insideTiles = null;
             _dungeonTiles = null;
+            _sandTiles = null;
             _waterTile = null;
             _fireBreathFrames = null;
             _zombieHit = null;
@@ -186,6 +187,7 @@ namespace ProjectZx.Core
         static Sprite[] _outsideTiles;
         static Sprite[] _insideTiles;
         static Sprite[] _dungeonTiles;
+        static Sprite[] _sandTiles;
         static Sprite _waterTile;
         static Sprite[] _fireBreathFrames;
         static Sprite[] _weaponFireFrames;
@@ -533,9 +535,16 @@ namespace ProjectZx.Core
 
         public static Sprite GetDungeonTile(int index)
         {
-            // Dungeon survival: the other new floor tile only (no alternating set).
-            _dungeonTiles ??= BuildTileSet("Roof Tiles");
+            // Dungeon survival floor — Resources/Dungeon_Tile.
+            _dungeonTiles ??= BuildTileSet("Dungeon_Tile");
             return _dungeonTiles[Mathf.Abs(index) % _dungeonTiles.Length];
+        }
+
+        public static Sprite GetSandTile(int index)
+        {
+            // Unlimited survival floor — Resources/SandTile.
+            _sandTiles ??= BuildTileSet("SandTile");
+            return _sandTiles[Mathf.Abs(index) % _sandTiles.Length];
         }
 
         static Sprite[] BuildTileSet(params string[] paths)
