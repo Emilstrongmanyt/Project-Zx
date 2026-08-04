@@ -62,6 +62,7 @@ namespace ProjectZx.Waves
 
                 EnsureBiomeForRound(CurrentRound);
                 _roundActive = true;
+                DpsTracker.BeginRound();
                 yield return StartCoroutine(SpawnRound(CurrentRound));
 
                 while (_roundActive)
@@ -72,6 +73,7 @@ namespace ProjectZx.Waves
                     if (EnemiesRemaining <= 0 && !_spawning)
                     {
                         _roundActive = false;
+                        DpsTracker.EndRound();
                         _hud?.SetRoundComplete(CurrentRound);
                         GameSave.RecordHighestRound(CurrentRound);
                         TryRecordWeaponProgress(CurrentRound);

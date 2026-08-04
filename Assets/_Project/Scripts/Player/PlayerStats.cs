@@ -130,8 +130,17 @@ namespace ProjectZx.Player
             RunAttackSpeedMultiplier = 1f;
             RunAttackRangeMultiplier = 1f;
             RunLootRangeMultiplier = 1f;
-            RunCritChance = 0f;
-            RunCritMultiplier = 1.5f;
+            // Bowman identity: +40% base crit chance, +40% base crit damage (1.5× → 2.1×).
+            if (GameSessionContext.SelectedClass == PlayerClass.Bowman)
+            {
+                RunCritChance = 0.40f;
+                RunCritMultiplier = 1.5f * 1.4f;
+            }
+            else
+            {
+                RunCritChance = 0f;
+                RunCritMultiplier = 1.5f;
+            }
             RunLifesteal = 0f;
             RunBossDamageBonus = 0f;
             RunExecuteBonus = 0f;
@@ -480,8 +489,9 @@ namespace ProjectZx.Player
         public bool CanOfferAttackRangeTalent =>
             AttackRangeMultiplier * 1.06f <= StatCaps.RunMaxAttackRangeMultiplier + 0.001f;
         public bool CanOfferHpTalent => MaxHp + 30 <= StatCaps.RunMaxHp;
-        public bool CanOfferCritChance => RunCritChance + 0.08f <= 0.55f;
-        public bool CanOfferCritDamage => RunCritMultiplier + 0.25f <= 3f;
+        // Higher caps so Bowman (starts 40% / 2.1×) still gains from crit talent picks.
+        public bool CanOfferCritChance => RunCritChance + 0.08f <= 0.90f;
+        public bool CanOfferCritDamage => RunCritMultiplier + 0.25f <= 3.6f;
         public bool CanOfferLifesteal => RunLifesteal + 0.03f <= 0.2f;
         public bool CanOfferBossHunter => RunBossDamageBonus + 0.2f <= 0.8f;
         public bool CanOfferExecute => RunExecuteBonus + 0.5f <= 1.5f;
@@ -595,11 +605,11 @@ namespace ProjectZx.Player
                     break;
                 case RunLevelChoice.CritChance:
                     if (!CanOfferCritChance) break;
-                    RunCritChance = Mathf.Min(0.55f, RunCritChance + 0.08f);
+                    RunCritChance = Mathf.Min(0.90f, RunCritChance + 0.08f);
                     break;
                 case RunLevelChoice.CritDamage:
                     if (!CanOfferCritDamage) break;
-                    RunCritMultiplier = Mathf.Min(3f, RunCritMultiplier + 0.25f);
+                    RunCritMultiplier = Mathf.Min(3.6f, RunCritMultiplier + 0.25f);
                     break;
                 case RunLevelChoice.Lifesteal:
                     if (!CanOfferLifesteal) break;

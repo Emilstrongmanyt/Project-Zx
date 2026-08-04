@@ -218,6 +218,18 @@ namespace ProjectZx.Enemies
                     _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * CryptTrashStatScale));
                     _speed *= CryptTrashStatScale;
                 }
+
+                // Dungeon R20–40: pure InsideElite + per-round speed was outpacing player power.
+                // Soften speed hardest; trim HP/ATK slightly so mid–late dungeon stays fair.
+                if (GameSessionContext.SurvivalMap == SurvivalMapKind.Dungeon && round >= 15)
+                {
+                    var late = Mathf.InverseLerp(15f, 40f, round);
+                    var speedSoft = Mathf.Lerp(0.94f, 0.76f, late);
+                    var statSoft = Mathf.Lerp(0.97f, 0.88f, late);
+                    _speed *= speedSoft;
+                    _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * statSoft));
+                    _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * statSoft));
+                }
             }
 
             // Inside Survival map: every enemy (including bosses) moves 15% slower.

@@ -4,18 +4,24 @@ using UnityEngine;
 namespace ProjectZx.Core
 {
     /// <summary>
-    /// Sliding-window damage-per-second tracker for the survival HUD.
-    /// Records every point of damage enemies take from the player team.
+    /// Combat DPS tracker for the survival HUD.
+    /// Live = calm average over the last <see cref="WindowSeconds"/> seconds of combat time.
+    /// Round = average DPS for the current survival round (resets each round).
+    /// Both freeze while talent / retreat menus pause combat (timeScale 0 + explicit pause).
     /// </summary>
     public static class DpsTracker
     {
-        const float WindowSeconds = 3f;
-        const float IdleFadeSeconds = 1.15f;
+        public const float WindowSeconds = 3f;
 
         static readonly List<float> _times = new(64);
         static readonly List<int> _damages = new(64);
-        static float _displayDps;
-        static float _peakDps;
+
+        static bool _paused;
+        static float _liveDps;
+        static float _roundDamage;
+        static float _roundCombatSeconds;
+        static float _roundAvgDps;
+        static float _lastCompletedRoundAvg;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics() => Reset();
@@ -24,27 +30,70 @@ namespace ProjectZx.Core
         {
             _times.Clear();
             _damages.Clear();
-            _displayDps = 0f;
-            _peakDps = 0f;
+            _paused = false;
+            _liveDps = 0f;
+            _roundDamage = 0f;
+            _roundCombatSeconds = 0f;
+            _roundAvgDps = 0f;
+            _lastCompletedRoundAvg = 0f;
+        }
+
+        /// <summary>Freeze meters during talent picks / retreat menus.</summary>
+        public static void SetPaused(bool paused) => _paused = paused;
+
+        public static bool IsPaused => _paused;
+
+        public static void BeginRound()
+        {
+            // Keep last completed average for the brief between-rounds gap.
+            if (_roundCombatSeconds > 0.25f && _roundDamage > 0f)
+                _lastCompletedRoundAvg = _roundDamage / _roundCombatSeconds;
+
+            _roundDamage = 0f;
+            _roundCombatSeconds = 0f;
+            _roundAvgDps = 0f;
+            _times.Clear();
+            _damages.Clear();
+            _liveDps = 0f;
+        }
+
+        public static void EndRound()
+        {
+            if (_roundCombatSeconds > 0.25f && _roundDamage > 0f)
+                _lastCompletedRoundAvg = _roundDamage / _roundCombatSeconds;
+            _roundAvgDps = _lastCompletedRoundAvg;
         }
 
         public static void Record(int damage)
         {
-            if (damage <= 0) return;
-            // Use unscaled time so talent-pause frames don't freeze the meter forever.
-            _times.Add(Time.unscaledTime);
+            if (damage <= 0 || _paused) return;
+            // Scaled time freezes when menus set timeScale = 0.
+            var now = Time.time;
+            _times.Add(now);
             _damages.Add(damage);
+            _roundDamage += damage;
         }
 
-        /// <summary>Smoothed DPS for UI (decays after combat idles).</summary>
-        public static float DisplayDps => _displayDps;
+        /// <summary>Calm 3-second combat window average (lightly smoothed for display).</summary>
+        public static float LiveDps => _liveDps;
 
-        /// <summary>Highest smoothed DPS seen this run (resets with <see cref="Reset"/>).</summary>
-        public static float PeakDps => _peakDps;
+        /// <summary>Average DPS for the active round (or last completed if between rounds).</summary>
+        public static float RoundAvgDps =>
+            _roundCombatSeconds > 0.25f ? _roundAvgDps : _lastCompletedRoundAvg;
 
         public static void Tick()
         {
-            var now = Time.unscaledTime;
+            if (_paused) return;
+            if (Time.timeScale <= 0.001f) return;
+
+            var dt = Time.deltaTime;
+            if (dt <= 0f) return;
+
+            _roundCombatSeconds += dt;
+            if (_roundCombatSeconds > 0.01f)
+                _roundAvgDps = _roundDamage / _roundCombatSeconds;
+
+            var now = Time.time;
             Prune(now);
 
             var sum = 0;
@@ -59,27 +108,15 @@ namespace ProjectZx.Core
             else
             {
                 var oldest = _times[0];
-                var span = Mathf.Max(0.4f, now - oldest);
+                var span = Mathf.Max(0.5f, now - oldest);
                 if (span > WindowSeconds) span = WindowSeconds;
                 raw = sum / span;
             }
 
-            var dt = Mathf.Max(0.0001f, Time.unscaledDeltaTime);
-
-            if (raw <= 0.01f)
-            {
-                var lastHitAge = _times.Count > 0 ? now - _times[^1] : IdleFadeSeconds + 1f;
-                if (lastHitAge > IdleFadeSeconds)
-                    _displayDps = Mathf.MoveTowards(_displayDps, 0f, dt * Mathf.Max(50f, _displayDps * 1.5f));
-                else
-                    _displayDps = Mathf.Lerp(_displayDps, 0f, 1f - Mathf.Exp(-3f * dt));
-            }
-            else
-            {
-                _displayDps = Mathf.Lerp(_displayDps, raw, 1f - Mathf.Exp(-10f * dt));
-                if (_displayDps > _peakDps)
-                    _peakDps = _displayDps;
-            }
+            // Gentle blend so the number does not flicker every hit.
+            _liveDps = Mathf.Lerp(_liveDps, raw, 1f - Mathf.Exp(-3.5f * dt));
+            if (raw <= 0.01f && _liveDps < 1f)
+                _liveDps = 0f;
         }
 
         static void Prune(float now)

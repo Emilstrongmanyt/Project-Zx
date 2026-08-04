@@ -10,8 +10,8 @@ namespace ProjectZx.Combat
     [RequireComponent(typeof(PlayerStats))]
     public class BowmanCombat : MonoBehaviour
     {
-        /// <summary>Base bow damage (pre-standard bonus).</summary>
-        const float DamageMultiplier = 1.26f;
+        /// <summary>Base bow damage (pre-standard bonus). Identity: +1.4× vs unarmed baseline.</summary>
+        const float DamageMultiplier = 1.4f;
         /// <summary>Standard single-target technique: +40% base damage.</summary>
         const float StandardDamageBonus = 1.4f;
         const float PierceSecondaryMultiplier = 0.5f;

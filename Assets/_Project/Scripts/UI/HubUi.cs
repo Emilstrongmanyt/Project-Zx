@@ -1228,7 +1228,7 @@ namespace ProjectZx.UI
             var weaponTier = WeaponCatalog.GetUnlockedTier();
             var baseDamage = 10f * GameSave.DamageMultiplier * EquipmentCatalog.CombinedDamageMultiplier()
                 * WeaponCatalog.DamageMultiplier();
-            if (selected == PlayerClass.Bowman) baseDamage *= 1.26f;
+            if (selected == PlayerClass.Bowman) baseDamage *= 1.4f;
             else if (selected == PlayerClass.Spearman) baseDamage *= 1.15f;
             else if (selected == PlayerClass.Samurai) baseDamage *= 0.7f;
             var moveSpeed = 4.5f * GameSave.SpeedMultiplier;
