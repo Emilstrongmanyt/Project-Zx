@@ -21,8 +21,13 @@ namespace ProjectZx.Player
         const float CastSkin = 0.04f;
         const float StuckClearDelay = 0.35f;
 
-        [SerializeField] float baseSpeed = 4.5f;
+        public const float DefaultBaseSpeed = 4.5f;
+
+        [SerializeField] float baseSpeed = DefaultBaseSpeed;
         [SerializeField] bool allowNpcInteraction = true;
+
+        /// <summary>Current world move speed (shop + run multipliers applied).</summary>
+        public float CurrentMoveSpeed => GetSpeed();
 
         Vector2? _moveTarget;
         NpcInteractable _pendingNpc;

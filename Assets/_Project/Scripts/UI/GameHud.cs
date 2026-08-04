@@ -17,6 +17,7 @@ namespace ProjectZx.UI
         Text _hpText;
         Text _xpText;
         Text _goldText;
+        Text _dpsText;
         Image _hpFill;
         Image _xpFill;
         Text _bannerText;
@@ -48,6 +49,7 @@ namespace ProjectZx.UI
         void Awake()
         {
             Instance = this;
+            DpsTracker.Reset();
             Build();
             Achievements.OnUnlocked += OnAchievementUnlocked;
         }
@@ -102,6 +104,7 @@ namespace ProjectZx.UI
                 "0/30");
 
             BuildHudGoldChip(canvasGo.transform, new Vector2(SafeLeft, -SafeTop - 154f));
+            BuildHudDpsChip(canvasGo.transform, new Vector2(SafeLeft, -SafeTop - 208f));
 
             _bannerText = CreateText(canvasGo.transform, "", 44, Vector2.zero, TextAnchor.MiddleCenter);
             _bannerText.color = new Color(1f, 0.85f, 0.3f);
@@ -511,6 +514,12 @@ namespace ProjectZx.UI
             if (_goldText != null)
                 _goldText.text = GoldFormat.Abbreviate(stats.RunGold);
 
+            if (_dpsText != null)
+            {
+                DpsTracker.Tick();
+                _dpsText.text = FormatDpsLabel(DpsTracker.DisplayDps);
+            }
+
             if (IsGamePaused) return;
 
             if (_achievementToastTimer > 0f)
@@ -806,6 +815,76 @@ namespace ProjectZx.UI
             _goldText.color = new Color(1f, 0.94f, 0.72f);
             _goldText.alignment = TextAnchor.MiddleLeft;
             _goldText.raycastTarget = false;
+        }
+
+        void BuildHudDpsChip(Transform parent, Vector2 pos)
+        {
+            // Matches gold chip styling so the meter reads as a sibling resource row.
+            var chip = new GameObject("DpsChip");
+            chip.transform.SetParent(parent, false);
+            var chipRect = chip.AddComponent<RectTransform>();
+            chipRect.anchorMin = new Vector2(0f, 1f);
+            chipRect.anchorMax = new Vector2(0f, 1f);
+            chipRect.pivot = new Vector2(0f, 1f);
+            chipRect.anchoredPosition = pos;
+            chipRect.sizeDelta = new Vector2(200f, 44f);
+
+            var bg = chip.AddComponent<Image>();
+            if (StoneUi.Available && StoneUi.ResourceBarBg != null)
+            {
+                bg.sprite = StoneUi.ResourceBarBg;
+                bg.type = Image.Type.Sliced;
+                bg.color = Color.white;
+            }
+            else
+            {
+                bg.color = new Color(0.1f, 0.08f, 0.12f, 0.82f);
+            }
+
+            var iconSprite = ArtLibrary.Arrow != null
+                ? ArtLibrary.Arrow
+                : ArtLibrary.Sparkles != null
+                    ? ArtLibrary.Sparkles
+                    : ArtLibrary.GoldCoin;
+
+            if (iconSprite != null)
+            {
+                var iconGo = new GameObject("DpsIcon");
+                iconGo.transform.SetParent(chip.transform, false);
+                var iconRect = iconGo.AddComponent<RectTransform>();
+                iconRect.anchorMin = new Vector2(0f, 0.5f);
+                iconRect.anchorMax = new Vector2(0f, 0.5f);
+                iconRect.pivot = new Vector2(0f, 0.5f);
+                iconRect.anchoredPosition = new Vector2(10f, 0f);
+                iconRect.sizeDelta = new Vector2(32f, 32f);
+                var iconImage = iconGo.AddComponent<Image>();
+                iconImage.sprite = iconSprite;
+                iconImage.color = new Color(1f, 0.78f, 0.55f, 1f);
+                iconImage.raycastTarget = false;
+            }
+
+            var textGo = new GameObject("DpsText");
+            textGo.transform.SetParent(chip.transform, false);
+            var textRect = textGo.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(iconSprite != null ? 46f : 12f, 0f);
+            textRect.offsetMax = new Vector2(-10f, 0f);
+            _dpsText = textGo.AddComponent<Text>();
+            _dpsText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            _dpsText.text = "DPS 0";
+            _dpsText.fontSize = 22;
+            _dpsText.fontStyle = FontStyle.Bold;
+            _dpsText.color = new Color(1f, 0.78f, 0.58f);
+            _dpsText.alignment = TextAnchor.MiddleLeft;
+            _dpsText.raycastTarget = false;
+        }
+
+        static string FormatDpsLabel(float dps)
+        {
+            if (dps < 1f) return "DPS 0";
+            if (dps < 1000f) return $"DPS {Mathf.RoundToInt(dps)}";
+            return $"DPS {GoldFormat.Abbreviate(Mathf.RoundToInt(dps))}";
         }
 
         void CreateChoiceButton(

@@ -65,7 +65,7 @@ namespace ProjectZx.Core
                 AttackMode.Whirlwind =>
                     "Full 360° spin cleave — buy in shop, then equip here.",
                 AttackMode.PiercingShot =>
-                    "Primary hit plus 50% damage to one enemy behind.",
+                    "Arrow pierces up to 5 enemies (full damage on first, 50% on each after).",
                 AttackMode.Standard when playerClass == PlayerClass.Bowman =>
                     "Single focused arrow shot (+40% damage).",
                 AttackMode.Standard when playerClass == PlayerClass.Spearman =>

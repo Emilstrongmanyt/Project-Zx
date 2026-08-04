@@ -186,7 +186,7 @@ namespace ProjectZx.UI
             y += step;
             _whirlwindRow = CreateShopUpgradeRow(content.transform, "Whirlwind (360°)", ShopCosts.Whirlwind, y, BuyWhirlwind);
             y += step;
-            _piercingShotRow = CreateShopUpgradeRow(content.transform, "Piercing Shot (Bowman)", ShopCosts.PiercingShot, y, BuyPiercingShot);
+            _piercingShotRow = CreateShopUpgradeRow(content.transform, "Piercing Shot (5 enemies)", ShopCosts.PiercingShot, y, BuyPiercingShot);
             y += step;
             _frostTipRow = CreateShopUpgradeRow(content.transform, "Frost Tip (1s chill, −60% move)", ShopCosts.FrostTip, y, BuyFrostTip);
 
@@ -982,11 +982,11 @@ namespace ProjectZx.UI
                 SetUpgradeRow(_whirlwindRow, "Whirlwind (360°)", ShopCosts.Whirlwind, false, string.Empty);
 
             if (GameSave.PiercingShotUnlocked)
-                SetOwnedRow(_piercingShotRow, "Piercing Shot (Bowman)");
+                SetOwnedRow(_piercingShotRow, "Piercing Shot (5 enemies)");
             else if (!GameSave.BowmanUnlocked)
-                SetLockedRow(_piercingShotRow, "Piercing Shot (Bowman)", "Unlock Bowman first");
+                SetLockedRow(_piercingShotRow, "Piercing Shot (5 enemies)", "Unlock Bowman first");
             else
-                SetUpgradeRow(_piercingShotRow, "Piercing Shot (Bowman)", ShopCosts.PiercingShot, false, string.Empty);
+                SetUpgradeRow(_piercingShotRow, "Piercing Shot (5 enemies)", ShopCosts.PiercingShot, false, string.Empty);
 
             if (GameSave.FrostTipUnlocked)
                 SetOwnedRow(_frostTipRow, "Frost Tip (1s chill, −60% move)");

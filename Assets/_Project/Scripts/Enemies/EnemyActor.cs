@@ -298,8 +298,12 @@ namespace ProjectZx.Enemies
                 _contactRange = IsBoss ? 1.2f : BaseContactRange;
             }
 
-            _canSprint = !isBoss && !IsRanged && round >= 10;
+            // Flying packs already ignore chill; keep them from sprinting past the player.
+            _canSprint = !isBoss && !IsRanged && !IsFlying && round >= 10;
             _sprintCooldown = Random.Range(2f, SprintCooldown);
+
+            if (IsFlying)
+                CapFlyingMoveSpeed();
         }
 
         public float HpRatio => _maxHp > 0 ? (float)_hp / _maxHp : 0f;
@@ -701,7 +705,34 @@ namespace ProjectZx.Enemies
             var speed = _speed;
             if (_sprinting) speed *= SprintSpeedMultiplier;
             if (IsChilled) speed *= ChillSpeedMultiplier;
+            if (IsFlying)
+            {
+                var cap = ResolvePlayerMoveSpeedCap();
+                if (cap > 0f)
+                    speed = Mathf.Min(speed, cap);
+            }
+
             return speed;
+        }
+
+        void CapFlyingMoveSpeed()
+        {
+            var cap = ResolvePlayerMoveSpeedCap();
+            if (cap > 0f)
+                _speed = Mathf.Min(_speed, cap);
+        }
+
+        float ResolvePlayerMoveSpeedCap()
+        {
+            if (_player == null)
+                _player = GameObject.FindGameObjectWithTag("Player")?.transform;
+            if (_player == null) return 0f;
+
+            var stats = _player.GetComponent<PlayerStats>();
+            if (stats != null && !stats.IsDead)
+                return Mathf.Max(0.5f, stats.EffectiveMoveSpeed);
+
+            return TapMovement.DefaultBaseSpeed * GameSave.SpeedMultiplier;
         }
 
         void UpdateChill()
@@ -909,6 +940,7 @@ namespace ProjectZx.Enemies
         public void TakeDamage(int amount)
         {
             if (!IsAlive || amount <= 0) return;
+            DpsTracker.Record(amount);
             ShowHitSprite();
             FloatingDamageNumber.Spawn(transform.position, amount, isHeroHit: false);
             _hp -= amount;
@@ -919,6 +951,7 @@ namespace ProjectZx.Enemies
         void TakeBurnDamage(int amount)
         {
             if (!IsAlive || amount <= 0) return;
+            DpsTracker.Record(amount);
             ShowHitSprite();
             FloatingDamageNumber.SpawnBurn(transform.position, amount);
             _hp -= amount;
@@ -929,6 +962,7 @@ namespace ProjectZx.Enemies
         void TakeBleedDamage(int amount)
         {
             if (!IsAlive || amount <= 0) return;
+            DpsTracker.Record(amount);
             ShowHitSprite();
             FloatingDamageNumber.SpawnBleed(transform.position, amount);
             _hp -= amount;

@@ -769,6 +769,20 @@ namespace ProjectZx.Player
             BankRunGoldToSave();
         }
 
+        /// <summary>
+        /// Player world move speed matching <see cref="TapMovement"/> (base × permanent × run).
+        /// Used to cap flying enemies so they cannot outrun the hero.
+        /// </summary>
+        public float EffectiveMoveSpeed
+        {
+            get
+            {
+                var tap = GetComponent<TapMovement>();
+                if (tap != null) return tap.CurrentMoveSpeed;
+                return TapMovement.DefaultBaseSpeed * GameSave.SpeedMultiplier * RunSpeedMultiplier;
+            }
+        }
+
         public float Damage =>
             10f * GameSave.DamageMultiplier * EquipmentCatalog.CombinedDamageMultiplier()
             * WeaponCatalog.DamageMultiplier() * RunDamageMultiplier * DamageOutputScale;

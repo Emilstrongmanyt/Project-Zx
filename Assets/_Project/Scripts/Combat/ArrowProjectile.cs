@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ProjectZx.Core;
 using ProjectZx.Enemies;
 using ProjectZx.Player;
@@ -9,6 +10,7 @@ namespace ProjectZx.Combat
     /// <summary>
     /// Straight-line bowman arrow (no mid-air homing). Horizontal tip-+X art; rotation
     /// follows velocity so slight aim angles look natural rather than permanently diagonal.
+    /// Piercing Shot continues through up to <see cref="PierceMaxTargets"/> enemies.
     /// </summary>
     public class ArrowProjectile : MonoBehaviour
     {
@@ -19,17 +21,23 @@ namespace ProjectZx.Combat
         /// <summary>−25% visual size vs previous 0.72.</summary>
         const float VisualScale = 0.54f;
         const float TorsoOffsetY = 0.28f;
+        /// <summary>Piercing Shot: total enemies one arrow can hit.</summary>
+        public const int PierceMaxTargets = 5;
+        const float PierceSearchRange = 7.5f;
 
         PlayerStats _source;
         EnemyActor _target;
-        float _damageMultiplier;
+        float _baseDamageMultiplier;
         bool _canApplyFrost;
         bool _pierce;
         float _pierceMultiplier;
+        int _hitsRemaining;
+        bool _hasHitOnce;
         float _life;
         float _distanceLeft;
         Vector2 _velocity = Vector2.right;
         Vector2 _aimPoint;
+        readonly HashSet<EnemyActor> _alreadyHit = new();
         SpriteRenderer _renderer;
 
         public static void Spawn(
@@ -67,10 +75,12 @@ namespace ProjectZx.Combat
             var proj = go.AddComponent<ArrowProjectile>();
             proj._source = source;
             proj._target = target;
-            proj._damageMultiplier = damageMultiplier;
+            proj._baseDamageMultiplier = damageMultiplier;
             proj._canApplyFrost = canApplyFrost;
             proj._pierce = pierce;
             proj._pierceMultiplier = pierceMultiplier;
+            proj._hitsRemaining = pierce ? PierceMaxTargets : 1;
+            proj._hasHitOnce = false;
             proj._life = Mathf.Clamp(dist / DefaultSpeed + 0.35f, 0.35f, MaxLifetime);
             proj._velocity = dir * DefaultSpeed;
             proj._aimPoint = aim;
@@ -108,7 +118,12 @@ namespace ProjectZx.Combat
             }
 
             if (_target == null || !_target.IsAlive)
+            {
+                // Target died mid-flight: chain to next pierce target or coast to expiry.
+                if (_pierce && _hitsRemaining > 0)
+                    TryContinuePierce(null);
                 return;
+            }
 
             // Live aim follows a moving target; still straight-line velocity (no homing turn).
             var liveAim = (Vector2)_target.transform.position + Vector2.up * TorsoOffsetY;
@@ -121,51 +136,72 @@ namespace ProjectZx.Combat
 
         void OnImpact()
         {
-            if (_source != null && _target != null && _target.IsAlive)
+            if (_source != null && _target != null && _target.IsAlive && !_alreadyHit.Contains(_target))
             {
-                CombatDamage.Apply(_source, _target, _damageMultiplier, canApplyFrost: _canApplyFrost);
+                var mul = _hasHitOnce
+                    ? _baseDamageMultiplier * _pierceMultiplier
+                    : _baseDamageMultiplier;
+                CombatDamage.Apply(_source, _target, mul, canApplyFrost: _canApplyFrost);
+                _alreadyHit.Add(_target);
+                _hasHitOnce = true;
+                _hitsRemaining = Mathf.Max(0, _hitsRemaining - 1);
 
-                if (_pierce)
-                    DamagePierceTarget(_target);
+                if (_pierce && _hitsRemaining > 0 && TryContinuePierce(_target))
+                    return;
+            }
+            else if (_pierce && _hitsRemaining > 0 && TryContinuePierce(_target))
+            {
+                return;
             }
 
             Destroy(gameObject);
         }
 
-        void DamagePierceTarget(EnemyActor primary)
+        /// <summary>
+        /// Retargets the same arrow at the next living enemy along the flight direction.
+        /// </summary>
+        bool TryContinuePierce(EnemyActor exclude)
         {
-            if (_source == null || primary == null) return;
+            if (_source == null) return false;
 
-            var origin = (Vector2)primary.transform.position;
+            var origin = (Vector2)transform.position;
             var dir = _velocity.sqrMagnitude > 0.0001f ? _velocity.normalized : Vector2.right;
             EnemyActor best = null;
-            var bestProjection = float.MinValue;
-            const float pierceRange = 5.5f;
+            var bestProjection = float.MaxValue;
 
             foreach (var enemy in Object.FindObjectsByType<EnemyActor>())
             {
-                if (enemy == null || enemy == primary || !enemy.IsAlive) continue;
+                if (enemy == null || !enemy.IsAlive) continue;
+                if (enemy == exclude || _alreadyHit.Contains(enemy)) continue;
 
                 var offset = (Vector2)enemy.transform.position - origin;
-                if (offset.sqrMagnitude > pierceRange * pierceRange) continue;
+                if (offset.sqrMagnitude > PierceSearchRange * PierceSearchRange) continue;
 
                 var projection = Vector2.Dot(offset, dir);
-                if (projection <= 0.2f) continue;
-                if (projection <= bestProjection) continue;
+                if (projection <= 0.25f) continue;
+
+                // Prefer the nearest enemy still ahead of the arrow.
+                if (projection >= bestProjection) continue;
 
                 bestProjection = projection;
                 best = enemy;
             }
 
-            if (best == null) return;
+            if (best == null) return false;
 
-            Spawn(
-                primary.transform.position + (Vector3)(dir * 0.25f),
-                best,
-                _source,
-                _damageMultiplier * _pierceMultiplier,
-                _canApplyFrost,
-                pierce: false);
+            _target = best;
+            _aimPoint = (Vector2)best.transform.position + Vector2.up * TorsoOffsetY;
+            var toAim = _aimPoint - origin;
+            if (toAim.sqrMagnitude > 0.0001f)
+            {
+                dir = toAim.normalized;
+                _velocity = dir * DefaultSpeed;
+            }
+
+            _distanceLeft = Vector2.Distance(origin, _aimPoint);
+            _life = Mathf.Max(_life, Mathf.Clamp(_distanceLeft / DefaultSpeed + 0.25f, 0.25f, MaxLifetime));
+            transform.position = origin + dir * 0.2f;
+            return true;
         }
     }
 }
