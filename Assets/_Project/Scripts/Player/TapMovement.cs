@@ -28,6 +28,7 @@ namespace ProjectZx.Player
         NpcInteractable _pendingNpc;
         ArenaDoor _pendingDoor;
         ArenaGateway _pendingGateway;
+        ArenaCryptPortal _pendingCryptPortal;
         ArenaVictoryGate _pendingVictoryGate;
         Camera _camera;
         Rigidbody2D _rb;
@@ -110,6 +111,7 @@ namespace ProjectZx.Player
                     _pendingNpc = null;
                     _pendingDoor = null;
                     _pendingGateway = null;
+                    _pendingCryptPortal = null;
                     _pendingVictoryGate = null;
                     _chaseTouchId = -1;
                     _chaseMouse = false;
@@ -122,6 +124,7 @@ namespace ProjectZx.Player
                 TryCompletePendingNpcInteract();
                 TryCompletePendingDoor();
                 TryCompletePendingGateway();
+                TryCompletePendingCryptPortal();
                 TryCompletePendingVictoryGate();
                 return;
             }
@@ -133,6 +136,7 @@ namespace ProjectZx.Player
                 TryCompletePendingNpcInteract();
                 TryCompletePendingDoor();
                 TryCompletePendingGateway();
+                TryCompletePendingCryptPortal();
                 TryCompletePendingVictoryGate();
                 return;
             }
@@ -148,6 +152,7 @@ namespace ProjectZx.Player
                 TryCompletePendingNpcInteract();
                 TryCompletePendingDoor();
                 TryCompletePendingGateway();
+                TryCompletePendingCryptPortal();
                 TryCompletePendingVictoryGate();
                 return;
             }
@@ -164,6 +169,7 @@ namespace ProjectZx.Player
             TryCompletePendingNpcInteract();
             TryCompletePendingDoor();
             TryCompletePendingGateway();
+            TryCompletePendingCryptPortal();
             TryCompletePendingVictoryGate();
         }
 
@@ -354,6 +360,7 @@ namespace ProjectZx.Player
 
                     _pendingDoor = door;
                     _pendingGateway = null;
+                    _pendingCryptPortal = null;
                     _pendingVictoryGate = null;
                     _pendingNpc = null;
                     _moveTarget = door.transform.position;
@@ -373,9 +380,30 @@ namespace ProjectZx.Player
 
                     _pendingGateway = gateway;
                     _pendingDoor = null;
+                    _pendingCryptPortal = null;
                     _pendingVictoryGate = null;
                     _pendingNpc = null;
                     _moveTarget = gateway.transform.position;
+                    return;
+                }
+
+                var cryptPortal = FindCryptPortalAtTap(world);
+                if (cryptPortal != null)
+                {
+                    if (cryptPortal.TryEnter(transform))
+                    {
+                        ClearMovement();
+                        return;
+                    }
+
+                    if (!movementAllowed) return;
+
+                    _pendingCryptPortal = cryptPortal;
+                    _pendingDoor = null;
+                    _pendingGateway = null;
+                    _pendingVictoryGate = null;
+                    _pendingNpc = null;
+                    _moveTarget = cryptPortal.transform.position;
                     return;
                 }
 
@@ -393,6 +421,7 @@ namespace ProjectZx.Player
                     _pendingVictoryGate = victory;
                     _pendingDoor = null;
                     _pendingGateway = null;
+                    _pendingCryptPortal = null;
                     _pendingNpc = null;
                     _moveTarget = victory.transform.position;
                     return;
@@ -406,6 +435,7 @@ namespace ProjectZx.Player
                 _pendingNpc = null;
                 _pendingDoor = null;
                 _pendingGateway = null;
+                _pendingCryptPortal = null;
                 _pendingVictoryGate = null;
             }
 
@@ -443,6 +473,7 @@ namespace ProjectZx.Player
             _pendingNpc = npc;
             _pendingDoor = null;
             _pendingGateway = null;
+            _pendingCryptPortal = null;
             _pendingVictoryGate = null;
             _moveTarget = npc.transform.position;
             return true;
@@ -470,6 +501,14 @@ namespace ProjectZx.Player
             if (_pendingGateway == null) return;
             if (Vector2.Distance(transform.position, _pendingGateway.transform.position) > 2.2f) return;
             if (_pendingGateway.TryEnter(transform))
+                ClearMovement();
+        }
+
+        void TryCompletePendingCryptPortal()
+        {
+            if (_pendingCryptPortal == null) return;
+            if (Vector2.Distance(transform.position, _pendingCryptPortal.transform.position) > 2.2f) return;
+            if (_pendingCryptPortal.TryEnter(transform))
                 ClearMovement();
         }
 
@@ -512,6 +551,24 @@ namespace ProjectZx.Player
                 if (dist > NpcTapRadius || dist >= bestDist) continue;
                 bestDist = dist;
                 best = gate;
+            }
+
+            return best;
+        }
+
+        static ArenaCryptPortal FindCryptPortalAtTap(Vector2 worldPos)
+        {
+            var portals = UnityEngine.Object.FindObjectsByType<ArenaCryptPortal>();
+            ArenaCryptPortal best = null;
+            var bestDist = float.MaxValue;
+
+            foreach (var portal in portals)
+            {
+                if (portal == null) continue;
+                var dist = Vector2.Distance(worldPos, portal.transform.position);
+                if (dist > NpcTapRadius || dist >= bestDist) continue;
+                bestDist = dist;
+                best = portal;
             }
 
             return best;
@@ -565,6 +622,7 @@ namespace ProjectZx.Player
             _pendingNpc = null;
             _pendingDoor = null;
             _pendingGateway = null;
+            _pendingCryptPortal = null;
             _pendingVictoryGate = null;
             _chaseTouchId = -1;
             _chaseMouse = false;

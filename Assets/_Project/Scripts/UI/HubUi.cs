@@ -360,11 +360,12 @@ namespace ProjectZx.UI
             var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ChallengeBoardUi);
             CreateText(panel.transform, "Survival Challenge", 40, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(700, 56));
             CreateText(panel.transform, "Set class & technique at the Wizard shop first.\nUnlocked maps start fresh at round 1.", 24, TextAnchor.MiddleCenter, new Vector2(0, 175), new Vector2(760, 72));
-            CreateButton(panel.transform, "Outside Survival", new Vector2(0, 50), () => EnterSurvival(SurvivalMapKind.Outside), large: true);
-            CreateButton(panel.transform, "Inside Survival", new Vector2(0, -20), () => EnterSurvival(SurvivalMapKind.Inside), large: true);
-            CreateButton(panel.transform, "Dungeon Survival", new Vector2(0, -90), () => EnterSurvival(SurvivalMapKind.Dungeon), large: true);
-            CreateButton(panel.transform, "Unlimited Survival", new Vector2(0, -160), () => EnterSurvival(SurvivalMapKind.Unlimited), large: true);
-            CreateButton(panel.transform, "Close", new Vector2(0, -240), () => panel.SetActive(false), large: true);
+            CreateButton(panel.transform, "Outside Survival", new Vector2(0, 80), () => EnterSurvival(SurvivalMapKind.Outside), large: true);
+            CreateButton(panel.transform, "Inside Survival", new Vector2(0, 15), () => EnterSurvival(SurvivalMapKind.Inside), large: true);
+            CreateButton(panel.transform, "Dungeon Survival", new Vector2(0, -50), () => EnterSurvival(SurvivalMapKind.Dungeon), large: true);
+            CreateButton(panel.transform, "Crypt Survival", new Vector2(0, -115), () => EnterSurvival(SurvivalMapKind.Crypt), large: true);
+            CreateButton(panel.transform, "Unlimited Survival", new Vector2(0, -180), () => EnterSurvival(SurvivalMapKind.Unlimited), large: true);
+            CreateButton(panel.transform, "Close", new Vector2(0, -255), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
         }
@@ -374,11 +375,12 @@ namespace ProjectZx.UI
             var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ChallengeBoardUi);
             CreateText(panel.transform, "Campfire Travel", 34, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(640, 48));
             CreateText(panel.transform, "Choose an unlocked map. Each run starts at round 1.", 20, TextAnchor.MiddleCenter, new Vector2(0, 185), new Vector2(680, 48));
-            CreateButton(panel.transform, "Outside Survival", new Vector2(0, 70), () => EnterSurvival(SurvivalMapKind.Outside));
-            CreateButton(panel.transform, "Inside Survival", new Vector2(0, 0), () => EnterSurvival(SurvivalMapKind.Inside));
-            CreateButton(panel.transform, "Dungeon Survival", new Vector2(0, -70), () => EnterSurvival(SurvivalMapKind.Dungeon));
+            CreateButton(panel.transform, "Outside Survival", new Vector2(0, 100), () => EnterSurvival(SurvivalMapKind.Outside));
+            CreateButton(panel.transform, "Inside Survival", new Vector2(0, 40), () => EnterSurvival(SurvivalMapKind.Inside));
+            CreateButton(panel.transform, "Dungeon Survival", new Vector2(0, -20), () => EnterSurvival(SurvivalMapKind.Dungeon));
+            CreateButton(panel.transform, "Crypt Survival", new Vector2(0, -80), () => EnterSurvival(SurvivalMapKind.Crypt));
             CreateButton(panel.transform, "Unlimited Survival", new Vector2(0, -140), () => EnterSurvival(SurvivalMapKind.Unlimited));
-            CreateButton(panel.transform, "Close", new Vector2(0, -220), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Close", new Vector2(0, -210), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
@@ -777,6 +779,7 @@ namespace ProjectZx.UI
         {
             if (mapKind == SurvivalMapKind.Inside && !GameSave.InsideMapUnlocked) return;
             if (mapKind == SurvivalMapKind.Dungeon && !GameSave.DungeonMapUnlocked) return;
+            if (mapKind == SurvivalMapKind.Crypt && !GameSave.CryptMapUnlocked) return;
             if (mapKind == SurvivalMapKind.Unlimited && !GameSave.UnlimitedMapUnlocked) return;
 
             GameSessionContext.SurvivalMap = mapKind;
@@ -1262,7 +1265,8 @@ namespace ProjectZx.UI
                 $"Second Wind: {GameSave.SecondWindMaxCharges} charge(s)/run\n" +
                 $"Campfire Blessing: {(GameSave.CampfireBlessingUnlocked ? "Owned" : "Locked")}\n" +
                 $"Achievement XP: x{Achievements.AchievementXpMultiplier:0.##}\n" +
-                $"Unlimited Map: {(GameSave.UnlimitedMapUnlocked ? "Unlocked" : "Locked")}\n" +
+                $"Crypt Map: {(GameSave.CryptMapUnlocked ? "Unlocked" : "Locked")}\n" +
+                $"Unlimited Map: {(GameSave.UnlimitedMapUnlocked ? "Unlocked" : "Clear Crypt R50")}\n" +
                 $"Ring: {EquipName(GameSave.EquippedRing)}\n" +
                 $"Necklace: {EquipName(GameSave.EquippedNecklace)}\n" +
                 $"Spearman: {(GameSave.SpearmanUnlocked ? "Unlocked" : "Locked")}\n" +
@@ -1277,6 +1281,7 @@ namespace ProjectZx.UI
                 $"Gold Earned: {GameSave.LifetimeGoldEarned}\n" +
                 $"Highest Round: {GameSave.HighestRoundReached}\n" +
                 $"Dungeon Best: {GameSave.DungeonHighestRoundReached}\n" +
+                $"Crypt Best: {GameSave.CryptHighestRoundReached}\n" +
                 $"Unlimited Best: {GameSave.UnlimitedHighestRoundReached}\n" +
                 $"Weapons: {WeaponCatalog.GetUnlockProgressSummary()}";
         }
@@ -1324,11 +1329,19 @@ namespace ProjectZx.UI
                     button.interactable = unlocked;
                     label.text = unlocked ? "Dungeon Survival" : "Dungeon Survival (Locked)";
                 }
+                else if (text.Contains("Crypt Survival"))
+                {
+                    var unlocked = GameSave.CryptMapUnlocked;
+                    button.interactable = unlocked;
+                    label.text = unlocked ? "Crypt Survival" : "Crypt Survival (Locked)";
+                }
                 else if (text.Contains("Unlimited Survival"))
                 {
                     var unlocked = GameSave.UnlimitedMapUnlocked;
                     button.interactable = unlocked;
-                    label.text = unlocked ? "Unlimited Survival" : "Unlimited Survival (Locked)";
+                    label.text = unlocked
+                        ? "Unlimited Survival"
+                        : "Unlimited Survival (Clear Crypt R50)";
                 }
             }
         }

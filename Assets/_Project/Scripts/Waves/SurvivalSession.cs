@@ -55,6 +55,8 @@ namespace ProjectZx.Waves
                 if (stats != null && stats.IsDead) break;
 
                 CurrentRound++;
+                if (MapKind == SurvivalMapKind.Crypt && CurrentRound > StatCaps.CryptMaxRound)
+                    break;
                 if (MapKind == SurvivalMapKind.Unlimited && CurrentRound > StatCaps.UnlimitedMaxRound)
                     break;
 
@@ -100,6 +102,14 @@ namespace ProjectZx.Waves
 
                 if (IsStageHoldRound(CurrentRound))
                     break;
+
+                if (MapKind == SurvivalMapKind.Crypt && CurrentRound >= StatCaps.CryptMaxRound
+                    && !IsStageHoldRound(CurrentRound))
+                {
+                    _hud?.ShowBanner("Crypt Survival complete! Returning to camp…", 4f);
+                    yield return new WaitForSeconds(3f);
+                    break;
+                }
 
                 if (MapKind == SurvivalMapKind.Unlimited && CurrentRound >= StatCaps.UnlimitedMaxRound)
                 {
@@ -151,6 +161,7 @@ namespace ProjectZx.Waves
             if (round == 20 && MapKind == SurvivalMapKind.Outside) return true;
             if (round == 30 && MapKind == SurvivalMapKind.Inside) return true;
             if (round == 40 && MapKind == SurvivalMapKind.Dungeon) return true;
+            if (round == StatCaps.CryptMaxRound && MapKind == SurvivalMapKind.Crypt) return true;
             return false;
         }
 
@@ -161,7 +172,9 @@ namespace ProjectZx.Waves
             if (round == 30 && MapKind == SurvivalMapKind.Inside)
                 return "Enter the gateway to Dungeon Survival!";
             if (round == 40 && MapKind == SurvivalMapKind.Dungeon)
-                return "Enter the victory portal to return to camp!";
+                return "Enter the Crypt portal to Crypt Survival!";
+            if (round == StatCaps.CryptMaxRound && MapKind == SurvivalMapKind.Crypt)
+                return "Enter the victory portal — Unlimited Survival awaits!";
             return "Stage cleared!";
         }
 
@@ -176,8 +189,11 @@ namespace ProjectZx.Waves
             var roundTwentyBoss = round == 20 && MapKind == SurvivalMapKind.Outside;
             var roundThirtyBoss = round == 30 && MapKind == SurvivalMapKind.Inside;
             var roundFortyBoss = round == 40 && MapKind == SurvivalMapKind.Dungeon;
+            var roundFiftyBoss = round == StatCaps.CryptMaxRound && MapKind == SurvivalMapKind.Crypt;
             // Unlimited uses standard bosses on every 10th round (not stage portals).
             if (MapKind == SurvivalMapKind.Unlimited && round == 100)
+                bossRound = true;
+            if (roundFiftyBoss)
                 bossRound = true;
 
             if (bossRound) total = Mathf.Max(total - 1, 1);
@@ -193,7 +209,7 @@ namespace ProjectZx.Waves
 
                 for (var i = 0; i < count; i++)
                 {
-                    SpawnEnemy(round, false, false, false, false);
+                    SpawnEnemy(round, false, false, false, false, false);
                     if (i % 3 == 0) yield return null;
                 }
 
@@ -204,8 +220,9 @@ namespace ProjectZx.Waves
             if (bossRound)
             {
                 yield return new WaitForSeconds(0.35f);
-                SpawnEnemy(round, true, roundTwentyBoss, roundThirtyBoss, roundFortyBoss);
-                _hud?.ShowBossWarning(roundTwentyBoss || roundThirtyBoss || roundFortyBoss);
+                SpawnEnemy(round, true, roundTwentyBoss, roundThirtyBoss, roundFortyBoss, roundFiftyBoss);
+                _hud?.ShowBossWarning(
+                    roundTwentyBoss || roundThirtyBoss || roundFortyBoss || roundFiftyBoss);
             }
 
             _spawning = false;
@@ -233,7 +250,13 @@ namespace ProjectZx.Waves
             _hud?.ShowBanner("Magician unlocked!", 3.5f);
         }
 
-        void SpawnEnemy(int round, bool boss, bool roundTwentyBoss, bool roundThirtyBoss, bool roundFortyBoss)
+        void SpawnEnemy(
+            int round,
+            bool boss,
+            bool roundTwentyBoss,
+            bool roundThirtyBoss,
+            bool roundFortyBoss,
+            bool roundFiftyBoss)
         {
             var origin = _player != null ? (Vector2)_player.position : Vector2.zero;
             var spawnPos = ArenaBounds.RandomSpawnAround(origin, 7f, 12f);
@@ -248,12 +271,13 @@ namespace ProjectZx.Waves
                 zombieKind,
                 roundThirtyBoss,
                 roundFortyBoss,
-                isRanged: ranged);
+                isRanged: ranged,
+                isRoundFiftyBoss: roundFiftyBoss);
             EnemiesRemaining++;
         }
 
         /// <summary>
-        /// Late Dungeon + Unlimited: mix in warlock/bat casters that fire projectiles.
+        /// Late Dungeon / Crypt + Unlimited: mix in warlock/bat casters that fire projectiles.
         /// Chance ramps with round so early dungeon stays melee-heavy.
         /// </summary>
         bool ShouldSpawnRanged(int round)
@@ -263,6 +287,14 @@ namespace ProjectZx.Waves
                 if (round < 12) return false;
                 // Half prior rates: R12 ~6%, R25 ~16%, R40 ~24% (capped).
                 var chance = Mathf.Clamp(0.06f + (round - 12) * 0.0075f, 0.06f, 0.24f);
+                return Random.value < chance;
+            }
+
+            if (MapKind == SurvivalMapKind.Crypt)
+            {
+                if (round < 8) return false;
+                // Slightly more ranged than Dungeon: R8 ~10%, R25 ~22%, R50 ~32%.
+                var chance = Mathf.Clamp(0.1f + (round - 8) * 0.008f, 0.1f, 0.32f);
                 return Random.value < chance;
             }
 
@@ -304,6 +336,7 @@ namespace ProjectZx.Waves
             return MapKind switch
             {
                 SurvivalMapKind.Dungeon => EnemyZombieKind.InsideElite,
+                SurvivalMapKind.Crypt => EnemyZombieKind.InsideElite,
                 _ => EnemyZombieKind.Outside
             };
         }
@@ -355,6 +388,14 @@ namespace ProjectZx.Waves
                         _hud?.ShowBanner(banner, 4.5f);
                 }
 
+                Achievements.EvaluateWeaponTierAchievements();
+                return;
+            }
+
+            if (MapKind == SurvivalMapKind.Crypt)
+            {
+                if (GameSave.RecordCryptRound(round) && round >= StatCaps.CryptMaxRound)
+                    _hud?.ShowBanner("Crypt conquered! Unlimited Survival unlocked at camp.", 4.5f);
                 Achievements.EvaluateWeaponTierAchievements();
                 return;
             }

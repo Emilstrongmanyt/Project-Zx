@@ -31,6 +31,7 @@ namespace ProjectZx.Core
         InsideArcher,
         TogetherAgain,
         DungeonClearer,
+        CryptClearer,
         EndlessHorizon,
         // Weapon material tier unlocks (matches WeaponCatalog progression).
         IronArsenal,
@@ -89,8 +90,9 @@ namespace ProjectZx.Core
             new(AchievementId.DungeonDelver, "Dungeon Delver", "Clear Outside round 20 and enter the door to Inside Survival."),
             new(AchievementId.InsideArcher, "Inside Archer", "Clear round 30 on Inside survival."),
             new(AchievementId.TogetherAgain, "Together Again", "Meet RowZi at the Outside round 20 door."),
-            new(AchievementId.DungeonClearer, "Dungeon Clearer", "Defeat the Dungeon round 40 boss and enter the victory portal."),
-            new(AchievementId.EndlessHorizon, "Endless Horizon", "Unlock Unlimited Survival after clearing Dungeon."),
+            new(AchievementId.DungeonClearer, "Dungeon Clearer", "Defeat the Dungeon round 40 boss and enter the Crypt portal."),
+            new(AchievementId.CryptClearer, "Crypt Clearer", "Defeat the Crypt round 50 Minotaur and enter the victory portal."),
+            new(AchievementId.EndlessHorizon, "Endless Horizon", "Unlock Unlimited Survival after clearing Crypt round 50."),
             new(AchievementId.IronArsenal, "Iron Arsenal", "Unlock Iron weapons (Dungeon Survival round 30)."),
             new(AchievementId.SteelArsenal, "Steel Arsenal", "Unlock Steel weapons (Unlimited Survival round 20)."),
             new(AchievementId.CopperArsenal, "Copper Arsenal", "Unlock Copper weapons (Unlimited Survival round 30)."),
@@ -217,6 +219,8 @@ namespace ProjectZx.Core
         public static void UnlockTogetherAgain() => TryUnlock(AchievementId.TogetherAgain);
 
         public static void UnlockDungeonClearer() => TryUnlock(AchievementId.DungeonClearer);
+
+        public static void UnlockCryptClearer() => TryUnlock(AchievementId.CryptClearer);
 
         public static void UnlockEndlessHorizon() => TryUnlock(AchievementId.EndlessHorizon);
 

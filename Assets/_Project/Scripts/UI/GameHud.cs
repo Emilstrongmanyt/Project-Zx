@@ -539,6 +539,7 @@ namespace ProjectZx.UI
             {
                 SurvivalMapKind.Inside => "Inside",
                 SurvivalMapKind.Dungeon => "Dungeon",
+                SurvivalMapKind.Crypt => "Crypt",
                 SurvivalMapKind.Unlimited => "Unlimited",
                 _ => "Outside"
             };
@@ -568,7 +569,10 @@ namespace ProjectZx.UI
 
         public void ShowBossWarning(bool stageBoss = false)
         {
-            _bannerText.text = stageBoss ? "STAGE BOSS!" : "BOSS INCOMING!";
+            if (stageBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Crypt)
+                _bannerText.text = "MINOTAUR — STAGE BOSS!";
+            else
+                _bannerText.text = stageBoss ? "STAGE BOSS!" : "BOSS INCOMING!";
             _bannerTimer = 2.5f;
         }
 

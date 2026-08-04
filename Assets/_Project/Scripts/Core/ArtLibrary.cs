@@ -73,6 +73,8 @@ namespace ProjectZx.Core
         static void ResetCaches()
         {
             MonsterSetCache.Clear();
+            _minotaurBossLoaded = false;
+            _minotaurBossSet = default;
             _playerIdle = null;
             _playerWalk = null;
             _playerAttack = null;
@@ -786,6 +788,100 @@ namespace ProjectZx.Core
         /// <summary>Lord boss set for Dungeon R40 (phase by HP).</summary>
         public static MonsterAnimSet GetLordBossAnimSet(bool highPhase) =>
             LoadRandomMonsterSet(highPhase ? LordBossHighSets : LordBossLowSets);
+
+        static MonsterAnimSet _minotaurBossSet;
+        static bool _minotaurBossLoaded;
+
+        /// <summary>Crypt R50 Minotaur from Resources/Art/Enemies/Bosses/Minotaur sheets.</summary>
+        public static MonsterAnimSet GetMinotaurBossAnimSet()
+        {
+            if (_minotaurBossLoaded) return _minotaurBossSet;
+            _minotaurBossLoaded = true;
+
+            const string root = "Art/Enemies/Bosses/Minotaur/";
+            var idle = LoadMinotaurSheet(root + "Minotaur_Idle");
+            var walk = LoadMinotaurSheet(root + "Minotaur_Walk");
+            var attack = LoadMinotaurSheet(root + "Minotaur_Attack");
+            var stomp = LoadMinotaurSheet(root + "Minotaur_Stomp");
+            var damage = LoadMinotaurSheet(root + "Minotaur_Damage");
+
+            var stand = idle.Length > 0 ? idle : walk;
+            if (stand.Length == 0)
+            {
+                _minotaurBossSet = GetLordBossAnimSet(highPhase: true);
+                return _minotaurBossSet;
+            }
+
+            var walkFrames = walk.Length > 0 ? walk : stand;
+            var attackFrames = attack.Length > 0
+                ? attack
+                : stomp.Length > 0 ? stomp : stand;
+            if (stomp.Length > 0 && attack.Length > 0)
+            {
+                var merged = new List<Sprite>(attack.Length + stomp.Length);
+                merged.AddRange(attack);
+                merged.AddRange(stomp);
+                attackFrames = merged.ToArray();
+            }
+
+            var hit = damage.Length > 0 ? damage[0] : attackFrames.Length >= 2 ? attackFrames[1] : stand[0];
+            var hitAttack = damage.Length > 1 ? damage[1] : hit;
+            var attackPose = attackFrames.Length >= 3 ? attackFrames[2] : attackFrames[^1];
+
+            _minotaurBossSet = new MonsterAnimSet
+            {
+                Idle = stand[0],
+                Hit = hit,
+                Attack = attackPose,
+                HitAttack = hitAttack,
+                StandFrames = stand,
+                WalkFrames = walkFrames,
+                AttackFrames = attackFrames,
+                FacesRightByDefault = true,
+                IsFlying = false
+            };
+            return _minotaurBossSet;
+        }
+
+        /// <summary>
+        /// Loads a multi-frame Minotaur sheet (Unity sliced sprites, or 80px grid fallback).
+        /// </summary>
+        static Sprite[] LoadMinotaurSheet(string resourcePath)
+        {
+            var multi = Resources.LoadAll<Sprite>(resourcePath);
+            if (multi != null && multi.Length > 1)
+            {
+                System.Array.Sort(multi, (a, b) =>
+                    GetTrailingFrameIndex(a != null ? a.name : null)
+                        .CompareTo(GetTrailingFrameIndex(b != null ? b.name : null)));
+                var list = new List<Sprite>(multi.Length);
+                foreach (var s in multi)
+                {
+                    if (s != null) list.Add(s);
+                }
+
+                if (list.Count > 0) return list.ToArray();
+            }
+
+            var tex = Resources.Load<Texture2D>(resourcePath);
+            if (tex == null) return System.Array.Empty<Sprite>();
+
+            const int cell = 80;
+            const float ppu = 80f;
+            var cols = Mathf.Max(1, tex.width / cell);
+            var rows = Mathf.Max(1, tex.height / cell);
+            var frames = new List<Sprite>(cols * rows);
+            // Sheets are authored top-left first; Unity rects use bottom-left origin.
+            for (var row = rows - 1; row >= 0; row--)
+            for (var col = 0; col < cols; col++)
+            {
+                var rect = new Rect(col * cell, row * cell, cell, cell);
+                if (rect.xMax > tex.width || rect.yMax > tex.height) continue;
+                frames.Add(Sprite.Create(tex, rect, new Vector2(0.5f, 0.15f), ppu));
+            }
+
+            return frames.ToArray();
+        }
 
         static MonsterAnimSet LoadRandomMonsterSet(string[] pool)
         {

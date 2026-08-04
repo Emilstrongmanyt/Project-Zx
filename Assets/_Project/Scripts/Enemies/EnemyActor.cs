@@ -46,6 +46,10 @@ namespace ProjectZx.Enemies
         /// <summary>All enemies on Inside Survival map: −15% move speed.</summary>
         const float InsideMapSpeedScale = 0.85f;
         const float RoundFortyBossStatScale = 4.5f;
+        /// <summary>Crypt R50 Minotaur: slightly above Dungeon R40 footprint before map mult.</summary>
+        const float RoundFiftyBossStatScale = 5f;
+        /// <summary>Crypt trash packs vs Dungeon elite baseline.</summary>
+        const float CryptTrashStatScale = 1.15f;
         const float BossProjectileInterval = 1.5f;
         const float BossProjectileLifetime = 5f;
         const float BossProjectileSpeed = 2.2f;
@@ -73,6 +77,7 @@ namespace ProjectZx.Enemies
         public bool IsRoundTwentyBoss { get; private set; }
         public bool IsRoundThirtyBoss { get; private set; }
         public bool IsRoundFortyBoss { get; private set; }
+        public bool IsRoundFiftyBoss { get; private set; }
 
         int _hp;
         int _maxHp;
@@ -134,7 +139,8 @@ namespace ProjectZx.Enemies
             EnemyZombieKind zombieKind = EnemyZombieKind.Outside,
             bool isRoundThirtyBoss = false,
             bool isRoundFortyBoss = false,
-            bool isRanged = false)
+            bool isRanged = false,
+            bool isRoundFiftyBoss = false)
         {
             _round = round;
             IsBoss = isBoss;
@@ -142,6 +148,7 @@ namespace ProjectZx.Enemies
             IsRoundTwentyBoss = isRoundTwentyBoss;
             IsRoundThirtyBoss = isRoundThirtyBoss;
             IsRoundFortyBoss = isRoundFortyBoss;
+            IsRoundFiftyBoss = isRoundFiftyBoss;
             _hp = isBoss ? 220 + round * 30 : 18 + round * 6;
             _attack = isBoss ? 18 + round : 6 + Mathf.FloorToInt(round * 0.6f);
             _speed = isBoss ? 1.5f + round * 0.03f : 1.2f + round * 0.07f;
@@ -168,6 +175,17 @@ namespace ProjectZx.Enemies
                 _speed = outsideR20Speed;
             }
 
+            // Crypt R50 Minotaur: heavier footprint than R40 before map mult.
+            if (isRoundFiftyBoss)
+            {
+                const int outsideR20Hp = 220 + 20 * 30;
+                const int outsideR20Attack = 18 + 20;
+                const float outsideR20Speed = 1.5f + 20 * 0.03f;
+                _hp = Mathf.RoundToInt(outsideR20Hp * RoundFiftyBossStatScale);
+                _attack = Mathf.RoundToInt(outsideR20Attack * RoundFiftyBossStatScale);
+                _speed = outsideR20Speed * 1.05f;
+            }
+
             if (!isBoss)
             {
                 var kindScale = zombieKind switch
@@ -192,6 +210,14 @@ namespace ProjectZx.Enemies
                     _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * OutsideZombieStatScale));
                     _speed *= OutsideZombieStatScale;
                 }
+
+                // Crypt trash: ~15% tougher than Dungeon elite packs.
+                if (GameSessionContext.SurvivalMap == SurvivalMapKind.Crypt)
+                {
+                    _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * CryptTrashStatScale));
+                    _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * CryptTrashStatScale));
+                    _speed *= CryptTrashStatScale;
+                }
             }
 
             // Inside Survival map: every enemy (including bosses) moves 15% slower.
@@ -212,6 +238,13 @@ namespace ProjectZx.Enemies
                 _attack = Mathf.Max(1, _attack * 2);
             }
 
+            // Crypt Survival bosses: 2.5× HP and damage (including R50 Minotaur).
+            if (isBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Crypt)
+            {
+                _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * 2.5f));
+                _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * 2.5f));
+            }
+
             // Unlimited Survival bosses: 5× HP and damage (every 10th-round boss + R100).
             if (isBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Unlimited)
             {
@@ -223,7 +256,11 @@ namespace ProjectZx.Enemies
             _renderer = GetComponent<SpriteRenderer>();
             _player = GameObject.FindGameObjectWithTag("Player")?.transform;
             _maxHp = Mathf.Max(1, _hp);
-            ApplySprites(isBoss, isRoundTwentyBoss || isRoundThirtyBoss || isRoundFortyBoss, zombieKind, IsRanged);
+            ApplySprites(
+                isBoss,
+                isRoundTwentyBoss || isRoundThirtyBoss || isRoundFortyBoss || isRoundFiftyBoss,
+                zombieKind,
+                IsRanged);
 
             if (_renderer != null)
             {
@@ -231,11 +268,11 @@ namespace ProjectZx.Enemies
                 _baseColor = _renderer.color;
             }
 
-            // Classic bosses use fire breath; Dungeon R40 BossB uses fire projectiles only.
-            if (isBoss && !isRoundFortyBoss)
+            // Classic bosses use fire breath; R40 Lord + R50 Minotaur use projectiles instead.
+            if (isBoss && !isRoundFortyBoss && !isRoundFiftyBoss)
                 SetupFireBreathFx();
 
-            if (isRoundFortyBoss)
+            if (isRoundFortyBoss || isRoundFiftyBoss)
                 _bossProjectileCooldown = BossProjectileInterval * 0.5f;
 
             if (IsRanged)
@@ -313,6 +350,12 @@ namespace ProjectZx.Enemies
 
         void ApplySprites(bool isBoss, bool isRoundTwentyBoss, EnemyZombieKind zombieKind, bool isRanged = false)
         {
+            if (IsRoundFiftyBoss)
+            {
+                ApplyAnimSet(ArtLibrary.GetMinotaurBossAnimSet());
+                return;
+            }
+
             if (IsRoundFortyBoss)
             {
                 _bossBLowPhase = HpRatio <= 0.5f;
@@ -627,7 +670,7 @@ namespace ProjectZx.Enemies
             if (_meleeAttackAnimTimer > 0f)
                 _meleeAttackAnimTimer -= Time.deltaTime;
 
-            if (IsRoundFortyBoss)
+            if (IsRoundFortyBoss || IsRoundFiftyBoss)
                 UpdateBossProjectiles();
             else if (IsBoss)
             {
@@ -774,7 +817,7 @@ namespace ProjectZx.Enemies
         /// <summary>Boss wind-up only while breathing, about to breathe, or in melee — not the whole engage range.</summary>
         bool IsInBossAttackPoseRange()
         {
-            if (!IsBoss || IsRoundFortyBoss || _player == null || _fireBreathing) return false;
+            if (!IsBoss || IsRoundFortyBoss || IsRoundFiftyBoss || _player == null || _fireBreathing) return false;
             var dist = Vector2.Distance(transform.position, _player.position);
             if (dist <= _contactRange * 1.25f) return true;
             return dist <= FireBreathEngageRange && _fireBreathCooldown <= 0.35f;
@@ -1108,8 +1151,11 @@ namespace ProjectZx.Enemies
             if (IsRoundFortyBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Dungeon)
             {
                 GameSave.SamuraiUnlocked = true;
-                ArenaVictoryGate.Spawn(pos + Vector2.up * 0.5f);
+                ArenaCryptPortal.Spawn(pos + Vector2.up * 0.5f);
             }
+
+            if (IsRoundFiftyBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Crypt)
+                ArenaVictoryGate.Spawn(pos + Vector2.up * 0.5f);
 
             Destroy(gameObject);
         }

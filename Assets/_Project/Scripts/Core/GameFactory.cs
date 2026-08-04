@@ -65,7 +65,7 @@ namespace ProjectZx.Core
                     sprite = waterSprite;
                 else if (mapKind == SurvivalMapKind.Unlimited)
                     sprite = ArtLibrary.GetSandTile(tileIndex);
-                else if (mapKind == SurvivalMapKind.Dungeon)
+                else if (mapKind == SurvivalMapKind.Dungeon || mapKind == SurvivalMapKind.Crypt)
                     sprite = ArtLibrary.GetDungeonTile(tileIndex);
                 else if (mapKind == SurvivalMapKind.Inside)
                     sprite = ArtLibrary.GetInsideTile(tileIndex);
@@ -375,6 +375,19 @@ namespace ProjectZx.Core
             return go;
         }
 
+        public static GameObject CreateArenaCryptPortal(Vector3 position)
+        {
+            var go = CreateSprite("ArenaCryptPortal", ArtLibrary.Gateway, position, 1.18f, 10);
+            var col = go.AddComponent<BoxCollider2D>();
+            col.size = new Vector2(1.4f, 2.1f);
+            col.isTrigger = true;
+            // Cool violet so it reads as the Crypt descent portal.
+            var sr = go.GetComponent<SpriteRenderer>();
+            if (sr != null)
+                sr.color = new Color(0.72f, 0.55f, 1f, 1f);
+            return go;
+        }
+
         /// <summary>
         /// Rebuild floor + obstacles for Unlimited mid-run biome transitions.
         /// </summary>
@@ -383,6 +396,7 @@ namespace ProjectZx.Core
             DestroyNamed("OutsideFloor");
             DestroyNamed("InsideFloor");
             DestroyNamed("DungeonFloor");
+            DestroyNamed("CryptFloor");
             DestroyNamed("UnlimitedFloor");
             DestroyNamed("ArenaObstacles");
             DestroyNamed("InsideObstacles");
@@ -392,13 +406,17 @@ namespace ProjectZx.Core
             const float arenaH = ArenaBounds.ArenaHeight;
             var isInside = visualBiome == SurvivalMapKind.Inside;
             var isDungeon = visualBiome == SurvivalMapKind.Dungeon;
+            var isCrypt = visualBiome == SurvivalMapKind.Crypt;
             // Unlimited keeps SandTile for every biome phase; props still follow visualBiome.
             var floorKind = GameSessionContext.SurvivalMap == SurvivalMapKind.Unlimited
                 ? SurvivalMapKind.Unlimited
                 : visualBiome;
             var floorName = floorKind == SurvivalMapKind.Unlimited
                 ? "UnlimitedFloor"
-                : isDungeon ? "DungeonFloor" : isInside ? "InsideFloor" : "OutsideFloor";
+                : isCrypt ? "CryptFloor"
+                : isDungeon ? "DungeonFloor"
+                : isInside ? "InsideFloor"
+                : "OutsideFloor";
 
             CreateTiledField(floorName, arenaW, arenaH, floorKind, 1f);
 
@@ -406,7 +424,7 @@ namespace ProjectZx.Core
             ReserveClearing(Vector2.zero, 4.5f);
             if (isInside)
                 ScatterInsideObstacles(arenaW, arenaH);
-            else if (isDungeon)
+            else if (isDungeon || isCrypt)
                 ScatterCryptObstacles(arenaW, arenaH);
             else
                 ScatterArenaObstacles(arenaW, arenaH, 14, 10, 3);
@@ -417,7 +435,7 @@ namespace ProjectZx.Core
                 if (GameSessionContext.SurvivalMap == SurvivalMapKind.Unlimited)
                     cam.backgroundColor = new Color(0.55f, 0.45f, 0.28f);
                 else
-                    cam.backgroundColor = isDungeon
+                    cam.backgroundColor = isDungeon || isCrypt
                         ? new Color(0.08f, 0.07f, 0.1f)
                         : isInside
                             ? new Color(0.2f, 0.16f, 0.12f)
@@ -562,10 +580,13 @@ namespace ProjectZx.Core
             EnemyZombieKind zombieKind = EnemyZombieKind.Outside,
             bool isRoundThirtyBoss = false,
             bool isRoundFortyBoss = false,
-            bool isRanged = false)
+            bool isRanged = false,
+            bool isRoundFiftyBoss = false)
         {
             Sprite sprite;
-            if (isRoundFortyBoss)
+            if (isRoundFiftyBoss)
+                sprite = ArtLibrary.GetMinotaurBossAnimSet().Idle ?? ArtLibrary.BossB;
+            else if (isRoundFortyBoss)
                 sprite = ArtLibrary.GetLordBossAnimSet(highPhase: true).Idle ?? ArtLibrary.BossB;
             else if (isBoss)
                 sprite = ArtLibrary.GetGolemBossAnimSet().Idle ?? ArtLibrary.Boss;
@@ -584,14 +605,17 @@ namespace ProjectZx.Core
                     ArtLibrary.GetZombieSprites(zombieKind, out sprite, out _);
             }
 
-            var isStageBoss = isRoundTwentyBoss || isRoundThirtyBoss || isRoundFortyBoss;
+            var isStageBoss = isRoundTwentyBoss || isRoundThirtyBoss || isRoundFortyBoss || isRoundFiftyBoss;
             // Sanctum 96–128px sprites: previous footprint ×4 so demons read at combat scale.
             var scale = (isBoss ? 0.55f : 0.32f * 2.5f) * 1.5f * 4f;
             if (isBoss) scale *= 1.5f;
-            // Outside R20, Inside R30, and Dungeon R40 stage bosses share the same large scale.
+            // Stage bosses share the same large combat footprint.
             if (isStageBoss) scale *= 2.5f;
+            // Minotaur sheet is denser; pull scale back slightly so it fits the arena.
+            if (isRoundFiftyBoss)
+                scale *= 0.72f;
             // R10 / R20 decade bosses were reading too small after the 4× pass.
-            if (isBoss && (round == 10 || round == 20))
+            if (isBoss && (round == 10 || round == 20) && !isRoundFiftyBoss)
                 scale *= 1.7f;
             // Outside survival R20 stage boss was still ~2× too large in TestFlight.
             if (isRoundTwentyBoss)
@@ -610,7 +634,7 @@ namespace ProjectZx.Core
 
             // Visual scale is large; keep WORLD hitboxes body-sized (local radius = world / scale).
             var worldHitRadius = isStageBoss ? 1.35f : isBoss ? 0.95f : 0.55f;
-            if (isBoss && (round == 10 || round == 20))
+            if (isBoss && (round == 10 || round == 20) && !isRoundFiftyBoss)
                 worldHitRadius *= 1.35f;
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = worldHitRadius / Mathf.Max(0.001f, scale);
@@ -619,7 +643,15 @@ namespace ProjectZx.Core
 
             go.AddComponent<HitFlash>();
             var enemy = go.AddComponent<EnemyActor>();
-            enemy.Initialize(round, isBoss, isRoundTwentyBoss, zombieKind, isRoundThirtyBoss, isRoundFortyBoss, isRanged);
+            enemy.Initialize(
+                round,
+                isBoss,
+                isRoundTwentyBoss,
+                zombieKind,
+                isRoundThirtyBoss,
+                isRoundFortyBoss,
+                isRanged,
+                isRoundFiftyBoss);
             return go;
         }
 

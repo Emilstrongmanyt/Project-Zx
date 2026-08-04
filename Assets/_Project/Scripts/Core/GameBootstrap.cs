@@ -94,6 +94,7 @@ namespace ProjectZx.Core
                     AudioManager.Instance?.PlayInsideBgm();
                     break;
                 case SurvivalMapKind.Dungeon:
+                case SurvivalMapKind.Crypt:
                     AudioManager.Instance?.PlayDungeonBgm();
                     break;
                 default:
@@ -103,10 +104,11 @@ namespace ProjectZx.Core
 
             var isInside = visualBiome == SurvivalMapKind.Inside;
             var isDungeon = visualBiome == SurvivalMapKind.Dungeon;
+            var isCrypt = visualBiome == SurvivalMapKind.Crypt;
             var isUnlimited = mapKind == SurvivalMapKind.Unlimited;
             SetupCamera(isUnlimited
                 ? new Color(0.55f, 0.45f, 0.28f) // sand-adjacent clear color
-                : isDungeon
+                : isDungeon || isCrypt
                 ? new Color(0.08f, 0.07f, 0.1f)
                 : isInside
                     ? new Color(0.2f, 0.16f, 0.12f)
@@ -115,22 +117,22 @@ namespace ProjectZx.Core
 
             const float arenaW = ArenaBounds.ArenaWidth;
             const float arenaH = ArenaBounds.ArenaHeight;
-            // Dungeon → Dungeon_Tile; Unlimited → SandTile (props still use visual biome).
+            // Dungeon/Crypt → Dungeon_Tile; Unlimited → SandTile (props still use visual biome).
             var floorKind = isUnlimited
                 ? SurvivalMapKind.Unlimited
                 : visualBiome == SurvivalMapKind.Unlimited ? SurvivalMapKind.Outside : visualBiome;
-            GameFactory.CreateTiledField(
-                isUnlimited ? "UnlimitedFloor" : isDungeon ? "DungeonFloor" : isInside ? "InsideFloor" : "OutsideFloor",
-                arenaW,
-                arenaH,
-                floorKind,
-                1f);
+            var floorName = isUnlimited ? "UnlimitedFloor"
+                : isCrypt ? "CryptFloor"
+                : isDungeon ? "DungeonFloor"
+                : isInside ? "InsideFloor"
+                : "OutsideFloor";
+            GameFactory.CreateTiledField(floorName, arenaW, arenaH, floorKind, 1f);
 
             GameFactory.ClearScatterReservations();
             GameFactory.ReserveClearing(Vector2.zero, 4.5f); // player spawn / fight space
             if (isInside)
                 GameFactory.ScatterInsideObstacles(arenaW, arenaH);
-            else if (isDungeon)
+            else if (isDungeon || isCrypt)
                 GameFactory.ScatterCryptObstacles(arenaW, arenaH);
             else
                 GameFactory.ScatterArenaObstacles(arenaW, arenaH, 14, 10, 3);

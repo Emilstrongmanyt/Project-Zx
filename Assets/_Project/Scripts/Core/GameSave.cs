@@ -15,6 +15,7 @@ namespace ProjectZx.Core
         const string RangeLevelKey = "zx_up_range";
         const string InsideUnlockedKey = "zx_inside_unlocked";
         const string DungeonUnlockedKey = "zx_dungeon_unlocked";
+        const string CryptUnlockedKey = "zx_crypt_unlocked";
         const string WhirlwindKey = "zx_whirlwind";
         const string PiercingShotKey = "zx_piercing_shot";
         const string FrostTipKey = "zx_frost_tip";
@@ -24,6 +25,7 @@ namespace ProjectZx.Core
         const string CampfireBlessingKey = "zx_campfire_blessing";
         const string InsideClearedKey = "zx_inside_cleared";
         const string DungeonClearedKey = "zx_dungeon_cleared";
+        const string CryptClearedKey = "zx_crypt_cleared";
         const string FlameEnchantKey = "zx_flame_enchant";
         const string UnlimitedUnlockedKey = "zx_unlimited_unlocked";
         const string SpearmanUnlockedKey = "zx_spearman_unlocked";
@@ -52,6 +54,7 @@ namespace ProjectZx.Core
         const string HighestRoundKey = "zx_highest_round";
         const string UnlimitedHighestRoundKey = "zx_unlimited_highest_round";
         const string DungeonHighestRoundKey = "zx_dungeon_highest_round";
+        const string CryptHighestRoundKey = "zx_crypt_highest_round";
         const string OwnedEquipmentKey = "zx_owned_equipment";
         const string EquippedRingKey = "zx_equipped_ring";
         const string EquippedNecklaceKey = "zx_equipped_necklace";
@@ -108,6 +111,16 @@ namespace ProjectZx.Core
             set
             {
                 PlayerPrefs.SetInt(DungeonUnlockedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool CryptMapUnlocked
+        {
+            get => PlayerPrefs.GetInt(CryptUnlockedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(CryptUnlockedKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
         }
@@ -241,6 +254,16 @@ namespace ProjectZx.Core
             set
             {
                 PlayerPrefs.SetInt(DungeonClearedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool CryptSurvivalCleared
+        {
+            get => PlayerPrefs.GetInt(CryptClearedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(CryptClearedKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
         }
@@ -582,6 +605,13 @@ namespace ProjectZx.Core
             set { PlayerPrefs.SetInt(DungeonHighestRoundKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
         }
 
+        /// <summary>Best Crypt Survival round reached.</summary>
+        public static int CryptHighestRoundReached
+        {
+            get => PlayerPrefs.GetInt(CryptHighestRoundKey, 0);
+            set { PlayerPrefs.SetInt(CryptHighestRoundKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
+        }
+
         public static void RecordEnemyKill(bool isBoss)
         {
             if (isBoss)
@@ -619,6 +649,16 @@ namespace ProjectZx.Core
         {
             if (round <= DungeonHighestRoundReached) return false;
             DungeonHighestRoundReached = round;
+            return true;
+        }
+
+        /// <summary>
+        /// Records Crypt Survival depth. Returns true if a new personal best was set.
+        /// </summary>
+        public static bool RecordCryptRound(int round)
+        {
+            if (round <= CryptHighestRoundReached) return false;
+            CryptHighestRoundReached = round;
             return true;
         }
 

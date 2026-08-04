@@ -1,21 +1,21 @@
 using ProjectZx.Core;
 using ProjectZx.Player;
-using ProjectZx.Waves;
 using UnityEngine;
 
 namespace ProjectZx.World
 {
     /// <summary>
-    /// Portal after Crypt R50 Minotaur. Returns to campfire and unlocks Unlimited Survival.
+    /// Portal after clearing Dungeon survival round 40.
+    /// Starts a fresh Crypt survival run (round 1, level 1).
     /// </summary>
-    public class ArenaVictoryGate : MonoBehaviour
+    public class ArenaCryptPortal : MonoBehaviour
     {
         bool _used;
 
         public static void Spawn(Vector3 position)
         {
-            var gate = GameFactory.CreateArenaVictoryGate(position);
-            gate.AddComponent<ArenaVictoryGate>();
+            var portal = GameFactory.CreateArenaCryptPortal(position);
+            portal.AddComponent<ArenaCryptPortal>();
         }
 
         public bool TryEnter(Transform player)
@@ -24,28 +24,23 @@ namespace ProjectZx.World
             if (Vector2.Distance(player.position, transform.position) > 2.2f) return false;
 
             _used = true;
-
-            GameSave.CryptSurvivalCleared = true;
-            GameSave.RecordCryptRound(StatCaps.CryptMaxRound);
-            GameSave.UnlimitedMapUnlocked = true;
-            Achievements.UnlockCryptClearer();
-            Achievements.UnlockEndlessHorizon();
+            GameSave.CryptMapUnlocked = true;
+            GameSave.DungeonSurvivalCleared = true;
+            GameSave.RecordDungeonRound(40);
+            GameSave.FlameEnchantUnlocked = true;
             Achievements.EvaluateWeaponTierAchievements();
+            Achievements.UnlockDungeonClearer();
 
             var stats = player.GetComponent<PlayerStats>();
             stats?.BankRunGoldToSave();
 
+            GameSessionContext.SurvivalMap = SurvivalMapKind.Crypt;
             GameSessionContext.FreshSurvivalRun = true;
             GameSessionContext.StartingRound = 0;
             GameSessionContext.CarryRound = 0;
             GameSessionContext.RunSnapshot = default;
 
-            var session = SurvivalSession.Instance;
-            if (session != null)
-                session.RetreatToCamp();
-            else
-                GameFactory.LoadScene(GameScenes.MainMenuMap);
-
+            GameFactory.LoadScene(GameScenes.SurvivalArena);
             return true;
         }
     }

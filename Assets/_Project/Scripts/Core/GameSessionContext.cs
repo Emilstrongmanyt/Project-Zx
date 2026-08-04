@@ -5,7 +5,9 @@ namespace ProjectZx.Core
         Outside,
         Inside,
         Dungeon,
-        /// <summary>Post-Dungeon endless run: rounds 1–100 with shifting biomes.</summary>
+        /// <summary>Post-Dungeon crypt run: rounds 1–50 ending on the Minotaur.</summary>
+        Crypt,
+        /// <summary>Post-Crypt endless run: rounds 1–100 with shifting biomes.</summary>
         Unlimited
     }
 
