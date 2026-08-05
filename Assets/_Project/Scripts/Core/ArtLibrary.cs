@@ -387,7 +387,8 @@ namespace ProjectZx.Core
             TryLoadSprite(Admurin + "jade_necklace", TilePixelsPerUnit) ?? TryLoadSprite("Necklace", TilePixelsPerUnit);
         public static Sprite SkullNecklace => _skullNecklace ??=
             TryLoadSprite(Admurin + "skull_necklace", TilePixelsPerUnit) ?? TryLoadSprite("Skull Necklace", TilePixelsPerUnit);
-        public static Sprite TreasureChest => _treasureChest ??= CreateTreasureChestSprite();
+        /// <summary>Camp equipment chest — Layer Lab gold lucky-box when present.</summary>
+        public static Sprite TreasureChest => _treasureChest ??= LoadOrCreateTreasureChest();
         public static Sprite Gateway => _gateway ??= LoadOrCreateGateway();
         public static Sprite Stone => _stone ??= GetSheetVariant("RockSheet", 10, 0) ?? CreateStoneSprite();
         public static Sprite Tree => _tree ??= GetSheetVariant("TreeSheet", 9, 0) ?? CreateTreeSprite();
@@ -1530,11 +1531,179 @@ namespace ProjectZx.Core
 
         static Sprite LoadOrCreateAchievementBoardNpc()
         {
-            // Prefer a dedicated board asset; otherwise build a standing trophy board for the camp NPC.
-            // Do not fall back to ChallengeBoardUI (flat UI plate — wrong for a world prop).
-            var loaded = TryLoadSprite("Art/achievement_keeper", TilePixelsPerUnit)
-                         ?? TryLoadSprite("AchievementKeeper", TilePixelsPerUnit);
-            return loaded != null ? loaded : CreateAchievementBoardNpcSprite();
+            // Prefer prebuilt keeper art, then Layer Lab stage frame + trophy composite.
+            var loaded = TryLoadWorldPropSprite("Art/achievement_keeper", new Vector2(0.5f, 0.05f), 48f)
+                         ?? TryLoadWorldPropSprite("AchievementKeeper", new Vector2(0.5f, 0.05f), 48f);
+            if (loaded != null) return loaded;
+
+            var composite = TryComposeAchievementBoardSprite();
+            if (composite != null) return composite;
+
+            return CreateAchievementBoardNpcSprite();
+        }
+
+        /// <summary>
+        /// Builds a standing camp prop: stone stage frame with trophy icon, wooden post underfoot.
+        /// Uses Layer Lab assets copied into Resources/Art.
+        /// </summary>
+        static Sprite TryComposeAchievementBoardSprite()
+        {
+            var frameTex = LoadReadableTexture("Art/achievement_board");
+            var trophyTex = LoadReadableTexture("Art/achievement_trophy")
+                            ?? LoadReadableTexture("Art/achievement_medal");
+            if (frameTex == null && trophyTex == null) return null;
+
+            const int w = 96;
+            const int h = 120;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Bilinear;
+            tex.wrapMode = TextureWrapMode.Clamp;
+
+            // Transparent clear.
+            var clear = new Color(0f, 0f, 0f, 0f);
+            var pixels = new Color[w * h];
+            for (var i = 0; i < pixels.Length; i++)
+                pixels[i] = clear;
+
+            // Wooden post
+            var post = new Color(0.42f, 0.28f, 0.14f, 1f);
+            var postDark = new Color(0.28f, 0.17f, 0.08f, 1f);
+            for (var y = 0; y < 34; y++)
+            for (var x = 42; x <= 53; x++)
+                pixels[y * w + x] = (x <= 44 || x >= 51) ? postDark : post;
+
+            // Stage frame plaque
+            if (frameTex != null)
+            {
+                BlitTextureCentered(pixels, w, h, frameTex, centerX: w / 2f, centerY: 72f, targetH: 78f);
+            }
+            else
+            {
+                // Simple plaque fallback if frame missing.
+                var board = new Color(0.32f, 0.22f, 0.12f, 1f);
+                var frame = new Color(0.88f, 0.72f, 0.28f, 1f);
+                for (var y = 38; y < 110; y++)
+                for (var x = 12; x < 84; x++)
+                {
+                    var edge = x <= 14 || x >= 81 || y <= 40 || y >= 107;
+                    pixels[y * w + x] = edge ? frame : board;
+                }
+            }
+
+            // Trophy / medal centered on plaque
+            if (trophyTex != null)
+                BlitTextureCentered(pixels, w, h, trophyTex, centerX: w / 2f, centerY: 74f, targetH: 48f);
+
+            tex.SetPixels(pixels);
+            tex.Apply(false, false);
+            tex.name = "AchievementBoardComposite";
+            return Sprite.Create(tex, new Rect(0f, 0f, w, h), new Vector2(0.5f, 0.04f), 48f, 0, SpriteMeshType.FullRect);
+        }
+
+        static Sprite LoadOrCreateTreasureChest()
+        {
+            // Layer Lab gold lucky-box (Resources/Art/treasure_chest).
+            var loaded = TryLoadWorldPropSprite("Art/treasure_chest", new Vector2(0.5f, 0.12f), 64f);
+            return loaded != null ? loaded : CreateTreasureChestSprite();
+        }
+
+        static Sprite TryLoadWorldPropSprite(string path, Vector2 pivot, float pixelsPerUnit)
+        {
+            if (string.IsNullOrEmpty(path)) return null;
+
+            var texture = Resources.Load<Texture2D>(path);
+            if (texture == null)
+            {
+                var sprites = Resources.LoadAll<Sprite>(path);
+                if (sprites != null && sprites.Length > 0 && sprites[0] != null && sprites[0].texture != null)
+                    texture = sprites[0].texture;
+            }
+
+            if (texture == null) return null;
+
+            texture.filterMode = FilterMode.Bilinear;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            var sprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, texture.width, texture.height),
+                pivot,
+                pixelsPerUnit,
+                0,
+                SpriteMeshType.FullRect);
+            sprite.name = path.Contains('/') ? path[(path.LastIndexOf('/') + 1)..] : path;
+            return sprite;
+        }
+
+        static Texture2D LoadReadableTexture(string path)
+        {
+            var source = Resources.Load<Texture2D>(path);
+            if (source == null)
+            {
+                var sprites = Resources.LoadAll<Sprite>(path);
+                if (sprites != null && sprites.Length > 0 && sprites[0] != null)
+                    source = sprites[0].texture;
+            }
+
+            if (source == null) return null;
+            return MakeReadableCopy(source);
+        }
+
+        static Texture2D MakeReadableCopy(Texture source)
+        {
+            if (source == null) return null;
+            var w = source.width;
+            var h = source.height;
+            if (w <= 0 || h <= 0) return null;
+
+            var rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            var prev = RenderTexture.active;
+            Graphics.Blit(source, rt);
+            RenderTexture.active = rt;
+            var copy = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            copy.filterMode = FilterMode.Bilinear;
+            copy.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+            copy.Apply(false, false);
+            RenderTexture.active = prev;
+            RenderTexture.ReleaseTemporary(rt);
+            return copy;
+        }
+
+        static void BlitTextureCentered(Color[] dest, int destW, int destH, Texture2D src, float centerX, float centerY, float targetH)
+        {
+            if (src == null || targetH <= 1f) return;
+            var scale = targetH / src.height;
+            var targetW = src.width * scale;
+            var x0 = centerX - targetW * 0.5f;
+            var y0 = centerY - targetH * 0.5f;
+
+            var xStart = Mathf.Max(0, Mathf.FloorToInt(x0));
+            var yStart = Mathf.Max(0, Mathf.FloorToInt(y0));
+            var xEnd = Mathf.Min(destW, Mathf.CeilToInt(x0 + targetW));
+            var yEnd = Mathf.Min(destH, Mathf.CeilToInt(y0 + targetH));
+
+            for (var y = yStart; y < yEnd; y++)
+            for (var x = xStart; x < xEnd; x++)
+            {
+                var u = (x + 0.5f - x0) / targetW;
+                var v = (y + 0.5f - y0) / targetH;
+                if (u < 0f || u > 1f || v < 0f || v > 1f) continue;
+                var sample = src.GetPixelBilinear(u, v);
+                if (sample.a < 0.02f) continue;
+                var idx = y * destW + x;
+                var dst = dest[idx];
+                var a = sample.a + dst.a * (1f - sample.a);
+                if (a <= 0.001f)
+                {
+                    dest[idx] = sample;
+                    continue;
+                }
+
+                dest[idx] = new Color(
+                    (sample.r * sample.a + dst.r * dst.a * (1f - sample.a)) / a,
+                    (sample.g * sample.a + dst.g * dst.a * (1f - sample.a)) / a,
+                    (sample.b * sample.a + dst.b * dst.a * (1f - sample.a)) / a,
+                    a);
+            }
         }
 
         /// <summary>Standing achievement board world sprite (pivot at feet).</summary>

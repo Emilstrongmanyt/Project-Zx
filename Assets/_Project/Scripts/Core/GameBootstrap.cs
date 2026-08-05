@@ -70,14 +70,16 @@ namespace ProjectZx.Core
             const float campNpcScale = 0.38f * 1.25f;
             GameFactory.CreateNpc("WizardShop", ArtLibrary.Wizard, new Vector3(-2.1f, 1.1f), () => hub.OpenShop(), campNpcScale);
             GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(2.1f, 1.1f), () => hub.OpenMapSelect(), campNpcScale);
-            GameFactory.CreateNpc("AchievementBoard", ArtLibrary.AchievementKeeper, new Vector3(0f, 2.8f), () => hub.OpenAchievements(), 0.72f);
-            // Half prior scale (0.62 → 0.31), clear of the wizard shop.
-            GameFactory.CreateNpc("TreasureChest", ArtLibrary.TreasureChest, new Vector3(-6.4f, -0.6f), () => hub.OpenEquipmentChest(), 0.31f);
+            // Layer Lab stage frame + trophy composite (readable world prop).
+            GameFactory.CreateNpc("AchievementBoard", ArtLibrary.AchievementKeeper, new Vector3(0f, 2.8f), () => hub.OpenAchievements(), 0.55f);
+            // Layer Lab gold lucky-box chest.
+            GameFactory.CreateNpc("TreasureChest", ArtLibrary.TreasureChest, new Vector3(-6.4f, -0.6f), () => hub.OpenEquipmentChest(), 0.42f);
 
             var campfireNpc = campfire.AddComponent<NpcInteractable>();
             campfireNpc.Initialize(() => hub.OpenCampfireTravel());
 
             MovementJoystick.EnsureExists();
+            CampTipController.EnsureExists();
         }
 
         static void BuildSurvival(SurvivalMapKind mapKind)

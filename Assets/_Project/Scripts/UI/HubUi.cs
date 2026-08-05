@@ -10,6 +10,14 @@ namespace ProjectZx.UI
     {
         public static HubUi Instance { get; private set; }
 
+        /// <summary>True while any camp menu (shop, settings, map, etc.) is open.</summary>
+        public bool IsAnyMenuOpen =>
+            IsPanelOpen(_shopPanel) || IsPanelOpen(_loadoutPanel) || IsPanelOpen(_statsPanel)
+            || IsPanelOpen(_achievementsPanel) || IsPanelOpen(_mapPanel) || IsPanelOpen(_campfirePanel)
+            || IsPanelOpen(_equipmentPanel) || IsPanelOpen(_settingsPanel);
+
+        static bool IsPanelOpen(GameObject panel) => panel != null && panel.activeSelf;
+
         const float SafeRight = 140f;
         const float SafeTop = 36f;
         /// <summary>Shared almost-full-screen size for shop, settings, loadout, stats, etc.</summary>
