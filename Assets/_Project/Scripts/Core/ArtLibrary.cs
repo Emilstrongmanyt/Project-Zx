@@ -100,8 +100,10 @@ namespace ProjectZx.Core
             _sparkles2 = null;
             _necklace = null;
             _skullNecklace = null;
+            _protectorNecklace = null;
             _fortuneRing = null;
             _prismRing = null;
+            _nimbleRing = null;
             _staff = null;
             _treasureChest = null;
             _gateway = null;
@@ -166,8 +168,10 @@ namespace ProjectZx.Core
         static Sprite _sparkles2;
         static Sprite _necklace;
         static Sprite _skullNecklace;
+        static Sprite _protectorNecklace;
         static Sprite _fortuneRing;
         static Sprite _prismRing;
+        static Sprite _nimbleRing;
         static Sprite _staff;
         static Sprite _treasureChest;
         static Sprite _gateway;
@@ -383,10 +387,16 @@ namespace ProjectZx.Core
         /// <summary>Prism Ring icon — Admurin triple gem ring.</summary>
         public static Sprite PrismRing => _prismRing ??=
             TryLoadSprite(Admurin + "prism_ring", TilePixelsPerUnit) ?? Sparkles2;
+        /// <summary>Nimble Ring icon — Admurin speed ring.</summary>
+        public static Sprite NimbleRing => _nimbleRing ??=
+            TryLoadSprite(Admurin + "nimble_ring", TilePixelsPerUnit) ?? Sparkles;
         public static Sprite Necklace => _necklace ??=
             TryLoadSprite(Admurin + "jade_necklace", TilePixelsPerUnit) ?? TryLoadSprite("Necklace", TilePixelsPerUnit);
         public static Sprite SkullNecklace => _skullNecklace ??=
             TryLoadSprite(Admurin + "skull_necklace", TilePixelsPerUnit) ?? TryLoadSprite("Skull Necklace", TilePixelsPerUnit);
+        /// <summary>Protector Necklace icon — Admurin defensive charm.</summary>
+        public static Sprite ProtectorNecklace => _protectorNecklace ??=
+            TryLoadSprite(Admurin + "protector_necklace", TilePixelsPerUnit) ?? Necklace;
         /// <summary>Camp equipment chest — Layer Lab gold lucky-box when present.</summary>
         public static Sprite TreasureChest => _treasureChest ??= LoadOrCreateTreasureChest();
         public static Sprite Gateway => _gateway ??= LoadOrCreateGateway();

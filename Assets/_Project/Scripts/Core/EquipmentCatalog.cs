@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ProjectZx.Core
@@ -18,7 +19,11 @@ namespace ProjectZx.Core
         /// <summary>Admurin hearty necklace — +max HP.</summary>
         JadeNecklace = 3,
         /// <summary>Admurin skull charm necklace — +attack speed.</summary>
-        SkullNecklace = 4
+        SkullNecklace = 4,
+        /// <summary>Admurin nimble ring — +move speed.</summary>
+        NimbleRing = 5,
+        /// <summary>Admurin protector necklace — +max HP.</summary>
+        ProtectorNecklace = 6
     }
 
     public readonly struct EquipmentDef
@@ -30,6 +35,7 @@ namespace ProjectZx.Core
         public readonly float DamageMultiplier;
         public readonly float GoldFindMultiplier;
         public readonly float AttackSpeedMultiplier;
+        public readonly float MoveSpeedMultiplier;
         public readonly int BonusMaxHp;
 
         public EquipmentDef(
@@ -40,6 +46,7 @@ namespace ProjectZx.Core
             float damageMultiplier = 1f,
             float goldFindMultiplier = 1f,
             float attackSpeedMultiplier = 1f,
+            float moveSpeedMultiplier = 1f,
             int bonusMaxHp = 0)
         {
             Id = id;
@@ -49,6 +56,7 @@ namespace ProjectZx.Core
             DamageMultiplier = damageMultiplier;
             GoldFindMultiplier = goldFindMultiplier;
             AttackSpeedMultiplier = attackSpeedMultiplier;
+            MoveSpeedMultiplier = moveSpeedMultiplier;
             BonusMaxHp = bonusMaxHp;
         }
     }
@@ -61,10 +69,14 @@ namespace ProjectZx.Core
                 "+15% gold from kills", goldFindMultiplier: 1.15f),
             new(EquipmentId.PrismRing, EquipmentSlot.Ring, "Prism Ring",
                 "+8% damage", damageMultiplier: 1.08f),
+            new(EquipmentId.NimbleRing, EquipmentSlot.Ring, "Nimble Ring",
+                "+10% move speed", moveSpeedMultiplier: 1.1f),
             new(EquipmentId.JadeNecklace, EquipmentSlot.Necklace, "Jade Necklace",
                 "+20 Max HP", bonusMaxHp: 20),
             new(EquipmentId.SkullNecklace, EquipmentSlot.Necklace, "Skull Necklace",
-                "+10% attack speed", attackSpeedMultiplier: 1.1f)
+                "+10% attack speed", attackSpeedMultiplier: 1.1f),
+            new(EquipmentId.ProtectorNecklace, EquipmentSlot.Necklace, "Protector Necklace",
+                "+40 Max HP", bonusMaxHp: 40)
         };
 
         public static EquipmentDef Get(EquipmentId id)
@@ -85,16 +97,30 @@ namespace ProjectZx.Core
             {
                 EquipmentId.FortuneRing => ArtLibrary.FortuneRing,
                 EquipmentId.PrismRing => ArtLibrary.PrismRing,
+                EquipmentId.NimbleRing => ArtLibrary.NimbleRing,
                 EquipmentId.JadeNecklace => ArtLibrary.Necklace,
                 EquipmentId.SkullNecklace => ArtLibrary.SkullNecklace,
+                EquipmentId.ProtectorNecklace => ArtLibrary.ProtectorNecklace,
                 _ => null
             };
         }
 
+        /// <summary>
+        /// Random equipment drop, excluding items the player already owns/discovered.
+        /// Returns <see cref="EquipmentId.None"/> when every item is already owned.
+        /// </summary>
         public static EquipmentId RollRandomDrop()
         {
-            if (All.Length == 0) return EquipmentId.None;
-            return All[Random.Range(0, All.Length)].Id;
+            var pool = new List<EquipmentId>(All.Length);
+            for (var i = 0; i < All.Length; i++)
+            {
+                var id = All[i].Id;
+                if (!GameSave.OwnsEquipment(id))
+                    pool.Add(id);
+            }
+
+            if (pool.Count == 0) return EquipmentId.None;
+            return pool[Random.Range(0, pool.Count)];
         }
 
         public static float CombinedDamageMultiplier()
@@ -138,6 +164,21 @@ namespace ProjectZx.Core
                 var def = Get(id);
                 if (def.Id != EquipmentId.None)
                     mult *= def.AttackSpeedMultiplier;
+            }
+        }
+
+        public static float CombinedMoveSpeedMultiplier()
+        {
+            var m = 1f;
+            Apply(GameSave.EquippedRing, ref m);
+            Apply(GameSave.EquippedNecklace, ref m);
+            return m;
+
+            static void Apply(EquipmentId id, ref float mult)
+            {
+                var def = Get(id);
+                if (def.Id != EquipmentId.None)
+                    mult *= def.MoveSpeedMultiplier;
             }
         }
 

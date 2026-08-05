@@ -789,7 +789,8 @@ namespace ProjectZx.Player
             {
                 var tap = GetComponent<TapMovement>();
                 if (tap != null) return tap.CurrentMoveSpeed;
-                return TapMovement.DefaultBaseSpeed * GameSave.SpeedMultiplier * RunSpeedMultiplier;
+                return TapMovement.DefaultBaseSpeed * GameSave.SpeedMultiplier * RunSpeedMultiplier
+                       * EquipmentCatalog.CombinedMoveSpeedMultiplier();
             }
         }
 

@@ -1167,11 +1167,13 @@ namespace ProjectZx.Enemies
                 GameFactory.CreatePickup(pos + Vector2.down * 0.3f, PickupType.MapLoot, 1);
 
             // Very low chance for equipment (rings / necklaces) usable from the camp chest.
+            // Owned/discovered items are excluded from the roll pool and never re-drop.
             var equipmentChance = IsBoss ? BossEquipmentDropChance : EquipmentDropChance;
             if (Random.value < equipmentChance)
             {
                 var equipId = EquipmentCatalog.RollRandomDrop();
-                GameFactory.CreateEquipmentPickup(pos + Vector2.up * 0.45f + Vector2.left * 0.15f, equipId);
+                if (equipId != EquipmentId.None)
+                    GameFactory.CreateEquipmentPickup(pos + Vector2.up * 0.45f + Vector2.left * 0.15f, equipId);
             }
 
             // Boss epic crystal → talent pick (capped per run on the player side).

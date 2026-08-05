@@ -404,9 +404,10 @@ namespace ProjectZx.UI
             CreateText(panel.transform, "Necklaces", 28, TextAnchor.MiddleCenter, new Vector2(0, -10), new Vector2(400, 36));
 
             _equipmentButtons.Clear();
-            var ringX = new[] { -280f, 0f, 280f };
+            // 4 slots per row: Unequip + up to 3 items.
+            var ringX = new[] { -360f, -120f, 120f, 360f };
             var ringIndex = 0;
-            var neckX = new[] { -280f, 0f, 280f };
+            var neckX = new[] { -360f, -120f, 120f, 360f };
             var neckIndex = 0;
 
             // Unequip slots first.
@@ -1151,6 +1152,27 @@ namespace ProjectZx.UI
             GameSave.WhirlwindUnlocked = true;
             OnShopUpgradePurchased();
             if (_loadoutPanel != null && _loadoutPanel.activeSelf) RefreshLoadoutPanel();
+            ShowShopPurchaseHint("Hint: Enable Whirlwind In \"Build Loadout\"");
+        }
+
+        void ShowShopPurchaseHint(string message)
+        {
+            if (_shopPanel == null || string.IsNullOrEmpty(message)) return;
+
+            var existing = _shopPanel.transform.Find("PurchaseHint");
+            if (existing != null)
+                Destroy(existing.gameObject);
+
+            var hint = CreateText(
+                _shopPanel.transform,
+                message,
+                26,
+                TextAnchor.MiddleCenter,
+                new Vector2(0f, 360f),
+                new Vector2(900f, 48f));
+            hint.gameObject.name = "PurchaseHint";
+            hint.color = new Color(1f, 0.92f, 0.45f, 1f);
+            Destroy(hint.gameObject, 6f);
         }
 
         void BuyPiercingShot()
@@ -1239,7 +1261,7 @@ namespace ProjectZx.UI
             if (selected == PlayerClass.Bowman) baseDamage *= 1.4f;
             else if (selected == PlayerClass.Spearman) baseDamage *= 1.15f;
             else if (selected == PlayerClass.Samurai) baseDamage *= 0.7f;
-            var moveSpeed = 4.5f * GameSave.SpeedMultiplier;
+            var moveSpeed = 4.5f * GameSave.SpeedMultiplier * EquipmentCatalog.CombinedMoveSpeedMultiplier();
             var maxHp = GameSave.MaxHp + EquipmentCatalog.CombinedBonusMaxHp();
             var movementLabel = GameSave.UsesJoystickMovement ? "Joystick" : "Tap / Hold";
             var rangeMul = GameSave.AttackRangeMultiplier;

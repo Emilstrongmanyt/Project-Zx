@@ -182,7 +182,8 @@ namespace ProjectZx.Player
         {
             var stats = GetComponent<PlayerStats>();
             var runSpeed = stats != null ? stats.RunSpeedMultiplier : 1f;
-            return baseSpeed * GameSave.SpeedMultiplier * runSpeed;
+            return baseSpeed * GameSave.SpeedMultiplier * runSpeed
+                   * EquipmentCatalog.CombinedMoveSpeedMultiplier();
         }
 
         bool MoveByDelta(Vector2 delta)
