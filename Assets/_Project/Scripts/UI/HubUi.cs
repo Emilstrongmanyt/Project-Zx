@@ -69,11 +69,28 @@ namespace ProjectZx.UI
         Button _movementJoystickButton;
         Button _movementTapHoldButton;
 
+        enum ShopUpgradeKind
+        {
+            MaxHp,
+            Damage,
+            Speed,
+            Range,
+            GoldMagnet,
+            ThickHide,
+            SecondWind,
+            CampfireBlessing,
+            Whirlwind,
+            PiercingShot,
+            FrostTip
+        }
+
         struct UpgradeRowRefs
         {
             public Text Label;
             public Button BuyButton;
+            public Button InfoButton;
             public Image CoinIcon;
+            public ShopUpgradeKind Kind;
         }
 
         UpgradeRowRefs _hpRow;
@@ -87,6 +104,9 @@ namespace ProjectZx.UI
         UpgradeRowRefs _thickHideRow;
         UpgradeRowRefs _secondWindRow;
         UpgradeRowRefs _campfireBlessingRow;
+        GameObject _shopInfoPanel;
+        Text _shopInfoTitle;
+        Text _shopInfoBody;
 
         void Awake()
         {
@@ -137,7 +157,8 @@ namespace ProjectZx.UI
         GameObject BuildShopPanel(Transform parent)
         {
             var panel = CreateDialogPanel(parent, "ShopPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
-            CreateText(panel.transform, "Wizard Shop", 40, TextAnchor.MiddleCenter, new Vector2(0, 430), new Vector2(620, 52));
+            CreateText(panel.transform, "Upgrade Shop", 40, TextAnchor.MiddleCenter, new Vector2(0, 430), new Vector2(620, 52));
+            CreateText(panel.transform, "Tap Info for full effects & current totals.", 18, TextAnchor.MiddleCenter, new Vector2(0, 385), new Vector2(800, 28));
 
             var scrollRoot = new GameObject("ShopScroll");
             scrollRoot.transform.SetParent(panel.transform, false);
@@ -145,8 +166,8 @@ namespace ProjectZx.UI
             scrollRectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             scrollRectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             scrollRectTransform.pivot = new Vector2(0.5f, 0.5f);
-            scrollRectTransform.anchoredPosition = new Vector2(0f, 36f);
-            scrollRectTransform.sizeDelta = new Vector2(1000f, 680f);
+            scrollRectTransform.anchoredPosition = new Vector2(0f, 20f);
+            scrollRectTransform.sizeDelta = new Vector2(1000f, 660f);
 
             var scroll = scrollRoot.AddComponent<ScrollRect>();
             scroll.horizontal = false;
@@ -175,36 +196,77 @@ namespace ProjectZx.UI
             scroll.content = contentRect;
 
             var y = -10f;
-            const float step = -68f;
-            _hpRow = CreateShopUpgradeRow(content.transform, "Max HP +15", ShopCosts.HpUpgrade, y, BuyHp);
+            const float step = -64f;
+            _hpRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.MaxHp, y, BuyHp);
             y += step;
-            _damageRow = CreateShopUpgradeRow(content.transform, "Damage +8%", ShopCosts.DamageUpgrade, y, BuyDamage);
+            _damageRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.Damage, y, BuyDamage);
             y += step;
-            _speedRow = CreateShopUpgradeRow(content.transform, "Move Speed +6%", ShopCosts.SpeedUpgrade, y, BuySpeed);
+            _speedRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.Speed, y, BuySpeed);
             y += step;
-            _rangeRow = CreateShopUpgradeRow(content.transform, "Attack Range +5%", ShopCosts.RangeUpgrade, y, BuyRange);
+            _rangeRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.Range, y, BuyRange);
             y += step;
-            _goldMagnetRow = CreateShopUpgradeRow(content.transform, "Gold Magnet (+25% gold & loot range)", ShopCosts.GoldMagnet, y, BuyGoldMagnet);
+            _goldMagnetRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.GoldMagnet, y, BuyGoldMagnet);
             y += step;
-            _thickHideRow = CreateShopUpgradeRow(content.transform, "Thick Hide (−15% damage taken)", ShopCosts.ThickHide, y, BuyThickHide);
+            _thickHideRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.ThickHide, y, BuyThickHide);
             y += step;
-            _secondWindRow = CreateShopUpgradeRow(content.transform, "Second Wind (heal 30% once under 20% HP)", ShopCosts.SecondWind, y, BuySecondWind);
+            _secondWindRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.SecondWind, y, BuySecondWind);
             y += step;
-            _campfireBlessingRow = CreateShopUpgradeRow(content.transform, "Campfire Blessing (free level-up at run start)", ShopCosts.CampfireBlessing, y, BuyCampfireBlessing);
+            _campfireBlessingRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.CampfireBlessing, y, BuyCampfireBlessing);
             y += step;
-            _whirlwindRow = CreateShopUpgradeRow(content.transform, "Whirlwind (360°)", ShopCosts.Whirlwind, y, BuyWhirlwind);
+            _whirlwindRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.Whirlwind, y, BuyWhirlwind);
             y += step;
-            _piercingShotRow = CreateShopUpgradeRow(content.transform, "Piercing Shot (5 enemies)", ShopCosts.PiercingShot, y, BuyPiercingShot);
+            _piercingShotRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.PiercingShot, y, BuyPiercingShot);
             y += step;
-            _frostTipRow = CreateShopUpgradeRow(content.transform, "Frost Tip (1s chill, −60% move)", ShopCosts.FrostTip, y, BuyFrostTip);
+            _frostTipRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.FrostTip, y, BuyFrostTip);
 
             contentRect.sizeDelta = new Vector2(0f, Mathf.Abs(y) + 80f);
 
             CreateButton(panel.transform, "Build Loadout", new Vector2(-220, -400), () => OpenLoadout(), large: true);
             CreateButton(panel.transform, "Character Stats", new Vector2(220, -400), () => OpenStats(), large: true);
-            CreateButton(panel.transform, "Close", new Vector2(0, -470), () => panel.SetActive(false), large: true);
+            CreateButton(panel.transform, "Close", new Vector2(0, -470), () =>
+            {
+                if (_shopInfoPanel != null) _shopInfoPanel.SetActive(false);
+                panel.SetActive(false);
+            }, large: true);
+
+            BuildShopInfoOverlay(panel.transform);
             panel.SetActive(false);
             return panel;
+        }
+
+        void BuildShopInfoOverlay(Transform shopPanel)
+        {
+            // Built as a child of the already-scaled shop panel — do not apply HubMenuScale again.
+            _shopInfoPanel = new GameObject("ShopInfoOverlay");
+            _shopInfoPanel.transform.SetParent(shopPanel, false);
+            var rootRect = _shopInfoPanel.AddComponent<RectTransform>();
+            rootRect.anchorMin = Vector2.zero;
+            rootRect.anchorMax = Vector2.one;
+            rootRect.offsetMin = Vector2.zero;
+            rootRect.offsetMax = Vector2.zero;
+
+            var dim = _shopInfoPanel.AddComponent<Image>();
+            dim.color = new Color(0f, 0f, 0f, 0.62f);
+            dim.raycastTarget = true;
+
+            var card = new GameObject("ShopInfoCard");
+            card.transform.SetParent(_shopInfoPanel.transform, false);
+            var cardRect = card.AddComponent<RectTransform>();
+            cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+            cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+            cardRect.pivot = new Vector2(0.5f, 0.5f);
+            cardRect.anchoredPosition = Vector2.zero;
+            cardRect.sizeDelta = new Vector2(760f, 540f);
+            var cardImage = card.AddComponent<Image>();
+            UiSprites.ApplyPanelSprite(cardImage, ArtLibrary.LevelUpUi, largeMenu: false);
+
+            _shopInfoTitle = CreateText(card.transform, "Upgrade Info", 34, TextAnchor.MiddleCenter, new Vector2(0, 200), new Vector2(680, 48));
+            _shopInfoBody = CreateText(card.transform, "", 22, TextAnchor.UpperLeft, new Vector2(0, -10), new Vector2(660, 320));
+            _shopInfoBody.alignment = TextAnchor.UpperLeft;
+            _shopInfoBody.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _shopInfoBody.verticalOverflow = VerticalWrapMode.Overflow;
+            CreateButton(card.transform, "Close", new Vector2(0, -210), () => _shopInfoPanel.SetActive(false), large: true);
+            _shopInfoPanel.SetActive(false);
         }
 
         GameObject BuildAchievementsPanel(Transform parent)
@@ -405,8 +467,8 @@ namespace ProjectZx.UI
             CreateText(panel.transform, "Capes", 24, TextAnchor.MiddleCenter, new Vector2(0, -110), new Vector2(400, 32));
 
             _equipmentButtons.Clear();
-            // Unequip + up to 4 items per row.
-            var slotX = new[] { -400f, -200f, 0f, 200f, 400f };
+            // Unequip + 3 items per type (4 columns).
+            var slotX = new[] { -360f, -120f, 120f, 360f };
             var ringIndex = 0;
             var neckIndex = 0;
             var capeIndex = 0;
@@ -534,7 +596,7 @@ namespace ProjectZx.UI
                 label.text = "??? (Find in survival)";
             else
                 label.text = equipped ? $"{def.DisplayName} ✓" : $"{def.DisplayName}\n{def.Description}";
-            label.fontSize = owned ? 16 : 14;
+            label.fontSize = owned ? 18 : 16;
         }
 
         static EquipmentId GetEquippedInSlot(EquipmentSlot slot) => slot switch
@@ -847,25 +909,39 @@ namespace ProjectZx.UI
             };
         }
 
-        UpgradeRowRefs CreateShopUpgradeRow(Transform parent, string label, int cost, float y, Action onBuy)
+        UpgradeRowRefs CreateShopUpgradeRow(Transform parent, ShopUpgradeKind kind, float y, Action onBuy)
         {
-            var labelText = CreateText(parent, label, 26, TextAnchor.MiddleLeft, new Vector2(-40f, y - 28f), new Vector2(620f, 52f));
+            var labelText = CreateText(parent, GetShopRowTitle(kind), 28, TextAnchor.MiddleLeft, new Vector2(-40f, y - 28f), new Vector2(420f, 52f));
             var labelRect = labelText.GetComponent<RectTransform>();
             labelRect.anchorMin = new Vector2(0.5f, 1f);
             labelRect.anchorMax = new Vector2(0.5f, 1f);
             labelRect.pivot = new Vector2(0.5f, 1f);
-            labelRect.anchoredPosition = new Vector2(-120f, y);
+            labelRect.anchoredPosition = new Vector2(-200f, y);
             labelText.alignment = TextAnchor.MiddleLeft;
-            labelText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            labelText.horizontalOverflow = HorizontalWrapMode.Overflow;
             labelText.verticalOverflow = VerticalWrapMode.Truncate;
 
-            var buyButton = CreateButton(parent, $"Buy for {GoldFormat.Abbreviate(cost)}", new Vector2(360f, y - 28f), onBuy, large: true);
+            var infoButton = CreateButton(parent, "Info", new Vector2(160f, y - 28f), () => OpenShopInfo(kind));
+            var infoRect = infoButton.GetComponent<RectTransform>();
+            infoRect.anchorMin = new Vector2(0.5f, 1f);
+            infoRect.anchorMax = new Vector2(0.5f, 1f);
+            infoRect.pivot = new Vector2(0.5f, 1f);
+            infoRect.anchoredPosition = new Vector2(140f, y);
+            infoRect.sizeDelta = new Vector2(110f, 52f);
+            var infoImage = infoButton.GetComponent<Image>();
+            if (infoImage != null)
+                UiSprites.ApplyButtonSprite(infoImage, infoRect.sizeDelta, StoneButtonStyle.Primary);
+            var infoLabel = infoButton.GetComponentInChildren<Text>();
+            if (infoLabel != null)
+                infoLabel.fontSize = 22;
+
+            var buyButton = CreateButton(parent, "Buy", new Vector2(360f, y - 28f), onBuy, large: true);
             var buyRect = buyButton.GetComponent<RectTransform>();
             buyRect.anchorMin = new Vector2(0.5f, 1f);
             buyRect.anchorMax = new Vector2(0.5f, 1f);
             buyRect.pivot = new Vector2(0.5f, 1f);
             buyRect.anchoredPosition = new Vector2(360f, y);
-            buyRect.sizeDelta = new Vector2(280f, 56f);
+            buyRect.sizeDelta = new Vector2(240f, 56f);
             var buyImage = buyButton.GetComponent<Image>();
             if (buyImage != null)
                 UiSprites.ApplyButtonSprite(buyImage, buyRect.sizeDelta, StoneButtonStyle.Green);
@@ -876,7 +952,7 @@ namespace ProjectZx.UI
             {
                 var buyLabelRect = buyLabel.GetComponent<RectTransform>();
                 buyLabelRect.anchoredPosition = new Vector2(-10f, 0f);
-                buyLabelRect.sizeDelta = new Vector2(220f, 46f);
+                buyLabelRect.sizeDelta = new Vector2(180f, 46f);
                 buyLabel.fontSize = 22;
             }
 
@@ -886,8 +962,210 @@ namespace ProjectZx.UI
             {
                 Label = labelText,
                 BuyButton = buyButton,
-                CoinIcon = coinIcon
+                InfoButton = infoButton,
+                CoinIcon = coinIcon,
+                Kind = kind
             };
+        }
+
+        void OpenShopInfo(ShopUpgradeKind kind)
+        {
+            if (_shopInfoPanel == null) return;
+            if (_shopInfoTitle != null)
+                _shopInfoTitle.text = GetShopInfoTitle(kind);
+            if (_shopInfoBody != null)
+                _shopInfoBody.text = GetShopInfoBody(kind);
+            _shopInfoPanel.SetActive(true);
+            _shopInfoPanel.transform.SetAsLastSibling();
+        }
+
+        static string ToRoman(int value)
+        {
+            if (value <= 0) return "I";
+            value = Mathf.Clamp(value, 1, 40);
+            // Enough for permanent upgrade ranks.
+            string[] romans =
+            {
+                "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X",
+                "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX",
+                "XXI", "XXII", "XXIII", "XXIV", "XXV", "XXVI", "XXVII", "XXVIII", "XXIX", "XXX",
+                "XXXI", "XXXII", "XXXIII", "XXXIV", "XXXV", "XXXVI", "XXXVII", "XXXVIII", "XXXIX", "XL"
+            };
+            return romans[value - 1];
+        }
+
+        static string RankedTitle(string baseName, int ownedLevel, bool maxed)
+        {
+            if (maxed)
+                return $"{baseName} MAX";
+            // Next purchase is rank ownedLevel+1 (I when none owned).
+            return $"{baseName} {ToRoman(ownedLevel + 1)}";
+        }
+
+        static string GetShopRowTitle(ShopUpgradeKind kind) => kind switch
+        {
+            ShopUpgradeKind.MaxHp => RankedTitle("Max HP", GameSave.HpUpgradeLevel, GameSave.IsHpUpgradeMaxed),
+            ShopUpgradeKind.Damage => RankedTitle("Damage", GameSave.DamageUpgradeLevel, GameSave.IsDamageUpgradeMaxed),
+            ShopUpgradeKind.Speed => RankedTitle("Move Speed", GameSave.SpeedUpgradeLevel, GameSave.IsSpeedUpgradeMaxed),
+            ShopUpgradeKind.Range => RankedTitle("Attack Range", GameSave.RangeUpgradeLevel, GameSave.IsRangeUpgradeMaxed),
+            ShopUpgradeKind.GoldMagnet => GameSave.GoldMagnetUnlocked ? "Gold Magnet" : "Gold Magnet",
+            ShopUpgradeKind.ThickHide => GameSave.ThickHideLevel >= 3
+                ? "Thick Hide MAX"
+                : $"Thick Hide {ToRoman(GameSave.ThickHideLevel + 1)}",
+            ShopUpgradeKind.SecondWind => GameSave.SecondWindLevel >= 2
+                ? "Second Wind MAX"
+                : $"Second Wind {ToRoman(GameSave.SecondWindLevel + 1)}",
+            ShopUpgradeKind.CampfireBlessing => "Campfire Blessing",
+            ShopUpgradeKind.Whirlwind => "Whirlwind",
+            ShopUpgradeKind.PiercingShot => "Piercing Shot",
+            ShopUpgradeKind.FrostTip => "Frost Tip",
+            _ => kind.ToString()
+        };
+
+        static string GetShopInfoTitle(ShopUpgradeKind kind) => kind switch
+        {
+            ShopUpgradeKind.MaxHp => "Max HP",
+            ShopUpgradeKind.Damage => "Damage",
+            ShopUpgradeKind.Speed => "Move Speed",
+            ShopUpgradeKind.Range => "Attack Range",
+            ShopUpgradeKind.GoldMagnet => "Gold Magnet",
+            ShopUpgradeKind.ThickHide => "Thick Hide",
+            ShopUpgradeKind.SecondWind => "Second Wind",
+            ShopUpgradeKind.CampfireBlessing => "Campfire Blessing",
+            ShopUpgradeKind.Whirlwind => "Whirlwind",
+            ShopUpgradeKind.PiercingShot => "Piercing Shot",
+            ShopUpgradeKind.FrostTip => "Frost Tip",
+            _ => kind.ToString()
+        };
+
+        static string GetShopInfoBody(ShopUpgradeKind kind)
+        {
+            switch (kind)
+            {
+                case ShopUpgradeKind.MaxHp:
+                    return
+                        "Each rank: +15 Max HP (permanent).\n\n" +
+                        $"Current Max HP: {GameSave.MaxHp}\n" +
+                        $"Cap: {StatCaps.PermanentMaxHp}\n" +
+                        $"Ranks owned: {GameSave.HpUpgradeLevel}\n" +
+                        (GameSave.IsHpUpgradeMaxed
+                            ? "Status: MAXED"
+                            : $"Next rank: {ToRoman(GameSave.HpUpgradeLevel + 1)}  ·  Cost: {ShopCosts.NextHpCost}g");
+
+                case ShopUpgradeKind.Damage:
+                    return
+                        "Each rank: +8% permanent damage.\n\n" +
+                        $"Current multiplier: x{GameSave.DamageMultiplier:0.##}\n" +
+                        $"Cap: x{StatCaps.PermanentMaxDamageMultiplier:0.#}\n" +
+                        $"Ranks owned: {GameSave.DamageUpgradeLevel}\n" +
+                        (GameSave.IsDamageUpgradeMaxed
+                            ? "Status: MAXED"
+                            : $"Next rank: {ToRoman(GameSave.DamageUpgradeLevel + 1)}  ·  Cost: {ShopCosts.NextDamageCost}g");
+
+                case ShopUpgradeKind.Speed:
+                    return
+                        "Each rank: +6% permanent move speed.\n\n" +
+                        $"Current multiplier: x{GameSave.SpeedMultiplier:0.##}\n" +
+                        $"Cap: x{StatCaps.PermanentMaxSpeedMultiplier:0.#}\n" +
+                        $"Ranks owned: {GameSave.SpeedUpgradeLevel}\n" +
+                        (GameSave.IsSpeedUpgradeMaxed
+                            ? "Status: MAXED"
+                            : $"Next rank: {ToRoman(GameSave.SpeedUpgradeLevel + 1)}  ·  Cost: {ShopCosts.NextSpeedCost}g");
+
+                case ShopUpgradeKind.Range:
+                    return
+                        "Each rank: +5% permanent attack range.\n\n" +
+                        $"Current multiplier: x{GameSave.AttackRangeMultiplier:0.##}\n" +
+                        $"Cap: x{StatCaps.PermanentMaxAttackRangeMultiplier:0.#}\n" +
+                        $"Ranks owned: {GameSave.RangeUpgradeLevel}\n" +
+                        (GameSave.IsRangeUpgradeMaxed
+                            ? "Status: MAXED"
+                            : $"Next rank: {ToRoman(GameSave.RangeUpgradeLevel + 1)}  ·  Cost: {ShopCosts.NextRangeCost}g");
+
+                case ShopUpgradeKind.GoldMagnet:
+                    return
+                        "One-time upgrade.\n\n" +
+                        "+25% gold from kills\n" +
+                        "+25% loot pickup range\n\n" +
+                        (GameSave.GoldMagnetUnlocked
+                            ? "Status: Owned"
+                            : $"Cost: {ShopCosts.GoldMagnet}g");
+
+                case ShopUpgradeKind.ThickHide:
+                {
+                    var level = GameSave.ThickHideLevel;
+                    var dr = level <= 0 ? 0 : level * 15;
+                    return
+                        "Reduces all damage taken (permanent tiers).\n\n" +
+                        "I: −15% damage taken\n" +
+                        "II: −30% damage taken (requires Inside clear)\n" +
+                        "III: −45% damage taken (requires Dungeon clear)\n\n" +
+                        $"Current: T{level} ({dr}% DR)\n" +
+                        (level >= 3
+                            ? "Status: MAXED"
+                            : level == 1 && !GameSave.InsideSurvivalCleared
+                                ? "Next: Locked — clear Inside Survival"
+                                : level == 2 && !GameSave.DungeonSurvivalCleared
+                                    ? "Next: Locked — clear Dungeon Survival"
+                                    : $"Next rank: {ToRoman(level + 1)}  ·  Cost: {ShopCosts.NextThickHideCost}g");
+                }
+
+                case ShopUpgradeKind.SecondWind:
+                {
+                    var level = GameSave.SecondWindLevel;
+                    return
+                        "Auto-heal when you drop to 20% HP or below.\n\n" +
+                        "I: heal 30% Max HP once per run\n" +
+                        "II: two uses per run (requires Inside clear)\n\n" +
+                        $"Current charges/run: {GameSave.SecondWindMaxCharges}\n" +
+                        (level >= 2
+                            ? "Status: MAXED"
+                            : level == 1 && !GameSave.InsideSurvivalCleared
+                                ? "Next: Locked — clear Inside Survival"
+                                : $"Next rank: {ToRoman(level + 1)}  ·  Cost: {ShopCosts.NextSecondWindCost}g");
+                }
+
+                case ShopUpgradeKind.CampfireBlessing:
+                    return
+                        "One-time upgrade.\n\n" +
+                        "Start each survival run with a free level-up talent pick.\n\n" +
+                        (GameSave.CampfireBlessingUnlocked
+                            ? "Status: Owned"
+                            : $"Cost: {ShopCosts.CampfireBlessing}g");
+
+                case ShopUpgradeKind.Whirlwind:
+                    return
+                        "One-time upgrade for Batter / Spearman / Samurai.\n\n" +
+                        "Unlocks a powerful alternate attack technique.\n" +
+                        "Enable it in Build Loadout after purchase.\n\n" +
+                        (GameSave.WhirlwindUnlocked
+                            ? "Status: Owned"
+                            : $"Cost: {ShopCosts.Whirlwind}g");
+
+                case ShopUpgradeKind.PiercingShot:
+                    return
+                        "One-time Bowman upgrade.\n\n" +
+                        "Arrows pierce through up to 5 enemies.\n" +
+                        "Requires Bowman unlocked.\n\n" +
+                        (GameSave.PiercingShotUnlocked
+                            ? "Status: Owned"
+                            : !GameSave.BowmanUnlocked
+                                ? "Status: Locked — unlock Bowman first"
+                                : $"Cost: {ShopCosts.PiercingShot}g");
+
+                case ShopUpgradeKind.FrostTip:
+                    return
+                        "One-time upgrade for Spearman / Bowman / Samurai.\n\n" +
+                        "Hits chill enemies for 1s (−60% move speed).\n\n" +
+                        (GameSave.FrostTipUnlocked
+                            ? "Status: Owned"
+                            : !GameSave.SpearmanUnlocked && !GameSave.BowmanUnlocked && !GameSave.SamuraiUnlocked
+                                ? "Status: Locked — unlock Spearman, Bowman, or Samurai"
+                                : $"Cost: {ShopCosts.FrostTip}g");
+
+                default:
+                    return string.Empty;
+            }
         }
 
         static Image CreateBuyCoinIcon(Transform buttonTransform)
@@ -998,42 +1276,42 @@ namespace ProjectZx.UI
 
         void RefreshShopRows()
         {
-            SetUpgradeRow(_hpRow, "Max HP +15", ShopCosts.NextHpCost, GameSave.IsHpUpgradeMaxed, $"Max HP {GameSave.MaxHp}/{StatCaps.PermanentMaxHp}");
-            SetUpgradeRow(_damageRow, "Damage +8%", ShopCosts.NextDamageCost, GameSave.IsDamageUpgradeMaxed, $"Damage x{GameSave.DamageMultiplier:0.##} (max x{StatCaps.PermanentMaxDamageMultiplier:0.#})");
-            SetUpgradeRow(_speedRow, "Move Speed +6%", ShopCosts.NextSpeedCost, GameSave.IsSpeedUpgradeMaxed, $"Speed x{GameSave.SpeedMultiplier:0.##} (max x{StatCaps.PermanentMaxSpeedMultiplier:0.#})");
-            SetUpgradeRow(_rangeRow, "Attack Range +5%", ShopCosts.NextRangeCost, GameSave.IsRangeUpgradeMaxed, $"Range x{GameSave.AttackRangeMultiplier:0.##} (max x{StatCaps.PermanentMaxAttackRangeMultiplier:0.#})");
+            SetUpgradeRow(_hpRow, GetShopRowTitle(ShopUpgradeKind.MaxHp), ShopCosts.NextHpCost, GameSave.IsHpUpgradeMaxed);
+            SetUpgradeRow(_damageRow, GetShopRowTitle(ShopUpgradeKind.Damage), ShopCosts.NextDamageCost, GameSave.IsDamageUpgradeMaxed);
+            SetUpgradeRow(_speedRow, GetShopRowTitle(ShopUpgradeKind.Speed), ShopCosts.NextSpeedCost, GameSave.IsSpeedUpgradeMaxed);
+            SetUpgradeRow(_rangeRow, GetShopRowTitle(ShopUpgradeKind.Range), ShopCosts.NextRangeCost, GameSave.IsRangeUpgradeMaxed);
 
             if (GameSave.GoldMagnetUnlocked)
-                SetOwnedRow(_goldMagnetRow, "Gold Magnet (+25% gold & loot range)");
+                SetOwnedRow(_goldMagnetRow, "Gold Magnet");
             else
-                SetUpgradeRow(_goldMagnetRow, "Gold Magnet (+25% gold & loot range)", ShopCosts.GoldMagnet, false, string.Empty);
+                SetUpgradeRow(_goldMagnetRow, "Gold Magnet", ShopCosts.GoldMagnet, false);
 
             RefreshThickHideRow();
             RefreshSecondWindRow();
 
             if (GameSave.CampfireBlessingUnlocked)
-                SetOwnedRow(_campfireBlessingRow, "Campfire Blessing (free level-up at run start)");
+                SetOwnedRow(_campfireBlessingRow, "Campfire Blessing");
             else
-                SetUpgradeRow(_campfireBlessingRow, "Campfire Blessing (free level-up at run start)", ShopCosts.CampfireBlessing, false, string.Empty);
+                SetUpgradeRow(_campfireBlessingRow, "Campfire Blessing", ShopCosts.CampfireBlessing, false);
 
             if (GameSave.WhirlwindUnlocked)
-                SetOwnedRow(_whirlwindRow, "Whirlwind (360°)");
+                SetOwnedRow(_whirlwindRow, "Whirlwind");
             else
-                SetUpgradeRow(_whirlwindRow, "Whirlwind (360°)", ShopCosts.Whirlwind, false, string.Empty);
+                SetUpgradeRow(_whirlwindRow, "Whirlwind", ShopCosts.Whirlwind, false);
 
             if (GameSave.PiercingShotUnlocked)
-                SetOwnedRow(_piercingShotRow, "Piercing Shot (5 enemies)");
+                SetOwnedRow(_piercingShotRow, "Piercing Shot");
             else if (!GameSave.BowmanUnlocked)
-                SetLockedRow(_piercingShotRow, "Piercing Shot (5 enemies)", "Unlock Bowman first");
+                SetLockedRow(_piercingShotRow, "Piercing Shot");
             else
-                SetUpgradeRow(_piercingShotRow, "Piercing Shot (5 enemies)", ShopCosts.PiercingShot, false, string.Empty);
+                SetUpgradeRow(_piercingShotRow, "Piercing Shot", ShopCosts.PiercingShot, false);
 
             if (GameSave.FrostTipUnlocked)
-                SetOwnedRow(_frostTipRow, "Frost Tip (1s chill, −60% move)");
+                SetOwnedRow(_frostTipRow, "Frost Tip");
             else if (!GameSave.SpearmanUnlocked && !GameSave.BowmanUnlocked && !GameSave.SamuraiUnlocked)
-                SetLockedRow(_frostTipRow, "Frost Tip (1s chill, −60% move)", "Unlock Spearman, Bowman, or Samurai");
+                SetLockedRow(_frostTipRow, "Frost Tip");
             else
-                SetUpgradeRow(_frostTipRow, "Frost Tip (1s chill, −60% move)", ShopCosts.FrostTip, false, string.Empty);
+                SetUpgradeRow(_frostTipRow, "Frost Tip", ShopCosts.FrostTip, false);
         }
 
         void RefreshThickHideRow()
@@ -1041,29 +1319,24 @@ namespace ProjectZx.UI
             var level = GameSave.ThickHideLevel;
             if (level >= 3)
             {
-                SetOwnedRow(_thickHideRow, "Thick Hide III (−45% damage taken)");
+                SetOwnedRow(_thickHideRow, "Thick Hide MAX");
                 return;
             }
 
-            if (level == 0)
+            var title = $"Thick Hide {ToRoman(level + 1)}";
+            if (level == 1 && !GameSave.InsideSurvivalCleared)
             {
-                SetUpgradeRow(_thickHideRow, "Thick Hide I (−15% damage taken)", ShopCosts.NextThickHideCost, false, string.Empty);
+                SetLockedRow(_thickHideRow, title);
                 return;
             }
 
-            if (level == 1)
+            if (level == 2 && !GameSave.DungeonSurvivalCleared)
             {
-                if (!GameSave.InsideSurvivalCleared)
-                    SetLockedRow(_thickHideRow, "Thick Hide II (−30% damage taken)", "Clear Inside Survival");
-                else
-                    SetUpgradeRow(_thickHideRow, "Thick Hide II (−30% damage taken)", ShopCosts.NextThickHideCost, false, "Owned: T1 (−15%)");
+                SetLockedRow(_thickHideRow, title);
                 return;
             }
 
-            if (!GameSave.DungeonSurvivalCleared)
-                SetLockedRow(_thickHideRow, "Thick Hide III (−45% damage taken)", "Clear Dungeon Survival");
-            else
-                SetUpgradeRow(_thickHideRow, "Thick Hide III (−45% damage taken)", ShopCosts.NextThickHideCost, false, "Owned: T2 (−30%)");
+            SetUpgradeRow(_thickHideRow, title, ShopCosts.NextThickHideCost, false);
         }
 
         void RefreshSecondWindRow()
@@ -1071,26 +1344,24 @@ namespace ProjectZx.UI
             var level = GameSave.SecondWindLevel;
             if (level >= 2)
             {
-                SetOwnedRow(_secondWindRow, "Second Wind II (heal 30% twice under 20% HP)");
+                SetOwnedRow(_secondWindRow, "Second Wind MAX");
                 return;
             }
 
-            if (level == 0)
+            var title = $"Second Wind {ToRoman(level + 1)}";
+            if (level == 1 && !GameSave.InsideSurvivalCleared)
             {
-                SetUpgradeRow(_secondWindRow, "Second Wind I (heal 30% once under 20% HP)", ShopCosts.NextSecondWindCost, false, string.Empty);
+                SetLockedRow(_secondWindRow, title);
                 return;
             }
 
-            if (!GameSave.InsideSurvivalCleared)
-                SetLockedRow(_secondWindRow, "Second Wind II (2 uses/run)", "Clear Inside Survival");
-            else
-                SetUpgradeRow(_secondWindRow, "Second Wind II (2 uses/run)", ShopCosts.NextSecondWindCost, false, "Owned: 1 use/run");
+            SetUpgradeRow(_secondWindRow, title, ShopCosts.NextSecondWindCost, false);
         }
 
-        static void SetLockedRow(UpgradeRowRefs row, string label, string reason)
+        static void SetLockedRow(UpgradeRowRefs row, string label)
         {
             if (row.Label != null)
-                row.Label.text = $"{label} — {reason}";
+                row.Label.text = label;
 
             if (row.BuyButton != null)
             {
@@ -1098,7 +1369,7 @@ namespace ProjectZx.UI
                 var image = row.BuyButton.GetComponent<Image>();
                 if (image != null)
                 {
-                    UiSprites.ApplyButtonSprite(image, new Vector2(280f, 56f));
+                    UiSprites.ApplyButtonSprite(image, new Vector2(240f, 56f));
                     image.color = new Color(0.32f, 0.34f, 0.38f, 0.75f);
                 }
 
@@ -1114,17 +1385,10 @@ namespace ProjectZx.UI
                 row.CoinIcon.enabled = false;
         }
 
-        static void SetUpgradeRow(UpgradeRowRefs row, string label, int cost, bool maxed, string maxLabel)
+        static void SetUpgradeRow(UpgradeRowRefs row, string label, int cost, bool maxed)
         {
             if (row.Label != null)
-            {
-                if (maxed)
-                    row.Label.text = maxLabel;
-                else if (!string.IsNullOrEmpty(maxLabel))
-                    row.Label.text = $"{label}\n{maxLabel}";
-                else
-                    row.Label.text = label;
-            }
+                row.Label.text = label;
 
             if (row.BuyButton != null)
             {
@@ -1132,7 +1396,7 @@ namespace ProjectZx.UI
                 var image = row.BuyButton.GetComponent<Image>();
                 if (image != null)
                 {
-                    UiSprites.ApplyButtonSprite(image, new Vector2(280f, 56f),
+                    UiSprites.ApplyButtonSprite(image, new Vector2(240f, 56f),
                         maxed ? StoneButtonStyle.Primary : StoneButtonStyle.Green);
                     image.color = Color.white;
                 }
@@ -1140,7 +1404,7 @@ namespace ProjectZx.UI
                 var buyLabel = row.BuyButton.GetComponentInChildren<Text>();
                 if (buyLabel != null)
                 {
-                    buyLabel.text = maxed ? "MAX" : $"Buy for {GoldFormat.Abbreviate(cost)}";
+                    buyLabel.text = maxed ? "MAX" : $"Buy {GoldFormat.Abbreviate(cost)}";
                     buyLabel.color = Color.white;
                 }
             }
@@ -1160,7 +1424,7 @@ namespace ProjectZx.UI
                 var image = row.BuyButton.GetComponent<Image>();
                 if (image != null)
                 {
-                    UiSprites.ApplyButtonSprite(image, new Vector2(280f, 56f));
+                    UiSprites.ApplyButtonSprite(image, new Vector2(240f, 56f));
                     image.color = new Color(0.42f, 0.44f, 0.48f, 0.88f);
                 }
 
@@ -1220,6 +1484,7 @@ namespace ProjectZx.UI
             RefreshGold();
             RefreshShopRows();
             CloseAllHubPanels();
+            if (_shopInfoPanel != null) _shopInfoPanel.SetActive(false);
             _shopPanel.SetActive(true);
         }
 

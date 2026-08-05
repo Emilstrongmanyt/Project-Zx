@@ -30,9 +30,8 @@ namespace ProjectZx.Core
         /// <summary>Sentinel cape — block chance.</summary>
         SentinelCape = 8,
         /// <summary>Heavy ironweave cape — stronger damage reduction.</summary>
-        IronweaveCape = 9,
-        /// <summary>Guardian cape — HP + light damage reduction.</summary>
-        GuardianCape = 10
+        IronweaveCape = 9
+        // GuardianCape = 10 reserved (removed so each slot type has 3 items).
     }
 
     public readonly struct EquipmentDef
@@ -99,9 +98,7 @@ namespace ProjectZx.Core
             new(EquipmentId.SentinelCape, EquipmentSlot.Cape, "Sentinel Cape",
                 "+12% block chance", blockChance: 0.12f),
             new(EquipmentId.IronweaveCape, EquipmentSlot.Cape, "Ironweave Cape",
-                "−12% damage taken", damageReduction: 0.12f),
-            new(EquipmentId.GuardianCape, EquipmentSlot.Cape, "Guardian Cape",
-                "+30 Max HP, −5% damage taken", damageReduction: 0.05f, bonusMaxHp: 30)
+                "−12% damage taken", damageReduction: 0.12f)
         };
 
         public static EquipmentDef Get(EquipmentId id)
@@ -129,7 +126,6 @@ namespace ProjectZx.Core
                 EquipmentId.WoolCape => ArtLibrary.WoolCape,
                 EquipmentId.SentinelCape => ArtLibrary.SentinelCape,
                 EquipmentId.IronweaveCape => ArtLibrary.IronweaveCape,
-                EquipmentId.GuardianCape => ArtLibrary.GuardianCape,
                 _ => null
             };
         }

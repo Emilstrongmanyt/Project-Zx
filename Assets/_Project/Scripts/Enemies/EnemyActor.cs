@@ -39,8 +39,9 @@ namespace ProjectZx.Enemies
         const float BossHpPotionDropChance = 0.12f;
         const float MapLootDropChance = 0.005f;
         /// <summary>Very rare ring/necklace drops for the camp treasure chest (halved from original rates).</summary>
-        const float EquipmentDropChance = 0.00175f;
-        const float BossEquipmentDropChance = 0.01f;
+        // ~half prior rates so jewelry/capes stay rare.
+        const float EquipmentDropChance = 0.000875f;
+        const float BossEquipmentDropChance = 0.005f;
         /// <summary>Outside survival regular zombies: −25% HP and move speed.</summary>
         const float OutsideZombieStatScale = 0.75f;
         /// <summary>All enemies on Inside Survival map: −15% move speed.</summary>
