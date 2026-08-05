@@ -17,8 +17,7 @@ namespace ProjectZx.UI
         Text _hpText;
         Text _xpText;
         Text _goldText;
-        Text _dpsLiveText;
-        Text _dpsRoundText;
+        Text _dpsText;
         Image _hpFill;
         Image _xpFill;
         Text _bannerText;
@@ -520,10 +519,8 @@ namespace ProjectZx.UI
             if (!IsGamePaused)
                 DpsTracker.Tick();
 
-            if (_dpsLiveText != null)
-                _dpsLiveText.text = FormatDpsLiveLabel(DpsTracker.LiveDps);
-            if (_dpsRoundText != null)
-                _dpsRoundText.text = FormatDpsRoundLabel(DpsTracker.RoundAvgDps);
+            if (_dpsText != null)
+                _dpsText.text = FormatDpsLabel(DpsTracker.DisplayDps);
 
             if (IsGamePaused) return;
 
@@ -824,7 +821,7 @@ namespace ProjectZx.UI
 
         void BuildHudDpsChip(Transform parent, Vector2 pos)
         {
-            // Dual-line chip: calm 3s live average + round average.
+            // Single calm 3s-window DPS chip (matches gold chip styling).
             var chip = new GameObject("DpsChip");
             chip.transform.SetParent(parent, false);
             var chipRect = chip.AddComponent<RectTransform>();
@@ -832,7 +829,7 @@ namespace ProjectZx.UI
             chipRect.anchorMax = new Vector2(0f, 1f);
             chipRect.pivot = new Vector2(0f, 1f);
             chipRect.anchoredPosition = pos;
-            chipRect.sizeDelta = new Vector2(220f, 58f);
+            chipRect.sizeDelta = new Vector2(200f, 44f);
 
             var bg = chip.AddComponent<Image>();
             if (StoneUi.Available && StoneUi.ResourceBarBg != null)
@@ -852,7 +849,6 @@ namespace ProjectZx.UI
                     ? ArtLibrary.Sparkles
                     : ArtLibrary.GoldCoin;
 
-            var textLeft = 12f;
             if (iconSprite != null)
             {
                 var iconGo = new GameObject("DpsIcon");
@@ -862,56 +858,36 @@ namespace ProjectZx.UI
                 iconRect.anchorMax = new Vector2(0f, 0.5f);
                 iconRect.pivot = new Vector2(0f, 0.5f);
                 iconRect.anchoredPosition = new Vector2(10f, 0f);
-                iconRect.sizeDelta = new Vector2(30f, 30f);
+                iconRect.sizeDelta = new Vector2(32f, 32f);
                 var iconImage = iconGo.AddComponent<Image>();
                 iconImage.sprite = iconSprite;
                 iconImage.color = new Color(1f, 0.78f, 0.55f, 1f);
                 iconImage.raycastTarget = false;
-                textLeft = 44f;
             }
 
-            var liveGo = new GameObject("DpsLive");
-            liveGo.transform.SetParent(chip.transform, false);
-            var liveRect = liveGo.AddComponent<RectTransform>();
-            liveRect.anchorMin = new Vector2(0f, 0.5f);
-            liveRect.anchorMax = Vector2.one;
-            liveRect.offsetMin = new Vector2(textLeft, 0f);
-            liveRect.offsetMax = new Vector2(-8f, -4f);
-            _dpsLiveText = liveGo.AddComponent<Text>();
-            _dpsLiveText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            _dpsLiveText.text = "3s  0";
-            _dpsLiveText.fontSize = 18;
-            _dpsLiveText.fontStyle = FontStyle.Bold;
-            _dpsLiveText.color = new Color(1f, 0.78f, 0.58f);
-            _dpsLiveText.alignment = TextAnchor.MiddleLeft;
-            _dpsLiveText.raycastTarget = false;
-
-            var rndGo = new GameObject("DpsRound");
-            rndGo.transform.SetParent(chip.transform, false);
-            var rndRect = rndGo.AddComponent<RectTransform>();
-            rndRect.anchorMin = Vector2.zero;
-            rndRect.anchorMax = new Vector2(1f, 0.5f);
-            rndRect.offsetMin = new Vector2(textLeft, 4f);
-            rndRect.offsetMax = new Vector2(-8f, 0f);
-            _dpsRoundText = rndGo.AddComponent<Text>();
-            _dpsRoundText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            _dpsRoundText.text = "Rnd  0";
-            _dpsRoundText.fontSize = 16;
-            _dpsRoundText.fontStyle = FontStyle.Bold;
-            _dpsRoundText.color = new Color(0.78f, 0.88f, 1f);
-            _dpsRoundText.alignment = TextAnchor.MiddleLeft;
-            _dpsRoundText.raycastTarget = false;
+            var textGo = new GameObject("DpsText");
+            textGo.transform.SetParent(chip.transform, false);
+            var textRect = textGo.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(iconSprite != null ? 46f : 12f, 0f);
+            textRect.offsetMax = new Vector2(-10f, 0f);
+            _dpsText = textGo.AddComponent<Text>();
+            _dpsText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            _dpsText.text = "DPS 0";
+            _dpsText.fontSize = 22;
+            _dpsText.fontStyle = FontStyle.Bold;
+            _dpsText.color = new Color(1f, 0.78f, 0.58f);
+            _dpsText.alignment = TextAnchor.MiddleLeft;
+            _dpsText.raycastTarget = false;
         }
 
-        static string FormatDpsValue(float dps)
+        static string FormatDpsLabel(float dps)
         {
-            if (dps < 1f) return "0";
-            if (dps < 1000f) return Mathf.RoundToInt(dps).ToString();
-            return GoldFormat.Abbreviate(Mathf.RoundToInt(dps));
+            if (dps < 1f) return "DPS 0";
+            if (dps < 1000f) return $"DPS {Mathf.RoundToInt(dps)}";
+            return $"DPS {GoldFormat.Abbreviate(Mathf.RoundToInt(dps))}";
         }
-
-        static string FormatDpsLiveLabel(float dps) => $"3s  {FormatDpsValue(dps)}";
-        static string FormatDpsRoundLabel(float dps) => $"Rnd  {FormatDpsValue(dps)}";
 
         void CreateChoiceButton(
             Transform parent,
