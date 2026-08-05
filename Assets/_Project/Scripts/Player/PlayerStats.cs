@@ -25,7 +25,11 @@ namespace ProjectZx.Player
         Regen,
         Shield,
         Berserk,
-        XpBoost
+        XpBoost,
+        /// <summary>Defense category: reduce damage taken.</summary>
+        Defense,
+        /// <summary>Defense category: chance to fully block a hit.</summary>
+        Block
     }
 
     public class PlayerStats : MonoBehaviour
@@ -66,6 +70,10 @@ namespace ProjectZx.Player
         public float RunRegenPerSecond { get; private set; }
         public bool RunShieldUnlocked { get; private set; }
         public float RunBerserkBonus { get; private set; }
+        /// <summary>Run talent additive damage reduction (0.08 per pick, max 0.40 from talents).</summary>
+        public float RunDamageTakenReduction { get; private set; }
+        /// <summary>Run talent block chance (0.05 per pick, max 0.50 from talents).</summary>
+        public float RunBlockChance { get; private set; }
 
         // --- Boss epic crystal talents (run-scoped) ---
         public int EpicOwnedMask { get; private set; }
@@ -149,6 +157,8 @@ namespace ProjectZx.Player
             RunRegenPerSecond = 0f;
             RunShieldUnlocked = false;
             RunBerserkBonus = 0f;
+            RunDamageTakenReduction = 0f;
+            RunBlockChance = 0f;
             EpicOwnedMask = 0;
             PendingEpicChoices = 0;
             EpicPicksTaken = 0;
@@ -205,6 +215,8 @@ namespace ProjectZx.Player
             RunRegenPerSecond = 0f;
             RunShieldUnlocked = false;
             RunBerserkBonus = leader.RunBerserkBonus;
+            RunDamageTakenReduction = leader.RunDamageTakenReduction;
+            RunBlockChance = leader.RunBlockChance;
             RunDamageTakenMultiplier = leader.RunDamageTakenMultiplier;
             RunEpicBossDamageBonus = leader.RunEpicBossDamageBonus;
             RunEpicNormalDamageBonus = leader.RunEpicNormalDamageBonus;
@@ -326,13 +338,28 @@ namespace ProjectZx.Player
             {
                 _shieldReady = false;
                 _shieldCooldown = ShieldCooldownSeconds;
+                FloatingDamageNumber.SpawnBlock(transform.position);
+                return;
+            }
+
+            // Chance block: run talents + equipped capes (hard cap 50% total).
+            var blockChance = Mathf.Min(0.50f, RunBlockChance + EquipmentCatalog.CombinedBlockChance());
+            if (blockChance > 0f && UnityEngine.Random.value < blockChance)
+            {
+                _timeSinceDamaged = 0f;
+                FloatingDamageNumber.SpawnBlock(transform.position);
                 return;
             }
 
             if (GameSave.ThickHideLevel > 0)
                 amount = Mathf.Max(1, Mathf.RoundToInt(amount * GameSave.ThickHideDamageTakenMultiplier));
 
-            if (RunDamageTakenMultiplier > 1.001f)
+            // Additive DR from level-up Defense talent + equipment (cap 50% total reduction).
+            var reduction = Mathf.Min(0.50f, RunDamageTakenReduction + EquipmentCatalog.CombinedDamageReduction());
+            if (reduction > 0f)
+                amount = Mathf.Max(1, Mathf.RoundToInt(amount * (1f - reduction)));
+
+            if (RunDamageTakenMultiplier > 1.001f || RunDamageTakenMultiplier < 0.999f)
                 amount = Mathf.Max(1, Mathf.RoundToInt(amount * RunDamageTakenMultiplier));
 
             if (RunIronVeil && _ironVeilAbsorb > 0f)
@@ -500,6 +527,10 @@ namespace ProjectZx.Player
         public bool CanOfferShield => !RunShieldUnlocked;
         public bool CanOfferBerserk => RunBerserkBonus + 0.25f <= 0.5f;
         public bool CanOfferXpBoost => RunXpMultiplier * 1.15f <= 2f;
+        /// <summary>Defense talent: −8% damage taken per pick, max −40% from this talent.</summary>
+        public bool CanOfferDefenseTalent => RunDamageTakenReduction + 0.08f <= 0.40f + 0.001f;
+        /// <summary>Block talent: +5% block per pick, max 50% from this talent.</summary>
+        public bool CanOfferBlockTalent => RunBlockChance + 0.05f <= 0.50f + 0.001f;
 
         public static List<RunLevelChoice> RollLevelUpChoices(PlayerStats stats, int count = 4)
         {
@@ -537,6 +568,8 @@ namespace ProjectZx.Player
                 if (stats.CanOfferShield) pool.Add(RunLevelChoice.Shield);
                 if (stats.CanOfferBerserk) pool.Add(RunLevelChoice.Berserk);
                 if (stats.CanOfferXpBoost) pool.Add(RunLevelChoice.XpBoost);
+                if (stats.CanOfferDefenseTalent) pool.Add(RunLevelChoice.Defense);
+                if (stats.CanOfferBlockTalent) pool.Add(RunLevelChoice.Block);
             }
 
             for (var i = pool.Count - 1; i > 0; i--)
@@ -568,6 +601,8 @@ namespace ProjectZx.Player
                 RunLevelChoice.Shield => "Block 1 hit every 12s",
                 RunLevelChoice.Berserk => "+25% Damage under 40% HP",
                 RunLevelChoice.XpBoost => "+15% XP Gain",
+                RunLevelChoice.Defense => "−8% Damage Taken",
+                RunLevelChoice.Block => "+5% Block Chance",
                 _ => choice.ToString()
             };
         }
@@ -644,6 +679,14 @@ namespace ProjectZx.Player
                 case RunLevelChoice.XpBoost:
                     if (!CanOfferXpBoost) break;
                     RunXpMultiplier = Mathf.Min(2f, RunXpMultiplier * 1.15f);
+                    break;
+                case RunLevelChoice.Defense:
+                    if (!CanOfferDefenseTalent) break;
+                    RunDamageTakenReduction = Mathf.Min(0.40f, RunDamageTakenReduction + 0.08f);
+                    break;
+                case RunLevelChoice.Block:
+                    if (!CanOfferBlockTalent) break;
+                    RunBlockChance = Mathf.Min(0.50f, RunBlockChance + 0.05f);
                     break;
             }
 
@@ -888,6 +931,8 @@ namespace ProjectZx.Player
                 RunRegenPerSecond = RunRegenPerSecond,
                 RunShieldUnlocked = RunShieldUnlocked,
                 RunBerserkBonus = RunBerserkBonus,
+                RunDamageTakenReduction = RunDamageTakenReduction,
+                RunBlockChance = RunBlockChance,
                 SecondWindChargesUsed = _secondWindChargesUsed,
                 SecondWindUsed = _secondWindChargesUsed > 0,
                 EpicOwnedMask = EpicOwnedMask,
@@ -942,6 +987,8 @@ namespace ProjectZx.Player
             RunRegenPerSecond = snapshot.RunRegenPerSecond;
             RunShieldUnlocked = snapshot.RunShieldUnlocked;
             RunBerserkBonus = snapshot.RunBerserkBonus;
+            RunDamageTakenReduction = Mathf.Clamp01(snapshot.RunDamageTakenReduction);
+            RunBlockChance = Mathf.Clamp01(snapshot.RunBlockChance);
             _secondWindChargesUsed = snapshot.SecondWindChargesUsed > 0
                 ? snapshot.SecondWindChargesUsed
                 : snapshot.SecondWindUsed ? 1 : 0;

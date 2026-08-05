@@ -20,6 +20,7 @@ namespace ProjectZx.UI
         static readonly Color HeroColor = new Color(1f, 0.2f, 0.2f, 1f);
         static readonly Color BurnColor = new Color(1f, 0.45f, 0.85f, 1f);
         static readonly Color BleedColor = new Color(0.85f, 0.08f, 0.12f, 1f);
+        static readonly Color BlockColor = new Color(0.55f, 0.85f, 1f, 1f);
 
         static Canvas _canvas;
         static Font _font;
@@ -45,6 +46,21 @@ namespace ProjectZx.UI
         public static void SpawnBleed(Vector3 worldPosition, int amount)
         {
             Spawn(worldPosition, amount, BleedColor);
+        }
+
+        /// <summary>Full block / timed shield absorb feedback.</summary>
+        public static void SpawnBlock(Vector3 worldPosition)
+        {
+            if (GameHud.Instance != null && GameHud.Instance.IsGamePaused) return;
+
+            EnsureCanvas();
+            if (_canvas == null) return;
+
+            var go = new GameObject("BlockNumber");
+            go.transform.SetParent(_canvas.transform, false);
+
+            var number = go.AddComponent<FloatingDamageNumber>();
+            number.SetupText(worldPosition, "BLOCK", BlockColor);
         }
 
         public static void Spawn(Vector3 worldPosition, int amount, Color color)
@@ -92,6 +108,11 @@ namespace ProjectZx.UI
 
         void Setup(Vector3 worldPosition, int amount, Color color)
         {
+            SetupText(worldPosition, amount.ToString(), color);
+        }
+
+        void SetupText(Vector3 worldPosition, string text, Color color)
+        {
             _worldAnchor = worldPosition + Vector3.up * HeadOffsetY;
             _baseColor = color;
             _xJitterPixels = Random.Range(-28f, 28f);
@@ -107,7 +128,7 @@ namespace ProjectZx.UI
             _label = gameObject.AddComponent<Text>();
             if (_font != null)
                 _label.font = _font;
-            _label.text = amount.ToString();
+            _label.text = text;
             _label.fontSize = FontSize;
             _label.fontStyle = FontStyle.Bold;
             _label.alignment = TextAnchor.MiddleCenter;

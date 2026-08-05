@@ -6,7 +6,8 @@ namespace ProjectZx.Core
     public enum EquipmentSlot
     {
         Ring,
-        Necklace
+        Necklace,
+        Cape
     }
 
     public enum EquipmentId
@@ -23,7 +24,15 @@ namespace ProjectZx.Core
         /// <summary>Admurin nimble ring — +move speed.</summary>
         NimbleRing = 5,
         /// <summary>Admurin protector necklace — +max HP.</summary>
-        ProtectorNecklace = 6
+        ProtectorNecklace = 6,
+        /// <summary>Soft wool cape — damage reduction.</summary>
+        WoolCape = 7,
+        /// <summary>Sentinel cape — block chance.</summary>
+        SentinelCape = 8,
+        /// <summary>Heavy ironweave cape — stronger damage reduction.</summary>
+        IronweaveCape = 9,
+        /// <summary>Guardian cape — HP + light damage reduction.</summary>
+        GuardianCape = 10
     }
 
     public readonly struct EquipmentDef
@@ -36,6 +45,10 @@ namespace ProjectZx.Core
         public readonly float GoldFindMultiplier;
         public readonly float AttackSpeedMultiplier;
         public readonly float MoveSpeedMultiplier;
+        /// <summary>Additive fraction of damage ignored (0.08 = −8% damage taken).</summary>
+        public readonly float DamageReduction;
+        /// <summary>Chance 0–1 to fully block an incoming hit.</summary>
+        public readonly float BlockChance;
         public readonly int BonusMaxHp;
 
         public EquipmentDef(
@@ -47,6 +60,8 @@ namespace ProjectZx.Core
             float goldFindMultiplier = 1f,
             float attackSpeedMultiplier = 1f,
             float moveSpeedMultiplier = 1f,
+            float damageReduction = 0f,
+            float blockChance = 0f,
             int bonusMaxHp = 0)
         {
             Id = id;
@@ -57,6 +72,8 @@ namespace ProjectZx.Core
             GoldFindMultiplier = goldFindMultiplier;
             AttackSpeedMultiplier = attackSpeedMultiplier;
             MoveSpeedMultiplier = moveSpeedMultiplier;
+            DamageReduction = damageReduction;
+            BlockChance = blockChance;
             BonusMaxHp = bonusMaxHp;
         }
     }
@@ -76,7 +93,15 @@ namespace ProjectZx.Core
             new(EquipmentId.SkullNecklace, EquipmentSlot.Necklace, "Skull Necklace",
                 "+10% attack speed", attackSpeedMultiplier: 1.1f),
             new(EquipmentId.ProtectorNecklace, EquipmentSlot.Necklace, "Protector Necklace",
-                "+40 Max HP", bonusMaxHp: 40)
+                "+40 Max HP", bonusMaxHp: 40),
+            new(EquipmentId.WoolCape, EquipmentSlot.Cape, "Wool Cape",
+                "−8% damage taken", damageReduction: 0.08f),
+            new(EquipmentId.SentinelCape, EquipmentSlot.Cape, "Sentinel Cape",
+                "+12% block chance", blockChance: 0.12f),
+            new(EquipmentId.IronweaveCape, EquipmentSlot.Cape, "Ironweave Cape",
+                "−12% damage taken", damageReduction: 0.12f),
+            new(EquipmentId.GuardianCape, EquipmentSlot.Cape, "Guardian Cape",
+                "+30 Max HP, −5% damage taken", damageReduction: 0.05f, bonusMaxHp: 30)
         };
 
         public static EquipmentDef Get(EquipmentId id)
@@ -101,6 +126,10 @@ namespace ProjectZx.Core
                 EquipmentId.JadeNecklace => ArtLibrary.Necklace,
                 EquipmentId.SkullNecklace => ArtLibrary.SkullNecklace,
                 EquipmentId.ProtectorNecklace => ArtLibrary.ProtectorNecklace,
+                EquipmentId.WoolCape => ArtLibrary.WoolCape,
+                EquipmentId.SentinelCape => ArtLibrary.SentinelCape,
+                EquipmentId.IronweaveCape => ArtLibrary.IronweaveCape,
+                EquipmentId.GuardianCape => ArtLibrary.GuardianCape,
                 _ => null
             };
         }
@@ -123,70 +152,68 @@ namespace ProjectZx.Core
             return pool[Random.Range(0, pool.Count)];
         }
 
+        static void ForEachEquipped(System.Action<EquipmentDef> apply)
+        {
+            ApplyOne(GameSave.EquippedRing, apply);
+            ApplyOne(GameSave.EquippedNecklace, apply);
+            ApplyOne(GameSave.EquippedCape, apply);
+
+            static void ApplyOne(EquipmentId id, System.Action<EquipmentDef> action)
+            {
+                var def = Get(id);
+                if (def.Id != EquipmentId.None)
+                    action(def);
+            }
+        }
+
         public static float CombinedDamageMultiplier()
         {
             var m = 1f;
-            m *= MultOrOne(GameSave.EquippedRing);
-            m *= MultOrOne(GameSave.EquippedNecklace);
+            ForEachEquipped(d => m *= d.DamageMultiplier);
             return m;
-
-            static float MultOrOne(EquipmentId id)
-            {
-                var def = Get(id);
-                return def.Id == EquipmentId.None ? 1f : def.DamageMultiplier;
-            }
         }
 
         public static float CombinedGoldFindMultiplier()
         {
             var m = 1f;
-            Apply(GameSave.EquippedRing, ref m);
-            Apply(GameSave.EquippedNecklace, ref m);
+            ForEachEquipped(d => m *= d.GoldFindMultiplier);
             return m;
-
-            static void Apply(EquipmentId id, ref float mult)
-            {
-                var def = Get(id);
-                if (def.Id != EquipmentId.None)
-                    mult *= def.GoldFindMultiplier;
-            }
         }
 
         public static float CombinedAttackSpeedMultiplier()
         {
             var m = 1f;
-            Apply(GameSave.EquippedRing, ref m);
-            Apply(GameSave.EquippedNecklace, ref m);
+            ForEachEquipped(d => m *= d.AttackSpeedMultiplier);
             return m;
-
-            static void Apply(EquipmentId id, ref float mult)
-            {
-                var def = Get(id);
-                if (def.Id != EquipmentId.None)
-                    mult *= def.AttackSpeedMultiplier;
-            }
         }
 
         public static float CombinedMoveSpeedMultiplier()
         {
             var m = 1f;
-            Apply(GameSave.EquippedRing, ref m);
-            Apply(GameSave.EquippedNecklace, ref m);
+            ForEachEquipped(d => m *= d.MoveSpeedMultiplier);
             return m;
+        }
 
-            static void Apply(EquipmentId id, ref float mult)
-            {
-                var def = Get(id);
-                if (def.Id != EquipmentId.None)
-                    mult *= def.MoveSpeedMultiplier;
-            }
+        /// <summary>Sum of equipped additive damage reduction (capped elsewhere at combat time).</summary>
+        public static float CombinedDamageReduction()
+        {
+            var r = 0f;
+            ForEachEquipped(d => r += d.DamageReduction);
+            return r;
+        }
+
+        /// <summary>Sum of equipped block chance (capped elsewhere at combat time).</summary>
+        public static float CombinedBlockChance()
+        {
+            var c = 0f;
+            ForEachEquipped(d => c += d.BlockChance);
+            return c;
         }
 
         public static int CombinedBonusMaxHp()
         {
             var hp = 0;
-            hp += Get(GameSave.EquippedRing).BonusMaxHp;
-            hp += Get(GameSave.EquippedNecklace).BonusMaxHp;
+            ForEachEquipped(d => hp += d.BonusMaxHp);
             return hp;
         }
     }

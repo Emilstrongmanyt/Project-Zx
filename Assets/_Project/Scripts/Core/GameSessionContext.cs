@@ -36,6 +36,10 @@ namespace ProjectZx.Core
         public float RunRegenPerSecond;
         public bool RunShieldUnlocked;
         public float RunBerserkBonus;
+        /// <summary>Run Defense talent additive DR (0–0.4).</summary>
+        public float RunDamageTakenReduction;
+        /// <summary>Run Block talent chance (0–0.5).</summary>
+        public float RunBlockChance;
         /// <summary>How many Second Wind charges have been consumed this run.</summary>
         public int SecondWindChargesUsed;
         /// <summary>Legacy bool for old snapshots; prefer SecondWindChargesUsed.</summary>

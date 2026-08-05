@@ -58,6 +58,7 @@ namespace ProjectZx.Core
         const string OwnedEquipmentKey = "zx_owned_equipment";
         const string EquippedRingKey = "zx_equipped_ring";
         const string EquippedNecklaceKey = "zx_equipped_necklace";
+        const string EquippedCapeKey = "zx_equipped_cape";
 
         public static int LastRunGoldBanked { get; set; }
 
@@ -327,6 +328,17 @@ namespace ProjectZx.Core
             }
         }
 
+        public static EquipmentId EquippedCape
+        {
+            get => SanitizeEquipped((EquipmentId)PlayerPrefs.GetInt(EquippedCapeKey, 0), EquipmentSlot.Cape);
+            set
+            {
+                var id = SanitizeEquipped(value, EquipmentSlot.Cape);
+                PlayerPrefs.SetInt(EquippedCapeKey, (int)id);
+                PlayerPrefs.Save();
+            }
+        }
+
         public static bool OwnsEquipment(EquipmentId id)
         {
             if (id == EquipmentId.None || !EquipmentCatalog.IsValid(id)) return false;
@@ -351,18 +363,34 @@ namespace ProjectZx.Core
             var def = EquipmentCatalog.Get(id);
             if (def.Id == EquipmentId.None || !OwnsEquipment(id)) return;
 
-            if (def.Slot == EquipmentSlot.Ring)
-                EquippedRing = id;
-            else
-                EquippedNecklace = id;
+            switch (def.Slot)
+            {
+                case EquipmentSlot.Ring:
+                    EquippedRing = id;
+                    break;
+                case EquipmentSlot.Necklace:
+                    EquippedNecklace = id;
+                    break;
+                case EquipmentSlot.Cape:
+                    EquippedCape = id;
+                    break;
+            }
         }
 
         public static void UnequipSlot(EquipmentSlot slot)
         {
-            if (slot == EquipmentSlot.Ring)
-                EquippedRing = EquipmentId.None;
-            else
-                EquippedNecklace = EquipmentId.None;
+            switch (slot)
+            {
+                case EquipmentSlot.Ring:
+                    EquippedRing = EquipmentId.None;
+                    break;
+                case EquipmentSlot.Necklace:
+                    EquippedNecklace = EquipmentId.None;
+                    break;
+                case EquipmentSlot.Cape:
+                    EquippedCape = EquipmentId.None;
+                    break;
+            }
         }
 
         static EquipmentId SanitizeEquipped(EquipmentId id, EquipmentSlot slot)

@@ -104,6 +104,10 @@ namespace ProjectZx.Core
             _fortuneRing = null;
             _prismRing = null;
             _nimbleRing = null;
+            _woolCape = null;
+            _sentinelCape = null;
+            _ironweaveCape = null;
+            _guardianCape = null;
             _staff = null;
             _treasureChest = null;
             _gateway = null;
@@ -172,6 +176,10 @@ namespace ProjectZx.Core
         static Sprite _fortuneRing;
         static Sprite _prismRing;
         static Sprite _nimbleRing;
+        static Sprite _woolCape;
+        static Sprite _sentinelCape;
+        static Sprite _ironweaveCape;
+        static Sprite _guardianCape;
         static Sprite _staff;
         static Sprite _treasureChest;
         static Sprite _gateway;
@@ -397,6 +405,14 @@ namespace ProjectZx.Core
         /// <summary>Protector Necklace icon — Admurin defensive charm.</summary>
         public static Sprite ProtectorNecklace => _protectorNecklace ??=
             TryLoadSprite(Admurin + "protector_necklace", TilePixelsPerUnit) ?? Necklace;
+        public static Sprite WoolCape => _woolCape ??=
+            TryLoadSprite(Admurin + "wool_cape", TilePixelsPerUnit) ?? Sparkles;
+        public static Sprite SentinelCape => _sentinelCape ??=
+            TryLoadSprite(Admurin + "sentinel_cape", TilePixelsPerUnit) ?? Sparkles;
+        public static Sprite IronweaveCape => _ironweaveCape ??=
+            TryLoadSprite(Admurin + "ironweave_cape", TilePixelsPerUnit) ?? Sparkles;
+        public static Sprite GuardianCape => _guardianCape ??=
+            TryLoadSprite(Admurin + "guardian_cape", TilePixelsPerUnit) ?? Sparkles;
         /// <summary>Camp equipment chest — Layer Lab gold lucky-box when present.</summary>
         public static Sprite TreasureChest => _treasureChest ??= LoadOrCreateTreasureChest();
         public static Sprite Gateway => _gateway ??= LoadOrCreateGateway();

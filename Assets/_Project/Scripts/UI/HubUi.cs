@@ -396,48 +396,68 @@ namespace ProjectZx.UI
         GameObject BuildEquipmentPanel(Transform parent)
         {
             var panel = CreateDialogPanel(parent, "EquipmentPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
-            CreateText(panel.transform, "Treasure Chest", 38, TextAnchor.MiddleCenter, new Vector2(0, 350), new Vector2(700, 48));
-            CreateText(panel.transform, "Equip 1 ring and 1 necklace. Drops unlock here after you find them.", 20, TextAnchor.MiddleCenter, new Vector2(0, 300), new Vector2(860, 40));
-            _equipmentStatusText = CreateText(panel.transform, "", 22, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(860, 48));
+            CreateText(panel.transform, "Treasure Chest", 36, TextAnchor.MiddleCenter, new Vector2(0, 390), new Vector2(700, 48));
+            CreateText(panel.transform, "One ring, necklace, and cape. Drops unlock here after you find them.", 18, TextAnchor.MiddleCenter, new Vector2(0, 345), new Vector2(920, 36));
+            _equipmentStatusText = CreateText(panel.transform, "", 20, TextAnchor.MiddleCenter, new Vector2(0, 300), new Vector2(920, 40));
 
-            CreateText(panel.transform, "Rings", 28, TextAnchor.MiddleCenter, new Vector2(0, 190), new Vector2(400, 36));
-            CreateText(panel.transform, "Necklaces", 28, TextAnchor.MiddleCenter, new Vector2(0, -10), new Vector2(400, 36));
+            CreateText(panel.transform, "Rings", 24, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(400, 32));
+            CreateText(panel.transform, "Necklaces", 24, TextAnchor.MiddleCenter, new Vector2(0, 70), new Vector2(400, 32));
+            CreateText(panel.transform, "Capes", 24, TextAnchor.MiddleCenter, new Vector2(0, -110), new Vector2(400, 32));
 
             _equipmentButtons.Clear();
-            // 4 slots per row: Unequip + up to 3 items.
-            var ringX = new[] { -360f, -120f, 120f, 360f };
+            // Unequip + up to 4 items per row.
+            var slotX = new[] { -400f, -200f, 0f, 200f, 400f };
             var ringIndex = 0;
-            var neckX = new[] { -360f, -120f, 120f, 360f };
             var neckIndex = 0;
+            var capeIndex = 0;
+            const float ringY = 190f;
+            const float neckY = 10f;
+            const float capeY = -170f;
 
-            // Unequip slots first.
-            _equipmentButtons.Add(CreateButton(panel.transform, "No Ring", new Vector2(ringX[ringIndex++], 120f), () =>
+            // Unequip slots first (refresh order depends on this).
+            _equipmentButtons.Add(CreateButton(panel.transform, "No Ring", new Vector2(slotX[ringIndex++], ringY), () =>
             {
                 GameSave.UnequipSlot(EquipmentSlot.Ring);
                 RefreshEquipmentPanel();
             }));
-            _equipmentButtons.Add(CreateButton(panel.transform, "No Necklace", new Vector2(neckX[neckIndex++], -80f), () =>
+            _equipmentButtons.Add(CreateButton(panel.transform, "No Necklace", new Vector2(slotX[neckIndex++], neckY), () =>
             {
                 GameSave.UnequipSlot(EquipmentSlot.Necklace);
+                RefreshEquipmentPanel();
+            }));
+            _equipmentButtons.Add(CreateButton(panel.transform, "No Cape", new Vector2(slotX[capeIndex++], capeY), () =>
+            {
+                GameSave.UnequipSlot(EquipmentSlot.Cape);
                 RefreshEquipmentPanel();
             }));
 
             foreach (var def in EquipmentCatalog.All)
             {
                 var id = def.Id;
-                if (def.Slot == EquipmentSlot.Ring)
+                switch (def.Slot)
                 {
-                    var x = ringIndex < ringX.Length ? ringX[ringIndex++] : 0f;
-                    _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, new Vector2(x, 120f), () => SelectEquipment(id)));
-                }
-                else
-                {
-                    var x = neckIndex < neckX.Length ? neckX[neckIndex++] : 0f;
-                    _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, new Vector2(x, -80f), () => SelectEquipment(id)));
+                    case EquipmentSlot.Ring:
+                    {
+                        var x = ringIndex < slotX.Length ? slotX[ringIndex++] : 0f;
+                        _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, new Vector2(x, ringY), () => SelectEquipment(id)));
+                        break;
+                    }
+                    case EquipmentSlot.Necklace:
+                    {
+                        var x = neckIndex < slotX.Length ? slotX[neckIndex++] : 0f;
+                        _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, new Vector2(x, neckY), () => SelectEquipment(id)));
+                        break;
+                    }
+                    case EquipmentSlot.Cape:
+                    {
+                        var x = capeIndex < slotX.Length ? slotX[capeIndex++] : 0f;
+                        _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, new Vector2(x, capeY), () => SelectEquipment(id)));
+                        break;
+                    }
                 }
             }
 
-            CreateButton(panel.transform, "Close", new Vector2(0, -300), () => panel.SetActive(false), large: true);
+            CreateButton(panel.transform, "Close", new Vector2(0, -360), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
         }
@@ -456,15 +476,18 @@ namespace ProjectZx.UI
             {
                 var ring = EquipmentCatalog.Get(GameSave.EquippedRing);
                 var neck = EquipmentCatalog.Get(GameSave.EquippedNecklace);
+                var cape = EquipmentCatalog.Get(GameSave.EquippedCape);
                 var ringName = ring.Id != EquipmentId.None ? ring.DisplayName : "None";
                 var neckName = neck.Id != EquipmentId.None ? neck.DisplayName : "None";
-                _equipmentStatusText.text = $"Equipped: {ringName}  ·  {neckName}";
+                var capeName = cape.Id != EquipmentId.None ? cape.DisplayName : "None";
+                _equipmentStatusText.text = $"Equipped: {ringName}  ·  {neckName}  ·  {capeName}";
             }
 
-            // Button order: No Ring, No Necklace, then catalog All in order.
+            // Button order: No Ring, No Necklace, No Cape, then catalog All in order.
             var buttonIndex = 0;
             RefreshEquipButton(GetEquipButton(buttonIndex++), EquipmentId.None, EquipmentSlot.Ring, "No Ring");
             RefreshEquipButton(GetEquipButton(buttonIndex++), EquipmentId.None, EquipmentSlot.Necklace, "No Necklace");
+            RefreshEquipButton(GetEquipButton(buttonIndex++), EquipmentId.None, EquipmentSlot.Cape, "No Cape");
 
             foreach (var def in EquipmentCatalog.All)
                 RefreshEquipButton(GetEquipButton(buttonIndex++), def.Id, def.Slot, def.DisplayName);
@@ -482,8 +505,8 @@ namespace ProjectZx.UI
 
             var owned = id == EquipmentId.None || GameSave.OwnsEquipment(id);
             var equipped = id == EquipmentId.None
-                ? (slot == EquipmentSlot.Ring ? GameSave.EquippedRing == EquipmentId.None : GameSave.EquippedNecklace == EquipmentId.None)
-                : (slot == EquipmentSlot.Ring ? GameSave.EquippedRing == id : GameSave.EquippedNecklace == id);
+                ? GetEquippedInSlot(slot) == EquipmentId.None
+                : GetEquippedInSlot(slot) == id;
 
             button.interactable = owned;
             var image = button.GetComponent<Image>();
@@ -511,8 +534,16 @@ namespace ProjectZx.UI
                 label.text = "??? (Find in survival)";
             else
                 label.text = equipped ? $"{def.DisplayName} ✓" : $"{def.DisplayName}\n{def.Description}";
-            label.fontSize = owned ? 18 : 16;
+            label.fontSize = owned ? 16 : 14;
         }
+
+        static EquipmentId GetEquippedInSlot(EquipmentSlot slot) => slot switch
+        {
+            EquipmentSlot.Ring => GameSave.EquippedRing,
+            EquipmentSlot.Necklace => GameSave.EquippedNecklace,
+            EquipmentSlot.Cape => GameSave.EquippedCape,
+            _ => EquipmentId.None
+        };
 
         public void OpenEquipmentChest()
         {
@@ -1299,6 +1330,8 @@ namespace ProjectZx.UI
                 $"Unlimited Map: {(GameSave.UnlimitedMapUnlocked ? "Unlocked" : "Clear Crypt R50")}\n" +
                 $"Ring: {EquipName(GameSave.EquippedRing)}\n" +
                 $"Necklace: {EquipName(GameSave.EquippedNecklace)}\n" +
+                $"Cape: {EquipName(GameSave.EquippedCape)}\n" +
+                $"Equip DR: {EquipmentCatalog.CombinedDamageReduction() * 100f:0}%   Equip Block: {EquipmentCatalog.CombinedBlockChance() * 100f:0}%\n" +
                 $"Spearman: {(GameSave.SpearmanUnlocked ? "Unlocked" : "Locked")}\n" +
                 $"Bowman: {(GameSave.BowmanUnlocked ? "Unlocked" : "Locked")}\n" +
                 $"Samurai: {(GameSave.SamuraiUnlocked ? "Unlocked" : "Locked")}\n" +
