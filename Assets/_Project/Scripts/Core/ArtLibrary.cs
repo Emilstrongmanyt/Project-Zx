@@ -39,6 +39,10 @@ namespace ProjectZx.Core
         public const float TilePixelsPerUnit = 64f;
         const string Admurin = "Items/Admurin/";
         const string Monsters = "Monsters/";
+        /// <summary>Curated crypt/dungeon sheets under Resources/RogueAdventure/.</summary>
+        const string RogueAdventure = "RogueAdventure/";
+        /// <summary>ElvGames dungeon object sprites under Resources/DungeonProps/.</summary>
+        const string DungeonProps = "DungeonProps/";
 
         static readonly string[] OutsideDemonSets =
         {
@@ -424,7 +428,10 @@ namespace ProjectZx.Core
         public static Sprite[] ComputerVariants => _computerVariants ??= LoadSheetSprites("ComputerSheet", 8);
         public static Sprite[] InsidePropVariants => _insidePropVariants ??= LoadSheetSprites("Inside1Sheet", 9);
         public static Sprite[] WarheadVariants => _warheadVariants ??= LoadSheetSprites("WarheadSheet", 8);
-        public static Sprite[] CryptVariants => _cryptVariants ??= LoadSheetSprites("CryptSheet", 9);
+        /// <summary>
+        /// Crypt/Dungeon obstacles: CryptSheet tombs + RA crypt props + dungeon walls/torches/traps.
+        /// </summary>
+        public static Sprite[] CryptVariants => _cryptVariants ??= BuildCryptPropVariants();
 
         // Outside trees/rocks use sheet variants #1 and #2 only (indices 0 and 1).
         public static Sprite GetRandomTreeSprite() => PickFromFirstTwo(TreeVariants) ?? CreateTreeSprite();
@@ -564,8 +571,8 @@ namespace ProjectZx.Core
 
         public static Sprite GetDungeonTile(int index)
         {
-            // Dungeon survival floor — Resources/Dungeon_Tile.
-            _dungeonTiles ??= BuildTileSet("Dungeon_Tile");
+            // Dungeon + Crypt floors — curated stone crypt tiles (never outdoor grass).
+            _dungeonTiles ??= BuildDungeonTileSet();
             return _dungeonTiles[Mathf.Abs(index) % _dungeonTiles.Length];
         }
 
@@ -587,8 +594,151 @@ namespace ProjectZx.Core
             }
 
             if (list.Count == 0)
-                list.Add(CreateTileFallback("fallback_tile"));
+            {
+                // Keep the source path name so CreateTileFallback can pick dungeon/water/inside colors
+                // (never use a generic "fallback_tile" green grass for dungeon loads).
+                var fallbackName = paths != null && paths.Length > 0 && !string.IsNullOrEmpty(paths[0])
+                    ? paths[0]
+                    : "fallback_tile";
+                list.Add(CreateTileFallback(fallbackName));
+            }
+
             return list.ToArray();
+        }
+
+        /// <summary>
+        /// Solid stone crypt/dungeon floors. Prefers curated Rogue Adventure crypt strip,
+        /// then Dungeon_Tile variants, then a dark procedural dungeon tile (never grass).
+        /// </summary>
+        static Sprite[] BuildDungeonTileSet()
+        {
+            var list = new System.Collections.Generic.List<Sprite>(12);
+            AppendSprites(list, SliceHorizontalStrip(RogueAdventure + "RA_Crypt_Floors", 32));
+            if (list.Count == 0)
+            {
+                var paths = new[]
+                {
+                    "Dungeon_Tile", "Dungeon_Tile_2", "Dungeon_Tile_3", "Dungeon_Tile_4"
+                };
+                for (var i = 0; i < paths.Length; i++)
+                {
+                    var sprite = LoadFloorTileSprite(paths[i]) ?? TryLoadSprite(paths[i], TilePixelsPerUnit);
+                    if (sprite == null) continue;
+                    if (IsLikelyLandTile(sprite)) continue;
+                    list.Add(sprite);
+                }
+            }
+
+            if (list.Count == 0)
+                list.Add(CreateTileFallback("dungeon_tile"));
+            return list.ToArray();
+        }
+
+        /// <summary>
+        /// Crypt obstacle pool: existing CryptSheet + RA crypt props + ElvGames dungeon objects.
+        /// </summary>
+        static Sprite[] BuildCryptPropVariants()
+        {
+            var list = new System.Collections.Generic.List<Sprite>(64);
+            AppendSprites(list, LoadSheetSprites("CryptSheet", 9));
+            AppendSprites(list, SliceHorizontalStrip(RogueAdventure + "RA_Crypt_Props", 32));
+            AppendSprites(list, SliceGridSheet(DungeonProps + "dungeon_walls", 16));
+            AppendSprites(list, SliceGridSheet(DungeonProps + "dungeon_torches", 16));
+            AppendSprites(list, SliceGridSheet(DungeonProps + "dungeon_traps", 16));
+            AppendSprites(list, SliceGridSheet(DungeonProps + "dungeon_boulder", 32));
+            if (list.Count == 0)
+                list.Add(CreateStoneSprite());
+            return list.ToArray();
+        }
+
+        static void AppendSprites(System.Collections.Generic.List<Sprite> list, Sprite[] sprites)
+        {
+            if (list == null || sprites == null) return;
+            for (var i = 0; i < sprites.Length; i++)
+            {
+                if (sprites[i] != null)
+                    list.Add(sprites[i]);
+            }
+        }
+
+        /// <summary>Slice a horizontal strip texture into equal-width sprites (runtime, no multi-sprite meta).</summary>
+        static Sprite[] SliceHorizontalStrip(string path, int cellSize)
+        {
+            var texture = LoadResourceTexture(path);
+            if (texture == null || cellSize <= 0 || texture.width < cellSize)
+                return null;
+
+            texture.filterMode = FilterMode.Point;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            var height = Mathf.Min(cellSize, texture.height);
+            var count = Mathf.Max(1, texture.width / cellSize);
+            var list = new System.Collections.Generic.List<Sprite>(count);
+            for (var i = 0; i < count; i++)
+            {
+                var x = i * cellSize;
+                var w = Mathf.Min(cellSize, texture.width - x);
+                if (w <= 0) break;
+                var sprite = Sprite.Create(
+                    texture,
+                    new Rect(x, 0f, w, height),
+                    new Vector2(0.5f, 0.5f),
+                    TilePixelsPerUnit,
+                    0,
+                    SpriteMeshType.FullRect);
+                sprite.name = path + "_" + i;
+                list.Add(sprite);
+            }
+
+            return list.Count > 0 ? list.ToArray() : null;
+        }
+
+        /// <summary>Slice a texture into a grid of cellSize×cellSize sprites.</summary>
+        static Sprite[] SliceGridSheet(string path, int cellSize)
+        {
+            var texture = LoadResourceTexture(path);
+            if (texture == null || cellSize <= 0 || texture.width < cellSize || texture.height < cellSize)
+            {
+                // Fall back to a single full-rect sprite when the sheet is smaller than one cell.
+                var single = LoadFloorTileSprite(path) ?? TryLoadSprite(path, TilePixelsPerUnit);
+                return single != null ? new[] { single } : null;
+            }
+
+            texture.filterMode = FilterMode.Point;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            var cols = texture.width / cellSize;
+            var rows = texture.height / cellSize;
+            if (cols <= 0 || rows <= 0) return null;
+
+            var list = new System.Collections.Generic.List<Sprite>(cols * rows);
+            for (var row = 0; row < rows; row++)
+            for (var col = 0; col < cols; col++)
+            {
+                var sprite = Sprite.Create(
+                    texture,
+                    new Rect(col * cellSize, row * cellSize, cellSize, cellSize),
+                    new Vector2(0.5f, 0.5f),
+                    TilePixelsPerUnit,
+                    0,
+                    SpriteMeshType.FullRect);
+                sprite.name = path + "_" + (row * cols + col);
+                list.Add(sprite);
+            }
+
+            return list.Count > 0 ? list.ToArray() : null;
+        }
+
+        static Texture2D LoadResourceTexture(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return null;
+
+            var texture = Resources.Load<Texture2D>(path);
+            if (texture != null) return texture;
+
+            var sprites = Resources.LoadAll<Sprite>(path);
+            if (sprites != null && sprites.Length > 0 && sprites[0] != null && sprites[0].texture != null)
+                return sprites[0].texture;
+
+            return null;
         }
 
         /// <summary>
@@ -2213,13 +2363,17 @@ namespace ProjectZx.Core
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
             tex.filterMode = FilterMode.Point;
 
-            var isDungeon = name.Contains("dungeon");
-            var isInside = name.Contains("inside");
-            var isWater = name.Contains("water");
+            var lower = name != null ? name.ToLowerInvariant() : string.Empty;
+            var isDungeon = lower.Contains("dungeon") || lower.Contains("crypt");
+            var isInside = lower.Contains("inside") || lower.Contains("rectangle");
+            var isWater = lower.Contains("water");
+            var isSand = lower.Contains("sand");
             var baseColor = isWater
                 ? new Color(0.12f, 0.22f, 0.52f)
                 : isDungeon
                     ? new Color(0.14f, 0.13f, 0.16f)
+                : isSand
+                    ? new Color(0.72f, 0.62f, 0.4f)
                 : isInside
                     ? new Color(0.34f, 0.28f, 0.2f)
                     : new Color(0.24f, 0.48f, 0.2f);
@@ -2227,6 +2381,8 @@ namespace ProjectZx.Core
                 ? new Color(0.2f, 0.34f, 0.62f)
                 : isDungeon
                     ? new Color(0.22f, 0.2f, 0.24f)
+                : isSand
+                    ? new Color(0.8f, 0.7f, 0.48f)
                 : isInside
                     ? new Color(0.42f, 0.34f, 0.24f)
                     : new Color(0.3f, 0.58f, 0.26f);

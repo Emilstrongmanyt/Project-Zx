@@ -53,6 +53,8 @@ namespace ProjectZx.Core
             if (waterSprite == null)
                 Debug.LogError("[GameFactory] Water tile sprite failed to load; borders will be missing.");
 
+            var isDungeonLike = mapKind == SurvivalMapKind.Dungeon || mapKind == SurvivalMapKind.Crypt;
+
             for (var row = 0; row < rows; row++)
             for (var col = 0; col < cols; col++)
             {
@@ -61,11 +63,14 @@ namespace ProjectZx.Core
                     || col < borderDepth || col >= cols - borderDepth;
                 var tileIndex = col + row * 7;
                 Sprite sprite;
-                if (isBorder)
+                // Crypt/Dungeon borders use dark stone (not water/grass) so portals never look outdoor.
+                if (isBorder && isDungeonLike)
+                    sprite = ArtLibrary.GetDungeonTile(tileIndex + 3);
+                else if (isBorder)
                     sprite = waterSprite;
                 else if (mapKind == SurvivalMapKind.Unlimited)
                     sprite = ArtLibrary.GetSandTile(tileIndex);
-                else if (mapKind == SurvivalMapKind.Dungeon || mapKind == SurvivalMapKind.Crypt)
+                else if (isDungeonLike)
                     sprite = ArtLibrary.GetDungeonTile(tileIndex);
                 else if (mapKind == SurvivalMapKind.Inside)
                     sprite = ArtLibrary.GetInsideTile(tileIndex);
@@ -77,7 +82,9 @@ namespace ProjectZx.Core
                 var tileScale = ArtLibrary.GetTileScale(sprite, tileSize);
                 var sortOrder = isBorder ? ArenaBounds.WaterSortOrder : ArenaBounds.FloorSortOrder;
                 var tile = CreateSprite(
-                    isBorder ? $"Water_{col}_{row}" : $"Tile_{col}_{row}",
+                    isBorder
+                        ? (isDungeonLike ? $"Wall_{col}_{row}" : $"Water_{col}_{row}")
+                        : $"Tile_{col}_{row}",
                     sprite,
                     pos,
                     tileScale,
@@ -87,12 +94,16 @@ namespace ProjectZx.Core
                 ApplyFloorMaterial(tileRenderer);
                 if (isBorder)
                 {
+                    // Keep WaterTile component so existing collision/clamp logic stays consistent.
                     tile.AddComponent<WaterTile>();
                     var waterCol = tile.AddComponent<BoxCollider2D>();
                     // Local size so world collider matches one tile after scale is applied.
                     var scale = Mathf.Max(0.001f, tile.transform.localScale.x);
                     waterCol.size = Vector2.one * (tileSize / scale);
                     waterCol.isTrigger = false;
+                    // Darken border ring so walls read as solid crypt perimeter.
+                    if (isDungeonLike && tileRenderer != null)
+                        tileRenderer.color = new Color(0.55f, 0.5f, 0.48f, 1f);
                 }
                 tile.transform.SetParent(root.transform, true);
             }
@@ -199,11 +210,16 @@ namespace ProjectZx.Core
             ReserveClearing(Vector2.zero, 4f);
             var root = new GameObject("CryptObstacles");
             var rng = new System.Random(90212);
+            // CryptSheet tombs + RA crypt props + ElvGames dungeon walls/torches/traps/boulders.
             var cryptBag = new SpriteVariantBag(ArtLibrary.CryptVariants, rng);
 
-            for (var i = 0; i < 22; i++)
-                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 2.5f, 5f, 1.8f,
-                    pos => CreatePropObstacle("CryptProp", cryptBag.Pick(), new Vector3(pos.x, pos.y, 0f), 1f, 0.34f));
+            for (var i = 0; i < 28; i++)
+            {
+                var scale = 0.95f + (float)rng.NextDouble() * 0.45f;
+                TryPlaceObstacle(root.transform, rng, arenaWidth, arenaHeight, 2.4f, 5f, 1.7f,
+                    pos => CreatePropObstacle("CryptProp", cryptBag.Pick(), new Vector3(pos.x, pos.y, 0f), scale, 0.34f),
+                    footprintPadding: 0.9f);
+            }
 
             return root;
         }
