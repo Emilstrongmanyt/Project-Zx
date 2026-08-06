@@ -150,16 +150,22 @@ namespace ProjectZx.Player
             if (_lootTimer > 0f) return;
             _lootTimer = LootScanInterval;
 
-            var credit = _stats != null ? _stats.LootCreditTarget : _leaderStats;
-            if (credit == null) return;
+            // Always credit the active player — never bank loot on the companion.
+            var credit = _leaderStats != null
+                ? _leaderStats.LootCreditTarget
+                : _stats != null ? _stats.LootCreditTarget : null;
+            if (credit == null || credit.IsDead) return;
 
-            var range = 1.45f * (credit.EffectiveLootRangeMultiplier);
+            var range = 1.45f * credit.EffectiveLootRangeMultiplier;
+            // Boss crystals use a slightly larger vacuum so companions do not miss them.
+            var crystalRange = range * 1.25f;
             var pickups = Object.FindObjectsByType<LootPickup>();
             for (var i = 0; i < pickups.Length; i++)
             {
                 var pickup = pickups[i];
                 if (pickup == null) continue;
-                if (Vector2.Distance(transform.position, pickup.transform.position) > range) continue;
+                var maxRange = pickup.Type == PickupType.EpicCrystal ? crystalRange : range;
+                if (Vector2.Distance(transform.position, pickup.transform.position) > maxRange) continue;
                 pickup.CollectFor(credit);
             }
         }

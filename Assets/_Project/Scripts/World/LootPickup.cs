@@ -117,8 +117,9 @@ namespace ProjectZx.World
         public void ForceCollect(PlayerStats stats)
         {
             if (_collected || stats == null) return;
-            // Map-loot / epic crystals must not recursively vacuum other special pickups.
-            if (_type is PickupType.MapLoot or PickupType.EpicCrystal)
+            // Pink map-loot crystals only vacuum other piles; never re-enter the vacuum path.
+            // Epic crystals must still award talent picks (do not destroy them silently).
+            if (_type == PickupType.MapLoot)
             {
                 _collected = true;
                 Destroy(gameObject);
@@ -128,12 +129,13 @@ namespace ProjectZx.World
             Collect(stats);
         }
 
-        /// <summary>Companion / external collect — credits the given player stats.</summary>
+        /// <summary>Companion / external collect — always credits the real player.</summary>
         public void CollectFor(PlayerStats stats) => Collect(stats);
 
         void Collect(PlayerStats stats)
         {
             if (_collected || stats == null) return;
+            // Player or companion — gold / XP / crystals always land on the run leader.
             stats = stats.LootCreditTarget;
             if (stats == null) return;
             _collected = true;
@@ -165,6 +167,10 @@ namespace ProjectZx.World
 
         void CollectEpicCrystal(PlayerStats stats)
         {
+            // Always resolve to the leader so companion vacuum grants epic talent UI.
+            stats = stats != null ? stats.LootCreditTarget : null;
+            if (stats == null) return;
+
             if (!stats.CanAcceptEpicCrystal)
             {
                 GameHud.Instance?.ShowBanner("Epic talents full for this run.", 2f);

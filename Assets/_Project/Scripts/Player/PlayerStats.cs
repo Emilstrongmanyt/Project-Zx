@@ -238,18 +238,32 @@ namespace ProjectZx.Player
             Level = leader.Level;
         }
 
-        public bool CanAcceptEpicCrystal =>
-            !IsCompanion
-            && SurvivalMode
-            && !IsDead
-            && EpicPicksTaken + PendingEpicChoices < EpicTalentCatalog.MaxPicksPerRun;
+        public bool CanAcceptEpicCrystal
+        {
+            get
+            {
+                // Companion never owns the pick — evaluate the leader instead.
+                if (IsCompanion)
+                    return CompanionLeader != null && CompanionLeader.CanAcceptEpicCrystal;
+
+                return SurvivalMode
+                       && !IsDead
+                       && EpicPicksTaken + PendingEpicChoices < EpicTalentCatalog.MaxPicksPerRun;
+            }
+        }
 
         public bool HasEpicTalent(EpicTalentId id) =>
             EpicTalentCatalog.HasTalent(EpicOwnedMask, id);
 
-        /// <summary>Boss crystal pickup — queues an epic talent choice panel.</summary>
+        /// <summary>Boss crystal pickup — queues an epic talent choice panel on the run leader.</summary>
         public void OfferEpicTalentChoice()
         {
+            if (IsCompanion)
+            {
+                CompanionLeader?.OfferEpicTalentChoice();
+                return;
+            }
+
             if (!CanAcceptEpicCrystal) return;
             PendingEpicChoices++;
             EpicChoiceRequired?.Invoke(PendingEpicChoices);
@@ -484,6 +498,12 @@ namespace ProjectZx.Player
 
         public void Heal(int amount)
         {
+            if (IsCompanion)
+            {
+                CompanionLeader?.Heal(amount);
+                return;
+            }
+
             if (!SurvivalMode || IsDead || amount <= 0) return;
             CurrentHp = Mathf.Min(MaxHp, CurrentHp + amount);
         }
@@ -493,6 +513,13 @@ namespace ProjectZx.Player
 
         public void AddXp(int amount)
         {
+            // Companion kills / vacuum must never level a silent companion unit.
+            if (IsCompanion)
+            {
+                CompanionLeader?.AddXp(amount);
+                return;
+            }
+
             if (!SurvivalMode || IsDead || amount <= 0) return;
             if (Level >= StatCaps.MaxRunLevel) return;
 
@@ -807,10 +834,78 @@ namespace ProjectZx.Player
 
         public void AddRunGold(int amount)
         {
+            if (IsCompanion)
+            {
+                CompanionLeader?.AddRunGold(amount);
+                return;
+            }
+
             if (!SurvivalMode || IsDead || amount <= 0 || _goldBanked) return;
             // GameSave.GoldFindMultiplier already includes equipped jewelry.
             var mult = GameSave.GoldFindMultiplier * RunGoldFindMultiplier;
             RunGold += Mathf.Max(1, Mathf.RoundToInt(amount * mult));
+        }
+
+        /// <summary>Retreat / debug summary of live run stats and owned epic talents.</summary>
+        public string BuildRunStatusSummary()
+        {
+            var sb = new System.Text.StringBuilder(512);
+            sb.AppendLine($"Lv {Level}  ·  HP {CurrentHp}/{MaxHp}  ·  Gold {RunGold}");
+            sb.AppendLine(
+                $"DMG x{RunDamageMultiplier:0.##}  ·  SPD x{RunSpeedMultiplier:0.##}  ·  AS x{RunAttackSpeedMultiplier:0.##}");
+            sb.AppendLine(
+                $"Range x{AttackRangeMultiplier:0.##}  ·  Loot x{EffectiveLootRangeMultiplier:0.##}");
+            sb.AppendLine(
+                $"Crit {RunCritChance * 100f:0}% / x{RunCritMultiplier:0.##}  ·  LS {RunLifesteal * 100f:0}%");
+            sb.AppendLine(
+                $"DR {RunDamageTakenReduction * 100f:0}%  ·  Block {RunBlockChance * 100f:0}%");
+
+            if (RunBossDamageBonus > 0f || RunEpicBossDamageBonus > 0f)
+                sb.AppendLine(
+                    $"Boss dmg +{(RunBossDamageBonus + RunEpicBossDamageBonus) * 100f:0}%");
+            if (RunExecuteBonus > 0f || RunExecutionEdgeBonus > 0f)
+                sb.AppendLine(
+                    $"Execute +{RunExecuteBonus * 100f:0}% / Edge +{RunExecutionEdgeBonus * 100f:0}%");
+            if (RunBerserkBonus > 0f)
+                sb.AppendLine($"Berserk +{RunBerserkBonus * 100f:0}% under 40% HP");
+            if (RunRegenPerSecond > 0f)
+                sb.AppendLine($"Regen {RunRegenPerSecond:0.#}/s OOC");
+            if (RunShieldUnlocked)
+                sb.AppendLine("Shield: armed every 12s");
+            if (RunMultishotChance > 0f)
+                sb.AppendLine($"Multishot {RunMultishotChance * 100f:0}%");
+            if (RunPierceBonus > 0)
+                sb.AppendLine($"Pierce +{RunPierceBonus}");
+            if (RunArcaneEcho)
+                sb.AppendLine("Arcane Echo");
+            if (RunBloodletting)
+                sb.AppendLine("Bloodletting");
+            if (RunIronVeil)
+                sb.AppendLine("Iron Veil");
+            if (RunPhoenixHeart || HasEpicTalent(EpicTalentId.PhoenixHeart))
+                sb.AppendLine(PhoenixHeartUsed || _phoenixChargesRemaining <= 0
+                    ? "Phoenix Heart: spent"
+                    : "Phoenix Heart: ready");
+
+            sb.AppendLine();
+            sb.Append("Epic talents: ");
+            var anyEpic = false;
+            foreach (var id in EpicTalentCatalog.All)
+            {
+                if (!HasEpicTalent(id)) continue;
+                if (anyEpic) sb.Append(", ");
+                sb.Append(EpicTalentCatalog.GetTitle(id));
+                anyEpic = true;
+            }
+
+            if (!anyEpic)
+                sb.Append("none");
+
+            var pending = PendingLevelUpChoices + PendingEpicChoices;
+            if (pending > 0)
+                sb.Append($"\nPending picks: {pending}");
+
+            return sb.ToString().TrimEnd();
         }
 
         public void BankRunGoldToSave()

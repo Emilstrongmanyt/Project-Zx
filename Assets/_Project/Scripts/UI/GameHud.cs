@@ -38,6 +38,9 @@ namespace ProjectZx.UI
         readonly List<GameObject> _choiceButtons = new();
         readonly List<GameObject> _epicChoiceButtons = new();
         readonly Queue<AchievementDef> _pendingAchievementToasts = new();
+        AchievementDef _activeAchievementToast;
+        bool _hasActiveAchievementToast;
+        Text _retreatStatsText;
         bool _choosingLevelUp;
         bool _choosingEpic;
 
@@ -134,9 +137,8 @@ namespace ProjectZx.UI
             // Never cover level-up / epic talent options — queue toast until combat resumes.
             if (IsChoosingUpgrade)
             {
+                SuppressAchievementToastForTalentMenu();
                 _pendingAchievementToasts.Enqueue(def);
-                if (_achievementToast != null)
-                    _achievementToast.SetActive(false);
                 return;
             }
 
@@ -146,13 +148,51 @@ namespace ProjectZx.UI
         void ShowAchievementToast(AchievementDef def)
         {
             if (_achievementToast == null || def.Title == null) return;
+            // Talent menus always win — never draw toast over picks.
+            if (IsChoosingUpgrade)
+            {
+                _pendingAchievementToasts.Enqueue(def);
+                HideAchievementToastImmediate();
+                return;
+            }
+
+            _activeAchievementToast = def;
+            _hasActiveAchievementToast = true;
             if (_achievementToastTitle != null)
                 _achievementToastTitle.text = "Achievement Unlocked!";
             if (_achievementToastBody != null)
                 _achievementToastBody.text =
                     $"{def.Title}\n{def.Description}\n+{Achievements.CompletionGoldReward} gold";
+            // Keep toast under dialog panels so a race cannot cover talent buttons.
+            _achievementToast.transform.SetAsFirstSibling();
             _achievementToast.SetActive(true);
             _achievementToastTimer = 4f;
+        }
+
+        /// <summary>
+        /// Hide any visible achievement toast before talent UI opens. Re-queues the active toast.
+        /// </summary>
+        void SuppressAchievementToastForTalentMenu()
+        {
+            if (_hasActiveAchievementToast)
+            {
+                _pendingAchievementToasts.Enqueue(_activeAchievementToast);
+                _hasActiveAchievementToast = false;
+            }
+
+            HideAchievementToastImmediate();
+        }
+
+        void HideAchievementToastImmediate()
+        {
+            if (_achievementToast != null)
+            {
+                _achievementToast.SetActive(false);
+                _achievementToast.transform.SetAsFirstSibling();
+            }
+
+            _achievementToastTimer = 0f;
+            _hasActiveAchievementToast = false;
         }
 
         void FlushPendingAchievementToasts()
@@ -195,12 +235,28 @@ namespace ProjectZx.UI
 
         GameObject BuildRetreatPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "RetreatPanel", Vector2.zero, new Vector2(560, 300), ArtLibrary.ChallengeBoardUi);
-            CreatePanelText(panel.transform, "Retreat to Camp?", 34, new Vector2(0, 78), new Vector2(500, 48));
-            CreatePanelText(panel.transform, "Run gold will be saved. Current progress ends.", 24, new Vector2(0, 22), new Vector2(500, 64));
+            var panel = CreateDialogPanel(parent, "RetreatPanel", Vector2.zero, new Vector2(760, 780), ArtLibrary.ChallengeBoardUi);
+            CreatePanelText(panel.transform, "Retreat to Camp?", 36, new Vector2(0, 330), new Vector2(700, 48));
+            CreatePanelText(
+                panel.transform,
+                "Run gold is saved. Current run progress ends.",
+                22,
+                new Vector2(0, 288),
+                new Vector2(700, 36));
 
-            CreateHudButton(panel.transform, "Yes, Retreat", new Vector2(-130, -78), ConfirmRetreat);
-            CreateHudButton(panel.transform, "Keep Fighting", new Vector2(130, -78), CloseRetreatPanel);
+            _retreatStatsText = CreatePanelText(
+                panel.transform,
+                "",
+                20,
+                new Vector2(0, 20),
+                new Vector2(680, 460));
+            _retreatStatsText.alignment = TextAnchor.UpperLeft;
+            _retreatStatsText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _retreatStatsText.verticalOverflow = VerticalWrapMode.Truncate;
+            _retreatStatsText.color = new Color(0.92f, 0.94f, 0.98f);
+
+            CreateHudButton(panel.transform, "Yes, Retreat", new Vector2(-150, -320), ConfirmRetreat);
+            CreateHudButton(panel.transform, "Keep Fighting", new Vector2(150, -320), CloseRetreatPanel);
             panel.SetActive(false);
             return panel;
         }
@@ -210,7 +266,25 @@ namespace ProjectZx.UI
             if (IsChoosingUpgrade || _stats == null || _stats.IsDead) return;
             Time.timeScale = 0f;
             FloatingDamageNumber.ClearAll();
-            _retreatPanel.SetActive(true);
+            SuppressAchievementToastForTalentMenu();
+            RefreshRetreatStats();
+            if (_retreatPanel != null)
+            {
+                _retreatPanel.transform.SetAsLastSibling();
+                _retreatPanel.SetActive(true);
+            }
+        }
+
+        void RefreshRetreatStats()
+        {
+            if (_retreatStatsText == null) return;
+            if (_stats == null)
+            {
+                _retreatStatsText.text = "No run data.";
+                return;
+            }
+
+            _retreatStatsText.text = "Current upgrades\n\n" + _stats.BuildRunStatusSummary();
         }
 
         void CloseRetreatPanel()
@@ -339,13 +413,17 @@ namespace ProjectZx.UI
             _choosingLevelUp = true;
             Time.timeScale = 0f;
             FloatingDamageNumber.ClearAll();
-            // Hide toast so it cannot block talent buttons.
-            if (_achievementToast != null)
-                _achievementToast.SetActive(false);
+            // Achievement toast must be gone before talent buttons appear.
+            SuppressAchievementToastForTalentMenu();
             if (_levelUpTitle != null)
                 _levelUpTitle.text = remaining > 1 ? $"Level Up! ({remaining} picks)" : "Level Up!";
             PopulateChoiceButtons();
-            _levelUpPanel.SetActive(true);
+            if (_levelUpPanel != null)
+            {
+                _levelUpPanel.transform.SetAsLastSibling();
+                _levelUpPanel.SetActive(true);
+            }
+
             SparkleBurst.Play(_levelUpPanel.transform, new Vector2(0f, 180f), 18);
         }
 
@@ -363,8 +441,7 @@ namespace ProjectZx.UI
             _choosingEpic = true;
             Time.timeScale = 0f;
             FloatingDamageNumber.ClearAll();
-            if (_achievementToast != null)
-                _achievementToast.SetActive(false);
+            SuppressAchievementToastForTalentMenu();
             if (_epicTitle != null)
             {
                 _epicTitle.text = remaining > 1
@@ -373,7 +450,12 @@ namespace ProjectZx.UI
             }
 
             PopulateEpicChoiceButtons();
-            _epicPanel.SetActive(true);
+            if (_epicPanel != null)
+            {
+                _epicPanel.transform.SetAsLastSibling();
+                _epicPanel.SetActive(true);
+            }
+
             SparkleBurst.Play(_epicPanel.transform, new Vector2(0f, 180f), 22);
         }
 
@@ -555,9 +637,9 @@ namespace ProjectZx.UI
             if (_achievementToastTimer > 0f)
             {
                 _achievementToastTimer -= Time.deltaTime;
-                if (_achievementToastTimer <= 0f && _achievementToast != null)
+                if (_achievementToastTimer <= 0f)
                 {
-                    _achievementToast.SetActive(false);
+                    HideAchievementToastImmediate();
                     // Chain any toasts that fired while a talent menu was open.
                     FlushPendingAchievementToasts();
                 }
