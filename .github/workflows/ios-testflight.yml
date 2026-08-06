@@ -1,4 +1,5 @@
 # Project Zx iOS TestFlight — Unity build on Linux, sign/upload on Mac.
+# Trigger note: keep this workflow on every main push (TestFlight pipeline).
 
 name: iOS TestFlight
 
