@@ -14,13 +14,13 @@ namespace ProjectZx.Enemies
     {
         /// <summary>Max distance to start / sustain fire breath (engagement).</summary>
         const float FireBreathEngageRange = 6.75f;
-        /// <summary>Damage only within the visible stream length (matches VFX).</summary>
-        const float FireBreathDamageRange = 4.0f;
+        /// <summary>Damage only within the visible stream length (matches VFX). +20% vs prior 4.0.</summary>
+        const float FireBreathDamageRange = 4.8f;
         const float FireBreathDuration = 3f;
         const float FireBreathCooldown = 12f;
         const float FireBreathTick = 0.45f;
-        /// <summary>World-space breath size (independent of huge boss transform scale).</summary>
-        const float FireBreathWorldScale = 2.55f;
+        /// <summary>World-space breath size (independent of huge boss transform scale). +20% vs prior 2.55.</summary>
+        const float FireBreathWorldScale = 3.06f;
         /// <summary>World distance from boss center to the breath mouth along the aim direction.</summary>
         const float FireBreathMouthWorldOffset = 1.35f;
         /// <summary>Slight vertical bias so breath leaves near the boss head (world units).</summary>
@@ -41,7 +41,7 @@ namespace ProjectZx.Enemies
         /// <summary>Very rare ring/necklace drops for the camp treasure chest (halved from original rates).</summary>
         // ~half prior rates so jewelry/capes stay rare.
         const float EquipmentDropChance = 0.000875f;
-        const float BossEquipmentDropChance = 0.005f;
+        const float BossEquipmentDropChance = 0.05f;
         /// <summary>Outside survival regular zombies: −25% HP and move speed.</summary>
         const float OutsideZombieStatScale = 0.75f;
         /// <summary>All enemies on Inside Survival map: −15% move speed.</summary>
@@ -79,6 +79,8 @@ namespace ProjectZx.Enemies
         public bool IsRoundThirtyBoss { get; private set; }
         public bool IsRoundFortyBoss { get; private set; }
         public bool IsRoundFiftyBoss { get; private set; }
+        /// <summary>Post-R20 elite trash: stronger stats/rewards, 1.3× visual scale applied by factory.</summary>
+        public bool IsElite { get; private set; }
 
         int _hp;
         int _maxHp;
@@ -141,11 +143,13 @@ namespace ProjectZx.Enemies
             bool isRoundThirtyBoss = false,
             bool isRoundFortyBoss = false,
             bool isRanged = false,
-            bool isRoundFiftyBoss = false)
+            bool isRoundFiftyBoss = false,
+            bool isElite = false)
         {
             _round = round;
             IsBoss = isBoss;
             IsRanged = isRanged && !isBoss;
+            IsElite = isElite && !isBoss;
             IsRoundTwentyBoss = isRoundTwentyBoss;
             IsRoundThirtyBoss = isRoundThirtyBoss;
             IsRoundFortyBoss = isRoundFortyBoss;
@@ -230,6 +234,23 @@ namespace ProjectZx.Enemies
                     _speed *= speedSoft;
                     _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * statSoft));
                     _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * statSoft));
+                }
+
+                // Post-R20: fewer trash packs overall, but each enemy hits harder and tanks more.
+                // Early rounds (≤20) keep the original curve.
+                if (round > 20)
+                {
+                    var latePower = 1f + (round - 20) * 0.045f;
+                    _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * latePower));
+                    _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * latePower));
+                }
+
+                // Named elites: denser threats with better loot (visual scale applied in factory).
+                if (IsElite)
+                {
+                    _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * 1.55f));
+                    _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * 1.35f));
+                    _speed *= 1.08f;
                 }
             }
 
@@ -1149,9 +1170,9 @@ namespace ProjectZx.Enemies
             _rb.linearVelocity = Vector2.zero;
             if (_fireBreathFx != null) _fireBreathFx.SetActive(false);
 
-            var xp = 4 + _round + (IsBoss ? 25 : 0);
-            // Gold coin yield halved from previous values.
-            var gold = Mathf.Max(1, (2 + _round / 2 + (IsBoss ? 15 : 0)) / 2);
+            var xp = 4 + _round + (IsBoss ? 25 : 0) + (IsElite ? 8 + _round / 2 : 0);
+            // Gold coin yield halved from previous values; elites pay a bit more.
+            var gold = Mathf.Max(1, (2 + _round / 2 + (IsBoss ? 15 : 0) + (IsElite ? 6 : 0)) / 2);
             var pos = (Vector2)transform.position;
             GameFactory.CreatePickup(pos + Vector2.left * 0.2f, PickupType.Xp, xp);
             GameFactory.CreatePickup(pos + Vector2.right * 0.2f, PickupType.Gold, gold);

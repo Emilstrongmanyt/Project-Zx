@@ -29,7 +29,11 @@ namespace ProjectZx.Player
         /// <summary>Defense category: reduce damage taken.</summary>
         Defense,
         /// <summary>Defense category: chance to fully block a hit.</summary>
-        Block
+        Block,
+        /// <summary>Bowman only: chance to fire a second arrow.</summary>
+        Multishot,
+        /// <summary>Bowman only: +1 pierce hit per stack on arrows.</summary>
+        Pierce
     }
 
     public class PlayerStats : MonoBehaviour
@@ -74,6 +78,10 @@ namespace ProjectZx.Player
         public float RunDamageTakenReduction { get; private set; }
         /// <summary>Run talent block chance (0.05 per pick, max 0.50 from talents).</summary>
         public float RunBlockChance { get; private set; }
+        /// <summary>Bowman Multishot: dual-arrow chance (0.33 per pick, max 0.99).</summary>
+        public float RunMultishotChance { get; private set; }
+        /// <summary>Bowman Pierce talent: extra enemies one arrow can pass through.</summary>
+        public int RunPierceBonus { get; private set; }
 
         // --- Boss epic crystal talents (run-scoped) ---
         public int EpicOwnedMask { get; private set; }
@@ -159,6 +167,8 @@ namespace ProjectZx.Player
             RunBerserkBonus = 0f;
             RunDamageTakenReduction = 0f;
             RunBlockChance = 0f;
+            RunMultishotChance = 0f;
+            RunPierceBonus = 0;
             EpicOwnedMask = 0;
             PendingEpicChoices = 0;
             EpicPicksTaken = 0;
@@ -217,6 +227,8 @@ namespace ProjectZx.Player
             RunBerserkBonus = leader.RunBerserkBonus;
             RunDamageTakenReduction = leader.RunDamageTakenReduction;
             RunBlockChance = leader.RunBlockChance;
+            RunMultishotChance = leader.RunMultishotChance;
+            RunPierceBonus = leader.RunPierceBonus;
             RunDamageTakenMultiplier = leader.RunDamageTakenMultiplier;
             RunEpicBossDamageBonus = leader.RunEpicBossDamageBonus;
             RunEpicNormalDamageBonus = leader.RunEpicNormalDamageBonus;
@@ -531,6 +543,14 @@ namespace ProjectZx.Player
         public bool CanOfferDefenseTalent => RunDamageTakenReduction + 0.08f <= 0.40f + 0.001f;
         /// <summary>Block talent: +5% block per pick, max 50% from this talent.</summary>
         public bool CanOfferBlockTalent => RunBlockChance + 0.05f <= 0.50f + 0.001f;
+        /// <summary>Bowman Multishot: +33% dual-shot chance per pick, max 99% (3 stacks).</summary>
+        public bool CanOfferMultishotTalent =>
+            GameSessionContext.SelectedClass == PlayerClass.Bowman
+            && RunMultishotChance + 0.33f <= 0.99f + 0.001f;
+        /// <summary>Bowman Pierce: +1 pierce hit per pick, max +3.</summary>
+        public bool CanOfferPierceTalent =>
+            GameSessionContext.SelectedClass == PlayerClass.Bowman
+            && RunPierceBonus + 1 <= 3;
 
         public static List<RunLevelChoice> RollLevelUpChoices(PlayerStats stats, int count = 4)
         {
@@ -552,11 +572,22 @@ namespace ProjectZx.Player
             }
             else
             {
+                var isBowman = GameSessionContext.SelectedClass == PlayerClass.Bowman;
                 if (stats.CanOfferSpeedTalent) pool.Add(RunLevelChoice.Speed);
                 if (stats.CanOfferHpTalent) pool.Add(RunLevelChoice.Hp);
                 if (stats.CanOfferAttackTalent) pool.Add(RunLevelChoice.Attack);
                 pool.Add(RunLevelChoice.AttackSpeed);
-                if (stats.CanOfferAttackRangeTalent) pool.Add(RunLevelChoice.AttackRange);
+                // Bowman swaps Attack Range for Multishot; other classes keep range.
+                if (isBowman)
+                {
+                    if (stats.CanOfferMultishotTalent) pool.Add(RunLevelChoice.Multishot);
+                    if (stats.CanOfferPierceTalent) pool.Add(RunLevelChoice.Pierce);
+                }
+                else if (stats.CanOfferAttackRangeTalent)
+                {
+                    pool.Add(RunLevelChoice.AttackRange);
+                }
+
                 pool.Add(RunLevelChoice.LootRange);
                 if (stats.CanOfferCritChance) pool.Add(RunLevelChoice.CritChance);
                 if (stats.CanOfferCritDamage) pool.Add(RunLevelChoice.CritDamage);
@@ -603,6 +634,8 @@ namespace ProjectZx.Player
                 RunLevelChoice.XpBoost => "+15% XP Gain",
                 RunLevelChoice.Defense => "−8% Damage Taken",
                 RunLevelChoice.Block => "+5% Block Chance",
+                RunLevelChoice.Multishot => "+33% Multishot Chance",
+                RunLevelChoice.Pierce => "+1 Pierce",
                 _ => choice.ToString()
             };
         }
@@ -687,6 +720,14 @@ namespace ProjectZx.Player
                 case RunLevelChoice.Block:
                     if (!CanOfferBlockTalent) break;
                     RunBlockChance = Mathf.Min(0.50f, RunBlockChance + 0.05f);
+                    break;
+                case RunLevelChoice.Multishot:
+                    if (!CanOfferMultishotTalent) break;
+                    RunMultishotChance = Mathf.Min(0.99f, RunMultishotChance + 0.33f);
+                    break;
+                case RunLevelChoice.Pierce:
+                    if (!CanOfferPierceTalent) break;
+                    RunPierceBonus = Mathf.Min(3, RunPierceBonus + 1);
                     break;
             }
 
@@ -933,6 +974,8 @@ namespace ProjectZx.Player
                 RunBerserkBonus = RunBerserkBonus,
                 RunDamageTakenReduction = RunDamageTakenReduction,
                 RunBlockChance = RunBlockChance,
+                RunMultishotChance = RunMultishotChance,
+                RunPierceBonus = RunPierceBonus,
                 SecondWindChargesUsed = _secondWindChargesUsed,
                 SecondWindUsed = _secondWindChargesUsed > 0,
                 EpicOwnedMask = EpicOwnedMask,
@@ -989,6 +1032,8 @@ namespace ProjectZx.Player
             RunBerserkBonus = snapshot.RunBerserkBonus;
             RunDamageTakenReduction = Mathf.Clamp01(snapshot.RunDamageTakenReduction);
             RunBlockChance = Mathf.Clamp01(snapshot.RunBlockChance);
+            RunMultishotChance = Mathf.Clamp(snapshot.RunMultishotChance, 0f, 0.99f);
+            RunPierceBonus = Mathf.Clamp(snapshot.RunPierceBonus, 0, 3);
             _secondWindChargesUsed = snapshot.SecondWindChargesUsed > 0
                 ? snapshot.SecondWindChargesUsed
                 : snapshot.SecondWindUsed ? 1 : 0;

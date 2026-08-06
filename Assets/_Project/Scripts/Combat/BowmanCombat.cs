@@ -105,6 +105,7 @@ namespace ProjectZx.Combat
             var pierce = GameSave.GetSelectedAttackMode(PlayerClass.Bowman) == AttackMode.PiercingShot
                          && GameSave.PiercingShotUnlocked;
             var dmgMul = pierce ? DamageMultiplier : DamageMultiplier * StandardDamageBonus;
+            var extraPierce = stats != null ? stats.RunPierceBonus : 0;
 
             ArrowProjectile.Spawn(
                 origin,
@@ -113,7 +114,43 @@ namespace ProjectZx.Combat
                 dmgMul,
                 canApplyFrost: true,
                 pierce: pierce,
-                pierceMultiplier: PierceSecondaryMultiplier);
+                pierceMultiplier: PierceSecondaryMultiplier,
+                extraPierceHits: extraPierce);
+
+            // Multishot talent: chance for a second arrow at the next-closest enemy (or same target).
+            if (stats != null && stats.RunMultishotChance > 0f && Random.value < stats.RunMultishotChance)
+            {
+                var secondary = FindSecondaryMultishotTarget(enemy);
+                if (secondary != null)
+                {
+                    var multiOrigin = GetArrowSpawnPoint(secondary) + new Vector3(0f, 0.08f, 0f);
+                    ArrowProjectile.Spawn(
+                        multiOrigin,
+                        secondary,
+                        stats,
+                        dmgMul,
+                        canApplyFrost: true,
+                        pierce: pierce,
+                        pierceMultiplier: PierceSecondaryMultiplier,
+                        extraPierceHits: extraPierce);
+                }
+            }
+        }
+
+        EnemyActor FindSecondaryMultishotTarget(EnemyActor primary)
+        {
+            EnemyActor best = null;
+            var bestDist = float.MaxValue;
+            foreach (var enemy in FindAllEnemies())
+            {
+                if (enemy == null || enemy == primary) continue;
+                var d = Vector2.Distance(transform.position, enemy.transform.position);
+                if (d > AttackRange * 1.15f || d >= bestDist) continue;
+                bestDist = d;
+                best = enemy;
+            }
+
+            return best != null ? best : primary;
         }
 
         Vector3 GetArrowSpawnPoint(EnemyActor target)

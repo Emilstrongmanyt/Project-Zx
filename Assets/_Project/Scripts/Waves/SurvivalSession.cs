@@ -184,7 +184,10 @@ namespace ProjectZx.Waves
             EnemiesRemaining = 0;
             _hud?.SetRound(round, MapKind);
 
-            var total = 6 + round * 5;
+            // R1–20: original density. R21+: slower growth so late rounds are tougher packs, not walls.
+            var total = round <= 20
+                ? 6 + round * 5
+                : 6 + 20 * 5 + (round - 20) * 2;
             var bossRound = round % 10 == 0;
             var roundTwentyBoss = round == 20 && MapKind == SurvivalMapKind.Outside;
             var roundThirtyBoss = round == 30 && MapKind == SurvivalMapKind.Inside;
@@ -199,7 +202,9 @@ namespace ProjectZx.Waves
             if (bossRound) total = Mathf.Max(total - 1, 1);
 
             var waveCount = GetWaveCount(round);
-            var waveBonus = round > 10 ? (round - 10) / 4 : 0;
+            var waveBonus = round > 10
+                ? (round <= 20 ? (round - 10) / 4 : 2 + (round - 20) / 8)
+                : 0;
             var basePerWave = Mathf.Max(1, total / waveCount);
             var remainder = total % waveCount;
 
@@ -262,6 +267,8 @@ namespace ProjectZx.Waves
             var spawnPos = ArenaBounds.RandomSpawnAround(origin, 7f, 12f);
             var zombieKind = ResolveZombieKind(round);
             var ranged = !boss && ShouldSpawnRanged(round);
+            // After R20: occasional elites (1.3× size, stronger stats/loot). Early rounds stay clean.
+            var elite = !boss && round > 20 && Random.value < EliteSpawnChance(round);
 
             GameFactory.CreateEnemy(
                 spawnPos,
@@ -272,8 +279,16 @@ namespace ProjectZx.Waves
                 roundThirtyBoss,
                 roundFortyBoss,
                 isRanged: ranged,
-                isRoundFiftyBoss: roundFiftyBoss);
+                isRoundFiftyBoss: roundFiftyBoss,
+                isElite: elite);
             EnemiesRemaining++;
+        }
+
+        /// <summary>R21 ~12%, climbing toward ~28% at very late rounds.</summary>
+        static float EliteSpawnChance(int round)
+        {
+            if (round <= 20) return 0f;
+            return Mathf.Clamp(0.12f + (round - 21) * 0.008f, 0.12f, 0.28f);
         }
 
         /// <summary>

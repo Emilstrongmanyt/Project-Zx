@@ -256,16 +256,17 @@ namespace ProjectZx.UI
             cardRect.anchorMax = new Vector2(0.5f, 0.5f);
             cardRect.pivot = new Vector2(0.5f, 0.5f);
             cardRect.anchoredPosition = Vector2.zero;
-            cardRect.sizeDelta = new Vector2(760f, 540f);
+            cardRect.sizeDelta = new Vector2(780f, 580f);
             var cardImage = card.AddComponent<Image>();
             UiSprites.ApplyPanelSprite(cardImage, ArtLibrary.LevelUpUi, largeMenu: false);
 
-            _shopInfoTitle = CreateText(card.transform, "Upgrade Info", 34, TextAnchor.MiddleCenter, new Vector2(0, 200), new Vector2(680, 48));
-            _shopInfoBody = CreateText(card.transform, "", 22, TextAnchor.UpperLeft, new Vector2(0, -10), new Vector2(660, 320));
+            _shopInfoTitle = CreateText(card.transform, "Upgrade Info", 34, TextAnchor.MiddleCenter, new Vector2(0, 230), new Vector2(700, 48));
+            // UpperCenter + padded size so body stays inside the panel frame (not top-left overflow).
+            _shopInfoBody = CreateText(card.transform, "", 22, TextAnchor.UpperCenter, new Vector2(0, -72), new Vector2(680, 360));
             _shopInfoBody.alignment = TextAnchor.UpperLeft;
             _shopInfoBody.horizontalOverflow = HorizontalWrapMode.Wrap;
-            _shopInfoBody.verticalOverflow = VerticalWrapMode.Overflow;
-            CreateButton(card.transform, "Close", new Vector2(0, -210), () => _shopInfoPanel.SetActive(false), large: true);
+            _shopInfoBody.verticalOverflow = VerticalWrapMode.Truncate;
+            CreateButton(card.transform, "Close", new Vector2(0, -230), () => _shopInfoPanel.SetActive(false), large: true);
             _shopInfoPanel.SetActive(false);
         }
 
@@ -1155,13 +1156,11 @@ namespace ProjectZx.UI
 
                 case ShopUpgradeKind.FrostTip:
                     return
-                        "One-time upgrade for Spearman / Bowman / Samurai.\n\n" +
+                        "One-time upgrade for Batter / Spearman / Bowman / Samurai.\n\n" +
                         "Hits chill enemies for 1s (−60% move speed).\n\n" +
                         (GameSave.FrostTipUnlocked
                             ? "Status: Owned"
-                            : !GameSave.SpearmanUnlocked && !GameSave.BowmanUnlocked && !GameSave.SamuraiUnlocked
-                                ? "Status: Locked — unlock Spearman, Bowman, or Samurai"
-                                : $"Cost: {ShopCosts.FrostTip}g");
+                            : $"Cost: {ShopCosts.FrostTip}g");
 
                 default:
                     return string.Empty;
@@ -1260,7 +1259,7 @@ namespace ProjectZx.UI
         void BuyFrostTip()
         {
             if (GameSave.FrostTipUnlocked) return;
-            if (!GameSave.SpearmanUnlocked && !GameSave.BowmanUnlocked && !GameSave.SamuraiUnlocked) return;
+            // Batter is always available; melee/ranged tip classes also benefit.
             if (!GameSave.TrySpendGold(ShopCosts.FrostTip)) return;
             GameSave.FrostTipUnlocked = true;
             OnShopUpgradePurchased();
@@ -1308,8 +1307,6 @@ namespace ProjectZx.UI
 
             if (GameSave.FrostTipUnlocked)
                 SetOwnedRow(_frostTipRow, "Frost Tip");
-            else if (!GameSave.SpearmanUnlocked && !GameSave.BowmanUnlocked && !GameSave.SamuraiUnlocked)
-                SetLockedRow(_frostTipRow, "Frost Tip");
             else
                 SetUpgradeRow(_frostTipRow, "Frost Tip", ShopCosts.FrostTip, false);
         }

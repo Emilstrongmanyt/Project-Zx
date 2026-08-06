@@ -37,6 +37,7 @@ namespace ProjectZx.UI
         PlayerStats _stats;
         readonly List<GameObject> _choiceButtons = new();
         readonly List<GameObject> _epicChoiceButtons = new();
+        readonly Queue<AchievementDef> _pendingAchievementToasts = new();
         bool _choosingLevelUp;
         bool _choosingEpic;
 
@@ -128,6 +129,22 @@ namespace ProjectZx.UI
 
         void OnAchievementUnlocked(AchievementDef def)
         {
+            if (def.Title == null) return;
+            HubUi.Instance?.RefreshGold();
+            // Never cover level-up / epic talent options — queue toast until combat resumes.
+            if (IsChoosingUpgrade)
+            {
+                _pendingAchievementToasts.Enqueue(def);
+                if (_achievementToast != null)
+                    _achievementToast.SetActive(false);
+                return;
+            }
+
+            ShowAchievementToast(def);
+        }
+
+        void ShowAchievementToast(AchievementDef def)
+        {
             if (_achievementToast == null || def.Title == null) return;
             if (_achievementToastTitle != null)
                 _achievementToastTitle.text = "Achievement Unlocked!";
@@ -136,7 +153,12 @@ namespace ProjectZx.UI
                     $"{def.Title}\n{def.Description}\n+{Achievements.CompletionGoldReward} gold";
             _achievementToast.SetActive(true);
             _achievementToastTimer = 4f;
-            HubUi.Instance?.RefreshGold();
+        }
+
+        void FlushPendingAchievementToasts()
+        {
+            if (_pendingAchievementToasts.Count == 0 || IsChoosingUpgrade) return;
+            ShowAchievementToast(_pendingAchievementToasts.Dequeue());
         }
 
         void CreateRetreatButton(Transform parent)
@@ -317,6 +339,9 @@ namespace ProjectZx.UI
             _choosingLevelUp = true;
             Time.timeScale = 0f;
             FloatingDamageNumber.ClearAll();
+            // Hide toast so it cannot block talent buttons.
+            if (_achievementToast != null)
+                _achievementToast.SetActive(false);
             if (_levelUpTitle != null)
                 _levelUpTitle.text = remaining > 1 ? $"Level Up! ({remaining} picks)" : "Level Up!";
             PopulateChoiceButtons();
@@ -338,6 +363,8 @@ namespace ProjectZx.UI
             _choosingEpic = true;
             Time.timeScale = 0f;
             FloatingDamageNumber.ClearAll();
+            if (_achievementToast != null)
+                _achievementToast.SetActive(false);
             if (_epicTitle != null)
             {
                 _epicTitle.text = remaining > 1
@@ -482,6 +509,7 @@ namespace ProjectZx.UI
         {
             Time.timeScale = 1f;
             _stats?.GrantTalentSelectionIFrames(1f);
+            FlushPendingAchievementToasts();
         }
 
         void Update()
@@ -528,7 +556,16 @@ namespace ProjectZx.UI
             {
                 _achievementToastTimer -= Time.deltaTime;
                 if (_achievementToastTimer <= 0f && _achievementToast != null)
+                {
                     _achievementToast.SetActive(false);
+                    // Chain any toasts that fired while a talent menu was open.
+                    FlushPendingAchievementToasts();
+                }
+            }
+            else if (_pendingAchievementToasts.Count > 0
+                     && (_achievementToast == null || !_achievementToast.activeSelf))
+            {
+                FlushPendingAchievementToasts();
             }
 
             if (_bannerTimer > 0f)

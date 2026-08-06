@@ -581,7 +581,8 @@ namespace ProjectZx.Core
             bool isRoundThirtyBoss = false,
             bool isRoundFortyBoss = false,
             bool isRanged = false,
-            bool isRoundFiftyBoss = false)
+            bool isRoundFiftyBoss = false,
+            bool isElite = false)
         {
             Sprite sprite;
             if (isRoundFiftyBoss)
@@ -620,7 +621,15 @@ namespace ProjectZx.Core
             // Outside survival R20 stage boss was still ~2× too large in TestFlight.
             if (isRoundTwentyBoss)
                 scale *= 0.5f;
-            var go = CreateSprite(isBoss ? "Boss" : isRanged ? "RangedDemon" : "Demon", sprite, position, scale, 0);
+            // Post-R20 elites read larger than trash packs.
+            if (isElite && !isBoss)
+                scale *= 1.3f;
+            var go = CreateSprite(
+                isBoss ? "Boss" : isElite ? "EliteDemon" : isRanged ? "RangedDemon" : "Demon",
+                sprite,
+                position,
+                scale,
+                0);
             go.tag = "Enemy";
             go.AddComponent<YSortRenderer>();
 
@@ -633,7 +642,7 @@ namespace ProjectZx.Core
             rb.useFullKinematicContacts = false;
 
             // Visual scale is large; keep WORLD hitboxes body-sized (local radius = world / scale).
-            var worldHitRadius = isStageBoss ? 1.35f : isBoss ? 0.95f : 0.55f;
+            var worldHitRadius = isStageBoss ? 1.35f : isBoss ? 0.95f : isElite ? 0.65f : 0.55f;
             if (isBoss && (round == 10 || round == 20) && !isRoundFiftyBoss)
                 worldHitRadius *= 1.35f;
             var col = go.AddComponent<CircleCollider2D>();
@@ -651,7 +660,8 @@ namespace ProjectZx.Core
                 isRoundThirtyBoss,
                 isRoundFortyBoss,
                 isRanged,
-                isRoundFiftyBoss);
+                isRoundFiftyBoss,
+                isElite);
             return go;
         }
 

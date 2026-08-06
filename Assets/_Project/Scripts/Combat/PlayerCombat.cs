@@ -114,7 +114,7 @@ namespace ProjectZx.Combat
             if (_bodyRenderer != null)
                 _bodyRenderer.flipX = !_swingFacingRight;
 
-            CombatDamage.Apply(GetComponent<PlayerStats>(), enemy, StandardDamageMultiplier);
+            CombatDamage.Apply(GetComponent<PlayerStats>(), enemy, StandardDamageMultiplier, canApplyFrost: true);
         }
 
         void PerformWhirlwind()
@@ -175,7 +175,7 @@ namespace ProjectZx.Combat
         {
             var stats = GetComponent<PlayerStats>();
             foreach (var enemy in FindEnemiesInRange(range))
-                CombatDamage.Apply(stats, enemy);
+                CombatDamage.Apply(stats, enemy, canApplyFrost: true);
         }
 
         bool HasEnemyInRange(float range)

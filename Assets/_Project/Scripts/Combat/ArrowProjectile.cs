@@ -47,7 +47,8 @@ namespace ProjectZx.Combat
             float damageMultiplier,
             bool canApplyFrost,
             bool pierce = false,
-            float pierceMultiplier = 0.5f)
+            float pierceMultiplier = 0.5f,
+            int extraPierceHits = 0)
         {
             if (target == null || source == null) return;
 
@@ -61,6 +62,9 @@ namespace ProjectZx.Combat
                 dir.Normalize();
 
             var dist = Vector2.Distance(spawn, aim);
+            var bonusHits = Mathf.Max(0, extraPierceHits);
+            var maxHits = (pierce ? PierceMaxTargets : 1) + bonusHits;
+            var canPierce = pierce || bonusHits > 0;
 
             var go = new GameObject("ArrowProjectile");
             go.transform.position = origin;
@@ -77,9 +81,9 @@ namespace ProjectZx.Combat
             proj._target = target;
             proj._baseDamageMultiplier = damageMultiplier;
             proj._canApplyFrost = canApplyFrost;
-            proj._pierce = pierce;
+            proj._pierce = canPierce;
             proj._pierceMultiplier = pierceMultiplier;
-            proj._hitsRemaining = pierce ? PierceMaxTargets : 1;
+            proj._hitsRemaining = Mathf.Max(1, maxHits);
             proj._hasHitOnce = false;
             proj._life = Mathf.Clamp(dist / DefaultSpeed + 0.35f, 0.35f, MaxLifetime);
             proj._velocity = dir * DefaultSpeed;
