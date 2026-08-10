@@ -14,7 +14,7 @@ namespace ProjectZx.UI
         public bool IsAnyMenuOpen =>
             IsPanelOpen(_shopPanel) || IsPanelOpen(_loadoutPanel) || IsPanelOpen(_statsPanel)
             || IsPanelOpen(_achievementsPanel) || IsPanelOpen(_mapPanel) || IsPanelOpen(_campfirePanel)
-            || IsPanelOpen(_equipmentPanel) || IsPanelOpen(_settingsPanel);
+            || IsPanelOpen(_equipmentPanel) || IsPanelOpen(_settingsPanel) || IsPanelOpen(_questPanel);
 
         static bool IsPanelOpen(GameObject panel) => panel != null && panel.activeSelf;
 
@@ -47,6 +47,18 @@ namespace ProjectZx.UI
         GameObject _campfirePanel;
         GameObject _equipmentPanel;
         GameObject _settingsPanel;
+        GameObject _questPanel;
+        Image _questPortraitImage;
+        Text _questTitleText;
+        Text _questBodyText;
+        Text _questStatusText;
+        Button _questAcceptButton;
+        Button _questTurnInButton;
+        Text _questAcceptLabel;
+        Text _questTurnInLabel;
+        QuestId _questPanelFocusId = QuestId.GrandWizardsPeril;
+        float _questPortraitAnimTimer;
+        int _questPortraitFrameIndex;
         Text _equipmentStatusText;
         Text _bgmVolumeLabel;
         Text _sfxVolumeLabel;
@@ -152,6 +164,50 @@ namespace ProjectZx.UI
             _campfirePanel = BuildCampfirePanel(canvasGo.transform);
             _equipmentPanel = BuildEquipmentPanel(canvasGo.transform);
             _settingsPanel = BuildSettingsPanel(canvasGo.transform);
+            _questPanel = BuildQuestPanel(canvasGo.transform);
+        }
+
+        void Update()
+        {
+            AnimateQuestPortraitTalk();
+        }
+
+        /// <summary>
+        /// Cycles the 6-frame Wizard Portrait (2×3 of 64×64) while the quest dialogue is open
+        /// so the wizard appears to talk during the quest text.
+        /// </summary>
+        void AnimateQuestPortraitTalk()
+        {
+            if (!IsPanelOpen(_questPanel) || _questPortraitImage == null) return;
+
+            var frames = ArtLibrary.WizardPortraitFrames;
+            if (frames == null || frames.Length == 0) return;
+
+            // Single-frame fallback: still nudge slightly so the portrait feels alive.
+            if (frames.Length == 1)
+            {
+                _questPortraitAnimTimer += Time.unscaledDeltaTime;
+                var bob = 1f + Mathf.Sin(_questPortraitAnimTimer * 6f) * 0.012f;
+                _questPortraitImage.rectTransform.localScale = new Vector3(bob, bob, 1f);
+                return;
+            }
+
+            // Talk cadence: slightly irregular frame steps read better than a rigid loop.
+            _questPortraitAnimTimer += Time.unscaledDeltaTime;
+            var step = 0.11f + (_questPortraitFrameIndex % 3) * 0.02f;
+            if (_questPortraitAnimTimer < step) return;
+            _questPortraitAnimTimer = 0f;
+
+            // Hold closed-mouth frame 0 a bit longer between syllables.
+            if (_questPortraitFrameIndex == 0 && UnityEngine.Random.value < 0.35f)
+            {
+                _questPortraitImage.sprite = frames[0];
+                return;
+            }
+
+            _questPortraitFrameIndex = (_questPortraitFrameIndex + 1) % frames.Length;
+            _questPortraitImage.sprite = frames[_questPortraitFrameIndex];
+            _questPortraitImage.rectTransform.localScale = Vector3.one;
         }
 
         GameObject BuildShopPanel(Transform parent)
@@ -628,10 +684,167 @@ namespace ProjectZx.UI
             if (_mapPanel != null) _mapPanel.SetActive(false);
             if (_campfirePanel != null) _campfirePanel.SetActive(false);
             if (_equipmentPanel != null) _equipmentPanel.SetActive(false);
+            if (_questPanel != null) _questPanel.SetActive(false);
             if (_settingsPanel != null && _settingsPanel.activeSelf)
                 CloseSettings();
             else if (_settingsPanel != null)
                 _settingsPanel.SetActive(false);
+        }
+
+        GameObject BuildQuestPanel(Transform parent)
+        {
+            // Dialogue layout: Stone border, portrait left, quest copy right.
+            var panel = CreateDialogPanel(parent, "QuestPanel", Vector2.zero, new Vector2(980f, 560f), ArtLibrary.ShopUi);
+
+            var portraitGo = new GameObject("WizardPortrait");
+            portraitGo.transform.SetParent(panel.transform, false);
+            var portraitRect = portraitGo.AddComponent<RectTransform>();
+            portraitRect.anchorMin = new Vector2(0.5f, 0.5f);
+            portraitRect.anchorMax = new Vector2(0.5f, 0.5f);
+            portraitRect.pivot = new Vector2(0.5f, 0.5f);
+            portraitRect.anchoredPosition = new Vector2(-300f, 20f);
+            // Each talk frame is 64×64 (2×3 grid inside 128×192).
+            portraitRect.sizeDelta = new Vector2(240f, 240f);
+            _questPortraitImage = portraitGo.AddComponent<Image>();
+            _questPortraitImage.sprite = ArtLibrary.WizardPortrait;
+            _questPortraitImage.preserveAspect = true;
+            _questPortraitImage.raycastTarget = false;
+
+            _questTitleText = CreateText(
+                panel.transform,
+                "Quest",
+                34,
+                TextAnchor.MiddleCenter,
+                new Vector2(140f, 200f),
+                new Vector2(520f, 48f));
+            _questTitleText.alignment = TextAnchor.MiddleLeft;
+
+            _questStatusText = CreateText(
+                panel.transform,
+                "",
+                18,
+                TextAnchor.MiddleCenter,
+                new Vector2(140f, 155f),
+                new Vector2(520f, 28f));
+            _questStatusText.alignment = TextAnchor.MiddleLeft;
+            _questStatusText.color = new Color(1f, 0.9f, 0.55f);
+
+            _questBodyText = CreateText(
+                panel.transform,
+                "",
+                22,
+                TextAnchor.MiddleCenter,
+                new Vector2(140f, -10f),
+                new Vector2(520f, 280f));
+            _questBodyText.alignment = TextAnchor.UpperLeft;
+            _questBodyText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _questBodyText.verticalOverflow = VerticalWrapMode.Overflow;
+            _questBodyText.color = new Color(0.94f, 0.96f, 0.98f);
+
+            _questAcceptButton = CreateButton(panel.transform, "Accept", new Vector2(40f, -210f), AcceptFocusedQuest);
+            _questTurnInButton = CreateButton(panel.transform, "Turn In", new Vector2(300f, -210f), TurnInFocusedQuest);
+            _questAcceptLabel = _questAcceptButton.GetComponentInChildren<Text>();
+            _questTurnInLabel = _questTurnInButton.GetComponentInChildren<Text>();
+            CreateButton(panel.transform, "Close", new Vector2(170f, -280f), () => panel.SetActive(false));
+
+            panel.SetActive(false);
+            return panel;
+        }
+
+        public void OpenQuestGiver()
+        {
+            RefreshGold();
+            CloseAllHubPanels();
+            if (!QuestCatalog.TryGetPrimaryOpenQuest(out var def, out _))
+            {
+                def = QuestCatalog.GrandWizardsPeril;
+            }
+
+            _questPanelFocusId = def.Id;
+            RefreshQuestPanel();
+            if (_questPanel != null)
+            {
+                _questPanel.SetActive(true);
+                SparkleBurst.Play(_questPanel.transform, new Vector2(-300f, 40f), 8);
+            }
+        }
+
+        void RefreshQuestPanel()
+        {
+            if (!QuestCatalog.TryGet(_questPanelFocusId, out var def))
+                def = QuestCatalog.GrandWizardsPeril;
+
+            var progress = QuestCatalog.GetProgress(def.Id);
+            if (_questPortraitImage != null)
+            {
+                var frames = ArtLibrary.WizardPortraitFrames;
+                _questPortraitImage.sprite = frames != null && frames.Length > 0
+                    ? frames[0]
+                    : ArtLibrary.WizardPortrait;
+                _questPortraitFrameIndex = 0;
+                _questPortraitAnimTimer = 0f;
+                _questPortraitImage.rectTransform.localScale = Vector3.one;
+            }
+
+            if (_questTitleText != null)
+                _questTitleText.text = def.Title;
+
+            if (_questStatusText != null)
+            {
+                _questStatusText.text = progress switch
+                {
+                    QuestProgress.Available => $"Available  ·  Reward: {def.GoldReward} Gold",
+                    QuestProgress.Active => "In progress  ·  Retrieve the pendant from Outside R20",
+                    QuestProgress.ReadyToTurnIn => $"Ready to turn in  ·  Reward: {def.GoldReward} Gold",
+                    QuestProgress.Completed => "Completed",
+                    _ => "Locked"
+                };
+            }
+
+            if (_questBodyText != null)
+            {
+                _questBodyText.text = progress switch
+                {
+                    QuestProgress.Available => def.OfferText,
+                    QuestProgress.Active => def.ActiveText,
+                    QuestProgress.ReadyToTurnIn => def.TurnInText,
+                    QuestProgress.Completed => def.CompletedText,
+                    _ => "Come back when you are ready for a new task."
+                };
+            }
+
+            var canAccept = progress == QuestProgress.Available;
+            var canTurnIn = progress == QuestProgress.ReadyToTurnIn;
+            if (_questAcceptButton != null)
+            {
+                _questAcceptButton.gameObject.SetActive(canAccept);
+                _questAcceptButton.interactable = canAccept;
+            }
+
+            if (_questTurnInButton != null)
+            {
+                _questTurnInButton.gameObject.SetActive(canTurnIn);
+                _questTurnInButton.interactable = canTurnIn;
+            }
+
+            if (_questAcceptLabel != null) _questAcceptLabel.text = "Accept";
+            if (_questTurnInLabel != null) _questTurnInLabel.text = "Turn In";
+        }
+
+        void AcceptFocusedQuest()
+        {
+            if (!QuestCatalog.TryAccept(_questPanelFocusId)) return;
+            RefreshGold();
+            RefreshQuestPanel();
+        }
+
+        void TurnInFocusedQuest()
+        {
+            if (!QuestCatalog.TryTurnIn(_questPanelFocusId, out var gold)) return;
+            RefreshGold();
+            RefreshQuestPanel();
+            if (gold > 0)
+                SparkleBurst.Play(_questPanel != null ? _questPanel.transform : transform, new Vector2(120f, 0f), 12);
         }
 
         void OpenSettings()

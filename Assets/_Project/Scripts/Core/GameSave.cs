@@ -59,6 +59,9 @@ namespace ProjectZx.Core
         const string EquippedRingKey = "zx_equipped_ring";
         const string EquippedNecklaceKey = "zx_equipped_necklace";
         const string EquippedCapeKey = "zx_equipped_cape";
+        const string QuestGwpAcceptedKey = "zx_quest_gwp_accepted";
+        const string QuestGwpCompletedKey = "zx_quest_gwp_completed";
+        const string TwinLightningPendantKey = "zx_item_twin_lightning_pendant";
 
         public static int LastRunGoldBanked { get; set; }
 
@@ -703,6 +706,39 @@ namespace ProjectZx.Core
             if (Gold < cost) return false;
             Gold -= cost;
             return true;
+        }
+
+        /// <summary>Grand Wizard's Peril — accepted from the camp quest wizard.</summary>
+        public static bool QuestGrandWizardsPerilAccepted
+        {
+            get => PlayerPrefs.GetInt(QuestGwpAcceptedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestGwpAcceptedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Grand Wizard's Peril — turned in for gold.</summary>
+        public static bool QuestGrandWizardsPerilCompleted
+        {
+            get => PlayerPrefs.GetInt(QuestGwpCompletedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestGwpCompletedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Quest item recovered from Outside Survival R20 boss (not equippable gear).</summary>
+        public static bool HasTwinLightningPendant
+        {
+            get => PlayerPrefs.GetInt(TwinLightningPendantKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(TwinLightningPendantKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
         }
     }
 }

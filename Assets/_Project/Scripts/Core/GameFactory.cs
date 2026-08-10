@@ -680,6 +680,22 @@ namespace ProjectZx.Core
             return go;
         }
 
+        /// <summary>Camp NPC with multi-frame idle animation (e.g. 16×32 quest wizard).</summary>
+        public static GameObject CreateAnimatedNpc(
+            string name,
+            Sprite[] frames,
+            Vector3 position,
+            System.Action onInteract,
+            float scale = 0.38f,
+            float fps = 4f)
+        {
+            var first = frames != null && frames.Length > 0 ? frames[0] : null;
+            var go = CreateNpc(name, first, position, onInteract, scale);
+            if (frames != null && frames.Length > 1)
+                go.AddComponent<SpriteFrameAnimator>().Initialize(frames, fps);
+            return go;
+        }
+
         public static GameObject CreateHeroCampNpc(Vector3 position, PlayableHero hero, float scale = 0.38f)
         {
             var go = CreateSprite($"{GameSave.GetHeroDisplayName(hero)}CampNpc", ArtLibrary.GetHeroIdleSprite(hero), position, scale, 9);
@@ -723,6 +739,7 @@ namespace ProjectZx.Core
                 PickupType.MapLoot => "MapLootPickup",
                 PickupType.Equipment => "EquipmentPickup",
                 PickupType.EpicCrystal => "EpicCrystalPickup",
+                PickupType.TwinLightningPendant => "TwinLightningPendantPickup",
                 _ => "GoldPickup"
             };
 
@@ -734,6 +751,7 @@ namespace ProjectZx.Core
                 : type == PickupType.MapLoot ? 0.75f
                 : type == PickupType.Equipment ? 0.8f
                 : type == PickupType.EpicCrystal ? 0.85f
+                : type == PickupType.TwinLightningPendant ? 0.8f
                 : 0.85f;
             go.AddComponent<LootPickup>().Initialize(type, amount);
             return go;

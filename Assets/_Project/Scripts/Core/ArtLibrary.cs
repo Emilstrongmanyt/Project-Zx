@@ -87,6 +87,10 @@ namespace ProjectZx.Core
             _enemyBurnFrames = null;
             _bossFireBoltFrames = null;
             _wizard = null;
+            _questWizard = null;
+            _questWizardFrames = null;
+            _wizardPortraitFrames = null;
+            _twinLightningPendant = null;
             _knight = null;
             _achievementKeeper = null;
             _ground = null;
@@ -159,6 +163,10 @@ namespace ProjectZx.Core
         static Sprite _boss;
         static Sprite _bossAttacking;
         static Sprite _wizard;
+        static Sprite _questWizard;
+        static Sprite[] _questWizardFrames;
+        static Sprite[] _wizardPortraitFrames;
+        static Sprite _twinLightningPendant;
         static Sprite _knight;
         static Sprite _achievementKeeper;
         static Sprite _ground;
@@ -277,6 +285,21 @@ namespace ProjectZx.Core
         public static Sprite Btn200x52 => _btn200x52 ??= Load("btn_200x52", "btn_primary");
         public static Sprite Btn360x56 => _btn360x56 ??= Load("btn_360x56", "btn_primary");
         public static Sprite Wizard => _wizard ??= Load("Placeholders/wizard", "WizardNpc");
+        /// <summary>Camp quest-giver world sprite — first 16×32 frame from Wizard Sprite sheet.</summary>
+        public static Sprite QuestWizard =>
+            _questWizard ??= (QuestWizardFrames != null && QuestWizardFrames.Length > 0
+                ? QuestWizardFrames[0]
+                : null) ?? Wizard;
+        /// <summary>Dialogue portrait frames from Wizard Portrait (left side of quest UI).</summary>
+        public static Sprite[] WizardPortraitFrames =>
+            _wizardPortraitFrames ??= LoadSheetFrames("Wizard Portrait");
+        public static Sprite WizardPortrait =>
+            WizardPortraitFrames != null && WizardPortraitFrames.Length > 0
+                ? WizardPortraitFrames[0]
+                : QuestWizard;
+        /// <summary>Twin Lightning Pendant quest item (ZZCharm).</summary>
+        public static Sprite TwinLightningPendant =>
+            _twinLightningPendant ??= TryLoadSprite("ZZCharm", TilePixelsPerUnit) ?? Necklace;
         public static Sprite Knight => _knight ??= Load("Placeholders/knight", "KnightNpc");
         /// <summary>World NPC: achievement board (not the wizard placeholder).</summary>
         public static Sprite AchievementKeeper => _achievementKeeper ??= LoadOrCreateAchievementBoardNpc();
@@ -1146,6 +1169,111 @@ namespace ProjectZx.Core
 
             return CreateTileFallback(path);
         }
+
+        static Sprite FirstSheetFrame(string resourcePath)
+        {
+            var frames = LoadSheetFrames(resourcePath);
+            return frames != null && frames.Length > 0 ? frames[0] : null;
+        }
+
+        /// <summary>Loads all sliced sprites from a Resources sheet, ordered by trailing frame index.</summary>
+        static Sprite[] LoadSheetFrames(string resourcePath)
+        {
+            if (string.IsNullOrEmpty(resourcePath)) return System.Array.Empty<Sprite>();
+
+            var multi = Resources.LoadAll<Sprite>(resourcePath);
+            if (multi != null && multi.Length > 1)
+            {
+                System.Array.Sort(multi, (a, b) =>
+                    GetTrailingFrameIndex(a != null ? a.name : null)
+                        .CompareTo(GetTrailingFrameIndex(b != null ? b.name : null)));
+
+                var list = new List<Sprite>(multi.Length);
+                for (var i = 0; i < multi.Length; i++)
+                {
+                    if (multi[i] != null) list.Add(multi[i]);
+                }
+
+                if (list.Count > 1) return list.ToArray();
+            }
+
+            // Fallback grid slice when the importer still has a single full-sheet sprite.
+            var tex = Resources.Load<Texture2D>(resourcePath);
+            if (tex != null)
+            {
+                var grid = TrySliceKnownGrid(resourcePath, tex);
+                if (grid != null && grid.Length > 1) return grid;
+            }
+
+            if (multi != null && multi.Length == 1 && multi[0] != null)
+                return new[] { multi[0] };
+
+            if (tex != null)
+            {
+                return new[]
+                {
+                    Sprite.Create(
+                        tex,
+                        new Rect(0f, 0f, tex.width, tex.height),
+                        new Vector2(0.5f, 0.5f),
+                        TilePixelsPerUnit)
+                };
+            }
+
+            return System.Array.Empty<Sprite>();
+        }
+
+        /// <summary>
+        /// Known multi-frame sheets (row-major, top-left first).
+        /// Wizard Portrait: 128×192, 3 rows × 2 cols of 64×64 talk frames.
+        /// Wizard Sprite: 32×32, 1 row × 2 cols of 16×32 world frames.
+        /// </summary>
+        static Sprite[] TrySliceKnownGrid(string resourcePath, Texture2D tex)
+        {
+            if (tex == null) return null;
+
+            int cellW;
+            int cellH;
+            int cols;
+            int rows;
+            var pivot = new Vector2(0.5f, 0.5f);
+
+            if (resourcePath == "Wizard Portrait" && tex.width == 128 && tex.height == 192)
+            {
+                cellW = 64;
+                cellH = 64;
+                cols = 2;
+                rows = 3;
+            }
+            else if (resourcePath == "Wizard Sprite" && tex.width == 32 && tex.height == 32)
+            {
+                cellW = 16;
+                cellH = 32;
+                cols = 2;
+                rows = 1;
+                pivot = new Vector2(0.5f, 0.15f);
+            }
+            else
+            {
+                return null;
+            }
+
+            var frames = new List<Sprite>(cols * rows);
+            // Author order is top-left first; Unity rect Y is bottom-left origin.
+            for (var row = 0; row < rows; row++)
+            for (var col = 0; col < cols; col++)
+            {
+                var x = col * cellW;
+                var y = (rows - 1 - row) * cellH;
+                frames.Add(Sprite.Create(tex, new Rect(x, y, cellW, cellH), pivot, TilePixelsPerUnit));
+            }
+
+            return frames.ToArray();
+        }
+
+        /// <summary>All world idle frames for the quest wizard (16×32 sheet).</summary>
+        public static Sprite[] QuestWizardFrames =>
+            _questWizardFrames ??= LoadSheetFrames("Wizard Sprite");
 
         static Sprite TryLoadSprite(string path, float pixelsPerUnit)
         {

@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace ProjectZx.World
 {
-    public enum PickupType { Xp, Gold, HpPotion, MapLoot, Equipment, EpicCrystal }
+    public enum PickupType { Xp, Gold, HpPotion, MapLoot, Equipment, EpicCrystal, TwinLightningPendant }
 
     public class LootPickup : MonoBehaviour
     {
@@ -58,13 +58,18 @@ namespace ProjectZx.World
                     _renderer.sprite = ArtLibrary.EpicCrystal;
                     transform.localScale = Vector3.one * EpicCrystalScale;
                     break;
+                case PickupType.TwinLightningPendant:
+                    _renderer.sprite = ArtLibrary.TwinLightningPendant;
+                    transform.localScale = Vector3.one * EquipmentPickupScale;
+                    break;
                 default:
                     _renderer.sprite = ArtLibrary.GoldCoinDropped;
                     transform.localScale = Vector3.one * DroppedPickupScale;
                     break;
             }
 
-            _renderer.sortingOrder = type is PickupType.MapLoot or PickupType.Equipment or PickupType.EpicCrystal
+            _renderer.sortingOrder = type is PickupType.MapLoot or PickupType.Equipment
+                or PickupType.EpicCrystal or PickupType.TwinLightningPendant
                 ? 10
                 : 8;
         }
@@ -157,6 +162,9 @@ namespace ProjectZx.World
                 case PickupType.EpicCrystal:
                     CollectEpicCrystal(stats);
                     break;
+                case PickupType.TwinLightningPendant:
+                    CollectTwinLightningPendant();
+                    break;
                 default:
                     stats.AddRunGold(_amount);
                     break;
@@ -197,6 +205,14 @@ namespace ProjectZx.World
             {
                 GameHud.Instance?.ShowBanner($"Already own {def.DisplayName}.", 2f);
             }
+        }
+
+        void CollectTwinLightningPendant()
+        {
+            GameSave.HasTwinLightningPendant = true;
+            GameHud.Instance?.ShowBanner(
+                $"{QuestCatalog.TwinLightningPendantName} recovered! Return it to the Grand Wizard at camp.",
+                3.4f);
         }
 
         static void CollectAllMapLoot(PlayerStats stats)

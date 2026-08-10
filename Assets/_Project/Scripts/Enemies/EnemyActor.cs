@@ -1202,6 +1202,16 @@ namespace ProjectZx.Enemies
             if (IsBoss)
                 TryDropEpicCrystal(pos);
 
+            // Grand Wizard's Peril: Outside R20 golem drops the Twin Lightning Pendant.
+            if (QuestCatalog.ShouldDropTwinLightningPendant(
+                    IsRoundTwentyBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Outside))
+            {
+                GameFactory.CreatePickup(
+                    pos + Vector2.up * 0.7f + Vector2.left * 0.35f,
+                    PickupType.TwinLightningPendant,
+                    1);
+            }
+
             var session = UnityEngine.Object.FindAnyObjectByType<SurvivalSession>();
             session?.NotifyEnemyKilled(this);
 
