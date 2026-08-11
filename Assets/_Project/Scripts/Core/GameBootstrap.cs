@@ -46,7 +46,7 @@ namespace ProjectZx.Core
             GameFactory.ReserveClearing(Vector2.zero, 4.5f);                 // campfire (map travel)
             GameFactory.ReserveClearing(new Vector2(-2.1f, 1.1f), 3.6f);     // wizard shop
             GameFactory.ReserveClearing(new Vector2(2.1f, 1.1f), 3.6f);      // knight map
-            GameFactory.ReserveClearing(new Vector2(5.0f, 1.1f), 3.2f);      // quest wizard
+            GameFactory.ReserveClearing(new Vector2(5.0f, 1.1f), 4.2f);      // quest wizard (large 16×32)
             GameFactory.ReserveClearing(new Vector2(0f, 2.8f), 3.6f);        // achievement board
             // Chest sits far left of the wizard so it never overlaps the shop NPC.
             GameFactory.ReserveClearing(new Vector2(-6.4f, -0.6f), 2.4f);    // treasure chest
@@ -73,12 +73,13 @@ namespace ProjectZx.Core
             GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(2.1f, 1.1f), () => hub.OpenMapSelect(), campNpcScale);
             // Quest giver — multi-frame 16×32 Wizard Sprite (separate from shop wizard).
             // Sheet is short at 100 PPU; scale up so the tall sprite reads next to other camp NPCs.
+            // 16×32 sheet is short at 100 PPU; ~3× prior camp scale so he reads next to other NPCs.
             GameFactory.CreateAnimatedNpc(
                 "QuestWizard",
                 ArtLibrary.QuestWizardFrames,
                 new Vector3(5.0f, 1.1f),
                 () => hub.OpenQuestGiver(),
-                campNpcScale * 2.4f,
+                campNpcScale * 2.4f * 3f,
                 fps: 3.5f);
             // Layer Lab stage frame + trophy composite (readable world prop).
             GameFactory.CreateNpc("AchievementBoard", ArtLibrary.AchievementKeeper, new Vector3(0f, 2.8f), () => hub.OpenAchievements(), 0.55f);

@@ -14,8 +14,8 @@ namespace ProjectZx.World
         const float XpPickupScale = 1.45f / 2.5f;
         const float DroppedPickupScale = 0.55f * 3f * 1.5f;
         const float MapLootScale = 1.55f / 2.5f;
-        // Rings/necklaces rendered 2× larger for readability on mobile.
-        const float EquipmentPickupScale = 1.7f;
+        // Rings / necklaces / capes / quest pendant — large enough to spot on mobile.
+        const float EquipmentPickupScale = 1.7f * 2f;
         const float EpicCrystalScale = 0.72f;
 
         PickupType _type;
