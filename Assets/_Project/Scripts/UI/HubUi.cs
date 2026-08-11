@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ProjectZx.Core;
+using ProjectZx.Player;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -80,6 +81,9 @@ namespace ProjectZx.UI
         Button _techniqueSpecialButton;
         Button _movementJoystickButton;
         Button _movementTapHoldButton;
+        Button _rollZyClassicSkinButton;
+        Button _rollZyUpgradedSkinButton;
+        Text _rollZySkinStatusText;
 
         enum ShopUpgradeKind
         {
@@ -442,25 +446,30 @@ namespace ProjectZx.UI
         GameObject BuildSettingsPanel(Transform parent)
         {
             var panel = CreateDialogPanel(parent, "SettingsPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
-            CreateText(panel.transform, "Settings", 40, TextAnchor.MiddleCenter, new Vector2(0, 300), new Vector2(560, 52));
+            CreateText(panel.transform, "Settings", 40, TextAnchor.MiddleCenter, new Vector2(0, 360), new Vector2(560, 52));
 
-            CreateText(panel.transform, "Movement Control", 28, TextAnchor.MiddleCenter, new Vector2(0, 220), new Vector2(620, 40));
-            CreateText(panel.transform, "Only one control style is active at a time.", 20, TextAnchor.MiddleCenter, new Vector2(0, 180), new Vector2(700, 32));
-            _movementJoystickButton = CreateButton(panel.transform, "Joystick", new Vector2(-160, 110), () => SelectMovementControl(MovementControlType.Joystick));
-            _movementTapHoldButton = CreateButton(panel.transform, "Tap / Hold", new Vector2(160, 110), () => SelectMovementControl(MovementControlType.TapHold));
-            CreateText(panel.transform, "Drag the on-screen joystick to place it. Position locks when you close Settings.", 18, TextAnchor.MiddleCenter, new Vector2(0, 55), new Vector2(900, 40));
+            CreateText(panel.transform, "Movement Control", 28, TextAnchor.MiddleCenter, new Vector2(0, 290), new Vector2(620, 40));
+            CreateText(panel.transform, "Only one control style is active at a time.", 20, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(700, 32));
+            _movementJoystickButton = CreateButton(panel.transform, "Joystick", new Vector2(-160, 185), () => SelectMovementControl(MovementControlType.Joystick));
+            _movementTapHoldButton = CreateButton(panel.transform, "Tap / Hold", new Vector2(160, 185), () => SelectMovementControl(MovementControlType.TapHold));
+            CreateText(panel.transform, "Drag the on-screen joystick to place it. Position locks when you close Settings.", 18, TextAnchor.MiddleCenter, new Vector2(0, 125), new Vector2(900, 40));
 
-            CreateText(panel.transform, "Music Volume", 26, TextAnchor.MiddleCenter, new Vector2(0, -10), new Vector2(400, 36));
-            _bgmVolumeLabel = CreateText(panel.transform, "70%", 22, TextAnchor.MiddleCenter, new Vector2(0, -50), new Vector2(120, 32));
-            CreateButton(panel.transform, "−", new Vector2(-200, -50), () => AdjustBgmVolume(-0.1f));
-            CreateButton(panel.transform, "+", new Vector2(200, -50), () => AdjustBgmVolume(0.1f));
+            CreateText(panel.transform, "RollZy Skin", 26, TextAnchor.MiddleCenter, new Vector2(0, 70), new Vector2(400, 36));
+            _rollZySkinStatusText = CreateText(panel.transform, "", 18, TextAnchor.MiddleCenter, new Vector2(0, 35), new Vector2(900, 32));
+            _rollZyClassicSkinButton = CreateButton(panel.transform, "Classic", new Vector2(-160, -15), () => SelectRollZySkin(upgraded: false));
+            _rollZyUpgradedSkinButton = CreateButton(panel.transform, "Upgraded", new Vector2(160, -15), () => SelectRollZySkin(upgraded: true));
 
-            CreateText(panel.transform, "SFX Volume", 26, TextAnchor.MiddleCenter, new Vector2(0, -130), new Vector2(400, 36));
-            _sfxVolumeLabel = CreateText(panel.transform, "85%", 22, TextAnchor.MiddleCenter, new Vector2(0, -170), new Vector2(120, 32));
-            CreateButton(panel.transform, "−", new Vector2(-200, -170), () => AdjustSfxVolume(-0.1f));
-            CreateButton(panel.transform, "+", new Vector2(200, -170), () => AdjustSfxVolume(0.1f));
+            CreateText(panel.transform, "Music Volume", 26, TextAnchor.MiddleCenter, new Vector2(0, -90), new Vector2(400, 36));
+            _bgmVolumeLabel = CreateText(panel.transform, "70%", 22, TextAnchor.MiddleCenter, new Vector2(0, -130), new Vector2(120, 32));
+            CreateButton(panel.transform, "−", new Vector2(-200, -130), () => AdjustBgmVolume(-0.1f));
+            CreateButton(panel.transform, "+", new Vector2(200, -130), () => AdjustBgmVolume(0.1f));
 
-            CreateButton(panel.transform, "Close", new Vector2(0, -280), () => CloseSettings(), large: true);
+            CreateText(panel.transform, "SFX Volume", 26, TextAnchor.MiddleCenter, new Vector2(0, -200), new Vector2(400, 36));
+            _sfxVolumeLabel = CreateText(panel.transform, "85%", 22, TextAnchor.MiddleCenter, new Vector2(0, -240), new Vector2(120, 32));
+            CreateButton(panel.transform, "−", new Vector2(-200, -240), () => AdjustSfxVolume(-0.1f));
+            CreateButton(panel.transform, "+", new Vector2(200, -240), () => AdjustSfxVolume(0.1f));
+
+            CreateButton(panel.transform, "Close", new Vector2(0, -340), () => CloseSettings(), large: true);
             panel.SetActive(false);
             return panel;
         }
@@ -868,7 +877,55 @@ namespace ProjectZx.UI
         void RefreshSettingsPanel()
         {
             RefreshMovementControlPicker();
+            RefreshRollZySkinPicker();
             RefreshVolumeLabels();
+        }
+
+        void SelectRollZySkin(bool upgraded)
+        {
+            if (upgraded && !GameSave.RollZyUpgradedSkinUnlocked) return;
+            GameSave.UseUpgradedRollZySkin = upgraded;
+            RefreshRollZySkinPicker();
+            // Apply immediately on camp so the player sees the change.
+            CampHeroManager.Instance?.RefreshAppearance();
+        }
+
+        void RefreshRollZySkinPicker()
+        {
+            var unlocked = GameSave.RollZyUpgradedSkinUnlocked;
+            var usingUpgraded = GameSave.UseUpgradedRollZySkin;
+
+            if (_rollZySkinStatusText != null)
+            {
+                _rollZySkinStatusText.text = unlocked
+                    ? (usingUpgraded ? "Using upgraded RollZy (Dungeon clear)." : "Using classic RollZy.")
+                    : "Upgraded skin unlocks after clearing Dungeon Survival.";
+            }
+
+            RefreshSkinButton(_rollZyClassicSkinButton, selected: !usingUpgraded, interactable: true, "Classic");
+            RefreshSkinButton(
+                _rollZyUpgradedSkinButton,
+                selected: usingUpgraded,
+                interactable: unlocked,
+                unlocked ? "Upgraded" : "Upgraded (Locked)");
+        }
+
+        static void RefreshSkinButton(Button button, bool selected, bool interactable, string label)
+        {
+            if (button == null) return;
+            button.interactable = interactable;
+            var image = button.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = !interactable
+                    ? new Color(0.45f, 0.45f, 0.5f, 0.85f)
+                    : selected
+                        ? new Color(0.35f, 0.72f, 0.42f, 1f)
+                        : Color.white;
+            }
+
+            var text = button.GetComponentInChildren<Text>();
+            if (text != null) text.text = label;
         }
 
         void AdjustBgmVolume(float delta)

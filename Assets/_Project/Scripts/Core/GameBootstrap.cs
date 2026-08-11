@@ -71,16 +71,14 @@ namespace ProjectZx.Core
             const float campNpcScale = 0.38f * 1.25f;
             GameFactory.CreateNpc("WizardShop", ArtLibrary.Wizard, new Vector3(-2.1f, 1.1f), () => hub.OpenShop(), campNpcScale);
             GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(2.1f, 1.1f), () => hub.OpenMapSelect(), campNpcScale);
-            // Quest giver — multi-frame 16×32 Wizard Sprite (separate from shop wizard).
-            // Sheet is short at 100 PPU; scale up so the tall sprite reads next to other camp NPCs.
-            // 16×32 sheet is short at 100 PPU; ~3× prior camp scale so he reads next to other NPCs.
-            GameFactory.CreateAnimatedNpc(
+            // Quest giver — idle uses only frame 0 of the 16×32 Wizard Sprite (no walk loop at camp).
+            // Sheet is short at 100 PPU; scaled up so he reads next to other camp NPCs.
+            GameFactory.CreateNpc(
                 "QuestWizard",
-                ArtLibrary.QuestWizardFrames,
+                ArtLibrary.QuestWizard,
                 new Vector3(5.0f, 1.1f),
                 () => hub.OpenQuestGiver(),
-                campNpcScale * 2.4f * 3f,
-                fps: 3.5f);
+                campNpcScale * 2.4f * 3f * 2f);
             // Layer Lab stage frame + trophy composite (readable world prop).
             GameFactory.CreateNpc("AchievementBoard", ArtLibrary.AchievementKeeper, new Vector3(0f, 2.8f), () => hub.OpenAchievements(), 0.55f);
             // Layer Lab gold lucky-box chest.

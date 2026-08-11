@@ -89,5 +89,118 @@ namespace ProjectZx.World
 
             return ClampToPlayable(origin);
         }
+
+        /// <summary>
+        /// Survival wave spawn: mixes near/far rings, arena edges, open-field picks, and
+        /// flanking angles so packs are harder to predict than a fixed 7–12 ring.
+        /// </summary>
+        public static Vector2 RandomWaveSpawn(Vector2 playerPos, bool preferDistance = false)
+        {
+            // Slight origin jitter so multi-spawns in one wave do not share one perfect center.
+            var origin = playerPos + Random.insideUnitCircle * 2.8f;
+            var roll = Random.value;
+
+            // Bosses / late pressure: bias toward farther entries.
+            if (preferDistance)
+                roll = Mathf.Min(1f, roll + 0.22f);
+
+            Vector2 candidate;
+            if (roll < 0.28f)
+                candidate = RandomSpawnAround(origin, 5.5f, 10f);
+            else if (roll < 0.5f)
+                candidate = RandomSpawnAround(origin, 9f, 15f);
+            else if (roll < 0.68f)
+                candidate = RandomSpawnAround(origin, 12f, 20f);
+            else if (roll < 0.84f)
+                candidate = RandomSpawnAtPlayableEdge(playerPos, minDistanceFromPlayer: 6f);
+            else if (roll < 0.94f)
+                candidate = RandomSpawnInPlayableAwayFrom(playerPos, minDistance: 8f);
+            else
+                candidate = RandomSpawnFlanking(playerPos, minDistance: 6.5f, maxDistance: 14f);
+
+            // Tiny final jitter so even same-strategy picks do not stack on identical tiles.
+            candidate = ClampToPlayable(candidate + Random.insideUnitCircle * 0.55f);
+            if (IsInsidePlayable(candidate) && IsClearOfObstacles(candidate)
+                && Vector2.Distance(candidate, playerPos) >= 4.5f)
+                return candidate;
+
+            return RandomSpawnAround(playerPos, 7f, 14f);
+        }
+
+        static Vector2 RandomSpawnAtPlayableEdge(Vector2 playerPos, float minDistanceFromPlayer)
+        {
+            var maxX = ArenaWidth * 0.5f - WaterMargin - 0.75f;
+            var maxY = ArenaHeight * 0.5f - WaterMargin - 0.75f;
+
+            for (var attempt = 0; attempt < 40; attempt++)
+            {
+                Vector2 candidate;
+                var side = Random.Range(0, 4);
+                switch (side)
+                {
+                    case 0: // west
+                        candidate = new Vector2(-maxX, Random.Range(-maxY, maxY));
+                        break;
+                    case 1: // east
+                        candidate = new Vector2(maxX, Random.Range(-maxY, maxY));
+                        break;
+                    case 2: // south
+                        candidate = new Vector2(Random.Range(-maxX, maxX), -maxY);
+                        break;
+                    default: // north
+                        candidate = new Vector2(Random.Range(-maxX, maxX), maxY);
+                        break;
+                }
+
+                candidate = ClampToPlayable(candidate + Random.insideUnitCircle * 1.2f);
+                if (Vector2.Distance(candidate, playerPos) < minDistanceFromPlayer) continue;
+                if (!IsInsidePlayable(candidate)) continue;
+                if (!IsClearOfObstacles(candidate)) continue;
+                return candidate;
+            }
+
+            return RandomSpawnAround(playerPos, minDistanceFromPlayer, minDistanceFromPlayer + 6f);
+        }
+
+        static Vector2 RandomSpawnInPlayableAwayFrom(Vector2 playerPos, float minDistance)
+        {
+            var maxX = ArenaWidth * 0.5f - WaterMargin - 1f;
+            var maxY = ArenaHeight * 0.5f - WaterMargin - 1f;
+
+            for (var attempt = 0; attempt < 48; attempt++)
+            {
+                var candidate = new Vector2(
+                    Random.Range(-maxX, maxX),
+                    Random.Range(-maxY, maxY));
+                if (Vector2.Distance(candidate, playerPos) < minDistance) continue;
+                if (!IsClearOfObstacles(candidate)) continue;
+                return candidate;
+            }
+
+            return RandomSpawnAround(playerPos, minDistance, minDistance + 8f);
+        }
+
+        static Vector2 RandomSpawnFlanking(Vector2 playerPos, float minDistance, float maxDistance)
+        {
+            // Prefer left/right of the player's current facing-agnostic axes (cardinal flanks).
+            var baseAngle = Random.value < 0.5f
+                ? Random.Range(-0.55f, 0.55f) // roughly east/west of vertical
+                : Mathf.PI * 0.5f + Random.Range(-0.55f, 0.55f); // roughly north/south of horizontal
+            if (Random.value < 0.5f) baseAngle += Mathf.PI;
+
+            for (var attempt = 0; attempt < 32; attempt++)
+            {
+                var angle = baseAngle + Random.Range(-0.35f, 0.35f);
+                var distance = Random.Range(minDistance, maxDistance);
+                var candidate = ClampToPlayable(
+                    playerPos + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance);
+                if (Vector2.Distance(candidate, playerPos) < minDistance * 0.8f) continue;
+                if (!IsInsidePlayable(candidate)) continue;
+                if (!IsClearOfObstacles(candidate)) continue;
+                return candidate;
+            }
+
+            return RandomSpawnAround(playerPos, minDistance, maxDistance);
+        }
     }
 }

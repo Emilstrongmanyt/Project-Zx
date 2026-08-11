@@ -264,7 +264,8 @@ namespace ProjectZx.Waves
             bool roundFiftyBoss)
         {
             var origin = _player != null ? (Vector2)_player.position : Vector2.zero;
-            var spawnPos = ArenaBounds.RandomSpawnAround(origin, 7f, 12f);
+            // Mix rings, edges, open field, and flanks so wave entries stay hard to camp.
+            var spawnPos = ArenaBounds.RandomWaveSpawn(origin, preferDistance: boss);
             var zombieKind = ResolveZombieKind(round);
             var ranged = !boss && ShouldSpawnRanged(round);
             // After R20: occasional elites (1.3× size, stronger stats/loot). Early rounds stay clean.

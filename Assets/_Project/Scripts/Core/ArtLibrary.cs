@@ -483,8 +483,8 @@ namespace ProjectZx.Core
                 return BuildHeroMovementSet(_rowZiSprites, facesRightByDefault: true);
             }
 
-            // Upgraded RollZy after clearing Dungeon survival (Dungeon Clearer achievement path).
-            if (GameSave.DungeonSurvivalCleared)
+            // Optional upgraded RollZy skin (unlocked after Dungeon clear; chosen in Settings).
+            if (GameSave.UseUpgradedRollZySkin)
             {
                 _rollZyUpgradedSprites ??= LoadOrderedHeroSheet("RollZy_two")
                                            ?? LoadHeroSheetSprites("RollZy_two", 8);
@@ -685,7 +685,12 @@ namespace ProjectZx.Core
             if (_weaponFireFrames != null) return;
             _weaponFireFrames = new Sprite[4];
             for (var i = 0; i < 4; i++)
-                _weaponFireFrames[i] = Load($"WeaponFire{i + 1}") ?? CreateTinyFlameSprite(i, 12, 16);
+            {
+                // Must use TryLoadSprite — Load() always fabricates a solid green square on miss,
+                // which made Flame Enchant (unlocked after Dungeon clear) flicker giant green quads.
+                _weaponFireFrames[i] = TryLoadSprite($"WeaponFire{i + 1}", TilePixelsPerUnit)
+                                      ?? CreateTinyFlameSprite(i, 12, 16);
+            }
         }
 
         static void EnsureEnemyBurnFrames()
@@ -693,7 +698,10 @@ namespace ProjectZx.Core
             if (_enemyBurnFrames != null) return;
             _enemyBurnFrames = new Sprite[4];
             for (var i = 0; i < 4; i++)
-                _enemyBurnFrames[i] = Load($"EnemyBurn{i + 1}") ?? CreateTinyFlameSprite(i, 14, 14);
+            {
+                _enemyBurnFrames[i] = TryLoadSprite($"EnemyBurn{i + 1}", TilePixelsPerUnit)
+                                     ?? CreateTinyFlameSprite(i, 14, 14);
+            }
         }
 
         static void EnsureBossFireBoltFrames()
@@ -703,15 +711,15 @@ namespace ProjectZx.Core
             for (var i = 0; i < 3; i++)
             {
                 // Prefer dedicated bolt art; fall back to FireBreath frames as a simple placeholder.
-                var dedicated = Load($"BossFireBolt{i + 1}");
+                var dedicated = TryLoadSprite($"BossFireBolt{i + 1}", TilePixelsPerUnit);
                 if (dedicated != null)
                 {
                     _bossFireBoltFrames[i] = dedicated;
                     continue;
                 }
 
-                var breath = Load($"FireBreath{i + 1}");
-                if (breath != null && breath.texture != null)
+                var breath = TryLoadSprite($"FireBreath{i + 1}", TilePixelsPerUnit);
+                if (breath != null && breath.texture != null && !IsSolidFallbackSprite(breath))
                 {
                     // Compact projectile: center pivot, slightly smaller visual.
                     _bossFireBoltFrames[i] = Sprite.Create(
@@ -772,8 +780,8 @@ namespace ProjectZx.Core
             _fireBreathFrames = new Sprite[4];
             for (var i = 0; i < 4; i++)
             {
-                var src = Load($"FireBreath{i + 1}");
-                if (src != null && src.texture != null)
+                var src = TryLoadSprite($"FireBreath{i + 1}", TilePixelsPerUnit);
+                if (src != null && src.texture != null && !IsSolidFallbackSprite(src))
                 {
                     // Pivot on the base (right edge) for left-pointing flame art.
                     _fireBreathFrames[i] = Sprite.Create(
@@ -790,6 +798,15 @@ namespace ProjectZx.Core
                     _fireBreathFrames[i] = CreateFireBreathFrameSprite(i);
                 }
             }
+        }
+
+        /// <summary>True for the solid-color squares CreateFallback builds (never real art).</summary>
+        static bool IsSolidFallbackSprite(Sprite sprite)
+        {
+            if (sprite == null || sprite.texture == null) return true;
+            // Procedural fallbacks are 16×16 at PPU 4.
+            return sprite.texture.width == 16 && sprite.texture.height == 16
+                   && Mathf.Approximately(sprite.pixelsPerUnit, 4f);
         }
 
         public static void GetZombieSprites(EnemyZombieKind kind, out Sprite idle, out Sprite hit)
@@ -1063,7 +1080,8 @@ namespace ProjectZx.Core
             var loaded = 0;
             for (var i = 0; i < count; i++)
             {
-                sprites[i] = Load($"{sheetName}_{i}", sheetName);
+                // Do not fall back to the full sheet / green CreateFallback per frame.
+                sprites[i] = TryLoadSprite($"{sheetName}_{i}", TilePixelsPerUnit);
                 if (sprites[i] != null) loaded++;
             }
 

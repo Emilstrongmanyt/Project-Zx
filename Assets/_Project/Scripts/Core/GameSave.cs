@@ -63,6 +63,7 @@ namespace ProjectZx.Core
         const string QuestGwpCompletedKey = "zx_quest_gwp_completed";
         const string TwinLightningPendantKey = "zx_item_twin_lightning_pendant";
         const string WeaponProgressMigratedKey = "zx_weapon_progress_migrated_v1";
+        const string RollZySkinKey = "zx_rollzy_skin";
 
         public static int LastRunGoldBanked { get; set; }
 
@@ -335,7 +336,34 @@ namespace ProjectZx.Core
             get => PlayerPrefs.GetInt(DungeonClearedKey, 0) == 1;
             set
             {
+                var wasCleared = PlayerPrefs.GetInt(DungeonClearedKey, 0) == 1;
                 PlayerPrefs.SetInt(DungeonClearedKey, value ? 1 : 0);
+                // First clear auto-selects the upgraded RollZy skin (player can change in Settings).
+                if (value && !wasCleared)
+                    PlayerPrefs.SetInt(RollZySkinKey, 1);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>True when the Dungeon-clear RollZy_two skin is available.</summary>
+        public static bool RollZyUpgradedSkinUnlocked => DungeonSurvivalCleared;
+
+        /// <summary>
+        /// When true, RollZy uses the upgraded sheet. Only valid after Dungeon clear;
+        /// defaults to upgraded on first unlock.
+        /// </summary>
+        public static bool UseUpgradedRollZySkin
+        {
+            get
+            {
+                if (!RollZyUpgradedSkinUnlocked) return false;
+                if (!PlayerPrefs.HasKey(RollZySkinKey)) return true;
+                return PlayerPrefs.GetInt(RollZySkinKey, 1) == 1;
+            }
+            set
+            {
+                if (value && !RollZyUpgradedSkinUnlocked) return;
+                PlayerPrefs.SetInt(RollZySkinKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
         }

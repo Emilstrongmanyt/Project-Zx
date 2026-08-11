@@ -33,6 +33,14 @@ namespace ProjectZx.Player
             Refresh(DefaultPlayerSpawn, DefaultStandbySpawn);
         }
 
+        /// <summary>Rebuild camp player/standby after skin or class appearance changes.</summary>
+        public void RefreshAppearance()
+        {
+            var playerPos = _player != null ? _player.transform.position : DefaultPlayerSpawn;
+            var standbyPos = _standbyNpc != null ? _standbyNpc.transform.position : DefaultStandbySpawn;
+            Refresh(playerPos, standbyPos);
+        }
+
         public void SelectHeroFromNpc(PlayableHero hero, Vector3 npcPosition)
         {
             if (hero == PlayableHero.RowZi && !GameSave.RowZiUnlocked) return;
