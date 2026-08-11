@@ -311,6 +311,7 @@ namespace ProjectZx.Player
         void BeginPointer(Vector2 screenPos, int touchId)
         {
             if (GameHud.Instance != null && GameHud.Instance.IsGamePaused) return;
+            if (HubUi.Instance != null && HubUi.Instance.IsAnyMenuOpen) return;
             if (MovementJoystick.Instance != null && MovementJoystick.Instance.IsPointerOver(screenPos)) return;
             if (IsPointerOverBlockingUi(screenPos)) return;
 
@@ -330,6 +331,7 @@ namespace ProjectZx.Player
         {
             if (!GameSave.UsesTapHoldMovement) return;
             if (GameHud.Instance != null && GameHud.Instance.IsGamePaused) return;
+            if (HubUi.Instance != null && HubUi.Instance.IsAnyMenuOpen) return;
             if (MovementJoystick.Instance != null && MovementJoystick.Instance.IsPointerOver(screenPos)) return;
             if (IsPointerOverBlockingUi(screenPos)) return;
             TrySetMoveTarget(screenPos, true, movementAllowed: true);
@@ -465,6 +467,8 @@ namespace ProjectZx.Player
 
         bool TryHandleNpcTap(Vector2 world, bool isChase)
         {
+            if (HubUi.Instance != null && HubUi.Instance.IsAnyMenuOpen) return false;
+
             var npc = FindNpcAtTap(world);
             if (npc == null) return false;
 
@@ -488,6 +492,7 @@ namespace ProjectZx.Player
         void TryCompletePendingNpcInteract()
         {
             if (_pendingNpc == null) return;
+            if (HubUi.Instance != null && HubUi.Instance.IsAnyMenuOpen) return;
             if (!NpcInRange(_pendingNpc)) return;
 
             if (_pendingNpc.TryInteract(transform))
@@ -638,6 +643,9 @@ namespace ProjectZx.Player
 
         bool IsPointerOverBlockingUi(Vector2 screenPos)
         {
+            if (HubUi.Instance != null && HubUi.Instance.IsAnyMenuOpen)
+                return true;
+
             if (EventSystem.current == null) return false;
 
             var eventData = new PointerEventData(EventSystem.current) { position = screenPos };
@@ -652,7 +660,11 @@ namespace ProjectZx.Player
                 var image = result.gameObject.GetComponent<Image>();
                 if (image == null || !image.raycastTarget) continue;
                 var name = result.gameObject.name;
-                if (name == "ShopPanel" || name == "LoadoutPanel" || name == "StatsPanel" || name == "AchievementsPanel" || name == "MapPanel" || name == "LevelUpPanel" || name == "EpicTalentPanel" || name == "CampfirePanel" || name == "RetreatPanel" || name == "EquipmentPanel")
+                if (name == "ShopPanel" || name == "LoadoutPanel" || name == "StatsPanel"
+                    || name == "AchievementsPanel" || name == "MapPanel" || name == "LevelUpPanel"
+                    || name == "EpicTalentPanel" || name == "CampfirePanel" || name == "RetreatPanel"
+                    || name == "EquipmentPanel" || name == "SettingsPanel" || name == "QuestPanel"
+                    || name == "ShopInfoPanel")
                     return true;
             }
 

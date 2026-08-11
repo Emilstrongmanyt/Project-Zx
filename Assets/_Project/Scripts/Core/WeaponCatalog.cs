@@ -2,7 +2,8 @@ namespace ProjectZx.Core
 {
     /// <summary>
     /// Weapon material tiers (Admurin armory sets). Higher tiers swap sprites and grant
-    /// damage + attack-speed perks. Equipped tier is always the highest unlocked.
+    /// damage + attack-speed perks. Equipped tier is the highest unlocked for that weapon type
+    /// (player class), not a shared global unlock.
     /// </summary>
     public enum WeaponMaterialTier
     {
@@ -25,14 +26,15 @@ namespace ProjectZx.Core
     }
 
     /// <summary>
-    /// Permanent weapon upgrades from Dungeon + Unlimited Survival depth.
-    /// No attack-range bonus per tier — damage scales hard, attack speed lightly.
-    /// Fateful (Unlimited R100) adds AOE splash on hit.
+    /// Per-class weapon upgrades. Progress with a bat only upgrades Batter weapons, etc.
+    /// Iron = Dungeon R30 with that class; Unlimited R20–R100 for most materials;
+    /// Gold = 50,000 kills with that weapon type.
     /// </summary>
     public static class WeaponCatalog
     {
         public const int IronUnlockDungeonRound = 30;
         public const int SteelUnlockUnlimitedRound = 20;
+        public const int GoldUnlockKills = 50000;
 
         public const float AoeSplashRadius = 1.85f;
         public const float AoeSplashDamageFraction = 0.45f;
@@ -42,39 +44,60 @@ namespace ProjectZx.Core
         /// <summary>+2.5% attack speed per tier step above Wooden.</summary>
         public const float AttackSpeedBonusPerTier = 0.025f;
 
-        /// <summary>
-        /// Full progression using every Admurin material folder.
-        /// Iron = Dungeon R30; remaining = Unlimited R20–R100 (every 10 rounds).
-        /// R90–R100 span Crimson → Altair → Angelic → Fateful so all sets are used:
-        /// R90 Crimson, R100 steps the three legendaries with Fateful as the equipped capstone.
-        /// </summary>
-        public static WeaponMaterialTier GetUnlockedTier()
+        static PlayerClass ActiveClass =>
+            GameSessionContext.SelectedClass;
+
+        /// <summary>Highest material unlocked for the active run / selected class weapon.</summary>
+        public static WeaponMaterialTier GetUnlockedTier() =>
+            GetUnlockedTier(ActiveClass);
+
+        public static WeaponMaterialTier GetUnlockedTier(PlayerClass playerClass)
         {
+            GameSave.EnsureWeaponProgressMigrated();
+
             var tier = WeaponMaterialTier.Wooden;
 
-            if (IsIronUnlocked())
+            if (IsIronUnlocked(playerClass))
                 tier = WeaponMaterialTier.Iron;
 
-            var u = GameSave.UnlimitedHighestRoundReached;
+            var u = GameSave.GetWeaponUnlimitedBest(playerClass);
             if (u >= 20) tier = WeaponMaterialTier.Steel;
             if (u >= 30) tier = WeaponMaterialTier.Copper;
             if (u >= 40) tier = WeaponMaterialTier.Silver;
-            if (u >= 50) tier = WeaponMaterialTier.Gold;
+            if (IsGoldUnlocked(playerClass)) tier = WeaponMaterialTier.Gold;
             if (u >= 60) tier = WeaponMaterialTier.Cobalt;
             if (u >= 70) tier = WeaponMaterialTier.Platinum;
             if (u >= 80) tier = WeaponMaterialTier.Adamantine;
             if (u >= 90) tier = WeaponMaterialTier.Crimson;
-            // R100 capstone. Altair/Angelic art is in Resources for a future mid-tier unlock.
             if (u >= 100) tier = WeaponMaterialTier.Fateful;
 
             return tier;
         }
 
-        public static bool IsIronUnlocked() =>
-            GameSave.DungeonHighestRoundReached >= IronUnlockDungeonRound
-            || GameSave.DungeonSurvivalCleared;
+        public static bool IsIronUnlocked() => IsIronUnlocked(ActiveClass);
 
-        public static bool HasAoeSplash() => GetUnlockedTier() == WeaponMaterialTier.Fateful;
+        public static bool IsIronUnlocked(PlayerClass playerClass) =>
+            GameSave.GetWeaponDungeonBest(playerClass) >= IronUnlockDungeonRound;
+
+        public static bool IsGoldUnlocked(PlayerClass playerClass) =>
+            GameSave.GetWeaponKillCount(playerClass) >= GoldUnlockKills;
+
+        public static bool HasAoeSplash() => HasAoeSplash(ActiveClass);
+
+        public static bool HasAoeSplash(PlayerClass playerClass) =>
+            GetUnlockedTier(playerClass) == WeaponMaterialTier.Fateful;
+
+        /// <summary>True if any class has unlocked at least this tier (achievements / UI).</summary>
+        public static bool AnyClassHasTier(WeaponMaterialTier tier)
+        {
+            foreach (PlayerClass c in System.Enum.GetValues(typeof(PlayerClass)))
+            {
+                if (TierIndex(GetUnlockedTier(c)) >= TierIndex(tier))
+                    return true;
+            }
+
+            return false;
+        }
 
         /// <summary>Power rank for damage/AS (Altair/Angelic reserved sets do not inflate equipped power).</summary>
         public static int TierIndex(WeaponMaterialTier tier)
@@ -123,7 +146,13 @@ namespace ProjectZx.Core
         public static float AttackRangeMultiplier(WeaponMaterialTier tier) => 1f;
 
         public static float DamageMultiplier() => DamageMultiplier(GetUnlockedTier());
+        public static float DamageMultiplier(PlayerClass playerClass) =>
+            DamageMultiplier(GetUnlockedTier(playerClass));
+
         public static float AttackSpeedMultiplier() => AttackSpeedMultiplier(GetUnlockedTier());
+        public static float AttackSpeedMultiplier(PlayerClass playerClass) =>
+            AttackSpeedMultiplier(GetUnlockedTier(playerClass));
+
         public static float AttackRangeMultiplier() => 1f;
 
         static string MaterialSuffix(WeaponMaterialTier tier) => tier switch
@@ -167,12 +196,26 @@ namespace ProjectZx.Core
         }
 
         public static string GetResourceName(PlayerClass playerClass) =>
-            GetResourceName(playerClass, GetUnlockedTier());
+            GetResourceName(playerClass, GetUnlockedTier(playerClass));
 
-        public static string TryNotifyUnlimitedTierUnlock(int previousBest, int newBest)
+        public static string GetClassDisplayName(PlayerClass playerClass) => playerClass switch
+        {
+            PlayerClass.Spearman => "Spearman",
+            PlayerClass.Bowman => "Bowman",
+            PlayerClass.Magician => "Magician",
+            PlayerClass.Samurai => "Samurai",
+            _ => "Batter"
+        };
+
+        /// <summary>
+        /// Banner when a new Unlimited material tier unlocks for the class that earned it.
+        /// </summary>
+        public static string TryNotifyUnlimitedTierUnlock(
+            PlayerClass playerClass, int previousBest, int newBest)
         {
             string best = null;
             var bestRound = -1;
+            var weapon = GetClassDisplayName(playerClass);
 
             void Consider(int round, string message)
             {
@@ -183,29 +226,47 @@ namespace ProjectZx.Core
                 }
             }
 
-            Consider(20, "Steel weapons unlocked! (+40% damage, +5% attack speed)");
-            Consider(30, "Copper weapons unlocked!");
-            Consider(40, "Silver weapons unlocked!");
-            Consider(50, "Gold weapons unlocked!");
-            Consider(60, "Cobalt weapons unlocked!");
-            Consider(70, "Platinum weapons unlocked!");
-            Consider(80, "Adamantine weapons unlocked!");
-            Consider(90, "Crimson weapons unlocked!");
-            Consider(100, "Fateful weapons unlocked! (+AOE splash on hit)");
+            Consider(20, $"{weapon} Steel unlocked! (+40% damage, +5% attack speed)");
+            Consider(30, $"{weapon} Copper unlocked!");
+            Consider(40, $"{weapon} Silver unlocked!");
+            // Gold is kill-based (not Unlimited R50).
+            Consider(60, $"{weapon} Cobalt unlocked!");
+            Consider(70, $"{weapon} Platinum unlocked!");
+            Consider(80, $"{weapon} Adamantine unlocked!");
+            Consider(90, $"{weapon} Crimson unlocked!");
+            Consider(100, $"{weapon} Fateful unlocked! (+AOE splash on hit)");
             return best;
         }
 
-        public static string TryNotifyDungeonIronUnlock(int previousBest, int newBest)
+        public static string TryNotifyDungeonIronUnlock(
+            PlayerClass playerClass, int previousBest, int newBest)
         {
             if (previousBest < IronUnlockDungeonRound && newBest >= IronUnlockDungeonRound)
-                return "Iron weapons unlocked! (+20% damage, +2.5% attack speed)";
+                return $"{GetClassDisplayName(playerClass)} Iron unlocked! (+20% damage, +2.5% attack speed)";
             return null;
         }
 
-        public static string GetUnlockProgressSummary()
+        public static string TryNotifyGoldUnlock(PlayerClass playerClass, int previousKills, int newKills)
         {
-            var iron = IsIronUnlocked() ? "Iron ✓" : $"Iron @ Dungeon R{IronUnlockDungeonRound}";
-            return $"{iron} · Unlimited best R{GameSave.UnlimitedHighestRoundReached} (Steel R20 … Fateful R100)";
+            if (previousKills < GoldUnlockKills && newKills >= GoldUnlockKills)
+                return $"{GetClassDisplayName(playerClass)} Gold unlocked! ({GoldUnlockKills:N0} kills with this weapon)";
+            return null;
         }
+
+        public static string GetUnlockProgressSummary(PlayerClass playerClass)
+        {
+            GameSave.EnsureWeaponProgressMigrated();
+            var iron = IsIronUnlocked(playerClass)
+                ? "Iron ✓"
+                : $"Iron @ Dungeon R{IronUnlockDungeonRound}";
+            var gold = IsGoldUnlocked(playerClass)
+                ? "Gold ✓"
+                : $"Gold @ {GameSave.GetWeaponKillCount(playerClass):N0}/{GoldUnlockKills:N0} kills";
+            var u = GameSave.GetWeaponUnlimitedBest(playerClass);
+            return $"{iron} · {gold} · Unlimited best R{u} (Steel R20 … Fateful R100, per weapon)";
+        }
+
+        public static string GetUnlockProgressSummary() =>
+            GetUnlockProgressSummary(ActiveClass);
     }
 }

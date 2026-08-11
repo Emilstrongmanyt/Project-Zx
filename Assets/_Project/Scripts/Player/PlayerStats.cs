@@ -653,11 +653,11 @@ namespace ProjectZx.Player
                 RunLevelChoice.CritDamage => "+25% Crit Damage",
                 RunLevelChoice.Lifesteal => "+3% Lifesteal",
                 RunLevelChoice.BossHunter => "+20% Damage vs Bosses",
-                RunLevelChoice.Execute => "+50% Damage under 25% HP",
+                RunLevelChoice.Execute => "+50% Damage under 25% HP (yours)",
                 RunLevelChoice.GoldFind => "+15% Gold Find",
                 RunLevelChoice.Regen => "+2 HP/sec out of combat",
                 RunLevelChoice.Shield => "Block 1 hit every 12s",
-                RunLevelChoice.Berserk => "+25% Damage under 40% HP",
+                RunLevelChoice.Berserk => "+25% Damage over 90% HP",
                 RunLevelChoice.XpBoost => "+15% XP Gain",
                 RunLevelChoice.Defense => "−8% Damage Taken",
                 RunLevelChoice.Block => "+5% Block Chance",
@@ -867,7 +867,7 @@ namespace ProjectZx.Player
                 sb.AppendLine(
                     $"Execute +{RunExecuteBonus * 100f:0}% / Edge +{RunExecutionEdgeBonus * 100f:0}%");
             if (RunBerserkBonus > 0f)
-                sb.AppendLine($"Berserk +{RunBerserkBonus * 100f:0}% under 40% HP");
+                sb.AppendLine($"Berserk +{RunBerserkBonus * 100f:0}% over 90% HP");
             if (RunRegenPerSecond > 0f)
                 sb.AppendLine($"Regen {RunRegenPerSecond:0.#}/s OOC");
             if (RunShieldUnlocked)
@@ -945,10 +945,17 @@ namespace ProjectZx.Player
                 if (session != null)
                 {
                     GameSave.RecordHighestRound(session.CurrentRound);
+                    var weaponClass = GameSessionContext.SelectedClass;
                     if (session.MapKind == SurvivalMapKind.Unlimited)
+                    {
                         GameSave.RecordUnlimitedRound(session.CurrentRound);
+                        GameSave.RecordWeaponUnlimitedRound(weaponClass, session.CurrentRound);
+                    }
                     else if (session.MapKind == SurvivalMapKind.Dungeon)
+                    {
                         GameSave.RecordDungeonRound(session.CurrentRound);
+                        GameSave.RecordWeaponDungeonRound(weaponClass, session.CurrentRound);
+                    }
                     else if (session.MapKind == SurvivalMapKind.Crypt)
                         GameSave.RecordCryptRound(session.CurrentRound);
                     Achievements.EvaluateWeaponTierAchievements();
@@ -989,8 +996,13 @@ namespace ProjectZx.Player
                 _invulnTimer = Mathf.Max(_invulnTimer, seconds);
         }
 
+        /// <summary>Berserk: bonus while the hero is healthy (over 90% HP).</summary>
         public bool IsBerserkActive =>
-            RunBerserkBonus > 0f && MaxHp > 0 && CurrentHp <= MaxHp * 0.4f;
+            RunBerserkBonus > 0f && MaxHp > 0 && CurrentHp >= MaxHp * 0.9f;
+
+        /// <summary>Execute talent: bonus while the hero is under 25% HP (not enemy HP).</summary>
+        public bool IsExecuteActive =>
+            RunExecuteBonus > 0f && MaxHp > 0 && CurrentHp <= MaxHp * 0.25f;
 
         public int RollDamage(EnemyActor target, float weaponMultiplier = 1f)
         {
@@ -998,6 +1010,10 @@ namespace ProjectZx.Player
 
             if (IsBerserkActive)
                 dmg *= 1f + RunBerserkBonus;
+
+            // Execute uses the hero's HP ratio, not the target's.
+            if (IsExecuteActive)
+                dmg *= 1f + RunExecuteBonus;
 
             if (target != null)
             {
@@ -1012,10 +1028,9 @@ namespace ProjectZx.Player
                 {
                     if (RunEpicNormalDamageBonus > 0f)
                         dmg *= 1f + RunEpicNormalDamageBonus;
-                    if (RunExecuteBonus > 0f && target.HpRatio <= 0.25f)
-                        dmg *= 1f + RunExecuteBonus;
                 }
 
+                // Executioner's Edge epic still keys off enemy HP.
                 if (RunExecutionEdgeBonus > 0f && target.HpRatio <= 0.3f)
                     dmg *= 1f + RunExecutionEdgeBonus;
             }

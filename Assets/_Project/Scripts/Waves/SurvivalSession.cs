@@ -361,7 +361,10 @@ namespace ProjectZx.Waves
             if (!enemy.IsAlive)
             {
                 EnemiesRemaining = Mathf.Max(0, EnemiesRemaining - 1);
-                GameSave.RecordEnemyKill(enemy.IsBoss);
+                var goldBanner = GameSave.RecordEnemyKillForWeapon(
+                    GameSessionContext.SelectedClass, enemy.IsBoss);
+                if (!string.IsNullOrEmpty(goldBanner))
+                    _hud?.ShowBanner(goldBanner, 4.5f);
             }
         }
 
@@ -386,19 +389,24 @@ namespace ProjectZx.Waves
         }
 
         /// <summary>
-        /// Tracks Dungeon / Unlimited depth for weapon material unlocks and banners.
+        /// Tracks Dungeon / Unlimited depth for weapon material unlocks (per class / weapon type).
         /// </summary>
         void TryRecordWeaponProgress(int round)
         {
             if (round <= 0) return;
 
+            var weaponClass = GameSessionContext.SelectedClass;
+
             if (MapKind == SurvivalMapKind.Dungeon)
             {
-                var previous = GameSave.DungeonHighestRoundReached;
-                if (GameSave.RecordDungeonRound(round))
+                // Global map depth (doors / achievements) still uses the shared best.
+                GameSave.RecordDungeonRound(round);
+
+                var previous = GameSave.GetWeaponDungeonBest(weaponClass);
+                if (GameSave.RecordWeaponDungeonRound(weaponClass, round))
                 {
                     var banner = WeaponCatalog.TryNotifyDungeonIronUnlock(
-                        previous, GameSave.DungeonHighestRoundReached);
+                        weaponClass, previous, GameSave.GetWeaponDungeonBest(weaponClass));
                     if (!string.IsNullOrEmpty(banner))
                         _hud?.ShowBanner(banner, 4.5f);
                 }
@@ -417,11 +425,13 @@ namespace ProjectZx.Waves
 
             if (MapKind != SurvivalMapKind.Unlimited) return;
 
-            var prevUnlimited = GameSave.UnlimitedHighestRoundReached;
-            if (GameSave.RecordUnlimitedRound(round))
+            GameSave.RecordUnlimitedRound(round);
+
+            var prevUnlimited = GameSave.GetWeaponUnlimitedBest(weaponClass);
+            if (GameSave.RecordWeaponUnlimitedRound(weaponClass, round))
             {
                 var unlimitedBanner = WeaponCatalog.TryNotifyUnlimitedTierUnlock(
-                    prevUnlimited, GameSave.UnlimitedHighestRoundReached);
+                    weaponClass, prevUnlimited, GameSave.GetWeaponUnlimitedBest(weaponClass));
                 if (!string.IsNullOrEmpty(unlimitedBanner))
                     _hud?.ShowBanner(unlimitedBanner, 4.5f);
             }

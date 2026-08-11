@@ -62,8 +62,86 @@ namespace ProjectZx.Core
         const string QuestGwpAcceptedKey = "zx_quest_gwp_accepted";
         const string QuestGwpCompletedKey = "zx_quest_gwp_completed";
         const string TwinLightningPendantKey = "zx_item_twin_lightning_pendant";
+        const string WeaponProgressMigratedKey = "zx_weapon_progress_migrated_v1";
 
         public static int LastRunGoldBanked { get; set; }
+
+        static string WeaponKillsKey(PlayerClass c) => $"zx_weapon_kills_{(int)c}";
+        static string WeaponDungeonKey(PlayerClass c) => $"zx_weapon_dungeon_{(int)c}";
+        static string WeaponUnlimitedKey(PlayerClass c) => $"zx_weapon_unlimited_{(int)c}";
+
+        /// <summary>
+        /// One-time: copy legacy global Dungeon/Unlimited bests onto every class so existing
+        /// players keep their weapon tiers. Gold (now kill-based) is seeded if they had R50+.
+        /// New progress is always recorded only for the class that earned it.
+        /// </summary>
+        public static void EnsureWeaponProgressMigrated()
+        {
+            if (PlayerPrefs.GetInt(WeaponProgressMigratedKey, 0) == 1) return;
+
+            var globalDungeon = DungeonHighestRoundReached;
+            var globalUnlimited = UnlimitedHighestRoundReached;
+            var seedGoldKills = globalUnlimited >= 50 ? WeaponCatalog.GoldUnlockKills : 0;
+
+            foreach (PlayerClass c in System.Enum.GetValues(typeof(PlayerClass)))
+            {
+                if (!PlayerPrefs.HasKey(WeaponDungeonKey(c)))
+                    PlayerPrefs.SetInt(WeaponDungeonKey(c), globalDungeon);
+                if (!PlayerPrefs.HasKey(WeaponUnlimitedKey(c)))
+                    PlayerPrefs.SetInt(WeaponUnlimitedKey(c), globalUnlimited);
+                if (!PlayerPrefs.HasKey(WeaponKillsKey(c)))
+                    PlayerPrefs.SetInt(WeaponKillsKey(c), seedGoldKills);
+            }
+
+            PlayerPrefs.SetInt(WeaponProgressMigratedKey, 1);
+            PlayerPrefs.Save();
+        }
+
+        public static int GetWeaponKillCount(PlayerClass playerClass)
+        {
+            EnsureWeaponProgressMigrated();
+            return Mathf.Max(0, PlayerPrefs.GetInt(WeaponKillsKey(playerClass), 0));
+        }
+
+        /// <summary>Returns previous kill count before the increment (for unlock banners).</summary>
+        public static int AddWeaponKill(PlayerClass playerClass)
+        {
+            EnsureWeaponProgressMigrated();
+            var prev = GetWeaponKillCount(playerClass);
+            PlayerPrefs.SetInt(WeaponKillsKey(playerClass), prev + 1);
+            PlayerPrefs.Save();
+            return prev;
+        }
+
+        public static int GetWeaponDungeonBest(PlayerClass playerClass)
+        {
+            EnsureWeaponProgressMigrated();
+            return Mathf.Max(0, PlayerPrefs.GetInt(WeaponDungeonKey(playerClass), 0));
+        }
+
+        public static bool RecordWeaponDungeonRound(PlayerClass playerClass, int round)
+        {
+            EnsureWeaponProgressMigrated();
+            if (round <= GetWeaponDungeonBest(playerClass)) return false;
+            PlayerPrefs.SetInt(WeaponDungeonKey(playerClass), round);
+            PlayerPrefs.Save();
+            return true;
+        }
+
+        public static int GetWeaponUnlimitedBest(PlayerClass playerClass)
+        {
+            EnsureWeaponProgressMigrated();
+            return Mathf.Max(0, PlayerPrefs.GetInt(WeaponUnlimitedKey(playerClass), 0));
+        }
+
+        public static bool RecordWeaponUnlimitedRound(PlayerClass playerClass, int round)
+        {
+            EnsureWeaponProgressMigrated();
+            if (round <= GetWeaponUnlimitedBest(playerClass)) return false;
+            PlayerPrefs.SetInt(WeaponUnlimitedKey(playerClass), round);
+            PlayerPrefs.Save();
+            return true;
+        }
 
         public static int Gold
         {
@@ -651,6 +729,19 @@ namespace ProjectZx.Core
                 LifetimeZombieKills++;
 
             Achievements.EvaluateKillAchievements();
+        }
+
+        /// <summary>
+        /// Lifetime kill + per-weapon kill for material unlocks. Returns gold-unlock banner if any.
+        /// </summary>
+        public static string RecordEnemyKillForWeapon(PlayerClass playerClass, bool isBoss)
+        {
+            RecordEnemyKill(isBoss);
+            var prev = AddWeaponKill(playerClass);
+            var now = prev + 1;
+            var banner = WeaponCatalog.TryNotifyGoldUnlock(playerClass, prev, now);
+            Achievements.EvaluateWeaponTierAchievements();
+            return banner;
         }
 
         public static void RecordDeath() => LifetimeDeaths++;

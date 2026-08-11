@@ -1761,9 +1761,9 @@ namespace ProjectZx.UI
 
             var selected = GameSave.SelectedClass;
             var className = GetClassDisplayName(selected);
-            var weaponTier = WeaponCatalog.GetUnlockedTier();
+            var weaponTier = WeaponCatalog.GetUnlockedTier(selected);
             var baseDamage = 10f * GameSave.DamageMultiplier * EquipmentCatalog.CombinedDamageMultiplier()
-                * WeaponCatalog.DamageMultiplier();
+                * WeaponCatalog.DamageMultiplier(selected);
             if (selected == PlayerClass.Bowman) baseDamage *= 1.4f;
             else if (selected == PlayerClass.Spearman) baseDamage *= 1.15f;
             else if (selected == PlayerClass.Samurai) baseDamage *= 0.7f;
@@ -1821,7 +1821,7 @@ namespace ProjectZx.UI
                 $"Dungeon Best: {GameSave.DungeonHighestRoundReached}\n" +
                 $"Crypt Best: {GameSave.CryptHighestRoundReached}\n" +
                 $"Unlimited Best: {GameSave.UnlimitedHighestRoundReached}\n" +
-                $"Weapons: {WeaponCatalog.GetUnlockProgressSummary()}";
+                $"Weapons ({className}): {WeaponCatalog.GetUnlockProgressSummary(selected)}";
         }
 
         static string EquipName(EquipmentId id)
