@@ -30,6 +30,9 @@ namespace ProjectZx.Combat
                 var fx = existing.GetComponent<FlameEnchantVfx>();
                 if (fx != null)
                 {
+                    existing.localPosition = localPos;
+                    existing.localScale = Vector3.one * scale;
+                    fx._kind = kind;
                     fx.gameObject.SetActive(true);
                     return fx;
                 }

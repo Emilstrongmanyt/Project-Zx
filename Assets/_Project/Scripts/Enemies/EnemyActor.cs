@@ -28,6 +28,8 @@ namespace ProjectZx.Enemies
         const int FireBreathSortOffset = 40;
         /// <summary>Cosine of half-angle for breath damage cone (~35° half-angle — tighter to VFX).</summary>
         const float FireBreathConeDot = 0.82f;
+        /// <summary>Bosses keep chasing while breathing, at reduced speed.</summary>
+        const float FireBreathMoveSpeedMultiplier = 0.6f;
         const float CastSkin = 0.1f;
         /// <summary>Frost Tip: keep 40% speed for 1 second (−60% move).</summary>
         const float ChillSpeedMultiplier = 0.4f;
@@ -466,7 +468,8 @@ namespace ProjectZx.Enemies
         void EnsureBurnVfx()
         {
             if (_burnVfx == null)
-                _burnVfx = FlameEnchantVfx.Attach(transform, FlameEnchantVfx.FlameKind.EnemyBurn, new Vector3(0f, 0.35f, 0f), 0.85f);
+                // ~1/10 prior size — burn is a body spark, not a full-size flame sheet.
+                _burnVfx = FlameEnchantVfx.Attach(transform, FlameEnchantVfx.FlameKind.EnemyBurn, new Vector3(0f, 0.2f, 0f), 0.08f);
             else
                 _burnVfx.SetActive(true);
         }
@@ -540,14 +543,11 @@ namespace ProjectZx.Enemies
         void FixedUpdate()
         {
             if (!IsAlive || _player == null) return;
-            if (_fireBreathing)
-            {
-                _rb.linearVelocity = Vector2.zero;
-                return;
-            }
 
             // Hold still while casting a ranged bolt or swinging in melee.
-            if ((IsRanged && _rangedAttackAnimTimer > 0f) || _meleeAttackAnimTimer > 0f)
+            // Fire-breath bosses still move (at FireBreathMoveSpeedMultiplier via GetMoveSpeed).
+            if (!_fireBreathing
+                && ((IsRanged && _rangedAttackAnimTimer > 0f) || _meleeAttackAnimTimer > 0f))
             {
                 _rb.linearVelocity = Vector2.zero;
                 UpdateFacingToward(_player.position);
@@ -563,7 +563,12 @@ namespace ProjectZx.Enemies
 
             var dist = toPlayer.magnitude;
             Vector2 dir;
-            if (IsRanged)
+            if (_fireBreathing)
+            {
+                // Keep pressure while the stream is active — still walk toward the player.
+                dir = toPlayer.normalized;
+            }
+            else if (IsRanged)
             {
                 // Kite: close if too far, back off if too close, hold preferred band.
                 if (dist > RangedPreferredMax)
@@ -739,6 +744,7 @@ namespace ProjectZx.Enemies
             var speed = _speed;
             if (_sprinting) speed *= SprintSpeedMultiplier;
             if (IsChilled) speed *= ChillSpeedMultiplier;
+            if (_fireBreathing) speed *= FireBreathMoveSpeedMultiplier;
             if (IsFlying)
             {
                 var cap = ResolvePlayerMoveSpeedCap();

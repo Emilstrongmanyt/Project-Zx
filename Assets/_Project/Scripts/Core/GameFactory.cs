@@ -500,7 +500,14 @@ namespace ProjectZx.Core
             {
                 AttachCombatForClass(go, playerClass);
                 if (GameSave.FlameEnchantUnlocked)
-                    Combat.FlameEnchantVfx.Attach(go.transform, Combat.FlameEnchantVfx.FlameKind.Weapon, new Vector3(0.35f, 0.15f, 0f), 0.7f);
+                {
+                    // Half prior scale; lower Y so the flame sits on the weapon, not the torso.
+                    Combat.FlameEnchantVfx.Attach(
+                        go.transform,
+                        Combat.FlameEnchantVfx.FlameKind.Weapon,
+                        new Vector3(0.32f, -0.22f, 0f),
+                        0.35f);
+                }
             }
 
             return go;
