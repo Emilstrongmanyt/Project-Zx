@@ -61,6 +61,9 @@ namespace ProjectZx.Core
         const string EquippedCapeKey = "zx_equipped_cape";
         const string QuestGwpAcceptedKey = "zx_quest_gwp_accepted";
         const string QuestGwpCompletedKey = "zx_quest_gwp_completed";
+        const string QuestCrowAcceptedKey = "zx_quest_crow_accepted";
+        const string QuestCrowRescuedKey = "zx_quest_crow_rescued";
+        const string QuestCrowCompletedKey = "zx_quest_crow_completed";
         const string TwinLightningPendantKey = "zx_item_twin_lightning_pendant";
         const string WeaponProgressMigratedKey = "zx_weapon_progress_migrated_v1";
         const string RollZySkinKey = "zx_rollzy_skin";
@@ -70,6 +73,7 @@ namespace ProjectZx.Core
         static string WeaponKillsKey(PlayerClass c) => $"zx_weapon_kills_{(int)c}";
         static string WeaponDungeonKey(PlayerClass c) => $"zx_weapon_dungeon_{(int)c}";
         static string WeaponUnlimitedKey(PlayerClass c) => $"zx_weapon_unlimited_{(int)c}";
+        static string WeaponEquippedKey(PlayerClass c) => $"zx_weapon_equipped_{(int)c}";
 
         /// <summary>
         /// One-time: copy legacy global Dungeon/Unlimited bests onto every class so existing
@@ -858,6 +862,63 @@ namespace ProjectZx.Core
                 PlayerPrefs.SetInt(TwinLightningPendantKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
+        }
+
+        /// <summary>Grey Wizard's Crow — accepted from the Grand Wizard.</summary>
+        public static bool QuestGreyWizardAccepted
+        {
+            get => PlayerPrefs.GetInt(QuestCrowAcceptedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestCrowAcceptedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Crow freed on Inside Survival; Grey Wizard returns to camp.</summary>
+        public static bool QuestGreyWizardRescued
+        {
+            get => PlayerPrefs.GetInt(QuestCrowRescuedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestCrowRescuedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestGreyWizardCompleted
+        {
+            get => PlayerPrefs.GetInt(QuestCrowCompletedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestCrowCompletedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>
+        /// Equipped material for a class weapon. Defaults to the highest unlocked tier.
+        /// Always clamped so saved values cannot exceed current unlocks.
+        /// </summary>
+        public static WeaponMaterialTier GetEquippedWeaponTier(PlayerClass playerClass)
+        {
+            EnsureWeaponProgressMigrated();
+            var max = WeaponCatalog.GetUnlockedTier(playerClass);
+            if (!PlayerPrefs.HasKey(WeaponEquippedKey(playerClass)))
+                return max;
+
+            var stored = (WeaponMaterialTier)PlayerPrefs.GetInt(
+                WeaponEquippedKey(playerClass), (int)WeaponMaterialTier.Wooden);
+            if (!WeaponCatalog.IsTierUnlocked(playerClass, stored))
+                return max;
+            return stored;
+        }
+
+        public static void SetEquippedWeaponTier(PlayerClass playerClass, WeaponMaterialTier tier)
+        {
+            if (!WeaponCatalog.IsTierUnlocked(playerClass, tier)) return;
+            PlayerPrefs.SetInt(WeaponEquippedKey(playerClass), (int)tier);
+            PlayerPrefs.Save();
         }
     }
 }

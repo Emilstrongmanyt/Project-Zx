@@ -79,6 +79,9 @@ namespace ProjectZx.UI
         Text _techniqueStatusText;
         Button _techniqueStandardButton;
         Button _techniqueSpecialButton;
+        Text _weaponTierStatusText;
+        Button _weaponTierPrevButton;
+        Button _weaponTierNextButton;
         Button _movementJoystickButton;
         Button _movementTapHoldButton;
         Button _rollZyClassicSkinButton;
@@ -420,25 +423,32 @@ namespace ProjectZx.UI
         GameObject BuildLoadoutPanel(Transform parent)
         {
             var panel = CreateDialogPanel(parent, "LoadoutPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
-            CreateText(panel.transform, "Build Loadout", 38, TextAnchor.MiddleCenter, new Vector2(0, 350), new Vector2(620, 52));
-            CreateText(panel.transform, "Class is saved per hero. Swap heroes at camp to set the companion build.\nMovement & audio live in Settings.", 18, TextAnchor.MiddleCenter, new Vector2(0, 300), new Vector2(820, 48));
+            CreateText(panel.transform, "Build Loadout", 38, TextAnchor.MiddleCenter, new Vector2(0, 360), new Vector2(620, 52));
+            CreateText(panel.transform, "Class is saved per hero. Swap heroes at camp to set the companion build.\nMovement & audio live in Settings.", 18, TextAnchor.MiddleCenter, new Vector2(0, 312), new Vector2(820, 48));
 
             // Class section (3 rows: Batter/Spearman, Bowman/Samurai, Magician)
-            _loadoutClassPicker = BuildClassPicker(panel.transform, 250f, 205f, 130f);
+            _loadoutClassPicker = BuildClassPicker(panel.transform, 255f, 210f, 135f);
 
             // Technique section under Magician row
-            CreateText(panel.transform, "Attack Technique", 28, TextAnchor.MiddleCenter, new Vector2(0, -80), new Vector2(620, 40));
-            _techniqueStatusText = CreateText(panel.transform, "", 20, TextAnchor.MiddleCenter, new Vector2(0, -126), new Vector2(780, 52));
+            CreateText(panel.transform, "Attack Technique", 26, TextAnchor.MiddleCenter, new Vector2(0, -55), new Vector2(620, 36));
+            _techniqueStatusText = CreateText(panel.transform, "", 18, TextAnchor.MiddleCenter, new Vector2(0, -95), new Vector2(780, 44));
             _techniqueStatusText.alignment = TextAnchor.UpperCenter;
-            _techniqueStandardButton = CreateButton(panel.transform, "Standard", new Vector2(-160, -200), () => SelectAttackMode(AttackMode.Standard));
-            _techniqueSpecialButton = CreateButton(panel.transform, "Special", new Vector2(160, -200), SelectSpecialAttackMode);
+            _techniqueStandardButton = CreateButton(panel.transform, "Standard", new Vector2(-160, -155), () => SelectAttackMode(AttackMode.Standard));
+            _techniqueSpecialButton = CreateButton(panel.transform, "Special", new Vector2(160, -155), SelectSpecialAttackMode);
 
-            CreateButton(panel.transform, "Back to Shop", new Vector2(-160, -300), () =>
+            // Weapon material quality (any unlocked tier)
+            CreateText(panel.transform, "Weapon Quality", 26, TextAnchor.MiddleCenter, new Vector2(0, -215), new Vector2(620, 36));
+            _weaponTierStatusText = CreateText(panel.transform, "", 18, TextAnchor.MiddleCenter, new Vector2(0, -255), new Vector2(820, 40));
+            _weaponTierStatusText.alignment = TextAnchor.UpperCenter;
+            _weaponTierPrevButton = CreateButton(panel.transform, "◀ Lower", new Vector2(-160, -305), () => CycleWeaponTier(-1));
+            _weaponTierNextButton = CreateButton(panel.transform, "Higher ▶", new Vector2(160, -305), () => CycleWeaponTier(1));
+
+            CreateButton(panel.transform, "Back to Shop", new Vector2(-160, -375), () =>
             {
                 panel.SetActive(false);
                 OpenShop();
             });
-            CreateButton(panel.transform, "Close", new Vector2(160, -300), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Close", new Vector2(160, -375), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
@@ -705,15 +715,41 @@ namespace ProjectZx.UI
             // Dialogue layout: Stone border, portrait left, quest copy right.
             var panel = CreateDialogPanel(parent, "QuestPanel", Vector2.zero, new Vector2(980f, 560f), ArtLibrary.ShopUi);
 
+            // Stone frame around the talking portrait.
+            var frameGo = new GameObject("PortraitFrame");
+            frameGo.transform.SetParent(panel.transform, false);
+            var frameRect = frameGo.AddComponent<RectTransform>();
+            frameRect.anchorMin = new Vector2(0.5f, 0.5f);
+            frameRect.anchorMax = new Vector2(0.5f, 0.5f);
+            frameRect.pivot = new Vector2(0.5f, 0.5f);
+            frameRect.anchoredPosition = new Vector2(-300f, 20f);
+            frameRect.sizeDelta = new Vector2(280f, 280f);
+            var frameImage = frameGo.AddComponent<Image>();
+            if (StoneUi.ItemFrame != null)
+            {
+                frameImage.sprite = StoneUi.ItemFrame;
+                frameImage.type = Image.Type.Sliced;
+                frameImage.pixelsPerUnitMultiplier = 0.85f;
+            }
+            else if (StoneUi.PanelFrameAlt != null)
+            {
+                frameImage.sprite = StoneUi.PanelFrameAlt;
+                frameImage.type = Image.Type.Sliced;
+            }
+            else
+            {
+                frameImage.color = new Color(0.35f, 0.28f, 0.22f, 0.95f);
+            }
+
             var portraitGo = new GameObject("WizardPortrait");
-            portraitGo.transform.SetParent(panel.transform, false);
+            portraitGo.transform.SetParent(frameGo.transform, false);
             var portraitRect = portraitGo.AddComponent<RectTransform>();
             portraitRect.anchorMin = new Vector2(0.5f, 0.5f);
             portraitRect.anchorMax = new Vector2(0.5f, 0.5f);
             portraitRect.pivot = new Vector2(0.5f, 0.5f);
-            portraitRect.anchoredPosition = new Vector2(-300f, 20f);
+            portraitRect.anchoredPosition = Vector2.zero;
             // Each talk frame is 64×64 (2×3 grid inside 128×192).
-            portraitRect.sizeDelta = new Vector2(240f, 240f);
+            portraitRect.sizeDelta = new Vector2(220f, 220f);
             _questPortraitImage = portraitGo.AddComponent<Image>();
             _questPortraitImage.sprite = ArtLibrary.WizardPortrait;
             _questPortraitImage.preserveAspect = true;
@@ -803,7 +839,9 @@ namespace ProjectZx.UI
                 _questStatusText.text = progress switch
                 {
                     QuestProgress.Available => $"Available  ·  Reward: {def.GoldReward} Gold",
-                    QuestProgress.Active => "In progress  ·  Retrieve the pendant from Outside R20",
+                    QuestProgress.Active => string.IsNullOrEmpty(def.ActiveStatusHint)
+                        ? "In progress"
+                        : def.ActiveStatusHint,
                     QuestProgress.ReadyToTurnIn => $"Ready to turn in  ·  Reward: {def.GoldReward} Gold",
                     QuestProgress.Completed => "Completed",
                     _ => "Locked"
@@ -1037,6 +1075,41 @@ namespace ProjectZx.UI
         {
             RefreshClassPicker(_loadoutClassPicker);
             RefreshTechniquePicker();
+            RefreshWeaponTierPicker();
+        }
+
+        void CycleWeaponTier(int direction)
+        {
+            var playerClass = GameSave.SelectedClass;
+            var tiers = WeaponCatalog.GetSelectableTiers(playerClass);
+            if (tiers.Count == 0) return;
+
+            var current = GameSave.GetEquippedWeaponTier(playerClass);
+            var index = tiers.IndexOf(current);
+            if (index < 0) index = tiers.Count - 1;
+            index = (index + direction + tiers.Count) % tiers.Count;
+            GameSave.SetEquippedWeaponTier(playerClass, tiers[index]);
+            RefreshWeaponTierPicker();
+        }
+
+        void RefreshWeaponTierPicker()
+        {
+            var playerClass = GameSave.SelectedClass;
+            var equipped = GameSave.GetEquippedWeaponTier(playerClass);
+            var max = WeaponCatalog.GetUnlockedTier(playerClass);
+            var tiers = WeaponCatalog.GetSelectableTiers(playerClass);
+
+            if (_weaponTierStatusText != null)
+            {
+                _weaponTierStatusText.text = tiers.Count <= 1
+                    ? $"Wooden only — unlock Iron (Dungeon R30) and higher materials for this weapon."
+                    : $"Equipped: {WeaponCatalog.GetTierName(equipped)}  ·  {WeaponCatalog.GetPerkSummary(equipped)}\n"
+                      + $"Highest unlocked: {WeaponCatalog.GetTierName(max)}";
+            }
+
+            var canCycle = tiers.Count > 1;
+            if (_weaponTierPrevButton != null) _weaponTierPrevButton.interactable = canCycle;
+            if (_weaponTierNextButton != null) _weaponTierNextButton.interactable = canCycle;
         }
 
         void RefreshTechniquePicker()
@@ -1818,7 +1891,7 @@ namespace ProjectZx.UI
 
             var selected = GameSave.SelectedClass;
             var className = GetClassDisplayName(selected);
-            var weaponTier = WeaponCatalog.GetUnlockedTier(selected);
+            var weaponTier = WeaponCatalog.GetEquippedTier(selected);
             var baseDamage = 10f * GameSave.DamageMultiplier * EquipmentCatalog.CombinedDamageMultiplier()
                 * WeaponCatalog.DamageMultiplier(selected);
             if (selected == PlayerClass.Bowman) baseDamage *= 1.4f;

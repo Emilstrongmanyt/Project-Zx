@@ -91,8 +91,14 @@ namespace ProjectZx.Core
                     tile.AddComponent<WaterTile>();
                     var waterCol = tile.AddComponent<BoxCollider2D>();
                     // Local size so world collider matches one tile after scale is applied.
+                    // Inset + edgeRadius rounds corners so players slide instead of snagging.
                     var scale = Mathf.Max(0.001f, tile.transform.localScale.x);
-                    waterCol.size = Vector2.one * (tileSize / scale);
+                    const float worldInset = 0.14f;
+                    const float worldEdgeRadius = 0.1f;
+                    var localEdge = worldEdgeRadius / scale;
+                    var localInner = Mathf.Max(0.05f, (tileSize - worldInset * 2f - worldEdgeRadius * 2f) / scale);
+                    waterCol.size = Vector2.one * localInner;
+                    waterCol.edgeRadius = localEdge;
                     waterCol.isTrigger = false;
                 }
                 tile.transform.SetParent(root.transform, true);
@@ -497,18 +503,7 @@ namespace ProjectZx.Core
             stats.ConfigureForRun(survivalMode);
 
             if (survivalMode)
-            {
                 AttachCombatForClass(go, playerClass);
-                if (GameSave.FlameEnchantUnlocked)
-                {
-                    // Half prior scale; lower Y so the flame sits on the weapon, not the torso.
-                    Combat.FlameEnchantVfx.Attach(
-                        go.transform,
-                        Combat.FlameEnchantVfx.FlameKind.Weapon,
-                        new Vector3(0.32f, -0.22f, 0f),
-                        0.35f);
-                }
-            }
 
             return go;
         }

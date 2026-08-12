@@ -71,14 +71,24 @@ namespace ProjectZx.Core
             const float campNpcScale = 0.38f * 1.25f;
             GameFactory.CreateNpc("WizardShop", ArtLibrary.Wizard, new Vector3(-2.1f, 1.1f), () => hub.OpenShop(), campNpcScale);
             GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(2.1f, 1.1f), () => hub.OpenMapSelect(), campNpcScale);
-            // Quest giver — idle uses only frame 0 of the 16×32 Wizard Sprite (no walk loop at camp).
-            // Sheet is short at 100 PPU; scaled up so he reads next to other camp NPCs.
+            // Grand Wizard (PurpleWizard 128×256 @ 100 PPU) — modest scale vs the old 16×32 blow-up.
             GameFactory.CreateNpc(
                 "QuestWizard",
                 ArtLibrary.QuestWizard,
                 new Vector3(5.0f, 1.1f),
                 () => hub.OpenQuestGiver(),
-                campNpcScale * 2.4f * 3f * 2f);
+                campNpcScale * 1.85f);
+            // Grey Wizard returns to camp after the crow rescue (and stays after turn-in).
+            if (GameSave.QuestGreyWizardRescued || GameSave.QuestGreyWizardCompleted)
+            {
+                var grey = GameFactory.CreateSprite(
+                    "GreyWizard",
+                    ArtLibrary.GreyWizard,
+                    new Vector3(6.35f, 1.05f),
+                    campNpcScale * 1.85f,
+                    6);
+                grey.AddComponent<YSortRenderer>().Configure(3);
+            }
             // Layer Lab stage frame + trophy composite (readable world prop).
             GameFactory.CreateNpc("AchievementBoard", ArtLibrary.AchievementKeeper, new Vector3(0f, 2.8f), () => hub.OpenAchievements(), 0.55f);
             // Layer Lab gold lucky-box chest.

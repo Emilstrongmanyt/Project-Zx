@@ -89,6 +89,8 @@ namespace ProjectZx.Core
             _wizard = null;
             _questWizard = null;
             _questWizardFrames = null;
+            _greyWizard = null;
+            _darkBird = null;
             _wizardPortraitFrames = null;
             _twinLightningPendant = null;
             _knight = null;
@@ -165,6 +167,8 @@ namespace ProjectZx.Core
         static Sprite _wizard;
         static Sprite _questWizard;
         static Sprite[] _questWizardFrames;
+        static Sprite _greyWizard;
+        static Sprite _darkBird;
         static Sprite[] _wizardPortraitFrames;
         static Sprite _twinLightningPendant;
         static Sprite _knight;
@@ -285,11 +289,19 @@ namespace ProjectZx.Core
         public static Sprite Btn200x52 => _btn200x52 ??= Load("btn_200x52", "btn_primary");
         public static Sprite Btn360x56 => _btn360x56 ??= Load("btn_360x56", "btn_primary");
         public static Sprite Wizard => _wizard ??= Load("Placeholders/wizard", "WizardNpc");
-        /// <summary>Camp quest-giver world sprite — first 16×32 frame from Wizard Sprite sheet.</summary>
+        /// <summary>Camp Grand Wizard (PurpleWizard 128×256). Falls back to legacy Wizard Sprite.</summary>
         public static Sprite QuestWizard =>
-            _questWizard ??= (QuestWizardFrames != null && QuestWizardFrames.Length > 0
-                ? QuestWizardFrames[0]
-                : null) ?? Wizard;
+            _questWizard ??= FirstSheetFrame("PurpleWizard")
+                             ?? (QuestWizardFrames != null && QuestWizardFrames.Length > 0
+                                 ? QuestWizardFrames[0]
+                                 : null)
+                             ?? Wizard;
+        /// <summary>Rescued Grey Wizard camp NPC (128×256).</summary>
+        public static Sprite GreyWizard =>
+            _greyWizard ??= FirstSheetFrame("GreyWizard") ?? QuestWizard;
+        /// <summary>Grey Wizard crow form (Inside Survival rescue target).</summary>
+        public static Sprite DarkBird =>
+            _darkBird ??= TryLoadSprite("DarkBird", 100f) ?? Sparkles;
         /// <summary>Dialogue portrait frames from Wizard Portrait (left side of quest UI).</summary>
         public static Sprite[] WizardPortraitFrames =>
             _wizardPortraitFrames ??= LoadSheetFrames("Wizard Portrait");

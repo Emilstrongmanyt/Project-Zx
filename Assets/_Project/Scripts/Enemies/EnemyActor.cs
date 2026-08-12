@@ -133,7 +133,7 @@ namespace ProjectZx.Enemies
         int _bleedTicksRemaining;
         float _bleedTickTimer;
         int _bleedDamageRemaining;
-        FlameEnchantVfx _burnVfx;
+
         readonly List<RaycastHit2D> _castHits = new();
         const float BodyAnimFrameSeconds = 0.1f;
 
@@ -467,17 +467,22 @@ namespace ProjectZx.Enemies
 
         void EnsureBurnVfx()
         {
-            if (_burnVfx == null)
-                // ~1/10 prior size — burn is a body spark, not a full-size flame sheet.
-                _burnVfx = FlameEnchantVfx.Attach(transform, FlameEnchantVfx.FlameKind.EnemyBurn, new Vector3(0f, 0.2f, 0f), 0.08f);
-            else
-                _burnVfx.SetActive(true);
+            // Soft red tint (~25%) — same idea as chill blue, not a large flame sprite.
+            if (_renderer == null || IsChilled) return;
+            _renderer.color = Color.Lerp(_baseColor, new Color(1f, 0.32f, 0.28f, 1f), 0.25f);
         }
 
         void ClearBurnVfx()
         {
-            if (_burnVfx != null)
-                _burnVfx.SetActive(false);
+            if (_renderer == null) return;
+            if (IsChilled) return;
+            if (_bleedTicksRemaining > 0)
+            {
+                _renderer.color = Color.Lerp(_baseColor, new Color(1f, 0.45f, 0.45f, 1f), 0.5f);
+                return;
+            }
+
+            _renderer.color = _baseColor;
         }
 
         void SetupFireBreathFx()

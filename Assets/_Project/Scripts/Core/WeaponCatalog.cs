@@ -2,8 +2,8 @@ namespace ProjectZx.Core
 {
     /// <summary>
     /// Weapon material tiers (Admurin armory sets). Higher tiers swap sprites and grant
-    /// damage + attack-speed perks. Equipped tier is the highest unlocked for that weapon type
-    /// (player class), not a shared global unlock.
+    /// damage + attack-speed perks. Unlocks are per class; players equip any unlocked tier
+    /// from Build Loadout (defaults to the highest unlocked).
     /// </summary>
     public enum WeaponMaterialTier
     {
@@ -82,10 +82,58 @@ namespace ProjectZx.Core
         public static bool IsGoldUnlocked(PlayerClass playerClass) =>
             GameSave.GetWeaponKillCount(playerClass) >= GoldUnlockKills;
 
+        /// <summary>Currently equipped material (clamped to unlocks).</summary>
+        public static WeaponMaterialTier GetEquippedTier() =>
+            GetEquippedTier(ActiveClass);
+
+        public static WeaponMaterialTier GetEquippedTier(PlayerClass playerClass) =>
+            GameSave.GetEquippedWeaponTier(playerClass);
+
+        public static bool IsTierUnlocked(PlayerClass playerClass, WeaponMaterialTier tier)
+        {
+            if (tier is WeaponMaterialTier.Altair or WeaponMaterialTier.Angelic)
+                return false;
+
+            EnsureProgress(playerClass);
+            return tier switch
+            {
+                WeaponMaterialTier.Wooden => true,
+                WeaponMaterialTier.Iron => IsIronUnlocked(playerClass),
+                WeaponMaterialTier.Steel => GameSave.GetWeaponUnlimitedBest(playerClass) >= 20,
+                WeaponMaterialTier.Copper => GameSave.GetWeaponUnlimitedBest(playerClass) >= 30,
+                WeaponMaterialTier.Silver => GameSave.GetWeaponUnlimitedBest(playerClass) >= 40,
+                WeaponMaterialTier.Gold => IsGoldUnlocked(playerClass),
+                WeaponMaterialTier.Cobalt => GameSave.GetWeaponUnlimitedBest(playerClass) >= 60,
+                WeaponMaterialTier.Platinum => GameSave.GetWeaponUnlimitedBest(playerClass) >= 70,
+                WeaponMaterialTier.Adamantine => GameSave.GetWeaponUnlimitedBest(playerClass) >= 80,
+                WeaponMaterialTier.Crimson => GameSave.GetWeaponUnlimitedBest(playerClass) >= 90,
+                WeaponMaterialTier.Fateful => GameSave.GetWeaponUnlimitedBest(playerClass) >= 100,
+                _ => false
+            };
+        }
+
+        static void EnsureProgress(PlayerClass playerClass) =>
+            GameSave.EnsureWeaponProgressMigrated();
+
+        /// <summary>Unlocked tiers for the class, low → high (for loadout cycling).</summary>
+        public static System.Collections.Generic.List<WeaponMaterialTier> GetSelectableTiers(
+            PlayerClass playerClass)
+        {
+            var list = new System.Collections.Generic.List<WeaponMaterialTier>(12);
+            foreach (WeaponMaterialTier t in System.Enum.GetValues(typeof(WeaponMaterialTier)))
+            {
+                if (IsTierUnlocked(playerClass, t))
+                    list.Add(t);
+            }
+
+            list.Sort((a, b) => TierIndex(a).CompareTo(TierIndex(b)));
+            return list;
+        }
+
         public static bool HasAoeSplash() => HasAoeSplash(ActiveClass);
 
         public static bool HasAoeSplash(PlayerClass playerClass) =>
-            GetUnlockedTier(playerClass) == WeaponMaterialTier.Fateful;
+            GetEquippedTier(playerClass) == WeaponMaterialTier.Fateful;
 
         /// <summary>True if any class has unlocked at least this tier (achievements / UI).</summary>
         public static bool AnyClassHasTier(WeaponMaterialTier tier)
@@ -145,13 +193,13 @@ namespace ProjectZx.Core
         /// <summary>Weapon materials do not modify attack range.</summary>
         public static float AttackRangeMultiplier(WeaponMaterialTier tier) => 1f;
 
-        public static float DamageMultiplier() => DamageMultiplier(GetUnlockedTier());
+        public static float DamageMultiplier() => DamageMultiplier(GetEquippedTier());
         public static float DamageMultiplier(PlayerClass playerClass) =>
-            DamageMultiplier(GetUnlockedTier(playerClass));
+            DamageMultiplier(GetEquippedTier(playerClass));
 
-        public static float AttackSpeedMultiplier() => AttackSpeedMultiplier(GetUnlockedTier());
+        public static float AttackSpeedMultiplier() => AttackSpeedMultiplier(GetEquippedTier());
         public static float AttackSpeedMultiplier(PlayerClass playerClass) =>
-            AttackSpeedMultiplier(GetUnlockedTier(playerClass));
+            AttackSpeedMultiplier(GetEquippedTier(playerClass));
 
         public static float AttackRangeMultiplier() => 1f;
 
@@ -196,7 +244,7 @@ namespace ProjectZx.Core
         }
 
         public static string GetResourceName(PlayerClass playerClass) =>
-            GetResourceName(playerClass, GetUnlockedTier(playerClass));
+            GetResourceName(playerClass, GetEquippedTier(playerClass));
 
         public static string GetClassDisplayName(PlayerClass playerClass) => playerClass switch
         {

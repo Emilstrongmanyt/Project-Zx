@@ -5,7 +5,8 @@ namespace ProjectZx.Core
 {
     public enum QuestId
     {
-        GrandWizardsPeril = 1
+        GrandWizardsPeril = 1,
+        GreyWizardsCrow = 2
     }
 
     public enum QuestProgress
@@ -25,6 +26,7 @@ namespace ProjectZx.Core
         public string ActiveText { get; }
         public string TurnInText { get; }
         public string CompletedText { get; }
+        public string ActiveStatusHint { get; }
         public int GoldReward { get; }
         public Func<bool> IsUnlocked { get; }
 
@@ -35,6 +37,7 @@ namespace ProjectZx.Core
             string activeText,
             string turnInText,
             string completedText,
+            string activeStatusHint,
             int goldReward,
             Func<bool> isUnlocked)
         {
@@ -44,6 +47,7 @@ namespace ProjectZx.Core
             ActiveText = activeText;
             TurnInText = turnInText;
             CompletedText = completedText;
+            ActiveStatusHint = activeStatusHint;
             GoldReward = goldReward;
             IsUnlocked = isUnlocked ?? (() => false);
         }
@@ -64,10 +68,22 @@ namespace ProjectZx.Core
             "The foul golem still has my Twin Lightning Pendant. Defeat the Outside Survival round 20 boss and bring it back!",
             "You found my Twin Lightning Pendant! My spells return — take this gold, brave clanker!",
             "Thank you again for returning my pendant. The camp is safer with heroes like you.",
+            "In progress  ·  Retrieve the pendant from Outside R20",
             800,
             () => true);
 
-        static readonly QuestDefinition[] AllQuests = { GrandWizardsPeril };
+        public static readonly QuestDefinition GreyWizardsCrow = new(
+            QuestId.GreyWizardsCrow,
+            "Grey Wizard's Crow",
+            "My colleague the Grey Wizard used a crow transformation to spy on the enemy base inside the caverns. He never returned. Please enter Inside Survival, and after round 10 find the dark crow and free him — he will know the way home.",
+            "Search Inside Survival after round 10. Tap the dark crow when you are near it to break the spell.",
+            "You freed him! The Grey Wizard is back at camp. Take this gold for your courage!",
+            "The Grey Wizard rests nearby. Your rescue may yet turn the war.",
+            "In progress  ·  Free the crow in Inside Survival (after R10)",
+            1000,
+            () => GameSave.InsideMapUnlocked);
+
+        static readonly QuestDefinition[] AllQuests = { GrandWizardsPeril, GreyWizardsCrow };
 
         public static IReadOnlyList<QuestDefinition> All => AllQuests;
 
@@ -97,28 +113,54 @@ namespace ProjectZx.Core
                     return GameSave.HasTwinLightningPendant
                         ? QuestProgress.ReadyToTurnIn
                         : QuestProgress.Active;
+
+                case QuestId.GreyWizardsCrow:
+                    if (GameSave.QuestGreyWizardCompleted) return QuestProgress.Completed;
+                    if (!GameSave.QuestGreyWizardAccepted) return QuestProgress.Available;
+                    return GameSave.QuestGreyWizardRescued
+                        ? QuestProgress.ReadyToTurnIn
+                        : QuestProgress.Active;
+
                 default:
                     return QuestProgress.Locked;
             }
         }
 
-        /// <summary>First unlocked quest that still needs player attention (accept / active / turn-in).</summary>
+        /// <summary>
+        /// Prefer turn-in, then active, then available so a ready crow reward is not
+        /// hidden behind another in-progress quest.
+        /// </summary>
         public static bool TryGetPrimaryOpenQuest(out QuestDefinition def, out QuestProgress progress)
         {
-            for (var i = 0; i < AllQuests.Length; i++)
-            {
-                var candidate = AllQuests[i];
-                var status = GetProgress(candidate.Id);
-                if (status is QuestProgress.Locked or QuestProgress.Completed) continue;
-                def = candidate;
-                progress = status;
+            if (TryFindByProgress(QuestProgress.ReadyToTurnIn, out def, out progress))
                 return true;
-            }
+            if (TryFindByProgress(QuestProgress.Active, out def, out progress))
+                return true;
+            if (TryFindByProgress(QuestProgress.Available, out def, out progress))
+                return true;
 
             // Fall back to a completed starter quest so the wizard still greets the player.
             if (TryGet(QuestId.GrandWizardsPeril, out def))
             {
                 progress = GetProgress(def.Id);
+                return true;
+            }
+
+            def = default;
+            progress = QuestProgress.Locked;
+            return false;
+        }
+
+        static bool TryFindByProgress(
+            QuestProgress wanted, out QuestDefinition def, out QuestProgress progress)
+        {
+            for (var i = 0; i < AllQuests.Length; i++)
+            {
+                var candidate = AllQuests[i];
+                var status = GetProgress(candidate.Id);
+                if (status != wanted) continue;
+                def = candidate;
+                progress = status;
                 return true;
             }
 
@@ -134,6 +176,9 @@ namespace ProjectZx.Core
             {
                 case QuestId.GrandWizardsPeril:
                     GameSave.QuestGrandWizardsPerilAccepted = true;
+                    return true;
+                case QuestId.GreyWizardsCrow:
+                    GameSave.QuestGreyWizardAccepted = true;
                     return true;
                 default:
                     return false;
@@ -156,6 +201,15 @@ namespace ProjectZx.Core
                     GameSave.Gold += goldAwarded;
                     GameSave.LifetimeGoldEarned += goldAwarded;
                     return true;
+
+                case QuestId.GreyWizardsCrow:
+                    if (!GameSave.QuestGreyWizardRescued) return false;
+                    GameSave.QuestGreyWizardCompleted = true;
+                    goldAwarded = def.GoldReward;
+                    GameSave.Gold += goldAwarded;
+                    GameSave.LifetimeGoldEarned += goldAwarded;
+                    return true;
+
                 default:
                     return false;
             }
@@ -167,6 +221,15 @@ namespace ProjectZx.Core
             if (!isOutsideRoundTwentyBoss) return false;
             if (GetProgress(QuestId.GrandWizardsPeril) != QuestProgress.Active) return false;
             return !GameSave.HasTwinLightningPendant;
+        }
+
+        /// <summary>Inside Survival crow after R10 while the rescue quest is active.</summary>
+        public static bool ShouldSpawnDarkBird(SurvivalMapKind mapKind, int round)
+        {
+            if (mapKind != SurvivalMapKind.Inside) return false;
+            if (round < 10) return false;
+            if (GetProgress(QuestId.GreyWizardsCrow) != QuestProgress.Active) return false;
+            return !GameSave.QuestGreyWizardRescued;
         }
     }
 }

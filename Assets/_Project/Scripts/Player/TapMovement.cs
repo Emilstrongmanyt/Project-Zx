@@ -18,7 +18,8 @@ namespace ProjectZx.Player
     {
         const float ArrivalDistance = 0.12f;
         const float NpcTapRadius = 2.4f;
-        const float CastSkin = 0.04f;
+        // Slightly larger skin + rounded water/tree colliders reduce edge snagging.
+        const float CastSkin = 0.08f;
         const float StuckClearDelay = 0.35f;
 
         public const float DefaultBaseSpeed = 4.5f;
@@ -251,7 +252,8 @@ namespace ProjectZx.Player
 
             if (allowed <= 0.0001f) return false;
 
-            _rb.MovePosition(_rb.position + direction * allowed);
+            var next = ArenaBounds.ClampToPlayable(_rb.position + direction * allowed);
+            _rb.MovePosition(next);
             _rb.linearVelocity = direction * (allowed / Time.fixedDeltaTime);
             return true;
         }

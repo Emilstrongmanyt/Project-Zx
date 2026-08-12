@@ -19,6 +19,7 @@ namespace ProjectZx.Waves
         bool _spawning;
         bool _roundActive;
         SurvivalMapKind _activeBiome;
+        bool _darkBirdSpawned;
 
         public static SurvivalSession Instance { get; private set; }
 
@@ -61,6 +62,7 @@ namespace ProjectZx.Waves
                     break;
 
                 EnsureBiomeForRound(CurrentRound);
+                TrySpawnDarkBird(CurrentRound);
                 _roundActive = true;
                 yield return StartCoroutine(SpawnRound(CurrentRound));
 
@@ -127,6 +129,19 @@ namespace ProjectZx.Waves
             GameSessionContext.CarryRound = 0;
             GameSessionContext.RunSnapshot = default;
             GameFactory.LoadScene(GameScenes.MainMenuMap);
+        }
+
+        void TrySpawnDarkBird(int round)
+        {
+            if (_darkBirdSpawned) return;
+            if (!QuestCatalog.ShouldSpawnDarkBird(MapKind, round)) return;
+
+            _darkBirdSpawned = true;
+            var origin = _player != null ? (Vector2)_player.position : Vector2.zero;
+            // Prefer a far/edge pick so the crow is a find, not a spawn-camp target.
+            var pos = ArenaBounds.RandomWaveSpawn(origin, preferDistance: true);
+            DarkBirdRescue.Spawn(pos);
+            _hud?.ShowBanner("A dark crow is watching in the distance…", 2.8f);
         }
 
         void EnsureBiomeForRound(int round)
