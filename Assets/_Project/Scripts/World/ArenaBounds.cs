@@ -13,22 +13,37 @@ namespace ProjectZx.World
         public const float SpawnClearRadius = 1.05f;
         public const int FloorSortOrder = -1000;
         public const int WaterSortOrder = -900;
-        /// <summary>Outer ring of water tiles around playable land (camp only; survival uses wrap).</summary>
+        /// <summary>Outer ring of water tiles around playable land (camp only).</summary>
         public const int WaterBorderDepth = 3;
+        /// <summary>
+        /// Extra biome floor tiles past the wrap edge on survival maps so the camera
+        /// never shows void when approaching the invisible teleport border.
+        /// </summary>
+        public const int VisualSkirtDepth = 8;
         public const int EntitySortBase = 100;
         public const float SortDepthScale = 40f;
 
         static readonly Collider2D[] OverlapBuffer = new Collider2D[12];
 
         /// <summary>
-        /// Survival arenas wrap at the map edge (no water border). Camp keeps a finite water ring.
+        /// Survival: wrap (teleport to opposite side) at the playable edge.
+        /// Camp: finite water ring, clamp only.
         /// </summary>
         public static bool WorldWrapEnabled { get; private set; }
 
         public static void SetWorldWrap(bool enabled) => WorldWrapEnabled = enabled;
 
         public static float WaterMargin => WorldWrapEnabled ? 0f : TileSize * WaterBorderDepth;
+
+        /// <summary>Playable half-extents (wrap / clamp boundary).</summary>
+        public static float PlayableHalfWidth => ArenaWidth * 0.5f - WaterMargin;
         public static float PlayableHalfHeight => ArenaHeight * 0.5f - WaterMargin;
+
+        /// <summary>Floor field size including visual skirt past wrap edges (survival).</summary>
+        public static float VisualFieldWidth =>
+            WorldWrapEnabled ? ArenaWidth + VisualSkirtDepth * TileSize * 2f : ArenaWidth;
+        public static float VisualFieldHeight =>
+            WorldWrapEnabled ? ArenaHeight + VisualSkirtDepth * TileSize * 2f : ArenaHeight;
 
         public static int GetYSortOrder(float worldY, int offset = 0)
         {
@@ -42,14 +57,16 @@ namespace ProjectZx.World
             if (WorldWrapEnabled)
                 return WrapToPlayable(position);
 
-            var maxX = ArenaWidth * 0.5f - WaterMargin;
-            var maxY = ArenaHeight * 0.5f - WaterMargin;
+            var maxX = PlayableHalfWidth;
+            var maxY = PlayableHalfHeight;
             return new Vector2(
                 Mathf.Clamp(position.x, -maxX, maxX),
                 Mathf.Clamp(position.y, -maxY, maxY));
         }
 
-        /// <summary>Toroidal wrap so survival maps feel never-ending.</summary>
+        /// <summary>
+        /// Invisible wrap border: leaving one edge teleports to the opposite side.
+        /// </summary>
         public static Vector2 WrapToPlayable(Vector2 position)
         {
             var halfW = ArenaWidth * 0.5f;
@@ -61,9 +78,8 @@ namespace ProjectZx.World
 
         public static bool IsInsidePlayable(Vector2 position)
         {
-            var maxX = ArenaWidth * 0.5f - WaterMargin;
-            var maxY = ArenaHeight * 0.5f - WaterMargin;
-            return Mathf.Abs(position.x) <= maxX && Mathf.Abs(position.y) <= maxY;
+            return Mathf.Abs(position.x) <= PlayableHalfWidth
+                   && Mathf.Abs(position.y) <= PlayableHalfHeight;
         }
 
         public static bool IsClearOfObstacles(Vector2 position, float radius = SpawnClearRadius)
@@ -149,8 +165,8 @@ namespace ProjectZx.World
 
         static Vector2 RandomSpawnAtPlayableEdge(Vector2 playerPos, float minDistanceFromPlayer)
         {
-            var maxX = ArenaWidth * 0.5f - WaterMargin - 0.75f;
-            var maxY = ArenaHeight * 0.5f - WaterMargin - 0.75f;
+            var maxX = PlayableHalfWidth - 0.75f;
+            var maxY = PlayableHalfHeight - 0.75f;
 
             for (var attempt = 0; attempt < 40; attempt++)
             {
@@ -184,8 +200,8 @@ namespace ProjectZx.World
 
         static Vector2 RandomSpawnInPlayableAwayFrom(Vector2 playerPos, float minDistance)
         {
-            var maxX = ArenaWidth * 0.5f - WaterMargin - 1f;
-            var maxY = ArenaHeight * 0.5f - WaterMargin - 1f;
+            var maxX = PlayableHalfWidth - 1f;
+            var maxY = PlayableHalfHeight - 1f;
 
             for (var attempt = 0; attempt < 48; attempt++)
             {

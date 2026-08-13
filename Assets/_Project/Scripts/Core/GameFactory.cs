@@ -47,7 +47,8 @@ namespace ProjectZx.Core
             var rows = Mathf.CeilToInt(height / tileSize);
             var originX = -(cols * tileSize) * 0.5f + tileSize * 0.5f;
             var originY = -(rows * tileSize) * 0.5f + tileSize * 0.5f;
-            // Survival uses world wrap (no water ring). Camp keeps the lake border.
+            // Survival: wrap teleport at playable edge, no water — full biome floor including skirt.
+            // Camp: water ring on the outer tiles.
             var borderDepth = ArenaBounds.WorldWrapEnabled
                 ? 0
                 : Mathf.Max(1, ArenaBounds.WaterBorderDepth);
@@ -67,6 +68,7 @@ namespace ProjectZx.Core
                 if (isBorder)
                     sprite = waterSprite;
                 // Dungeon + Crypt share Dungeon_Tile floors; Unlimited uses SandTile.
+                // On wrap maps the skirt past the invisible teleport edge is still biome tiles.
                 else if (mapKind == SurvivalMapKind.Unlimited)
                     sprite = ArtLibrary.GetSandTile(tileIndex);
                 else if (mapKind == SurvivalMapKind.Dungeon || mapKind == SurvivalMapKind.Crypt)
@@ -415,8 +417,11 @@ namespace ProjectZx.Core
             DestroyNamed("InsideObstacles");
             DestroyNamed("CryptObstacles");
 
+            // Obstacles stay in the playable wrap area; floor includes visual skirt.
             const float arenaW = ArenaBounds.ArenaWidth;
             const float arenaH = ArenaBounds.ArenaHeight;
+            var floorW = ArenaBounds.VisualFieldWidth;
+            var floorH = ArenaBounds.VisualFieldHeight;
             var isInside = visualBiome == SurvivalMapKind.Inside;
             var isDungeon = visualBiome == SurvivalMapKind.Dungeon;
             var isCrypt = visualBiome == SurvivalMapKind.Crypt;
@@ -431,7 +436,7 @@ namespace ProjectZx.Core
                 : isInside ? "InsideFloor"
                 : "OutsideFloor";
 
-            CreateTiledField(floorName, arenaW, arenaH, floorKind, 1f);
+            CreateTiledField(floorName, floorW, floorH, floorKind, 1f);
 
             ClearScatterReservations();
             ReserveClearing(Vector2.zero, 4.5f);

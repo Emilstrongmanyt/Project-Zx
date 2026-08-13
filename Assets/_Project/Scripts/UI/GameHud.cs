@@ -41,6 +41,9 @@ namespace ProjectZx.UI
         AchievementDef _activeAchievementToast;
         bool _hasActiveAchievementToast;
         Text _retreatStatsText;
+        Button _unstuckButton;
+        Text _unstuckLabel;
+        bool _unstuckUsedThisRun;
         bool _choosingLevelUp;
         bool _choosingEpic;
 
@@ -235,28 +238,34 @@ namespace ProjectZx.UI
 
         GameObject BuildRetreatPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "RetreatPanel", Vector2.zero, new Vector2(760, 780), ArtLibrary.ChallengeBoardUi);
-            CreatePanelText(panel.transform, "Retreat to Camp?", 36, new Vector2(0, 330), new Vector2(700, 48));
+            var panel = CreateDialogPanel(parent, "RetreatPanel", Vector2.zero, new Vector2(760, 820), ArtLibrary.ChallengeBoardUi);
+            CreatePanelText(panel.transform, "Retreat to Camp?", 36, new Vector2(0, 350), new Vector2(700, 48));
             CreatePanelText(
                 panel.transform,
                 "Run gold is saved. Current run progress ends.",
                 22,
-                new Vector2(0, 288),
+                new Vector2(0, 308),
                 new Vector2(700, 36));
 
             _retreatStatsText = CreatePanelText(
                 panel.transform,
                 "",
                 20,
-                new Vector2(0, 20),
-                new Vector2(680, 460));
+                new Vector2(0, 40),
+                new Vector2(680, 420));
             _retreatStatsText.alignment = TextAnchor.UpperLeft;
             _retreatStatsText.horizontalOverflow = HorizontalWrapMode.Wrap;
             _retreatStatsText.verticalOverflow = VerticalWrapMode.Truncate;
             _retreatStatsText.color = new Color(0.92f, 0.94f, 0.98f);
 
-            CreateHudButton(panel.transform, "Yes, Retreat", new Vector2(-150, -320), ConfirmRetreat);
-            CreateHudButton(panel.transform, "Keep Fighting", new Vector2(150, -320), CloseRetreatPanel);
+            // Once per run: teleport back to map spawn (0,0).
+            _unstuckButton = CreateHudButton(panel.transform, "Unstuck", new Vector2(0, -250), UseUnstuck);
+            _unstuckLabel = _unstuckButton != null
+                ? _unstuckButton.GetComponentInChildren<Text>()
+                : null;
+
+            CreateHudButton(panel.transform, "Yes, Retreat", new Vector2(-150, -340), ConfirmRetreat);
+            CreateHudButton(panel.transform, "Keep Fighting", new Vector2(150, -340), CloseRetreatPanel);
             panel.SetActive(false);
             return panel;
         }
@@ -268,6 +277,7 @@ namespace ProjectZx.UI
             FloatingDamageNumber.ClearAll();
             SuppressAchievementToastForTalentMenu();
             RefreshRetreatStats();
+            RefreshUnstuckButton();
             if (_retreatPanel != null)
             {
                 _retreatPanel.transform.SetAsLastSibling();
@@ -287,6 +297,54 @@ namespace ProjectZx.UI
             _retreatStatsText.text = "Current upgrades\n\n" + _stats.BuildRunStatusSummary();
         }
 
+        void RefreshUnstuckButton()
+        {
+            if (_unstuckButton == null) return;
+            var available = !_unstuckUsedThisRun && _stats != null && !_stats.IsDead;
+            _unstuckButton.interactable = available;
+            if (_unstuckLabel != null)
+                _unstuckLabel.text = _unstuckUsedThisRun ? "Unstuck (used)" : "Unstuck";
+        }
+
+        void UseUnstuck()
+        {
+            if (_unstuckUsedThisRun || _stats == null || _stats.IsDead) return;
+
+            _unstuckUsedThisRun = true;
+            var spawn = Vector2.zero;
+            var rb = _stats.GetComponent<Rigidbody2D>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector2.zero;
+                rb.position = spawn;
+            }
+            else
+            {
+                _stats.transform.position = new Vector3(spawn.x, spawn.y, _stats.transform.position.z);
+            }
+
+            // Companion follows after unstuck so they do not stay stuck elsewhere.
+            var companion = Object.FindAnyObjectByType<CompanionFollower>();
+            if (companion != null)
+            {
+                var cRb = companion.GetComponent<Rigidbody2D>();
+                var cPos = spawn + Vector2.left * 0.8f;
+                if (cRb != null)
+                {
+                    cRb.linearVelocity = Vector2.zero;
+                    cRb.position = cPos;
+                }
+                else
+                {
+                    companion.transform.position = new Vector3(cPos.x, cPos.y, companion.transform.position.z);
+                }
+            }
+
+            RefreshUnstuckButton();
+            ShowBanner("Returned to spawn. Unstuck used for this run.", 2.6f);
+            CloseRetreatPanel();
+        }
+
         void CloseRetreatPanel()
         {
             if (_retreatPanel != null)
@@ -303,7 +361,7 @@ namespace ProjectZx.UI
             SurvivalSession.Instance?.RetreatToCamp();
         }
 
-        static void CreateHudButton(Transform parent, string label, Vector2 pos, System.Action onClick)
+        static Button CreateHudButton(Transform parent, string label, Vector2 pos, System.Action onClick)
         {
             var go = new GameObject(label + "Button");
             go.transform.SetParent(parent, false);
@@ -333,6 +391,7 @@ namespace ProjectZx.UI
             text.color = Color.white;
             text.alignment = TextAnchor.MiddleCenter;
             text.raycastTarget = false;
+            return button;
         }
 
         GameObject BuildLevelUpPanel(Transform parent)

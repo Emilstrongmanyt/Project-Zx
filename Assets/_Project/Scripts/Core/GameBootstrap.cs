@@ -47,9 +47,9 @@ namespace ProjectZx.Core
             GameFactory.ReserveClearing(Vector2.zero, 4.5f);                 // campfire (map travel)
             GameFactory.ReserveClearing(new Vector2(-2.1f, 1.1f), 3.6f);     // wizard shop
             GameFactory.ReserveClearing(new Vector2(2.1f, 1.1f), 3.6f);      // knight map
-            GameFactory.ReserveClearing(new Vector2(5.0f, 1.1f), 4.2f);      // quest wizard (large 16×32)
-            GameFactory.ReserveClearing(new Vector2(6.35f, 1.05f), 2.8f);    // grey wizard (decorative)
-            GameFactory.ReserveClearing(new Vector2(7.7f, 0.9f), 3.2f);      // quest knight (Knight1)
+            GameFactory.ReserveClearing(new Vector2(4.2f, 1.6f), 3.6f);      // grand wizard
+            GameFactory.ReserveClearing(new Vector2(7.4f, -0.6f), 3.0f);     // grey wizard (decorative)
+            GameFactory.ReserveClearing(new Vector2(10.2f, 1.8f), 3.4f);     // quest knight (Knight1)
             GameFactory.ReserveClearing(new Vector2(0f, 2.8f), 3.6f);        // achievement board
             // Chest sits far left of the wizard so it never overlaps the shop NPC.
             GameFactory.ReserveClearing(new Vector2(-6.4f, -0.6f), 2.4f);    // treasure chest
@@ -74,13 +74,15 @@ namespace ProjectZx.Core
             const float campNpcScale = 0.38f * 1.25f;
             GameFactory.CreateNpc("WizardShop", ArtLibrary.Wizard, new Vector3(-2.1f, 1.1f), () => hub.OpenShop(), campNpcScale);
             GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(2.1f, 1.1f), () => hub.OpenMapSelect(), campNpcScale);
-            // Grand Wizard (PurpleWizard 128×256 @ 100 PPU) — modest scale vs the old 16×32 blow-up.
+            // Grand Wizard / Grey Wizard / Knight1 — spread so they do not stack.
+            const float questNpcScale = campNpcScale * 1.85f;
+            const float knight1Scale = questNpcScale * 1.5f;
             GameFactory.CreateNpc(
                 "QuestWizard",
                 ArtLibrary.QuestWizard,
-                new Vector3(5.0f, 1.1f),
+                new Vector3(4.2f, 1.6f),
                 () => hub.OpenQuestGiver(),
-                campNpcScale * 1.85f);
+                questNpcScale);
             // Grey Wizard returns to camp after the crow rescue (and stays after turn-in).
             // Decorative only for now — not tappable; flip across Y (mirror left/right).
             if (GameSave.QuestGreyWizardRescued || GameSave.QuestGreyWizardCompleted)
@@ -88,8 +90,8 @@ namespace ProjectZx.Core
                 var grey = GameFactory.CreateSprite(
                     "GreyWizard",
                     ArtLibrary.GreyWizard,
-                    new Vector3(6.35f, 1.05f),
-                    campNpcScale * 1.85f,
+                    new Vector3(7.4f, -0.6f),
+                    questNpcScale,
                     6);
                 grey.AddComponent<YSortRenderer>().Configure(3);
                 var greySr = grey.GetComponent<SpriteRenderer>();
@@ -101,9 +103,9 @@ namespace ProjectZx.Core
                 GameFactory.CreateNpc(
                     "QuestKnight",
                     ArtLibrary.Knight1,
-                    new Vector3(7.7f, 0.9f),
+                    new Vector3(10.2f, 1.8f),
                     () => hub.OpenQuestDialogue(QuestId.KnightsBestFriend),
-                    campNpcScale * 1.85f);
+                    knight1Scale);
             }
             // Layer Lab stage frame + trophy composite (readable world prop).
             GameFactory.CreateNpc("AchievementBoard", ArtLibrary.AchievementKeeper, new Vector3(0f, 2.8f), () => hub.OpenAchievements(), 0.55f);
@@ -154,8 +156,11 @@ namespace ProjectZx.Core
                     // Grass-adjacent clear color (no water ring on survival).
                     : new Color(0.16f, 0.32f, 0.14f));
 
+            // Playable wrap area is ArenaSize; floor includes a skirt past the teleport edge.
             const float arenaW = ArenaBounds.ArenaWidth;
             const float arenaH = ArenaBounds.ArenaHeight;
+            var floorW = ArenaBounds.VisualFieldWidth;
+            var floorH = ArenaBounds.VisualFieldHeight;
             // Dungeon/Crypt → Dungeon_Tile; Unlimited → SandTile (props still use visual biome).
             var floorKind = isUnlimited
                 ? SurvivalMapKind.Unlimited
@@ -165,7 +170,7 @@ namespace ProjectZx.Core
                 : isDungeon ? "DungeonFloor"
                 : isInside ? "InsideFloor"
                 : "OutsideFloor";
-            GameFactory.CreateTiledField(floorName, arenaW, arenaH, floorKind, 1f);
+            GameFactory.CreateTiledField(floorName, floorW, floorH, floorKind, 1f);
 
             GameFactory.ClearScatterReservations();
             GameFactory.ReserveClearing(Vector2.zero, 4.5f); // player spawn / fight space

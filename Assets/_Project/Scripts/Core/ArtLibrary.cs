@@ -464,8 +464,7 @@ namespace ProjectZx.Core
         public static Sprite Stone => _stone ??= GetSheetVariant("RockSheet", 10, 0) ?? CreateStoneSprite();
         public static Sprite Tree => _tree ??= GetSheetVariant("TreeSheet", 9, 0) ?? CreateTreeSprite();
 
-        /// <summary>Camp + Outside trees — three sprites from forest_tiles (80×160 each).</summary>
-        public static Sprite[] TreeVariants => _treeVariants ??= LoadForestTreeSprites();
+        public static Sprite[] TreeVariants => _treeVariants ??= LoadSheetSprites("TreeSheet", 9);
         public static Sprite[] RockVariants => _rockVariants ??= LoadSheetSprites("RockSheet", 10);
         public static Sprite[] ComputerVariants => _computerVariants ??= LoadSheetSprites("ComputerSheet", 8);
         public static Sprite[] InsidePropVariants => _insidePropVariants ??= LoadSheetSprites("Inside1Sheet", 9);
@@ -473,7 +472,8 @@ namespace ProjectZx.Core
         /// <summary>Dungeon + Crypt obstacles — CryptSheet props (shared by both maps).</summary>
         public static Sprite[] CryptVariants => _cryptVariants ??= LoadSheetSprites("CryptSheet", 9);
 
-        public static Sprite GetRandomTreeSprite() => PickRandom(TreeVariants) ?? CreateTreeSprite();
+        // Outside trees/rocks use sheet variants #1 and #2 only (indices 0 and 1).
+        public static Sprite GetRandomTreeSprite() => PickFromFirstTwo(TreeVariants) ?? CreateTreeSprite();
 
         public static Sprite GetRandomRockSprite() => PickFromFirstTwo(RockVariants) ?? CreateStoneSprite();
 
@@ -1293,15 +1293,6 @@ namespace ProjectZx.Core
                 rows = 1;
                 pivot = new Vector2(0.5f, 0.15f);
             }
-            else if (resourcePath == "forest_tiles" && tex.width == 240 && tex.height == 160)
-            {
-                // Three side-by-side tree columns.
-                cellW = 80;
-                cellH = 160;
-                cols = 3;
-                rows = 1;
-                pivot = new Vector2(0.5f, 0.08f);
-            }
             else
             {
                 return null;
@@ -1323,32 +1314,6 @@ namespace ProjectZx.Core
         /// <summary>All world idle frames for the quest wizard (16×32 sheet).</summary>
         public static Sprite[] QuestWizardFrames =>
             _questWizardFrames ??= LoadSheetFrames("Wizard Sprite");
-
-        static Sprite[] LoadForestTreeSprites()
-        {
-            var frames = LoadSheetFrames("forest_tiles");
-            if (frames != null && frames.Length >= 3)
-                return frames;
-
-            // Importer may expose a single 240×160 sheet — slice at runtime.
-            var tex = Resources.Load<Texture2D>("forest_tiles");
-            if (tex != null && tex.width >= 240 && tex.height >= 160)
-            {
-                var sliced = new Sprite[3];
-                for (var i = 0; i < 3; i++)
-                {
-                    sliced[i] = Sprite.Create(
-                        tex,
-                        new Rect(i * 80f, 0f, 80f, 160f),
-                        new Vector2(0.5f, 0.08f),
-                        TilePixelsPerUnit);
-                }
-
-                return sliced;
-            }
-
-            return LoadSheetSprites("TreeSheet", 9);
-        }
 
         static Sprite TryLoadSprite(string path, float pixelsPerUnit)
         {

@@ -5,10 +5,8 @@ namespace ProjectZx.World
     [RequireComponent(typeof(SpriteRenderer))]
     public class TreeObstacle : MonoBehaviour
     {
-        /// <summary>Small rounded trunk so large crowns do not trap the player at the base.</summary>
-        const float TrunkRadiusRatio = 0.11f;
-        const float MinTrunkRadius = 0.12f;
-        const float MaxTrunkRadius = 0.28f;
+        const float TrunkHeightRatio = 0.22f;
+        const float TrunkWidthRatio = 0.3f;
 
         void Awake()
         {
@@ -31,20 +29,17 @@ namespace ProjectZx.World
             if (sprite == null)
             {
                 var fallback = gameObject.AddComponent<CircleCollider2D>();
-                fallback.radius = 0.16f;
-                fallback.offset = new Vector2(0f, 0.1f);
+                fallback.radius = 0.18f;
+                fallback.offset = new Vector2(0f, 0.12f);
                 return;
             }
 
             var bounds = sprite.bounds;
-            // Circle at the trunk base — rounded contact instead of a sticky box.
-            var radius = Mathf.Clamp(
-                Mathf.Min(bounds.size.x, bounds.size.y) * TrunkRadiusRatio,
-                MinTrunkRadius,
-                MaxTrunkRadius);
-            var circle = gameObject.AddComponent<CircleCollider2D>();
-            circle.radius = radius;
-            circle.offset = new Vector2(bounds.center.x, bounds.min.y + radius * 0.85f);
+            var trunkHeight = Mathf.Max(0.1f, bounds.size.y * TrunkHeightRatio);
+            var trunkWidth = Mathf.Max(0.1f, bounds.size.x * TrunkWidthRatio);
+            var box = gameObject.AddComponent<BoxCollider2D>();
+            box.size = new Vector2(trunkWidth, trunkHeight);
+            box.offset = new Vector2(bounds.center.x, bounds.min.y + trunkHeight * 0.5f);
         }
     }
 }
