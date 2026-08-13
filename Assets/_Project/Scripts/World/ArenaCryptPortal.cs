@@ -27,7 +27,7 @@ namespace ProjectZx.World
             GameSave.CryptMapUnlocked = true;
             GameSave.DungeonSurvivalCleared = true;
             GameSave.RecordDungeonRound(40);
-            GameSave.FlameEnchantUnlocked = true;
+            // Flame Enchant is awarded by the knight quest (A Knight's Best Friend), not map clear.
             Achievements.EvaluateWeaponTierAchievements();
             Achievements.UnlockDungeonClearer();
 

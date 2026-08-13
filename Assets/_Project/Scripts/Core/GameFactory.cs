@@ -47,18 +47,21 @@ namespace ProjectZx.Core
             var rows = Mathf.CeilToInt(height / tileSize);
             var originX = -(cols * tileSize) * 0.5f + tileSize * 0.5f;
             var originY = -(rows * tileSize) * 0.5f + tileSize * 0.5f;
-            var borderDepth = Mathf.Max(1, ArenaBounds.WaterBorderDepth);
+            // Survival uses world wrap (no water ring). Camp keeps the lake border.
+            var borderDepth = ArenaBounds.WorldWrapEnabled
+                ? 0
+                : Mathf.Max(1, ArenaBounds.WaterBorderDepth);
             // Cache once so every border cell uses the same water sprite (no land fallback).
-            var waterSprite = ArtLibrary.WaterTile;
-            if (waterSprite == null)
+            var waterSprite = borderDepth > 0 ? ArtLibrary.WaterTile : null;
+            if (borderDepth > 0 && waterSprite == null)
                 Debug.LogError("[GameFactory] Water tile sprite failed to load; borders will be missing.");
 
             for (var row = 0; row < rows; row++)
             for (var col = 0; col < cols; col++)
             {
                 var pos = new Vector3(originX + col * tileSize, originY + row * tileSize, 0f);
-                var isBorder = row < borderDepth || row >= rows - borderDepth
-                    || col < borderDepth || col >= cols - borderDepth;
+                var isBorder = borderDepth > 0 && (row < borderDepth || row >= rows - borderDepth
+                    || col < borderDepth || col >= cols - borderDepth);
                 var tileIndex = col + row * 7;
                 Sprite sprite;
                 if (isBorder)
@@ -449,7 +452,7 @@ namespace ProjectZx.Core
                         ? new Color(0.08f, 0.07f, 0.1f)
                         : isInside
                             ? new Color(0.2f, 0.16f, 0.12f)
-                            : new Color(0.1f, 0.2f, 0.48f);
+                            : new Color(0.16f, 0.32f, 0.14f);
             }
         }
 
@@ -742,6 +745,7 @@ namespace ProjectZx.Core
                 PickupType.Equipment => "EquipmentPickup",
                 PickupType.EpicCrystal => "EpicCrystalPickup",
                 PickupType.TwinLightningPendant => "TwinLightningPendantPickup",
+                PickupType.KnightsGreatsword => "KnightsGreatswordPickup",
                 _ => "GoldPickup"
             };
 
@@ -754,6 +758,7 @@ namespace ProjectZx.Core
                 : type == PickupType.Equipment ? 0.8f
                 : type == PickupType.EpicCrystal ? 0.85f
                 : type == PickupType.TwinLightningPendant ? 0.8f
+                : type == PickupType.KnightsGreatsword ? 0.95f
                 : 0.85f;
             go.AddComponent<LootPickup>().Initialize(type, amount);
             return go;

@@ -1223,6 +1223,16 @@ namespace ProjectZx.Enemies
                     1);
             }
 
+            // A Knight's Best Friend: Dungeon R40 boss drops the lost greatsword.
+            if (QuestCatalog.ShouldDropKnightsGreatsword(
+                    IsRoundFortyBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Dungeon))
+            {
+                GameFactory.CreatePickup(
+                    pos + Vector2.up * 0.75f + Vector2.right * 0.4f,
+                    PickupType.KnightsGreatsword,
+                    1);
+            }
+
             var session = UnityEngine.Object.FindAnyObjectByType<SurvivalSession>();
             session?.NotifyEnemyKilled(this);
 

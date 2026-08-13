@@ -13,14 +13,21 @@ namespace ProjectZx.World
         public const float SpawnClearRadius = 1.05f;
         public const int FloorSortOrder = -1000;
         public const int WaterSortOrder = -900;
-        /// <summary>Outer ring of water tiles around playable land (both camp and survival).</summary>
+        /// <summary>Outer ring of water tiles around playable land (camp only; survival uses wrap).</summary>
         public const int WaterBorderDepth = 3;
         public const int EntitySortBase = 100;
         public const float SortDepthScale = 40f;
 
         static readonly Collider2D[] OverlapBuffer = new Collider2D[12];
 
-        public static float WaterMargin => TileSize * WaterBorderDepth;
+        /// <summary>
+        /// Survival arenas wrap at the map edge (no water border). Camp keeps a finite water ring.
+        /// </summary>
+        public static bool WorldWrapEnabled { get; private set; }
+
+        public static void SetWorldWrap(bool enabled) => WorldWrapEnabled = enabled;
+
+        public static float WaterMargin => WorldWrapEnabled ? 0f : TileSize * WaterBorderDepth;
         public static float PlayableHalfHeight => ArenaHeight * 0.5f - WaterMargin;
 
         public static int GetYSortOrder(float worldY, int offset = 0)
@@ -32,11 +39,24 @@ namespace ProjectZx.World
 
         public static Vector2 ClampToPlayable(Vector2 position)
         {
+            if (WorldWrapEnabled)
+                return WrapToPlayable(position);
+
             var maxX = ArenaWidth * 0.5f - WaterMargin;
             var maxY = ArenaHeight * 0.5f - WaterMargin;
             return new Vector2(
                 Mathf.Clamp(position.x, -maxX, maxX),
                 Mathf.Clamp(position.y, -maxY, maxY));
+        }
+
+        /// <summary>Toroidal wrap so survival maps feel never-ending.</summary>
+        public static Vector2 WrapToPlayable(Vector2 position)
+        {
+            var halfW = ArenaWidth * 0.5f;
+            var halfH = ArenaHeight * 0.5f;
+            position.x = Mathf.Repeat(position.x + halfW, ArenaWidth) - halfW;
+            position.y = Mathf.Repeat(position.y + halfH, ArenaHeight) - halfH;
+            return position;
         }
 
         public static bool IsInsidePlayable(Vector2 position)

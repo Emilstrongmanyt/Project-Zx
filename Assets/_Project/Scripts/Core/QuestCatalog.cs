@@ -6,7 +6,8 @@ namespace ProjectZx.Core
     public enum QuestId
     {
         GrandWizardsPeril = 1,
-        GreyWizardsCrow = 2
+        GreyWizardsCrow = 2,
+        KnightsBestFriend = 3
     }
 
     public enum QuestProgress
@@ -83,7 +84,21 @@ namespace ProjectZx.Core
             1000,
             () => GameSave.InsideMapUnlocked);
 
-        static readonly QuestDefinition[] AllQuests = { GrandWizardsPeril, GreyWizardsCrow };
+        public static readonly QuestDefinition KnightsBestFriend = new(
+            QuestId.KnightsBestFriend,
+            "A Knight's Best Friend",
+            "I fled the Dungeon without my greatsword — a knight's best friend. Recover it from the Dungeon Survival final boss and I will share the wizard's fire weapon enchantment, and 1000 gold.",
+            "The Dungeon Survival final boss still has my greatsword. Defeat round 40 and bring the blade home.",
+            "My greatsword! Take this gold — and the Flame Enchant. May your weapons burn true.",
+            "My blade is whole again. Fight well, clanker.",
+            "In progress  ·  Recover the greatsword from Dungeon R40 boss",
+            1000,
+            () => GameSave.DungeonKnightReturnedToCamp);
+
+        public const string KnightsGreatswordName = "Knight's Greatsword";
+
+        static readonly QuestDefinition[] AllQuests =
+            { GrandWizardsPeril, GreyWizardsCrow, KnightsBestFriend };
 
         public static IReadOnlyList<QuestDefinition> All => AllQuests;
 
@@ -118,6 +133,13 @@ namespace ProjectZx.Core
                     if (GameSave.QuestGreyWizardCompleted) return QuestProgress.Completed;
                     if (!GameSave.QuestGreyWizardAccepted) return QuestProgress.Available;
                     return GameSave.QuestGreyWizardRescued
+                        ? QuestProgress.ReadyToTurnIn
+                        : QuestProgress.Active;
+
+                case QuestId.KnightsBestFriend:
+                    if (GameSave.QuestKnightsBestFriendCompleted) return QuestProgress.Completed;
+                    if (!GameSave.QuestKnightsBestFriendAccepted) return QuestProgress.Available;
+                    return GameSave.HasKnightsGreatsword
                         ? QuestProgress.ReadyToTurnIn
                         : QuestProgress.Active;
 
@@ -180,6 +202,9 @@ namespace ProjectZx.Core
                 case QuestId.GreyWizardsCrow:
                     GameSave.QuestGreyWizardAccepted = true;
                     return true;
+                case QuestId.KnightsBestFriend:
+                    GameSave.QuestKnightsBestFriendAccepted = true;
+                    return true;
                 default:
                     return false;
             }
@@ -210,6 +235,16 @@ namespace ProjectZx.Core
                     GameSave.LifetimeGoldEarned += goldAwarded;
                     return true;
 
+                case QuestId.KnightsBestFriend:
+                    if (!GameSave.HasKnightsGreatsword) return false;
+                    GameSave.HasKnightsGreatsword = false;
+                    GameSave.QuestKnightsBestFriendCompleted = true;
+                    GameSave.FlameEnchantUnlocked = true;
+                    goldAwarded = def.GoldReward;
+                    GameSave.Gold += goldAwarded;
+                    GameSave.LifetimeGoldEarned += goldAwarded;
+                    return true;
+
                 default:
                     return false;
             }
@@ -231,5 +266,16 @@ namespace ProjectZx.Core
             if (GetProgress(QuestId.GreyWizardsCrow) != QuestProgress.Active) return false;
             return !GameSave.QuestGreyWizardRescued;
         }
+
+        /// <summary>Dungeon Survival R40 boss drops the greatsword while the knight quest is active.</summary>
+        public static bool ShouldDropKnightsGreatsword(bool isDungeonRoundFortyBoss)
+        {
+            if (!isDungeonRoundFortyBoss) return false;
+            if (GetProgress(QuestId.KnightsBestFriend) != QuestProgress.Active) return false;
+            return !GameSave.HasKnightsGreatsword;
+        }
+
+        /// <summary>No talking portrait asset for the knight yet — hide the portrait frame.</summary>
+        public static bool UsesQuestPortrait(QuestId id) => id != QuestId.KnightsBestFriend;
     }
 }

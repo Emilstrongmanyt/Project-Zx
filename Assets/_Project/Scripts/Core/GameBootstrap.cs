@@ -37,6 +37,7 @@ namespace ProjectZx.Core
         {
             EnsureAudioManager();
             AudioManager.Instance?.PlayCampBgm();
+            ArenaBounds.SetWorldWrap(false);
             // Deep water clear color so the ring reads clearly past the tile edge.
             SetupCamera(new Color(0.1f, 0.2f, 0.48f));
             GameFactory.CreateGrassField("CampGrass", ArenaBounds.CampWidth, ArenaBounds.CampHeight, 1f);
@@ -47,6 +48,8 @@ namespace ProjectZx.Core
             GameFactory.ReserveClearing(new Vector2(-2.1f, 1.1f), 3.6f);     // wizard shop
             GameFactory.ReserveClearing(new Vector2(2.1f, 1.1f), 3.6f);      // knight map
             GameFactory.ReserveClearing(new Vector2(5.0f, 1.1f), 4.2f);      // quest wizard (large 16×32)
+            GameFactory.ReserveClearing(new Vector2(6.35f, 1.05f), 2.8f);    // grey wizard (decorative)
+            GameFactory.ReserveClearing(new Vector2(7.7f, 0.9f), 3.2f);      // quest knight (Knight1)
             GameFactory.ReserveClearing(new Vector2(0f, 2.8f), 3.6f);        // achievement board
             // Chest sits far left of the wizard so it never overlaps the shop NPC.
             GameFactory.ReserveClearing(new Vector2(-6.4f, -0.6f), 2.4f);    // treasure chest
@@ -79,6 +82,7 @@ namespace ProjectZx.Core
                 () => hub.OpenQuestGiver(),
                 campNpcScale * 1.85f);
             // Grey Wizard returns to camp after the crow rescue (and stays after turn-in).
+            // Decorative only for now — not tappable; flip across Y (mirror left/right).
             if (GameSave.QuestGreyWizardRescued || GameSave.QuestGreyWizardCompleted)
             {
                 var grey = GameFactory.CreateSprite(
@@ -88,6 +92,18 @@ namespace ProjectZx.Core
                     campNpcScale * 1.85f,
                     6);
                 grey.AddComponent<YSortRenderer>().Configure(3);
+                var greySr = grey.GetComponent<SpriteRenderer>();
+                if (greySr != null) greySr.flipX = true;
+            }
+            // Knight1 returns after the player sends him home from Dungeon Survival.
+            if (GameSave.DungeonKnightReturnedToCamp)
+            {
+                GameFactory.CreateNpc(
+                    "QuestKnight",
+                    ArtLibrary.Knight1,
+                    new Vector3(7.7f, 0.9f),
+                    () => hub.OpenQuestDialogue(QuestId.KnightsBestFriend),
+                    campNpcScale * 1.85f);
             }
             // Layer Lab stage frame + trophy composite (readable world prop).
             GameFactory.CreateNpc("AchievementBoard", ArtLibrary.AchievementKeeper, new Vector3(0f, 2.8f), () => hub.OpenAchievements(), 0.55f);
@@ -127,14 +143,16 @@ namespace ProjectZx.Core
             var isDungeon = visualBiome == SurvivalMapKind.Dungeon;
             var isCrypt = visualBiome == SurvivalMapKind.Crypt;
             var isUnlimited = mapKind == SurvivalMapKind.Unlimited;
+            // Survival maps wrap at the edge (no water border).
+            ArenaBounds.SetWorldWrap(true);
             SetupCamera(isUnlimited
                 ? new Color(0.55f, 0.45f, 0.28f) // sand-adjacent clear color
                 : isDungeon || isCrypt
                 ? new Color(0.08f, 0.07f, 0.1f)
                 : isInside
                     ? new Color(0.2f, 0.16f, 0.12f)
-                    // Match water tile so survival shores read as a continuous lake edge.
-                    : new Color(0.1f, 0.2f, 0.48f));
+                    // Grass-adjacent clear color (no water ring on survival).
+                    : new Color(0.16f, 0.32f, 0.14f));
 
             const float arenaW = ArenaBounds.ArenaWidth;
             const float arenaH = ArenaBounds.ArenaHeight;
@@ -184,6 +202,8 @@ namespace ProjectZx.Core
 
             var session = new GameObject("SurvivalSession").AddComponent<SurvivalSession>();
             session.Begin(player.transform, hud, mapKind);
+
+            DungeonKnightEncounter.TrySpawnInDungeon();
 
             var bossAudio = new GameObject("BossProximityAudio").AddComponent<BossProximityAudio>();
             bossAudio.BindPlayer(player.transform);

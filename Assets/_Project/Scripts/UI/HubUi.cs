@@ -50,6 +50,7 @@ namespace ProjectZx.UI
         GameObject _settingsPanel;
         GameObject _questPanel;
         Image _questPortraitImage;
+        GameObject _questPortraitFrame;
         Text _questTitleText;
         Text _questBodyText;
         Text _questStatusText;
@@ -186,6 +187,7 @@ namespace ProjectZx.UI
         void AnimateQuestPortraitTalk()
         {
             if (!IsPanelOpen(_questPanel) || _questPortraitImage == null) return;
+            if (!QuestCatalog.UsesQuestPortrait(_questPanelFocusId)) return;
 
             var frames = ArtLibrary.WizardPortraitFrames;
             if (frames == null || frames.Length == 0) return;
@@ -715,7 +717,7 @@ namespace ProjectZx.UI
             // Dialogue layout: Stone border, portrait left, quest copy right.
             var panel = CreateDialogPanel(parent, "QuestPanel", Vector2.zero, new Vector2(980f, 560f), ArtLibrary.ShopUi);
 
-            // Stone frame around the talking portrait.
+            // Square stone frame so the 64×64 talk portrait fills without curved gaps.
             var frameGo = new GameObject("PortraitFrame");
             frameGo.transform.SetParent(panel.transform, false);
             var frameRect = frameGo.AddComponent<RectTransform>();
@@ -725,21 +727,23 @@ namespace ProjectZx.UI
             frameRect.anchoredPosition = new Vector2(-300f, 20f);
             frameRect.sizeDelta = new Vector2(280f, 280f);
             var frameImage = frameGo.AddComponent<Image>();
-            if (StoneUi.ItemFrame != null)
+            if (StoneUi.ButtonSquare != null)
             {
-                frameImage.sprite = StoneUi.ItemFrame;
+                frameImage.sprite = StoneUi.ButtonSquare;
                 frameImage.type = Image.Type.Sliced;
-                frameImage.pixelsPerUnitMultiplier = 0.85f;
+                frameImage.pixelsPerUnitMultiplier = 1f;
             }
-            else if (StoneUi.PanelFrameAlt != null)
+            else if (StoneUi.ListFrame != null)
             {
-                frameImage.sprite = StoneUi.PanelFrameAlt;
+                frameImage.sprite = StoneUi.ListFrame;
                 frameImage.type = Image.Type.Sliced;
             }
             else
             {
                 frameImage.color = new Color(0.35f, 0.28f, 0.22f, 0.95f);
             }
+
+            _questPortraitFrame = frameGo;
 
             var portraitGo = new GameObject("WizardPortrait");
             portraitGo.transform.SetParent(frameGo.transform, false);
@@ -805,7 +809,15 @@ namespace ProjectZx.UI
                 def = QuestCatalog.GrandWizardsPeril;
             }
 
-            _questPanelFocusId = def.Id;
+            OpenQuestDialogue(def.Id);
+        }
+
+        /// <summary>Open the quest panel focused on a specific quest (e.g. camp Knight1).</summary>
+        public void OpenQuestDialogue(QuestId questId)
+        {
+            RefreshGold();
+            CloseAllHubPanels();
+            _questPanelFocusId = questId;
             RefreshQuestPanel();
             if (_questPanel != null)
             {
@@ -820,32 +832,58 @@ namespace ProjectZx.UI
                 def = QuestCatalog.GrandWizardsPeril;
 
             var progress = QuestCatalog.GetProgress(def.Id);
+            var showPortrait = QuestCatalog.UsesQuestPortrait(def.Id);
+            if (_questPortraitFrame != null)
+                _questPortraitFrame.SetActive(showPortrait);
+
             if (_questPortraitImage != null)
             {
-                var frames = ArtLibrary.WizardPortraitFrames;
-                _questPortraitImage.sprite = frames != null && frames.Length > 0
-                    ? frames[0]
-                    : ArtLibrary.WizardPortrait;
-                _questPortraitFrameIndex = 0;
-                _questPortraitAnimTimer = 0f;
-                _questPortraitImage.rectTransform.localScale = Vector3.one;
+                if (showPortrait)
+                {
+                    var frames = ArtLibrary.WizardPortraitFrames;
+                    _questPortraitImage.sprite = frames != null && frames.Length > 0
+                        ? frames[0]
+                        : ArtLibrary.WizardPortrait;
+                    _questPortraitFrameIndex = 0;
+                    _questPortraitAnimTimer = 0f;
+                    _questPortraitImage.rectTransform.localScale = Vector3.one;
+                    _questPortraitImage.enabled = true;
+                }
+                else
+                {
+                    _questPortraitImage.enabled = false;
+                }
             }
 
+            // When no portrait, use full dialogue width for body/title.
+            var textX = showPortrait ? 140f : -20f;
+            var textW = showPortrait ? 520f : 860f;
             if (_questTitleText != null)
+            {
                 _questTitleText.text = def.Title;
+                var titleRect = _questTitleText.rectTransform;
+                titleRect.anchoredPosition = new Vector2(textX, 200f);
+                titleRect.sizeDelta = new Vector2(textW, 48f);
+            }
 
             if (_questStatusText != null)
             {
+                var rewardSuffix = def.Id == QuestId.KnightsBestFriend
+                    ? $"{def.GoldReward} Gold + Flame Enchant"
+                    : $"{def.GoldReward} Gold";
                 _questStatusText.text = progress switch
                 {
-                    QuestProgress.Available => $"Available  ·  Reward: {def.GoldReward} Gold",
+                    QuestProgress.Available => $"Available  ·  Reward: {rewardSuffix}",
                     QuestProgress.Active => string.IsNullOrEmpty(def.ActiveStatusHint)
                         ? "In progress"
                         : def.ActiveStatusHint,
-                    QuestProgress.ReadyToTurnIn => $"Ready to turn in  ·  Reward: {def.GoldReward} Gold",
+                    QuestProgress.ReadyToTurnIn => $"Ready to turn in  ·  Reward: {rewardSuffix}",
                     QuestProgress.Completed => "Completed",
                     _ => "Locked"
                 };
+                var statusRect = _questStatusText.rectTransform;
+                statusRect.anchoredPosition = new Vector2(textX, 155f);
+                statusRect.sizeDelta = new Vector2(textW, 28f);
             }
 
             if (_questBodyText != null)
@@ -858,6 +896,9 @@ namespace ProjectZx.UI
                     QuestProgress.Completed => def.CompletedText,
                     _ => "Come back when you are ready for a new task."
                 };
+                var bodyRect = _questBodyText.rectTransform;
+                bodyRect.anchoredPosition = new Vector2(textX, -10f);
+                bodyRect.sizeDelta = new Vector2(textW, 280f);
             }
 
             var canAccept = progress == QuestProgress.Available;
@@ -887,11 +928,14 @@ namespace ProjectZx.UI
 
         void TurnInFocusedQuest()
         {
-            if (!QuestCatalog.TryTurnIn(_questPanelFocusId, out var gold)) return;
+            var questId = _questPanelFocusId;
+            if (!QuestCatalog.TryTurnIn(questId, out var gold)) return;
             RefreshGold();
             RefreshQuestPanel();
             if (gold > 0)
                 SparkleBurst.Play(_questPanel != null ? _questPanel.transform : transform, new Vector2(120f, 0f), 12);
+            if (questId == QuestId.KnightsBestFriend && GameSave.FlameEnchantUnlocked)
+                SparkleBurst.Play(_questPanel != null ? _questPanel.transform : transform, new Vector2(-120f, 40f), 10);
         }
 
         void OpenSettings()
@@ -1925,7 +1969,7 @@ namespace ProjectZx.UI
                 $"Whirlwind: {(GameSave.WhirlwindUnlocked ? "Owned" : "Locked")}\n" +
                 $"Piercing Shot: {(GameSave.PiercingShotUnlocked ? "Owned" : "Locked")}\n" +
                 $"Frost Tip: {(GameSave.FrostTipUnlocked ? "Owned" : "Locked")}\n" +
-                $"Flame Enchant: {(GameSave.FlameEnchantUnlocked ? "Owned" : "Clear Dungeon R40")}\n" +
+                $"Flame Enchant: {(GameSave.FlameEnchantUnlocked ? "Owned" : "Knight quest reward")}\n" +
                 $"Gold Magnet: {(GameSave.GoldMagnetUnlocked ? "Owned" : "Locked")}\n" +
                 $"Thick Hide: T{GameSave.ThickHideLevel} ({(1f - GameSave.ThickHideDamageTakenMultiplier) * 100f:0}% DR)\n" +
                 $"Second Wind: {GameSave.SecondWindMaxCharges} charge(s)/run\n" +

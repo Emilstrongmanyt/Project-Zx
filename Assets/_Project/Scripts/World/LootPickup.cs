@@ -5,7 +5,17 @@ using UnityEngine;
 
 namespace ProjectZx.World
 {
-    public enum PickupType { Xp, Gold, HpPotion, MapLoot, Equipment, EpicCrystal, TwinLightningPendant }
+    public enum PickupType
+    {
+        Xp,
+        Gold,
+        HpPotion,
+        MapLoot,
+        Equipment,
+        EpicCrystal,
+        TwinLightningPendant,
+        KnightsGreatsword
+    }
 
     public class LootPickup : MonoBehaviour
     {
@@ -16,6 +26,8 @@ namespace ProjectZx.World
         const float MapLootScale = 1.55f / 2.5f;
         // Rings / necklaces / capes / quest pendant — large enough to spot on mobile.
         const float EquipmentPickupScale = 1.7f * 2f;
+        // Silver_Weapon5 is a small sheet sprite — 3× so it reads as a greatsword drop.
+        const float KnightsGreatswordScale = EquipmentPickupScale * 3f;
         const float EpicCrystalScale = 0.72f;
 
         PickupType _type;
@@ -62,6 +74,10 @@ namespace ProjectZx.World
                     _renderer.sprite = ArtLibrary.TwinLightningPendant;
                     transform.localScale = Vector3.one * EquipmentPickupScale;
                     break;
+                case PickupType.KnightsGreatsword:
+                    _renderer.sprite = ArtLibrary.KnightsGreatsword;
+                    transform.localScale = Vector3.one * KnightsGreatswordScale;
+                    break;
                 default:
                     _renderer.sprite = ArtLibrary.GoldCoinDropped;
                     transform.localScale = Vector3.one * DroppedPickupScale;
@@ -70,6 +86,7 @@ namespace ProjectZx.World
 
             _renderer.sortingOrder = type is PickupType.MapLoot or PickupType.Equipment
                 or PickupType.EpicCrystal or PickupType.TwinLightningPendant
+                or PickupType.KnightsGreatsword
                 ? 10
                 : 8;
         }
@@ -165,6 +182,9 @@ namespace ProjectZx.World
                 case PickupType.TwinLightningPendant:
                     CollectTwinLightningPendant();
                     break;
+                case PickupType.KnightsGreatsword:
+                    CollectKnightsGreatsword();
+                    break;
                 default:
                     stats.AddRunGold(_amount);
                     break;
@@ -212,6 +232,14 @@ namespace ProjectZx.World
             GameSave.HasTwinLightningPendant = true;
             GameHud.Instance?.ShowBanner(
                 $"{QuestCatalog.TwinLightningPendantName} recovered! Return it to the Grand Wizard at camp.",
+                3.4f);
+        }
+
+        void CollectKnightsGreatsword()
+        {
+            GameSave.HasKnightsGreatsword = true;
+            GameHud.Instance?.ShowBanner(
+                $"{QuestCatalog.KnightsGreatswordName} recovered! Return it to the Knight at camp.",
                 3.4f);
         }
 

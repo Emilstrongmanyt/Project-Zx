@@ -23,8 +23,8 @@ namespace ProjectZx.World
                 "DarkBirdRescue",
                 ArtLibrary.DarkBird,
                 new Vector3(position.x, position.y, 0f),
-                // 32×32 at 100 PPU is tiny — 2× so it is tappable on mobile.
-                scale: 2f,
+                // 32×32 at 100 PPU is tiny — 2× base, then ×1.5 for readability on mobile.
+                scale: 2f * 1.5f,
                 sortingOrder: 8);
             go.AddComponent<YSortRenderer>().Configure(6);
             var col = go.AddComponent<CircleCollider2D>();

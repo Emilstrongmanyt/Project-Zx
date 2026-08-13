@@ -65,6 +65,10 @@ namespace ProjectZx.Core
         const string QuestCrowRescuedKey = "zx_quest_crow_rescued";
         const string QuestCrowCompletedKey = "zx_quest_crow_completed";
         const string TwinLightningPendantKey = "zx_item_twin_lightning_pendant";
+        const string DungeonKnightReturnedKey = "zx_dungeon_knight_returned";
+        const string QuestKnightAcceptedKey = "zx_quest_knight_accepted";
+        const string QuestKnightCompletedKey = "zx_quest_knight_completed";
+        const string KnightsGreatswordKey = "zx_item_knights_greatsword";
         const string WeaponProgressMigratedKey = "zx_weapon_progress_migrated_v1";
         const string RollZySkinKey = "zx_rollzy_skin";
 
@@ -892,6 +896,48 @@ namespace ProjectZx.Core
             set
             {
                 PlayerPrefs.SetInt(QuestCrowCompletedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Dungeon Survival knight used the door home; appears at camp for his quest.</summary>
+        public static bool DungeonKnightReturnedToCamp
+        {
+            get => PlayerPrefs.GetInt(DungeonKnightReturnedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(DungeonKnightReturnedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestKnightsBestFriendAccepted
+        {
+            get => PlayerPrefs.GetInt(QuestKnightAcceptedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestKnightAcceptedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestKnightsBestFriendCompleted
+        {
+            get => PlayerPrefs.GetInt(QuestKnightCompletedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestKnightCompletedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Quest item recovered from Dungeon Survival R40 boss (not equippable gear).</summary>
+        public static bool HasKnightsGreatsword
+        {
+            get => PlayerPrefs.GetInt(KnightsGreatswordKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(KnightsGreatswordKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
         }
