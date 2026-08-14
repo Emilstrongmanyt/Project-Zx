@@ -185,7 +185,18 @@ namespace ProjectZx.Core
             if (TryFindByProgress(pool, QuestProgress.Available, out def, out progress))
                 return true;
 
-            // Fall back to the first quest in the pool (completed greeting / locked copy).
+            // All done / locked: prefer the latest completed quest in the pool
+            // (e.g. Grey Wizard crow after Grand Wizard peril), not always quest #1.
+            for (var i = pool.Length - 1; i >= 0; i--)
+            {
+                if (!TryGet(pool[i], out var completedDef)) continue;
+                var status = GetProgress(completedDef.Id);
+                if (status != QuestProgress.Completed) continue;
+                def = completedDef;
+                progress = status;
+                return true;
+            }
+
             if (TryGet(pool[0], out def))
             {
                 progress = GetProgress(def.Id);

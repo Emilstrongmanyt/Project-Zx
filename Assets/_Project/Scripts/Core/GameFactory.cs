@@ -417,7 +417,6 @@ namespace ProjectZx.Core
             DestroyNamed("InsideObstacles");
             DestroyNamed("CryptObstacles");
 
-            // Obstacles stay in the playable wrap area; floor includes visual skirt.
             const float arenaW = ArenaBounds.ArenaWidth;
             const float arenaH = ArenaBounds.ArenaHeight;
             var floorW = ArenaBounds.VisualFieldWidth;
@@ -440,12 +439,14 @@ namespace ProjectZx.Core
 
             ClearScatterReservations();
             ReserveClearing(Vector2.zero, 4.5f);
+            var propW = ArenaBounds.WorldWrapEnabled ? arenaW + 14f : arenaW;
+            var propH = ArenaBounds.WorldWrapEnabled ? arenaH + 14f : arenaH;
             if (isInside)
-                ScatterInsideObstacles(arenaW, arenaH);
+                ScatterInsideObstacles(propW, propH);
             else if (isDungeon || isCrypt)
-                ScatterCryptObstacles(arenaW, arenaH);
+                ScatterCryptObstacles(propW, propH);
             else
-                ScatterArenaObstacles(arenaW, arenaH, 14, 10, 3);
+                ScatterArenaObstacles(propW, propH, 18, 14, 4);
 
             var cam = Camera.main;
             if (cam != null)

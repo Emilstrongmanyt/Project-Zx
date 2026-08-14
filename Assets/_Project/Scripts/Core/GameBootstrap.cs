@@ -175,12 +175,15 @@ namespace ProjectZx.Core
 
             GameFactory.ClearScatterReservations();
             GameFactory.ReserveClearing(Vector2.zero, 4.5f); // player spawn / fight space
+            // Props also fill a band past the wrap edge so the approach to the border is not empty.
+            var propW = ArenaBounds.WorldWrapEnabled ? arenaW + 14f : arenaW;
+            var propH = ArenaBounds.WorldWrapEnabled ? arenaH + 14f : arenaH;
             if (isInside)
-                GameFactory.ScatterInsideObstacles(arenaW, arenaH);
+                GameFactory.ScatterInsideObstacles(propW, propH);
             else if (isDungeon || isCrypt)
-                GameFactory.ScatterCryptObstacles(arenaW, arenaH);
+                GameFactory.ScatterCryptObstacles(propW, propH);
             else
-                GameFactory.ScatterArenaObstacles(arenaW, arenaH, 14, 10, 3);
+                GameFactory.ScatterArenaObstacles(propW, propH, 18, 14, 4);
 
             var activeHero = GameSessionContext.SelectedHero;
             var activeClass = GameSave.GetHeroClass(activeHero);

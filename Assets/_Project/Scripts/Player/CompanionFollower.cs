@@ -18,10 +18,13 @@ namespace ProjectZx.Player
         const float MoveSpeed = 5.2f * 0.75f;
         const float ArriveSnap = 0.08f;
         const float LootScanInterval = 0.12f;
+        /// <summary>If farther than this from the leader on a wrap map, hard-snap beside them.</summary>
+        const float WrapResyncDistance = 8f;
 
         Transform _leader;
         PlayerStats _leaderStats;
         PlayerStats _stats;
+        Rigidbody2D _rb;
         SpriteRenderer _renderer;
         Sprite _idle;
         Sprite _walkA;
@@ -37,6 +40,7 @@ namespace ProjectZx.Player
             _leader = leader;
             _leaderStats = leaderStats;
             _stats = GetComponent<PlayerStats>();
+            _rb = GetComponent<Rigidbody2D>();
             _renderer = GetComponent<SpriteRenderer>();
 
             var set = ArtLibrary.GetHeroSprites(hero);
@@ -49,43 +53,71 @@ namespace ProjectZx.Player
                 _renderer.sprite = _idle;
 
             if (_leader != null)
-                transform.position = _leader.position + (Vector3)(Vector2.left * FollowDistance);
+                SetWorldPosition((Vector2)_leader.position + Vector2.left * FollowDistance);
+        }
+
+        void FixedUpdate()
+        {
+            if (_leader == null || _leaderStats == null || _leaderStats.IsDead)
+            {
+                ApplyIdleSprite();
+                return;
+            }
+
+            // Physics step: stay glued through wraps (leader moves in FixedUpdate).
+            FollowLeader();
         }
 
         void Update()
         {
             if (_leader == null || _leaderStats == null || _leaderStats.IsDead)
             {
-                // Leader gone — idle in place.
                 ApplyIdleSprite();
                 return;
             }
 
-            FollowLeader();
             UpdateFacingAndWalk();
             CollectNearbyLoot();
+        }
+
+        Vector2 GetWorldPosition()
+        {
+            if (_rb != null) return _rb.position;
+            return transform.position;
+        }
+
+        void SetWorldPosition(Vector2 pos)
+        {
+            if (_rb != null)
+            {
+                _rb.linearVelocity = Vector2.zero;
+                _rb.position = pos;
+            }
+
+            transform.position = new Vector3(pos.x, pos.y, transform.position.z);
         }
 
         void FollowLeader()
         {
             var leaderPos = (Vector2)_leader.position;
-            var selfPos = (Vector2)transform.position;
-            var leaderDelta = leaderPos - selfPos;
+            // Prefer leader rigidbody if present (matches teleport frame).
+            var leaderRb = _leader.GetComponent<Rigidbody2D>();
+            if (leaderRb != null) leaderPos = leaderRb.position;
 
-            // After a world wrap, snap instead of running across the whole map.
-            if (ArenaBounds.WorldWrapEnabled
-                && leaderDelta.sqrMagnitude > (ArenaBounds.ArenaWidth * 0.35f) * (ArenaBounds.ArenaWidth * 0.35f))
+            var selfPos = GetWorldPosition();
+            var toLeader = leaderPos - selfPos;
+            var distToLeader = toLeader.magnitude;
+
+            // After a wrap (or any large separation), snap beside the leader immediately.
+            if (ArenaBounds.WorldWrapEnabled && distToLeader > WrapResyncDistance)
             {
-                var snap = leaderPos + Vector2.left * FollowDistance;
-                transform.position = snap;
-                _lastLeaderDir = Vector2.left;
+                SnapBesideLeader(leaderPos);
                 return;
             }
 
-            if (leaderDelta.sqrMagnitude > 0.04f)
-                _lastLeaderDir = leaderDelta.normalized;
+            if (toLeader.sqrMagnitude > 0.04f)
+                _lastLeaderDir = toLeader.normalized;
 
-            // Prefer a slot slightly behind and to the side of the leader.
             var behind = -_lastLeaderDir;
             var side = new Vector2(-behind.y, behind.x);
             var target = leaderPos + behind * FollowDistance + side * FollowSideOffset;
@@ -94,23 +126,41 @@ namespace ProjectZx.Player
             var dist = toTarget.magnitude;
             if (dist <= ArriveSnap)
             {
-                transform.position = target;
+                SetWorldPosition(target);
                 return;
             }
 
             var step = MoveSpeed * (_stats != null ? _stats.RunSpeedMultiplier : 1f)
-                       * GameSave.SpeedMultiplier * Time.deltaTime;
+                       * GameSave.SpeedMultiplier * Time.fixedDeltaTime;
             if (step >= dist)
-                transform.position = target;
+                SetWorldPosition(target);
             else
-                transform.position = selfPos + toTarget / dist * step;
+                SetWorldPosition(selfPos + toTarget / dist * step);
         }
 
-        /// <summary>Called when the leader wraps; keeps the assist hero glued through the teleport.</summary>
+        void SnapBesideLeader(Vector2 leaderPos)
+        {
+            var dir = _lastLeaderDir.sqrMagnitude > 0.01f ? _lastLeaderDir : Vector2.right;
+            var behind = -dir;
+            var side = new Vector2(-behind.y, behind.x);
+            SetWorldPosition(leaderPos + behind * FollowDistance + side * FollowSideOffset);
+        }
+
+        /// <summary>
+        /// Same wrap offset as the leader — keeps assist hero continuous through the border.
+        /// </summary>
         public void TeleportWithLeader(Vector2 wrapDelta)
         {
             if (wrapDelta.sqrMagnitude < 0.25f) return;
-            transform.position += (Vector3)wrapDelta;
+            SetWorldPosition(GetWorldPosition() + wrapDelta);
+
+            // If still far (stale transform), hard-snap to follow slot.
+            if (_leader == null) return;
+            var leaderPos = (Vector2)_leader.position;
+            var leaderRb = _leader.GetComponent<Rigidbody2D>();
+            if (leaderRb != null) leaderPos = leaderRb.position;
+            if (Vector2.Distance(GetWorldPosition(), leaderPos) > WrapResyncDistance)
+                SnapBesideLeader(leaderPos);
         }
 
         void UpdateFacingAndWalk()
@@ -118,11 +168,14 @@ namespace ProjectZx.Player
             if (_renderer == null || _leader == null) return;
             if (IsBusyAttacking()) return;
 
-            var moving = ((Vector2)_leader.position - (Vector2)transform.position).sqrMagnitude > 0.12f;
+            var leaderPos = (Vector2)_leader.position;
+            var leaderRb = _leader.GetComponent<Rigidbody2D>();
+            if (leaderRb != null) leaderPos = leaderRb.position;
+
+            var moving = (leaderPos - GetWorldPosition()).sqrMagnitude > 0.12f;
             if (moving)
             {
                 var faceRight = _lastLeaderDir.x >= 0f;
-                // Match hero sheet default facing.
                 _renderer.flipX = _facesRightByDefault ? !faceRight : faceRight;
 
                 _walkAnimTimer += Time.deltaTime;
@@ -169,14 +222,12 @@ namespace ProjectZx.Player
             if (_lootTimer > 0f) return;
             _lootTimer = LootScanInterval;
 
-            // Always credit the active player — never bank loot on the companion.
             var credit = _leaderStats != null
                 ? _leaderStats.LootCreditTarget
                 : _stats != null ? _stats.LootCreditTarget : null;
             if (credit == null || credit.IsDead) return;
 
             var range = 1.45f * credit.EffectiveLootRangeMultiplier;
-            // Boss crystals use a slightly larger vacuum so companions do not miss them.
             var crystalRange = range * 1.25f;
             var pickups = Object.FindObjectsByType<LootPickup>();
             for (var i = 0; i < pickups.Length; i++)
@@ -184,7 +235,7 @@ namespace ProjectZx.Player
                 var pickup = pickups[i];
                 if (pickup == null) continue;
                 var maxRange = pickup.Type == PickupType.EpicCrystal ? crystalRange : range;
-                if (Vector2.Distance(transform.position, pickup.transform.position) > maxRange) continue;
+                if (Vector2.Distance(GetWorldPosition(), pickup.transform.position) > maxRange) continue;
                 pickup.CollectFor(credit);
             }
         }

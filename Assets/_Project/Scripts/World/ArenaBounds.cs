@@ -95,17 +95,25 @@ namespace ProjectZx.World
         }
 
         /// <summary>
-        /// After the player wraps, shift the rest of the world by the same delta so relative
-        /// positions stay continuous (companion, enemies, loot, props, portals).
+        /// After the player wraps, co-move mobile combat units only.
+        /// Fixed map props (trees/rocks) stay put so the torus still has obstacles
+        /// on the destination side — shifting them shoved them off the map.
         /// </summary>
         public static void ApplyWorldWrapDelta(Vector2 wrapDelta)
         {
             if (!WorldWrapEnabled || wrapDelta.sqrMagnitude < 0.25f) return;
 
-            ShiftAll<CompanionFollower>(wrapDelta);
+            // Companion first — force RB + transform so assist hero never trails a map away.
+            var companions = Object.FindObjectsByType<CompanionFollower>(FindObjectsSortMode.None);
+            for (var i = 0; i < companions.Length; i++)
+            {
+                if (companions[i] != null)
+                    companions[i].TeleportWithLeader(wrapDelta);
+            }
+
             ShiftAll<EnemyActor>(wrapDelta);
             ShiftAll<LootPickup>(wrapDelta);
-            ShiftAll<ArenaObstacle>(wrapDelta);
+            // Doors / portals / quest props that spawn mid-run.
             ShiftAll<ArenaDoor>(wrapDelta);
             ShiftAll<ArenaGateway>(wrapDelta);
             ShiftAll<ArenaCryptPortal>(wrapDelta);
@@ -115,6 +123,7 @@ namespace ProjectZx.World
             ShiftAll<ArrowProjectile>(wrapDelta);
             ShiftAll<BossFireProjectile>(wrapDelta);
             ShiftAll<EnemyRangedProjectile>(wrapDelta);
+            // ArenaObstacle intentionally NOT shifted — fixed torus layout.
         }
 
         static void ShiftAll<T>(Vector2 delta) where T : Component
@@ -124,20 +133,22 @@ namespace ProjectZx.World
             {
                 var item = items[i];
                 if (item == null) continue;
-                // Never shift the player root (companion is separate).
                 if (item.CompareTag("Player") && item.GetComponent<CompanionFollower>() == null)
                     continue;
                 ShiftTransform(item.transform, delta);
             }
         }
 
-        static void ShiftTransform(Transform t, Vector2 delta)
+        public static void ShiftTransform(Transform t, Vector2 delta)
         {
-            if (t == null) return;
+            if (t == null || delta.sqrMagnitude < 0.0001f) return;
             var rb = t.GetComponent<Rigidbody2D>();
             if (rb != null)
             {
-                rb.position += delta;
+                var next = rb.position + delta;
+                rb.position = next;
+                // Keep transform in sync the same frame (kinematic RB can lag a step).
+                t.position = new Vector3(next.x, next.y, t.position.z);
                 return;
             }
 

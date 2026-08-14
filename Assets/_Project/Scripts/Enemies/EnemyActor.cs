@@ -670,7 +670,15 @@ namespace ProjectZx.Enemies
 
             if (allowed <= 0.0001f) return false;
 
-            _rb.MovePosition(_rb.position + direction * allowed);
+            var proposed = _rb.position + direction * allowed;
+            if (ArenaBounds.WorldWrapEnabled)
+            {
+                ArenaBounds.ConstrainPosition(proposed, out var wrapped, out _);
+                proposed = wrapped;
+            }
+
+            _rb.position = proposed;
+            _rb.MovePosition(proposed);
             _rb.linearVelocity = direction * GetMoveSpeed();
             return true;
         }

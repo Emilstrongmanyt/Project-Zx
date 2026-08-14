@@ -254,9 +254,12 @@ namespace ProjectZx.Player
 
             var proposed = _rb.position + direction * allowed;
             ArenaBounds.ConstrainPosition(proposed, out var next, out var wrapDelta);
+            // Force immediate position so companion wrap matches this frame (MovePosition can lag).
+            _rb.position = next;
             _rb.MovePosition(next);
+            transform.position = new Vector3(next.x, next.y, transform.position.z);
             _rb.linearVelocity = direction * (allowed / Time.fixedDeltaTime);
-            // Co-move companion / combat / props so wrap feels continuous, not a hard cut.
+            // Co-move companion + combat (not fixed props — those stay on the torus).
             if (wrapDelta.sqrMagnitude > 0.25f)
                 ArenaBounds.ApplyWorldWrapDelta(wrapDelta);
             return true;
