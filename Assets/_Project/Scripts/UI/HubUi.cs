@@ -1954,7 +1954,8 @@ namespace ProjectZx.UI
             if (selected == PlayerClass.Bowman) baseDamage *= 1.4f;
             else if (selected == PlayerClass.Spearman) baseDamage *= 1.15f;
             else if (selected == PlayerClass.Samurai) baseDamage *= 0.7f;
-            var moveSpeed = 4.5f * GameSave.SpeedMultiplier * EquipmentCatalog.CombinedMoveSpeedMultiplier();
+            var moveSpeed = TapMovement.DefaultBaseSpeed * GameSave.SpeedMultiplier
+                            * EquipmentCatalog.CombinedMoveSpeedMultiplier();
             var maxHp = GameSave.MaxHp + EquipmentCatalog.CombinedBonusMaxHp();
             var movementLabel = GameSave.UsesJoystickMovement ? "Joystick" : "Tap / Hold";
             var rangeMul = GameSave.AttackRangeMultiplier;

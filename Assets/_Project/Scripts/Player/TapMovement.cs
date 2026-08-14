@@ -22,7 +22,8 @@ namespace ProjectZx.Player
         const float CastSkin = 0.08f;
         const float StuckClearDelay = 0.35f;
 
-        public const float DefaultBaseSpeed = 4.5f;
+        /// <summary>Default walk speed (−15% vs original 4.5).</summary>
+        public const float DefaultBaseSpeed = 4.5f * 0.85f;
 
         [SerializeField] float baseSpeed = DefaultBaseSpeed;
         [SerializeField] bool allowNpcInteraction = true;
@@ -254,14 +255,18 @@ namespace ProjectZx.Player
 
             var proposed = _rb.position + direction * allowed;
             ArenaBounds.ConstrainPosition(proposed, out var next, out var wrapDelta);
-            // Force immediate position so companion wrap matches this frame (MovePosition can lag).
-            _rb.position = next;
+            // Kinematic: MovePosition only. Setting position AND linearVelocity stacked and
+            // roughly doubled speed after the wrap hard-sync change.
             _rb.MovePosition(next);
-            transform.position = new Vector3(next.x, next.y, transform.position.z);
-            _rb.linearVelocity = direction * (allowed / Time.fixedDeltaTime);
-            // Co-move companion + combat (not fixed props — those stay on the torus).
+            _rb.linearVelocity = Vector2.zero;
+            // On wrap, force RB/transform sync the same frame so the companion can follow.
             if (wrapDelta.sqrMagnitude > 0.25f)
+            {
+                _rb.position = next;
+                transform.position = new Vector3(next.x, next.y, transform.position.z);
                 ArenaBounds.ApplyWorldWrapDelta(wrapDelta);
+            }
+
             return true;
         }
 
