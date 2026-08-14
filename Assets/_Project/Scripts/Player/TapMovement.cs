@@ -252,9 +252,13 @@ namespace ProjectZx.Player
 
             if (allowed <= 0.0001f) return false;
 
-            var next = ArenaBounds.ClampToPlayable(_rb.position + direction * allowed);
+            var proposed = _rb.position + direction * allowed;
+            ArenaBounds.ConstrainPosition(proposed, out var next, out var wrapDelta);
             _rb.MovePosition(next);
             _rb.linearVelocity = direction * (allowed / Time.fixedDeltaTime);
+            // Co-move companion / combat / props so wrap feels continuous, not a hard cut.
+            if (wrapDelta.sqrMagnitude > 0.25f)
+                ArenaBounds.ApplyWorldWrapDelta(wrapDelta);
             return true;
         }
 

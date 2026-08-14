@@ -1,4 +1,6 @@
+using ProjectZx.Combat;
 using ProjectZx.Enemies;
+using ProjectZx.Player;
 using UnityEngine;
 
 namespace ProjectZx.World
@@ -16,10 +18,11 @@ namespace ProjectZx.World
         /// <summary>Outer ring of water tiles around playable land (camp only).</summary>
         public const int WaterBorderDepth = 3;
         /// <summary>
-        /// Extra biome floor tiles past the wrap edge on survival maps so the camera
-        /// never shows void when approaching the invisible teleport border.
+        /// Extra biome floor past the wrap edge. Wider on X so landscape cameras
+        /// never show the tile edge before the invisible teleport border.
         /// </summary>
-        public const int VisualSkirtDepth = 8;
+        public const int VisualSkirtDepthX = 28;
+        public const int VisualSkirtDepthY = 16;
         public const int EntitySortBase = 100;
         public const float SortDepthScale = 40f;
 
@@ -35,33 +38,48 @@ namespace ProjectZx.World
 
         public static float WaterMargin => WorldWrapEnabled ? 0f : TileSize * WaterBorderDepth;
 
-        /// <summary>Playable half-extents (wrap / clamp boundary).</summary>
         public static float PlayableHalfWidth => ArenaWidth * 0.5f - WaterMargin;
         public static float PlayableHalfHeight => ArenaHeight * 0.5f - WaterMargin;
 
-        /// <summary>Floor field size including visual skirt past wrap edges (survival).</summary>
         public static float VisualFieldWidth =>
-            WorldWrapEnabled ? ArenaWidth + VisualSkirtDepth * TileSize * 2f : ArenaWidth;
+            WorldWrapEnabled ? ArenaWidth + VisualSkirtDepthX * TileSize * 2f : ArenaWidth;
         public static float VisualFieldHeight =>
-            WorldWrapEnabled ? ArenaHeight + VisualSkirtDepth * TileSize * 2f : ArenaHeight;
+            WorldWrapEnabled ? ArenaHeight + VisualSkirtDepthY * TileSize * 2f : ArenaHeight;
 
         public static int GetYSortOrder(float worldY, int offset = 0)
         {
-            // South (lower Y) draws in front with a positive, stable sorting band above floor tiles.
             var depth = Mathf.RoundToInt((PlayableHalfHeight - worldY) * SortDepthScale);
             return EntitySortBase + depth + offset;
         }
 
         public static Vector2 ClampToPlayable(Vector2 position)
         {
-            if (WorldWrapEnabled)
-                return WrapToPlayable(position);
+            ConstrainPosition(position, out var constrained, out _);
+            return constrained;
+        }
 
-            var maxX = PlayableHalfWidth;
-            var maxY = PlayableHalfHeight;
-            return new Vector2(
-                Mathf.Clamp(position.x, -maxX, maxX),
-                Mathf.Clamp(position.y, -maxY, maxY));
+        /// <summary>
+        /// Clamp (camp) or wrap (survival). When wrapping, <paramref name="wrapDelta"/> is the
+        /// teleport offset so callers can co-move companions / combat with the player.
+        /// </summary>
+        public static void ConstrainPosition(Vector2 position, out Vector2 constrained, out Vector2 wrapDelta)
+        {
+            if (!WorldWrapEnabled)
+            {
+                var maxX = PlayableHalfWidth;
+                var maxY = PlayableHalfHeight;
+                constrained = new Vector2(
+                    Mathf.Clamp(position.x, -maxX, maxX),
+                    Mathf.Clamp(position.y, -maxY, maxY));
+                wrapDelta = Vector2.zero;
+                return;
+            }
+
+            constrained = WrapToPlayable(position);
+            wrapDelta = constrained - position;
+            // Ignore tiny float noise; real wraps are full arena steps.
+            if (wrapDelta.sqrMagnitude < 0.25f)
+                wrapDelta = Vector2.zero;
         }
 
         /// <summary>
@@ -74,6 +92,56 @@ namespace ProjectZx.World
             position.x = Mathf.Repeat(position.x + halfW, ArenaWidth) - halfW;
             position.y = Mathf.Repeat(position.y + halfH, ArenaHeight) - halfH;
             return position;
+        }
+
+        /// <summary>
+        /// After the player wraps, shift the rest of the world by the same delta so relative
+        /// positions stay continuous (companion, enemies, loot, props, portals).
+        /// </summary>
+        public static void ApplyWorldWrapDelta(Vector2 wrapDelta)
+        {
+            if (!WorldWrapEnabled || wrapDelta.sqrMagnitude < 0.25f) return;
+
+            ShiftAll<CompanionFollower>(wrapDelta);
+            ShiftAll<EnemyActor>(wrapDelta);
+            ShiftAll<LootPickup>(wrapDelta);
+            ShiftAll<ArenaObstacle>(wrapDelta);
+            ShiftAll<ArenaDoor>(wrapDelta);
+            ShiftAll<ArenaGateway>(wrapDelta);
+            ShiftAll<ArenaCryptPortal>(wrapDelta);
+            ShiftAll<ArenaVictoryGate>(wrapDelta);
+            ShiftAll<DarkBirdRescue>(wrapDelta);
+            ShiftAll<DungeonKnightEncounter>(wrapDelta);
+            ShiftAll<ArrowProjectile>(wrapDelta);
+            ShiftAll<BossFireProjectile>(wrapDelta);
+            ShiftAll<EnemyRangedProjectile>(wrapDelta);
+        }
+
+        static void ShiftAll<T>(Vector2 delta) where T : Component
+        {
+            var items = Object.FindObjectsByType<T>(FindObjectsSortMode.None);
+            for (var i = 0; i < items.Length; i++)
+            {
+                var item = items[i];
+                if (item == null) continue;
+                // Never shift the player root (companion is separate).
+                if (item.CompareTag("Player") && item.GetComponent<CompanionFollower>() == null)
+                    continue;
+                ShiftTransform(item.transform, delta);
+            }
+        }
+
+        static void ShiftTransform(Transform t, Vector2 delta)
+        {
+            if (t == null) return;
+            var rb = t.GetComponent<Rigidbody2D>();
+            if (rb != null)
+            {
+                rb.position += delta;
+                return;
+            }
+
+            t.position += (Vector3)delta;
         }
 
         public static bool IsInsidePlayable(Vector2 position)
@@ -126,17 +194,11 @@ namespace ProjectZx.World
             return ClampToPlayable(origin);
         }
 
-        /// <summary>
-        /// Survival wave spawn: mixes near/far rings, arena edges, open-field picks, and
-        /// flanking angles so packs are harder to predict than a fixed 7–12 ring.
-        /// </summary>
         public static Vector2 RandomWaveSpawn(Vector2 playerPos, bool preferDistance = false)
         {
-            // Slight origin jitter so multi-spawns in one wave do not share one perfect center.
             var origin = playerPos + Random.insideUnitCircle * 2.8f;
             var roll = Random.value;
 
-            // Bosses / late pressure: bias toward farther entries.
             if (preferDistance)
                 roll = Mathf.Min(1f, roll + 0.22f);
 
@@ -154,7 +216,6 @@ namespace ProjectZx.World
             else
                 candidate = RandomSpawnFlanking(playerPos, minDistance: 6.5f, maxDistance: 14f);
 
-            // Tiny final jitter so even same-strategy picks do not stack on identical tiles.
             candidate = ClampToPlayable(candidate + Random.insideUnitCircle * 0.55f);
             if (IsInsidePlayable(candidate) && IsClearOfObstacles(candidate)
                 && Vector2.Distance(candidate, playerPos) >= 4.5f)
@@ -174,16 +235,16 @@ namespace ProjectZx.World
                 var side = Random.Range(0, 4);
                 switch (side)
                 {
-                    case 0: // west
+                    case 0:
                         candidate = new Vector2(-maxX, Random.Range(-maxY, maxY));
                         break;
-                    case 1: // east
+                    case 1:
                         candidate = new Vector2(maxX, Random.Range(-maxY, maxY));
                         break;
-                    case 2: // south
+                    case 2:
                         candidate = new Vector2(Random.Range(-maxX, maxX), -maxY);
                         break;
-                    default: // north
+                    default:
                         candidate = new Vector2(Random.Range(-maxX, maxX), maxY);
                         break;
                 }
@@ -218,10 +279,9 @@ namespace ProjectZx.World
 
         static Vector2 RandomSpawnFlanking(Vector2 playerPos, float minDistance, float maxDistance)
         {
-            // Prefer left/right of the player's current facing-agnostic axes (cardinal flanks).
             var baseAngle = Random.value < 0.5f
-                ? Random.Range(-0.55f, 0.55f) // roughly east/west of vertical
-                : Mathf.PI * 0.5f + Random.Range(-0.55f, 0.55f); // roughly north/south of horizontal
+                ? Random.Range(-0.55f, 0.55f)
+                : Mathf.PI * 0.5f + Random.Range(-0.55f, 0.55f);
             if (Random.value < 0.5f) baseAngle += Mathf.PI;
 
             for (var attempt = 0; attempt < 32; attempt++)

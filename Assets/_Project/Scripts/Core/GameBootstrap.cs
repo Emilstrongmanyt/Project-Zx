@@ -49,7 +49,7 @@ namespace ProjectZx.Core
             GameFactory.ReserveClearing(new Vector2(2.1f, 1.1f), 3.6f);      // knight map
             GameFactory.ReserveClearing(new Vector2(4.2f, 1.6f), 3.6f);      // grand wizard
             GameFactory.ReserveClearing(new Vector2(7.4f, -0.6f), 3.0f);     // grey wizard (decorative)
-            GameFactory.ReserveClearing(new Vector2(10.2f, 1.8f), 3.4f);     // quest knight (Knight1)
+            GameFactory.ReserveClearing(new Vector2(7.0f, 6.6f), 3.6f);      // quest knight (north trees)
             GameFactory.ReserveClearing(new Vector2(0f, 2.8f), 3.6f);        // achievement board
             // Chest sits far left of the wizard so it never overlaps the shop NPC.
             GameFactory.ReserveClearing(new Vector2(-6.4f, -0.6f), 2.4f);    // treasure chest
@@ -98,13 +98,14 @@ namespace ProjectZx.Core
                 if (greySr != null) greySr.flipX = true;
             }
             // Knight1 returns after the player sends him home from Dungeon Survival.
+            // North of camp near the tree line (wizards stay lower / mid).
             if (GameSave.DungeonKnightReturnedToCamp)
             {
                 GameFactory.CreateNpc(
                     "QuestKnight",
                     ArtLibrary.Knight1,
-                    new Vector3(10.2f, 1.8f),
-                    () => hub.OpenQuestDialogue(QuestId.KnightsBestFriend),
+                    new Vector3(7.0f, 6.6f),
+                    () => hub.OpenKnightQuestGiver(),
                     knight1Scale);
             }
             // Layer Lab stage frame + trophy composite (readable world prop).

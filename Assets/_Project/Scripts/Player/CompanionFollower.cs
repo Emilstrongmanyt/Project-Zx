@@ -69,7 +69,19 @@ namespace ProjectZx.Player
         void FollowLeader()
         {
             var leaderPos = (Vector2)_leader.position;
-            var leaderDelta = leaderPos - (Vector2)transform.position;
+            var selfPos = (Vector2)transform.position;
+            var leaderDelta = leaderPos - selfPos;
+
+            // After a world wrap, snap instead of running across the whole map.
+            if (ArenaBounds.WorldWrapEnabled
+                && leaderDelta.sqrMagnitude > (ArenaBounds.ArenaWidth * 0.35f) * (ArenaBounds.ArenaWidth * 0.35f))
+            {
+                var snap = leaderPos + Vector2.left * FollowDistance;
+                transform.position = snap;
+                _lastLeaderDir = Vector2.left;
+                return;
+            }
+
             if (leaderDelta.sqrMagnitude > 0.04f)
                 _lastLeaderDir = leaderDelta.normalized;
 
@@ -78,7 +90,7 @@ namespace ProjectZx.Player
             var side = new Vector2(-behind.y, behind.x);
             var target = leaderPos + behind * FollowDistance + side * FollowSideOffset;
 
-            var toTarget = target - (Vector2)transform.position;
+            var toTarget = target - selfPos;
             var dist = toTarget.magnitude;
             if (dist <= ArriveSnap)
             {
@@ -91,7 +103,14 @@ namespace ProjectZx.Player
             if (step >= dist)
                 transform.position = target;
             else
-                transform.position = (Vector2)transform.position + toTarget / dist * step;
+                transform.position = selfPos + toTarget / dist * step;
+        }
+
+        /// <summary>Called when the leader wraps; keeps the assist hero glued through the teleport.</summary>
+        public void TeleportWithLeader(Vector2 wrapDelta)
+        {
+            if (wrapDelta.sqrMagnitude < 0.25f) return;
+            transform.position += (Vector3)wrapDelta;
         }
 
         void UpdateFacingAndWalk()

@@ -148,21 +148,45 @@ namespace ProjectZx.Core
             }
         }
 
+        /// <summary>Quests offered only by the Grand Wizard (Purple Wizard) at camp.</summary>
+        public static readonly QuestId[] GrandWizardQuestIds =
+        {
+            QuestId.GrandWizardsPeril,
+            QuestId.GreyWizardsCrow
+        };
+
+        /// <summary>Quests offered only by Knight1 at camp.</summary>
+        public static readonly QuestId[] KnightQuestIds =
+        {
+            QuestId.KnightsBestFriend
+        };
+
         /// <summary>
         /// Prefer turn-in, then active, then available so a ready crow reward is not
-        /// hidden behind another in-progress quest.
+        /// hidden behind another in-progress quest. Scoped to a giver's quest list.
         /// </summary>
         public static bool TryGetPrimaryOpenQuest(out QuestDefinition def, out QuestProgress progress)
+            => TryGetPrimaryOpenQuest(GrandWizardQuestIds, out def, out progress);
+
+        public static bool TryGetPrimaryOpenQuest(
+            QuestId[] pool, out QuestDefinition def, out QuestProgress progress)
         {
-            if (TryFindByProgress(QuestProgress.ReadyToTurnIn, out def, out progress))
+            if (pool == null || pool.Length == 0)
+            {
+                def = default;
+                progress = QuestProgress.Locked;
+                return false;
+            }
+
+            if (TryFindByProgress(pool, QuestProgress.ReadyToTurnIn, out def, out progress))
                 return true;
-            if (TryFindByProgress(QuestProgress.Active, out def, out progress))
+            if (TryFindByProgress(pool, QuestProgress.Active, out def, out progress))
                 return true;
-            if (TryFindByProgress(QuestProgress.Available, out def, out progress))
+            if (TryFindByProgress(pool, QuestProgress.Available, out def, out progress))
                 return true;
 
-            // Fall back to a completed starter quest so the wizard still greets the player.
-            if (TryGet(QuestId.GrandWizardsPeril, out def))
+            // Fall back to the first quest in the pool (completed greeting / locked copy).
+            if (TryGet(pool[0], out def))
             {
                 progress = GetProgress(def.Id);
                 return true;
@@ -174,11 +198,14 @@ namespace ProjectZx.Core
         }
 
         static bool TryFindByProgress(
-            QuestProgress wanted, out QuestDefinition def, out QuestProgress progress)
+            QuestId[] pool,
+            QuestProgress wanted,
+            out QuestDefinition def,
+            out QuestProgress progress)
         {
-            for (var i = 0; i < AllQuests.Length; i++)
+            for (var i = 0; i < pool.Length; i++)
             {
-                var candidate = AllQuests[i];
+                if (!TryGet(pool[i], out var candidate)) continue;
                 var status = GetProgress(candidate.Id);
                 if (status != wanted) continue;
                 def = candidate;

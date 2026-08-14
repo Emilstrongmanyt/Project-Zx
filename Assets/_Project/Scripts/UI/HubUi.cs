@@ -800,11 +800,11 @@ namespace ProjectZx.UI
             return panel;
         }
 
+        /// <summary>Grand Wizard only — never shows the knight's quest dialogue.</summary>
         public void OpenQuestGiver()
         {
-            RefreshGold();
-            CloseAllHubPanels();
-            if (!QuestCatalog.TryGetPrimaryOpenQuest(out var def, out _))
+            if (!QuestCatalog.TryGetPrimaryOpenQuest(
+                    QuestCatalog.GrandWizardQuestIds, out var def, out _))
             {
                 def = QuestCatalog.GrandWizardsPeril;
             }
@@ -812,7 +812,19 @@ namespace ProjectZx.UI
             OpenQuestDialogue(def.Id);
         }
 
-        /// <summary>Open the quest panel focused on a specific quest (e.g. camp Knight1).</summary>
+        /// <summary>Knight1 only — always opens his own quest, never the wizard's.</summary>
+        public void OpenKnightQuestGiver()
+        {
+            if (!QuestCatalog.TryGetPrimaryOpenQuest(
+                    QuestCatalog.KnightQuestIds, out var def, out _))
+            {
+                def = QuestCatalog.KnightsBestFriend;
+            }
+
+            OpenQuestDialogue(def.Id);
+        }
+
+        /// <summary>Open the quest panel focused on a specific quest id.</summary>
         public void OpenQuestDialogue(QuestId questId)
         {
             RefreshGold();
@@ -822,7 +834,8 @@ namespace ProjectZx.UI
             if (_questPanel != null)
             {
                 _questPanel.SetActive(true);
-                SparkleBurst.Play(_questPanel.transform, new Vector2(-300f, 40f), 8);
+                var sparkleX = QuestCatalog.UsesQuestPortrait(questId) ? -300f : 0f;
+                SparkleBurst.Play(_questPanel.transform, new Vector2(sparkleX, 40f), 8);
             }
         }
 
