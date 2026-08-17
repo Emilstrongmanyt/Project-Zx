@@ -15,8 +15,8 @@ namespace ProjectZx.Combat
         {
             if (attacker == null || target == null || !target.IsAlive || attacker.IsDead) return;
 
-            var damage = attacker.RollDamage(target, weaponMultiplier);
-            target.TakeDamage(damage);
+            var damage = attacker.RollDamage(target, weaponMultiplier, out var isCrit);
+            target.TakeDamage(damage, isCrit);
             attacker.OnDamageDealt(damage);
 
             // Frost Tip: 1s chill (−60% move). Bosses + flying immune.

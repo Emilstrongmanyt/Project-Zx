@@ -15,7 +15,8 @@ namespace ProjectZx.UI
         public bool IsAnyMenuOpen =>
             IsPanelOpen(_shopPanel) || IsPanelOpen(_loadoutPanel) || IsPanelOpen(_statsPanel)
             || IsPanelOpen(_achievementsPanel) || IsPanelOpen(_mapPanel) || IsPanelOpen(_campfirePanel)
-            || IsPanelOpen(_equipmentPanel) || IsPanelOpen(_settingsPanel) || IsPanelOpen(_questPanel);
+            || IsPanelOpen(_equipmentPanel) || IsPanelOpen(_settingsPanel) || IsPanelOpen(_questPanel)
+            || IsPanelOpen(_onboardingPanel);
 
         static bool IsPanelOpen(GameObject panel) => panel != null && panel.activeSelf;
 
@@ -127,6 +128,25 @@ namespace ProjectZx.UI
         GameObject _shopInfoPanel;
         Text _shopInfoTitle;
         Text _shopInfoBody;
+        GameObject _onboardingPanel;
+        Text _onboardingTitle;
+        Text _onboardingBody;
+        Text _onboardingStepLabel;
+        int _onboardingStep;
+        GameObject _runToastPanel;
+        Text _runToastText;
+        float _runToastTimer;
+        Button _largeDamageNumbersButton;
+        Text _largeDamageNumbersLabel;
+
+        static readonly string[] OnboardingSteps =
+        {
+            "Welcome to Project Zx!\n\nThis is your camp. Upgrades and gold you bank from runs stay here forever.",
+            "Talk to the Wizard (left of the campfire) to buy permanent upgrades.\nWhirlwind is a strong early pick.",
+            "Talk to the Knight (right of the campfire) to start Outside Survival.\nSurvive waves, level up, and bank gold on death or retreat.",
+            "Talk to the Grand Wizard for quests.\nQuests teach the map unlock chain and pay gold rewards.",
+            "Tip: Use Retreat anytime to bank gold safely.\nUnstuck (once per run) returns you to the map spawn.\n\nGood luck, clanker!"
+        };
 
         void Awake()
         {
@@ -134,6 +154,12 @@ namespace ProjectZx.UI
             Build();
             RefreshGold();
             Achievements.OnUnlocked += OnAchievementUnlockedAtCamp;
+        }
+
+        void Start()
+        {
+            TryShowLastRunToast();
+            TryShowOnboarding();
         }
 
         void OnDestroy()
@@ -173,11 +199,138 @@ namespace ProjectZx.UI
             _equipmentPanel = BuildEquipmentPanel(canvasGo.transform);
             _settingsPanel = BuildSettingsPanel(canvasGo.transform);
             _questPanel = BuildQuestPanel(canvasGo.transform);
+            _onboardingPanel = BuildOnboardingPanel(canvasGo.transform);
+            _runToastPanel = BuildRunToastPanel(canvasGo.transform);
         }
 
         void Update()
         {
             AnimateQuestPortraitTalk();
+            TickRunToast();
+        }
+
+        GameObject BuildOnboardingPanel(Transform parent)
+        {
+            var panel = CreateDialogPanel(parent, "OnboardingPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ChallengeBoardUi);
+            _onboardingTitle = CreateText(panel.transform, "Getting Started", 38, TextAnchor.MiddleCenter, new Vector2(0, 340), new Vector2(800, 48));
+            _onboardingStepLabel = CreateText(panel.transform, "1 / 5", 22, TextAnchor.MiddleCenter, new Vector2(0, 290), new Vector2(200, 32));
+            _onboardingStepLabel.color = new Color(1f, 0.9f, 0.55f);
+            _onboardingBody = CreateText(panel.transform, "", 26, TextAnchor.MiddleCenter, new Vector2(0, 20), new Vector2(860, 420));
+            _onboardingBody.alignment = TextAnchor.UpperCenter;
+            CreateButton(panel.transform, "Skip", new Vector2(-200, -340), CompleteOnboarding);
+            CreateButton(panel.transform, "Next", new Vector2(200, -340), AdvanceOnboarding, large: true);
+            panel.SetActive(false);
+            return panel;
+        }
+
+        GameObject BuildRunToastPanel(Transform parent)
+        {
+            var panel = new GameObject("RunToast");
+            panel.transform.SetParent(parent, false);
+            var rect = panel.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0f, -SafeTop - 8f);
+            rect.sizeDelta = new Vector2(720f, 72f);
+
+            var bg = panel.AddComponent<Image>();
+            if (StoneUi.Available && StoneUi.ResourceBarBg != null)
+            {
+                bg.sprite = StoneUi.ResourceBarBg;
+                bg.type = Image.Type.Sliced;
+                bg.color = Color.white;
+            }
+            else
+            {
+                bg.color = new Color(0.08f, 0.1f, 0.14f, 0.9f);
+            }
+
+            _runToastText = CreateText(panel.transform, "", 24, TextAnchor.MiddleCenter, Vector2.zero, new Vector2(680f, 60f));
+            _runToastText.color = new Color(1f, 0.94f, 0.72f);
+            panel.SetActive(false);
+            return panel;
+        }
+
+        void TryShowLastRunToast()
+        {
+            if (_runToastPanel == null || _runToastText == null) return;
+            if (GameSave.LastRunGoldBanked <= 0 && GameSave.LastRunRound <= 0) return;
+
+            var gold = GameSave.LastRunGoldBanked;
+            var round = GameSave.LastRunRound;
+            var kills = GameSave.LastRunKills;
+            var died = GameSave.LastRunWasDeath;
+
+            var parts = new System.Text.StringBuilder();
+            if (gold > 0)
+                parts.Append($"Banked {GoldFormat.Abbreviate(gold)} gold");
+            if (round > 0)
+            {
+                if (parts.Length > 0) parts.Append("  ·  ");
+                parts.Append(died ? $"Fell at R{round}" : $"Reached R{round}");
+            }
+            if (kills > 0)
+            {
+                if (parts.Length > 0) parts.Append("  ·  ");
+                parts.Append($"{kills} kills");
+            }
+
+            if (parts.Length == 0) return;
+
+            _runToastText.text = parts.ToString();
+            _runToastPanel.SetActive(true);
+            _runToastTimer = 5.5f;
+            GameSave.ClearLastRunToast();
+        }
+
+        void TickRunToast()
+        {
+            if (_runToastPanel == null || !_runToastPanel.activeSelf) return;
+            _runToastTimer -= Time.unscaledDeltaTime;
+            if (_runToastTimer > 0f) return;
+            _runToastPanel.SetActive(false);
+        }
+
+        void TryShowOnboarding()
+        {
+            if (GameSave.OnboardingCompleted) return;
+            if (_onboardingPanel == null) return;
+            _onboardingStep = 0;
+            RefreshOnboardingStep();
+            CloseAllHubPanels();
+            _onboardingPanel.SetActive(true);
+        }
+
+        void RefreshOnboardingStep()
+        {
+            if (_onboardingBody == null) return;
+            var total = OnboardingSteps.Length;
+            var index = Mathf.Clamp(_onboardingStep, 0, total - 1);
+            _onboardingBody.text = OnboardingSteps[index];
+            if (_onboardingStepLabel != null)
+                _onboardingStepLabel.text = $"{index + 1} / {total}";
+            if (_onboardingTitle != null)
+                _onboardingTitle.text = index == 0 ? "Welcome" : "Getting Started";
+        }
+
+        void AdvanceOnboarding()
+        {
+            if (_onboardingStep >= OnboardingSteps.Length - 1)
+            {
+                CompleteOnboarding();
+                return;
+            }
+
+            _onboardingStep++;
+            RefreshOnboardingStep();
+        }
+
+        void CompleteOnboarding()
+        {
+            GameSave.OnboardingCompleted = true;
+            if (_onboardingPanel != null)
+                _onboardingPanel.SetActive(false);
         }
 
         /// <summary>
@@ -481,9 +634,29 @@ namespace ProjectZx.UI
             CreateButton(panel.transform, "−", new Vector2(-200, -240), () => AdjustSfxVolume(-0.1f));
             CreateButton(panel.transform, "+", new Vector2(200, -240), () => AdjustSfxVolume(0.1f));
 
-            CreateButton(panel.transform, "Close", new Vector2(0, -340), () => CloseSettings(), large: true);
+            CreateText(panel.transform, "Accessibility", 26, TextAnchor.MiddleCenter, new Vector2(0, -290), new Vector2(400, 36));
+            _largeDamageNumbersButton = CreateButton(panel.transform, "Large Damage Numbers", new Vector2(0, -335), ToggleLargeDamageNumbers);
+            _largeDamageNumbersLabel = _largeDamageNumbersButton != null
+                ? _largeDamageNumbersButton.GetComponentInChildren<Text>()
+                : null;
+
+            CreateButton(panel.transform, "Close", new Vector2(0, -400), () => CloseSettings(), large: true);
             panel.SetActive(false);
             return panel;
+        }
+
+        void ToggleLargeDamageNumbers()
+        {
+            GameSave.LargeDamageNumbers = !GameSave.LargeDamageNumbers;
+            RefreshLargeDamageNumbersButton();
+        }
+
+        void RefreshLargeDamageNumbersButton()
+        {
+            if (_largeDamageNumbersLabel == null) return;
+            _largeDamageNumbersLabel.text = GameSave.LargeDamageNumbers
+                ? "Large Damage Numbers: ON"
+                : "Large Damage Numbers: OFF";
         }
 
         GameObject BuildStatsPanel(Transform parent)
@@ -974,6 +1147,7 @@ namespace ProjectZx.UI
             RefreshMovementControlPicker();
             RefreshRollZySkinPicker();
             RefreshVolumeLabels();
+            RefreshLargeDamageNumbersButton();
         }
 
         void SelectRollZySkin(bool upgraded)
@@ -1251,10 +1425,10 @@ namespace ProjectZx.UI
                 picker.StatusText.text = GetClassStatusText(selected);
 
             RefreshClassButton(picker.BatterButton, PlayerClass.Batter, true, "Batter");
-            RefreshClassButton(picker.SpearmanButton, PlayerClass.Spearman, GameSave.SpearmanUnlocked, "Spearman (Beat R20 Boss)");
-            RefreshClassButton(picker.BowmanButton, PlayerClass.Bowman, GameSave.BowmanUnlocked, "Bowman (Clear R30 Inside)");
-            RefreshClassButton(picker.SamuraiButton, PlayerClass.Samurai, GameSave.SamuraiUnlocked, "Samurai (Dungeon R40 Boss)");
-            RefreshClassButton(picker.MagicianButton, PlayerClass.Magician, GameSave.MagicianUnlocked, "Magician (Clear Unlimited R80)");
+            RefreshClassButton(picker.SpearmanButton, PlayerClass.Spearman, GameSave.SpearmanUnlocked, "Spearman — Outside R20 boss");
+            RefreshClassButton(picker.BowmanButton, PlayerClass.Bowman, GameSave.BowmanUnlocked, "Bowman — Inside R30 clear");
+            RefreshClassButton(picker.SamuraiButton, PlayerClass.Samurai, GameSave.SamuraiUnlocked, "Samurai — Dungeon R40 boss");
+            RefreshClassButton(picker.MagicianButton, PlayerClass.Magician, GameSave.MagicianUnlocked, "Magician — Unlimited R80");
         }
 
         static void RefreshClassButton(Button button, PlayerClass playerClass, bool unlocked, string lockedLabel)
@@ -2043,31 +2217,38 @@ namespace ProjectZx.UI
                 if (label == null) continue;
                 var text = label.text ?? string.Empty;
 
-                if (text.Contains("Inside Survival"))
+                // Match by map name substring so locked labels still refresh next open.
+                if (text.Contains("Inside Survival") || text.Contains("Outside R20"))
                 {
                     var unlocked = GameSave.InsideMapUnlocked;
                     button.interactable = unlocked;
-                    label.text = unlocked ? "Inside Survival" : "Inside Survival (Locked)";
+                    label.text = unlocked
+                        ? "Inside Survival"
+                        : "Inside — clear Outside R20 door";
                 }
-                else if (text.Contains("Dungeon Survival"))
+                else if (text.Contains("Dungeon Survival") || text.Contains("Inside R30"))
                 {
                     var unlocked = GameSave.DungeonMapUnlocked;
                     button.interactable = unlocked;
-                    label.text = unlocked ? "Dungeon Survival" : "Dungeon Survival (Locked)";
+                    label.text = unlocked
+                        ? "Dungeon Survival"
+                        : "Dungeon — clear Inside R30 gateway";
                 }
-                else if (text.Contains("Crypt Survival"))
+                else if (text.Contains("Crypt Survival") || text.Contains("Dungeon R40"))
                 {
                     var unlocked = GameSave.CryptMapUnlocked;
                     button.interactable = unlocked;
-                    label.text = unlocked ? "Crypt Survival" : "Crypt Survival (Locked)";
+                    label.text = unlocked
+                        ? "Crypt Survival"
+                        : "Crypt — clear Dungeon R40 portal";
                 }
-                else if (text.Contains("Unlimited Survival"))
+                else if (text.Contains("Unlimited Survival") || text.Contains("Crypt R50"))
                 {
                     var unlocked = GameSave.UnlimitedMapUnlocked;
                     button.interactable = unlocked;
                     label.text = unlocked
                         ? "Unlimited Survival"
-                        : "Unlimited Survival (Clear Crypt R50)";
+                        : "Unlimited — clear Crypt R50";
                 }
             }
         }

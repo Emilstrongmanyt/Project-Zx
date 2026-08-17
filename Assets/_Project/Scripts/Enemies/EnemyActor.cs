@@ -990,12 +990,12 @@ namespace ProjectZx.Enemies
             if (_fireBreathFx != null) _fireBreathFx.SetActive(false);
         }
 
-        public void TakeDamage(int amount)
+        public void TakeDamage(int amount, bool isCrit = false)
         {
             if (!IsAlive || amount <= 0) return;
             DpsTracker.Record(amount);
             ShowHitSprite();
-            FloatingDamageNumber.Spawn(transform.position, amount, isHeroHit: false);
+            FloatingDamageNumber.Spawn(transform.position, amount, isHeroHit: false, isCrit: isCrit);
             _hp -= amount;
             UpdateBossBPhase();
             if (_hp <= 0) Die();

@@ -71,8 +71,49 @@ namespace ProjectZx.Core
         const string KnightsGreatswordKey = "zx_item_knights_greatsword";
         const string WeaponProgressMigratedKey = "zx_weapon_progress_migrated_v1";
         const string RollZySkinKey = "zx_rollzy_skin";
+        const string OnboardingDoneKey = "zx_onboarding_done";
+        const string LargeDamageNumbersKey = "zx_large_damage_numbers";
 
+        /// <summary>Gold banked from the most recent survival exit (death, retreat, or portal).</summary>
         public static int LastRunGoldBanked { get; set; }
+
+        /// <summary>Round reached on the most recent survival exit (for camp toast / recap).</summary>
+        public static int LastRunRound { get; set; }
+
+        /// <summary>Kills during the most recent survival run.</summary>
+        public static int LastRunKills { get; set; }
+
+        /// <summary>True if the last survival exit was a death (vs retreat / clear).</summary>
+        public static bool LastRunWasDeath { get; set; }
+
+        public static bool OnboardingCompleted
+        {
+            get => PlayerPrefs.GetInt(OnboardingDoneKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(OnboardingDoneKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Accessibility: larger combat damage floaters.</summary>
+        public static bool LargeDamageNumbers
+        {
+            get => PlayerPrefs.GetInt(LargeDamageNumbersKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(LargeDamageNumbersKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static void RecordLastRunSummary(int goldBanked, int round, int kills, bool died)
+        {
+            LastRunGoldBanked = Mathf.Max(0, goldBanked);
+            LastRunRound = Mathf.Max(0, round);
+            LastRunKills = Mathf.Max(0, kills);
+            LastRunWasDeath = died;
+        }
 
         static string WeaponKillsKey(PlayerClass c) => $"zx_weapon_kills_{(int)c}";
         static string WeaponDungeonKey(PlayerClass c) => $"zx_weapon_dungeon_{(int)c}";
@@ -826,6 +867,15 @@ namespace ProjectZx.Core
             Gold += amount;
             LifetimeGoldEarned += amount;
             LastRunGoldBanked = amount;
+        }
+
+        /// <summary>Consume camp-return toast data after it is shown once.</summary>
+        public static void ClearLastRunToast()
+        {
+            LastRunGoldBanked = 0;
+            LastRunRound = 0;
+            LastRunKills = 0;
+            LastRunWasDeath = false;
         }
 
         public static bool TrySpendGold(int cost)

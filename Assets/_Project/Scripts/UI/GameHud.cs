@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using ProjectZx.Core;
 using ProjectZx.Player;
@@ -18,6 +19,7 @@ namespace ProjectZx.UI
         Text _xpText;
         Text _goldText;
         Text _dpsText;
+        Text _objectiveText;
         Image _hpFill;
         Image _xpFill;
         Text _bannerText;
@@ -28,11 +30,14 @@ namespace ProjectZx.UI
         GameObject _levelUpPanel;
         GameObject _epicPanel;
         GameObject _retreatPanel;
+        GameObject _runResultsPanel;
         GameObject _achievementToast;
         Transform _choiceButtonRoot;
         Transform _epicChoiceRoot;
         float _bannerTimer;
+        bool _stickyBanner;
         float _achievementToastTimer;
+        float _objectiveRefreshTimer;
         Transform _player;
         PlayerStats _stats;
         readonly List<GameObject> _choiceButtons = new();
@@ -41,17 +46,23 @@ namespace ProjectZx.UI
         AchievementDef _activeAchievementToast;
         bool _hasActiveAchievementToast;
         Text _retreatStatsText;
+        Text _runResultsTitle;
+        Text _runResultsBody;
         Button _unstuckButton;
         Text _unstuckLabel;
         bool _unstuckUsedThisRun;
         bool _choosingLevelUp;
         bool _choosingEpic;
+        bool _runResultsOpen;
+        bool _runResultsHandled;
+        SurvivalMapKind _runResultsMap = SurvivalMapKind.Outside;
 
         public static GameHud Instance { get; private set; }
         public bool IsChoosingUpgrade => _choosingLevelUp || _choosingEpic;
         public bool IsRetreatMenuOpen => _retreatPanel != null && _retreatPanel.activeSelf;
-        /// <summary>Talent pick or retreat confirm — freezes combat and blocks movement.</summary>
-        public bool IsGamePaused => IsChoosingUpgrade || IsRetreatMenuOpen;
+        public bool IsRunResultsOpen => _runResultsOpen;
+        /// <summary>Talent pick, retreat, or death results — freezes combat and blocks movement.</summary>
+        public bool IsGamePaused => IsChoosingUpgrade || IsRetreatMenuOpen || IsRunResultsOpen;
 
         void Awake()
         {
@@ -112,6 +123,7 @@ namespace ProjectZx.UI
 
             BuildHudGoldChip(canvasGo.transform, new Vector2(SafeLeft, -SafeTop - 154f));
             BuildHudDpsChip(canvasGo.transform, new Vector2(SafeLeft, -SafeTop - 208f));
+            BuildObjectiveTracker(canvasGo.transform);
 
             _bannerText = CreateText(canvasGo.transform, "", 44, Vector2.zero, TextAnchor.MiddleCenter);
             _bannerText.color = new Color(1f, 0.85f, 0.3f);
@@ -119,8 +131,53 @@ namespace ProjectZx.UI
             _levelUpPanel = BuildLevelUpPanel(canvasGo.transform);
             _epicPanel = BuildEpicTalentPanel(canvasGo.transform);
             _retreatPanel = BuildRetreatPanel(canvasGo.transform);
+            _runResultsPanel = BuildRunResultsPanel(canvasGo.transform);
             _achievementToast = BuildAchievementToast(canvasGo.transform);
             CreateRetreatButton(canvasGo.transform);
+            RefreshObjectiveTracker(force: true);
+        }
+
+        void BuildObjectiveTracker(Transform parent)
+        {
+            var chip = new GameObject("ObjectiveTracker");
+            chip.transform.SetParent(parent, false);
+            var chipRect = chip.AddComponent<RectTransform>();
+            chipRect.anchorMin = new Vector2(1f, 1f);
+            chipRect.anchorMax = new Vector2(1f, 1f);
+            chipRect.pivot = new Vector2(1f, 1f);
+            chipRect.anchoredPosition = new Vector2(-SafeRight + 20f, -SafeTop);
+            chipRect.sizeDelta = new Vector2(520f, 110f);
+
+            var bg = chip.AddComponent<Image>();
+            if (StoneUi.Available && StoneUi.ResourceBarBg != null)
+            {
+                bg.sprite = StoneUi.ResourceBarBg;
+                bg.type = Image.Type.Sliced;
+                bg.color = new Color(1f, 1f, 1f, 0.92f);
+            }
+            else
+            {
+                bg.color = new Color(0.06f, 0.07f, 0.12f, 0.78f);
+            }
+
+            var textGo = new GameObject("ObjectiveText");
+            textGo.transform.SetParent(chip.transform, false);
+            var textRect = textGo.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(16f, 10f);
+            textRect.offsetMax = new Vector2(-16f, -10f);
+            _objectiveText = textGo.AddComponent<Text>();
+            _objectiveText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            _objectiveText.fontSize = 22;
+            _objectiveText.fontStyle = FontStyle.Bold;
+            _objectiveText.color = new Color(1f, 0.94f, 0.8f);
+            _objectiveText.alignment = TextAnchor.UpperRight;
+            _objectiveText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _objectiveText.verticalOverflow = VerticalWrapMode.Truncate;
+            _objectiveText.raycastTarget = false;
+            _objectiveText.text = "";
+            chip.SetActive(false);
         }
 
         GameObject BuildAchievementToast(Transform parent)
@@ -272,7 +329,7 @@ namespace ProjectZx.UI
 
         void ShowRetreatConfirm()
         {
-            if (IsChoosingUpgrade || _stats == null || _stats.IsDead) return;
+            if (IsChoosingUpgrade || IsRunResultsOpen || _stats == null || _stats.IsDead) return;
             Time.timeScale = 0f;
             FloatingDamageNumber.ClearAll();
             SuppressAchievementToastForTalentMenu();
@@ -283,6 +340,114 @@ namespace ProjectZx.UI
                 _retreatPanel.transform.SetAsLastSibling();
                 _retreatPanel.SetActive(true);
             }
+        }
+
+        GameObject BuildRunResultsPanel(Transform parent)
+        {
+            var panel = CreateDialogPanel(parent, "RunResultsPanel", Vector2.zero, new Vector2(760, 640), ArtLibrary.ChallengeBoardUi);
+            _runResultsTitle = CreatePanelText(panel.transform, "Run Over", 40, new Vector2(0, 240), new Vector2(700, 52));
+            _runResultsTitle.color = new Color(1f, 0.86f, 0.45f);
+            _runResultsBody = CreatePanelText(panel.transform, "", 26, new Vector2(0, 20), new Vector2(680, 320));
+            _runResultsBody.alignment = TextAnchor.UpperCenter;
+            _runResultsBody.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _runResultsBody.verticalOverflow = VerticalWrapMode.Truncate;
+            _runResultsBody.color = new Color(0.93f, 0.95f, 0.98f);
+
+            CreateHudButton(panel.transform, "Retry", new Vector2(-150, -230), ConfirmRunResultsRetry);
+            CreateHudButton(panel.transform, "Camp", new Vector2(150, -230), ConfirmRunResultsCamp);
+            panel.SetActive(false);
+            return panel;
+        }
+
+        /// <summary>Death results — pauses game until Retry or Camp is chosen.</summary>
+        public IEnumerator ShowRunResultsAndWait(
+            bool died,
+            int round,
+            int kills,
+            int goldBanked,
+            SurvivalMapKind mapKind)
+        {
+            if (_runResultsPanel == null)
+            {
+                _runResultsHandled = true;
+                yield break;
+            }
+
+            _runResultsMap = mapKind;
+            _runResultsHandled = false;
+            _runResultsOpen = true;
+            Time.timeScale = 0f;
+            FloatingDamageNumber.ClearAll();
+            SuppressAchievementToastForTalentMenu();
+            ClearStickyBanner();
+
+            if (_retreatPanel != null)
+                _retreatPanel.SetActive(false);
+
+            if (_runResultsTitle != null)
+                _runResultsTitle.text = died ? "You Fell" : "Run Complete";
+
+            var mapLabel = mapKind switch
+            {
+                SurvivalMapKind.Inside => "Inside",
+                SurvivalMapKind.Dungeon => "Dungeon",
+                SurvivalMapKind.Crypt => "Crypt",
+                SurvivalMapKind.Unlimited => "Unlimited",
+                _ => "Outside"
+            };
+
+            var body =
+                $"{mapLabel} Survival\n\n" +
+                $"Round reached: {round}\n" +
+                $"Kills: {kills}\n" +
+                $"Gold banked: {GoldFormat.Abbreviate(goldBanked)}\n\n" +
+                (died
+                    ? "Your run gold is safe at camp.\nRetry this map or return home."
+                    : "Victory! Gold is banked at camp.");
+
+            if (_runResultsBody != null)
+                _runResultsBody.text = body;
+
+            _runResultsPanel.transform.SetAsLastSibling();
+            _runResultsPanel.SetActive(true);
+
+            while (!_runResultsHandled)
+                yield return null;
+        }
+
+        void ConfirmRunResultsRetry()
+        {
+            if (!_runResultsOpen) return;
+            _runResultsHandled = true;
+            _runResultsOpen = false;
+            if (_runResultsPanel != null)
+                _runResultsPanel.SetActive(false);
+            Time.timeScale = 1f;
+
+            // Keep banked gold toast meaningful after a death retry (fresh run, no camp visit).
+            GameSave.ClearLastRunToast();
+            GameSessionContext.SurvivalMap = _runResultsMap;
+            GameSessionContext.FreshSurvivalRun = true;
+            GameSessionContext.StartingRound = 0;
+            GameSessionContext.CarryRound = 0;
+            GameSessionContext.RunSnapshot = default;
+            GameFactory.LoadScene(GameScenes.SurvivalArena);
+        }
+
+        void ConfirmRunResultsCamp()
+        {
+            if (!_runResultsOpen) return;
+            _runResultsHandled = true;
+            _runResultsOpen = false;
+            if (_runResultsPanel != null)
+                _runResultsPanel.SetActive(false);
+            Time.timeScale = 1f;
+
+            GameSessionContext.FreshSurvivalRun = true;
+            GameSessionContext.StartingRound = 0;
+            GameSessionContext.CarryRound = 0;
+            GameSessionContext.RunSnapshot = default;
+            GameFactory.LoadScene(GameScenes.MainMenuMap);
         }
 
         void RefreshRetreatStats()
@@ -691,6 +856,9 @@ namespace ProjectZx.UI
             if (_dpsText != null)
                 _dpsText.text = FormatDpsLabel(DpsTracker.DisplayDps);
 
+            // Objective tracker still refreshes while paused so stage-hold text stays visible.
+            RefreshObjectiveTracker(force: false);
+
             if (IsGamePaused) return;
 
             if (_achievementToastTimer > 0f)
@@ -709,17 +877,47 @@ namespace ProjectZx.UI
                 FlushPendingAchievementToasts();
             }
 
-            if (_bannerTimer > 0f)
+            if (_bannerTimer > 0f && !_stickyBanner)
             {
                 _bannerTimer -= Time.deltaTime;
-                if (_bannerTimer <= 0f) _bannerText.text = "";
+                if (_bannerTimer <= 0f && _bannerText != null)
+                    _bannerText.text = "";
+            }
+        }
+
+        void RefreshObjectiveTracker(bool force)
+        {
+            if (_objectiveText == null) return;
+
+            _objectiveRefreshTimer -= Time.unscaledDeltaTime;
+            if (!force && _objectiveRefreshTimer > 0f) return;
+            _objectiveRefreshTimer = 0.45f;
+
+            var session = SurvivalSession.Instance;
+            string line = null;
+            if (session != null && session.IsStageHoldActive)
+            {
+                var hold = session.GetStageHoldObjective();
+                if (!string.IsNullOrEmpty(hold))
+                    line = $"Objective: {hold}";
             }
 
-            if (stats.IsDead && _bannerTimer <= 0f)
+            if (string.IsNullOrEmpty(line))
+                line = QuestCatalog.BuildHudObjectiveLine();
+
+            var chip = _objectiveText.transform.parent != null
+                ? _objectiveText.transform.parent.gameObject
+                : null;
+
+            if (string.IsNullOrEmpty(line))
             {
-                _bannerText.text = "You fell";
-                _bannerTimer = 999f;
+                if (chip != null) chip.SetActive(false);
+                _objectiveText.text = "";
+                return;
             }
+
+            if (chip != null) chip.SetActive(true);
+            _objectiveText.text = line;
         }
 
         public void SetRound(int round, SurvivalMapKind mapKind)
@@ -744,8 +942,27 @@ namespace ProjectZx.UI
         public void ShowBanner(string message, float duration = 2f)
         {
             if (_bannerText == null || string.IsNullOrEmpty(message)) return;
+            _stickyBanner = false;
             _bannerText.text = message;
             _bannerTimer = duration;
+        }
+
+        /// <summary>Stage-hold portal guidance — stays until cleared or a normal banner replaces it.</summary>
+        public void ShowStickyBanner(string message)
+        {
+            if (_bannerText == null || string.IsNullOrEmpty(message)) return;
+            _stickyBanner = true;
+            _bannerText.text = message;
+            _bannerTimer = 9999f;
+            RefreshObjectiveTracker(force: true);
+        }
+
+        public void ClearStickyBanner()
+        {
+            _stickyBanner = false;
+            _bannerTimer = 0f;
+            if (_bannerText != null)
+                _bannerText.text = "";
         }
 
         public void ShowWaveIncoming(int wave = 1, int totalWaves = 1)

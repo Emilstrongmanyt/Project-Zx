@@ -12,6 +12,7 @@ namespace ProjectZx.Waves
     {
         public int CurrentRound { get; private set; }
         public int EnemiesRemaining { get; private set; }
+        public int RunKills { get; private set; }
         public SurvivalMapKind MapKind { get; private set; }
 
         Transform _player;
@@ -20,6 +21,7 @@ namespace ProjectZx.Waves
         bool _roundActive;
         SurvivalMapKind _activeBiome;
         bool _darkBirdSpawned;
+        bool _stageHoldActive;
 
         public static SurvivalSession Instance { get; private set; }
 
@@ -38,12 +40,19 @@ namespace ProjectZx.Waves
             _player = player;
             _hud = hud;
             MapKind = mapKind;
+            RunKills = 0;
+            _stageHoldActive = false;
             CurrentRound = GameSessionContext.FreshSurvivalRun
                 ? Mathf.Max(0, GameSessionContext.StartingRound)
                 : GameSessionContext.CarryRound;
             _activeBiome = GameSessionContext.GetVisualBiome(mapKind, Mathf.Max(1, CurrentRound + 1));
             StartCoroutine(RunLoop());
         }
+
+        public bool IsStageHoldActive => _stageHoldActive;
+
+        public string GetStageHoldObjective()
+            => _stageHoldActive ? GetStageHoldBanner(CurrentRound) : string.Empty;
 
         IEnumerator RunLoop()
         {
@@ -82,7 +91,8 @@ namespace ProjectZx.Waves
 
                         if (IsStageHoldRound(CurrentRound))
                         {
-                            _hud?.ShowBanner(GetStageHoldBanner(CurrentRound), 5f);
+                            _stageHoldActive = true;
+                            _hud?.ShowStickyBanner(GetStageHoldBanner(CurrentRound));
                             while (_player != null)
                             {
                                 stats = _player.GetComponent<PlayerStats>();
@@ -121,9 +131,26 @@ namespace ProjectZx.Waves
                 }
             }
 
-            yield return new WaitForSeconds(2f);
             var finalStats = _player != null ? _player.GetComponent<PlayerStats>() : null;
+            var died = finalStats != null && finalStats.IsDead;
             finalStats?.BankRunGoldToSave();
+            var goldBanked = GameSave.LastRunGoldBanked;
+            GameSave.RecordLastRunSummary(goldBanked, CurrentRound, RunKills, died);
+
+            if (died && _hud != null)
+            {
+                // Death results panel owns scene transition (Retry / Camp).
+                yield return _hud.ShowRunResultsAndWait(
+                    died: true,
+                    CurrentRound,
+                    RunKills,
+                    goldBanked,
+                    MapKind);
+                yield break;
+            }
+
+            // Successful clear / natural end — brief pause, then camp with banked toast.
+            yield return new WaitForSeconds(2f);
             GameSessionContext.FreshSurvivalRun = true;
             GameSessionContext.StartingRound = 0;
             GameSessionContext.CarryRound = 0;
@@ -377,6 +404,7 @@ namespace ProjectZx.Waves
             if (!enemy.IsAlive)
             {
                 EnemiesRemaining = Mathf.Max(0, EnemiesRemaining - 1);
+                RunKills++;
                 var goldBanner = GameSave.RecordEnemyKillForWeapon(
                     GameSessionContext.SelectedClass, enemy.IsBoss);
                 if (!string.IsNullOrEmpty(goldBanner))
@@ -388,14 +416,20 @@ namespace ProjectZx.Waves
         {
             StopAllCoroutines();
             _roundActive = false;
+            _stageHoldActive = false;
 
             var stats = _player != null ? _player.GetComponent<PlayerStats>() : null;
+            var goldBefore = 0;
             if (stats != null && !stats.IsDead)
             {
                 GameSave.RecordHighestRound(CurrentRound);
                 TryRecordWeaponProgress(CurrentRound);
+                goldBefore = stats.RunGold;
                 stats.BankRunGoldToSave();
             }
+
+            var goldBanked = GameSave.LastRunGoldBanked > 0 ? GameSave.LastRunGoldBanked : goldBefore;
+            GameSave.RecordLastRunSummary(goldBanked, CurrentRound, RunKills, died: false);
 
             GameSessionContext.FreshSurvivalRun = true;
             GameSessionContext.StartingRound = 0;

@@ -1005,7 +1005,11 @@ namespace ProjectZx.Player
             RunExecuteBonus > 0f && MaxHp > 0 && CurrentHp <= MaxHp * 0.25f;
 
         public int RollDamage(EnemyActor target, float weaponMultiplier = 1f)
+            => RollDamage(target, weaponMultiplier, out _);
+
+        public int RollDamage(EnemyActor target, float weaponMultiplier, out bool isCrit)
         {
+            isCrit = false;
             var dmg = Damage * weaponMultiplier;
 
             if (IsBerserkActive)
@@ -1036,7 +1040,10 @@ namespace ProjectZx.Player
             }
 
             if (RunCritChance > 0f && UnityEngine.Random.value < RunCritChance)
+            {
                 dmg *= RunCritMultiplier;
+                isCrit = true;
+            }
 
             return Mathf.Max(1, Mathf.RoundToInt(dmg));
         }

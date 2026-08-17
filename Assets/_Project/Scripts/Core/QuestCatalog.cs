@@ -315,5 +315,45 @@ namespace ProjectZx.Core
 
         /// <summary>No talking portrait asset for the knight yet — hide the portrait frame.</summary>
         public static bool UsesQuestPortrait(QuestId id) => id != QuestId.KnightsBestFriend;
+
+        /// <summary>
+        /// Compact in-run / camp objective line for the HUD tracker.
+        /// Prefers ready-to-turn-in, then active quests across all givers.
+        /// </summary>
+        public static string BuildHudObjectiveLine()
+        {
+            if (TryFindHudQuest(QuestProgress.ReadyToTurnIn, out var readyDef, out _))
+                return $"Quest: {readyDef.Title} — return to camp to turn in!";
+
+            if (TryFindHudQuest(QuestProgress.Active, out var activeDef, out _))
+            {
+                var hint = string.IsNullOrEmpty(activeDef.ActiveStatusHint)
+                    ? activeDef.Title
+                    : activeDef.ActiveStatusHint;
+                return $"Quest: {hint}";
+            }
+
+            return string.Empty;
+        }
+
+        static bool TryFindHudQuest(
+            QuestProgress wanted,
+            out QuestDefinition def,
+            out QuestProgress progress)
+        {
+            for (var i = 0; i < AllQuests.Length; i++)
+            {
+                var candidate = AllQuests[i];
+                var status = GetProgress(candidate.Id);
+                if (status != wanted) continue;
+                def = candidate;
+                progress = status;
+                return true;
+            }
+
+            def = default;
+            progress = QuestProgress.Locked;
+            return false;
+        }
     }
 }
