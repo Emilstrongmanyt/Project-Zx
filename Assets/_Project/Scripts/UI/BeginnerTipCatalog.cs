@@ -50,6 +50,7 @@ namespace ProjectZx.UI
                 "bank_gold" => GameSave.LifetimeDeaths + GameSave.HighestRoundReached < 5,
                 "retreat" => GameSave.HighestRoundReached < 8,
                 "equipment" => GameSave.HighestRoundReached >= 5,
+                "joystick" => !GameSave.HasOpenedSettings,
                 _ => true
             };
         }

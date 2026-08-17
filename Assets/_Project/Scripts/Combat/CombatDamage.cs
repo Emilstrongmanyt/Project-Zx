@@ -19,6 +19,10 @@ namespace ProjectZx.Combat
             target.TakeDamage(damage, isCrit);
             attacker.OnDamageDealt(damage);
 
+            // Companion assists with plain hits only — no slows, burns, or status procs.
+            if (attacker.IsCompanion)
+                return;
+
             // Frost Tip: 1s chill (−60% move). Bosses + flying immune.
             if (canApplyFrost && GameSave.FrostTipUnlocked && !target.IsSlowImmune)
                 target.ApplyChill(1f);

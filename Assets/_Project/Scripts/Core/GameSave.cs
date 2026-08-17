@@ -73,6 +73,7 @@ namespace ProjectZx.Core
         const string RollZySkinKey = "zx_rollzy_skin";
         const string OnboardingDoneKey = "zx_onboarding_done";
         const string LargeDamageNumbersKey = "zx_large_damage_numbers";
+        const string SettingsOpenedKey = "zx_settings_opened";
 
         /// <summary>Gold banked from the most recent survival exit (death, retreat, or portal).</summary>
         public static int LastRunGoldBanked { get; set; }
@@ -103,6 +104,17 @@ namespace ProjectZx.Core
             set
             {
                 PlayerPrefs.SetInt(LargeDamageNumbersKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>True after the player has opened Settings at least once (hides joystick tip).</summary>
+        public static bool HasOpenedSettings
+        {
+            get => PlayerPrefs.GetInt(SettingsOpenedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(SettingsOpenedKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
         }

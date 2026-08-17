@@ -211,14 +211,15 @@ namespace ProjectZx.UI
 
         GameObject BuildOnboardingPanel(Transform parent)
         {
-            var panel = CreateDialogPanel(parent, "OnboardingPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ChallengeBoardUi);
-            _onboardingTitle = CreateText(panel.transform, "Getting Started", 38, TextAnchor.MiddleCenter, new Vector2(0, 340), new Vector2(800, 48));
-            _onboardingStepLabel = CreateText(panel.transform, "1 / 5", 22, TextAnchor.MiddleCenter, new Vector2(0, 290), new Vector2(200, 32));
+            // Compact coach panel — not full hub size.
+            var panel = CreateDialogPanel(parent, "OnboardingPanel", Vector2.zero, new Vector2(720f, 520f), ArtLibrary.ChallengeBoardUi);
+            _onboardingTitle = CreateText(panel.transform, "Getting Started", 32, TextAnchor.MiddleCenter, new Vector2(0, 190), new Vector2(640, 40));
+            _onboardingStepLabel = CreateText(panel.transform, "1 / 5", 20, TextAnchor.MiddleCenter, new Vector2(0, 148), new Vector2(160, 28));
             _onboardingStepLabel.color = new Color(1f, 0.9f, 0.55f);
-            _onboardingBody = CreateText(panel.transform, "", 26, TextAnchor.MiddleCenter, new Vector2(0, 20), new Vector2(860, 420));
+            _onboardingBody = CreateText(panel.transform, "", 22, TextAnchor.MiddleCenter, new Vector2(0, 10), new Vector2(640, 260));
             _onboardingBody.alignment = TextAnchor.UpperCenter;
-            CreateButton(panel.transform, "Skip", new Vector2(-200, -340), CompleteOnboarding);
-            CreateButton(panel.transform, "Next", new Vector2(200, -340), AdvanceOnboarding, large: true);
+            CreateButton(panel.transform, "Skip", new Vector2(-150, -190), CompleteOnboarding);
+            CreateButton(panel.transform, "Next", new Vector2(150, -190), AdvanceOnboarding, large: true);
             panel.SetActive(false);
             return panel;
         }
@@ -1127,6 +1128,7 @@ namespace ProjectZx.UI
         void OpenSettings()
         {
             CloseAllHubPanels();
+            GameSave.HasOpenedSettings = true;
             RefreshSettingsPanel();
             if (_settingsPanel != null)
                 _settingsPanel.SetActive(true);

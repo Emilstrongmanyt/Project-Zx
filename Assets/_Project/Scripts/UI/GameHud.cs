@@ -145,8 +145,9 @@ namespace ProjectZx.UI
             chipRect.anchorMin = new Vector2(1f, 1f);
             chipRect.anchorMax = new Vector2(1f, 1f);
             chipRect.pivot = new Vector2(1f, 1f);
-            chipRect.anchoredPosition = new Vector2(-SafeRight + 20f, -SafeTop);
-            chipRect.sizeDelta = new Vector2(520f, 110f);
+            // Sit under the Retreat button (58px tall + gap).
+            chipRect.anchoredPosition = new Vector2(-SafeRight, -SafeTop - 72f);
+            chipRect.sizeDelta = new Vector2(420f, 96f);
 
             var bg = chip.AddComponent<Image>();
             if (StoneUi.Available && StoneUi.ResourceBarBg != null)
