@@ -864,7 +864,7 @@ namespace ProjectZx.Core
         }
 
         /// <summary>Random demon pack for regular enemies by map tier.</summary>
-        public static MonsterAnimSet GetEnemyAnimSet(EnemyZombieKind kind)
+        public static MonsterAnimSet GetEnemyAnimSet(EnemyZombieKind kind, bool forbidFlying = false)
         {
             var pool = kind switch
             {
@@ -872,12 +872,21 @@ namespace ProjectZx.Core
                 EnemyZombieKind.Inside => InsideDemonSets,
                 _ => OutsideDemonSets
             };
-            return LoadRandomMonsterSet(pool);
+            return LoadRandomMonsterSet(pool, forbidFlying: forbidFlying);
         }
 
         /// <summary>Warlock / bat / wing packs for late-map ranged enemies.</summary>
         public static MonsterAnimSet GetRangedEnemyAnimSet() =>
             LoadRandomMonsterSet(RangedDemonSets);
+
+        static readonly string[] FlyingDemonSets =
+        {
+            "inside/demon_bat_1", "elite/demon_wing_1"
+        };
+
+        /// <summary>Bat / wing packs for Fly movement pressure rounds.</summary>
+        public static MonsterAnimSet GetFlyingEnemyAnimSet() =>
+            LoadRandomMonsterSet(FlyingDemonSets, requireFlying: true);
 
         /// <summary>Golem boss set (Outside R20 / Inside R30 / regular bosses).</summary>
         public static MonsterAnimSet GetGolemBossAnimSet() =>
@@ -886,6 +895,88 @@ namespace ProjectZx.Core
         /// <summary>Lord boss set for Dungeon R40 (phase by HP).</summary>
         public static MonsterAnimSet GetLordBossAnimSet(bool highPhase) =>
             LoadRandomMonsterSet(highPhase ? LordBossHighSets : LordBossLowSets);
+
+        /// <summary>
+        /// Rogue Adventure boss packs under Resources/RogueBosses/{folder}/BossXX_A..E.
+        /// A=idle, B=walk, C–E=attack (hit uses mid attack).
+        /// </summary>
+        public static MonsterAnimSet GetRogueBossAnimSet(BossArtCatalog.RogueBossId id)
+        {
+            var folder = RogueBossFolder(id);
+            if (string.IsNullOrEmpty(folder)) return default;
+            if (MonsterSetCache.TryGetValue(folder, out var cached) && cached.IsValid)
+                return cached;
+
+            var prefix = RogueBossFilePrefix(id);
+            var root = "RogueBosses/" + folder + "/";
+            var a = TryLoadSprite(root + prefix + "_A", TilePixelsPerUnit);
+            var b = TryLoadSprite(root + prefix + "_B", TilePixelsPerUnit);
+            var c = TryLoadSprite(root + prefix + "_C", TilePixelsPerUnit);
+            var d = TryLoadSprite(root + prefix + "_D", TilePixelsPerUnit);
+            var e = TryLoadSprite(root + prefix + "_E", TilePixelsPerUnit);
+
+            if (a == null)
+            {
+                MonsterSetCache[folder] = default;
+                return default;
+            }
+
+            var stand = new[] { a };
+            var walk = b != null ? new[] { a, b } : stand;
+            var attackList = new List<Sprite>(3);
+            if (c != null) attackList.Add(c);
+            if (d != null) attackList.Add(d);
+            if (e != null) attackList.Add(e);
+            if (attackList.Count == 0) attackList.Add(a);
+            var attack = attackList.ToArray();
+
+            var hit = d ?? (attack.Length >= 2 ? attack[1] : a);
+            var hitAttack = e ?? hit;
+            var attackPose = c ?? attack[^1];
+
+            var set = new MonsterAnimSet
+            {
+                Idle = a,
+                Hit = hit,
+                Attack = attackPose,
+                HitAttack = hitAttack,
+                StandFrames = stand,
+                WalkFrames = walk,
+                AttackFrames = attack,
+                FacesRightByDefault = true,
+                IsFlying = false
+            };
+            MonsterSetCache[folder] = set;
+            return set;
+        }
+
+        static string RogueBossFolder(BossArtCatalog.RogueBossId id) => id switch
+        {
+            BossArtCatalog.RogueBossId.AncientBear => "01_AncientBear",
+            BossArtCatalog.RogueBossId.Osiris => "02_Osiris",
+            BossArtCatalog.RogueBossId.ChompBug => "03_ChompBug",
+            BossArtCatalog.RogueBossId.ToxicVermin => "05_ToxicVermin",
+            BossArtCatalog.RogueBossId.Werewolf => "06_Werewolf",
+            BossArtCatalog.RogueBossId.Molarbeast => "07_Molarbeast",
+            BossArtCatalog.RogueBossId.Abysslime => "08_Abysslime",
+            BossArtCatalog.RogueBossId.TitanGuard => "09_TitanGuard",
+            BossArtCatalog.RogueBossId.PumpkinJack => "10_PumpkinJack",
+            _ => null
+        };
+
+        static string RogueBossFilePrefix(BossArtCatalog.RogueBossId id) => id switch
+        {
+            BossArtCatalog.RogueBossId.AncientBear => "Boss01",
+            BossArtCatalog.RogueBossId.Osiris => "Boss02",
+            BossArtCatalog.RogueBossId.ChompBug => "Boss03",
+            BossArtCatalog.RogueBossId.ToxicVermin => "Boss05",
+            BossArtCatalog.RogueBossId.Werewolf => "Boss06",
+            BossArtCatalog.RogueBossId.Molarbeast => "Boss07",
+            BossArtCatalog.RogueBossId.Abysslime => "Boss08",
+            BossArtCatalog.RogueBossId.TitanGuard => "Boss09",
+            BossArtCatalog.RogueBossId.PumpkinJack => "Boss10",
+            _ => "Boss01"
+        };
 
         static MonsterAnimSet _minotaurBossSet;
         static bool _minotaurBossLoaded;
@@ -981,21 +1072,26 @@ namespace ProjectZx.Core
             return frames.ToArray();
         }
 
-        static MonsterAnimSet LoadRandomMonsterSet(string[] pool)
+        static MonsterAnimSet LoadRandomMonsterSet(string[] pool, bool forbidFlying = false, bool requireFlying = false)
         {
             if (pool == null || pool.Length == 0)
                 return default;
 
             // Prefer a random loaded set; fall through pool if a folder is missing.
             var start = Random.Range(0, pool.Length);
+            MonsterAnimSet fallback = default;
             for (var n = 0; n < pool.Length; n++)
             {
                 var key = pool[(start + n) % pool.Length];
                 var set = LoadMonsterAnimSet(key);
-                if (set.IsValid) return set;
+                if (!set.IsValid) continue;
+                if (!fallback.IsValid) fallback = set;
+                if (forbidFlying && set.IsFlying) continue;
+                if (requireFlying && !set.IsFlying) continue;
+                return set;
             }
 
-            return default;
+            return fallback;
         }
 
         /// <summary>

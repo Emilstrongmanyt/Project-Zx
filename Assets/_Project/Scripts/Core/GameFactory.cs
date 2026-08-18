@@ -597,16 +597,35 @@ namespace ProjectZx.Core
             bool isRoundFortyBoss = false,
             bool isRanged = false,
             bool isRoundFiftyBoss = false,
-            bool isElite = false)
+            bool isElite = false,
+            EnemyMovementMode? forcedMovementMode = null)
         {
             Sprite sprite;
             if (isRoundFiftyBoss)
                 sprite = ArtLibrary.GetMinotaurBossAnimSet().Idle ?? ArtLibrary.BossB;
             else if (isRoundFortyBoss)
                 sprite = ArtLibrary.GetLordBossAnimSet(highPhase: true).Idle ?? ArtLibrary.BossB;
+            else if (isBoss
+                     && BossArtCatalog.TryGetDecadeBossSet(
+                         GameSessionContext.SurvivalMap,
+                         round,
+                         isRoundTwentyBoss,
+                         isRoundThirtyBoss,
+                         isRoundFortyBoss,
+                         isRoundFiftyBoss,
+                         out var roguePreview)
+                     && roguePreview.Idle != null)
+                sprite = roguePreview.Idle;
             else if (isBoss)
                 sprite = ArtLibrary.GetGolemBossAnimSet().Idle ?? ArtLibrary.Boss;
-            else if (isRanged)
+            else if (forcedMovementMode == EnemyMovementMode.Fly)
+            {
+                var set = ArtLibrary.GetFlyingEnemyAnimSet();
+                sprite = set.Idle;
+                if (sprite == null)
+                    ArtLibrary.GetZombieSprites(zombieKind, out sprite, out _);
+            }
+            else if (isRanged || forcedMovementMode == EnemyMovementMode.Kite)
             {
                 var set = ArtLibrary.GetRangedEnemyAnimSet();
                 sprite = set.Idle;
@@ -615,7 +634,9 @@ namespace ProjectZx.Core
             }
             else
             {
-                var set = ArtLibrary.GetEnemyAnimSet(zombieKind);
+                var forbidFlying = forcedMovementMode is EnemyMovementMode.Chase or EnemyMovementMode.Sprint
+                    or EnemyMovementMode.Charge or EnemyMovementMode.Orbit or EnemyMovementMode.Strafe;
+                var set = ArtLibrary.GetEnemyAnimSet(zombieKind, forbidFlying: forbidFlying);
                 sprite = set.Idle;
                 if (sprite == null)
                     ArtLibrary.GetZombieSprites(zombieKind, out sprite, out _);
@@ -676,7 +697,8 @@ namespace ProjectZx.Core
                 isRoundFortyBoss,
                 isRanged,
                 isRoundFiftyBoss,
-                isElite);
+                isElite,
+                forcedMovementMode);
             return go;
         }
 

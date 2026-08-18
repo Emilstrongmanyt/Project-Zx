@@ -226,10 +226,6 @@ namespace ProjectZx.Waves
             EnemiesRemaining = 0;
             _hud?.SetRound(round, MapKind);
 
-            // R1–20: original density. R21+: slower growth so late rounds are tougher packs, not walls.
-            var total = round <= 20
-                ? 6 + round * 5
-                : 6 + 20 * 5 + (round - 20) * 2;
             var bossRound = round % 10 == 0;
             var roundTwentyBoss = round == 20 && MapKind == SurvivalMapKind.Outside;
             var roundThirtyBoss = round == 30 && MapKind == SurvivalMapKind.Inside;
@@ -241,6 +237,64 @@ namespace ProjectZx.Waves
             if (roundFiftyBoss)
                 bossRound = true;
 
+            if (ChallengeWaveCatalog.TryGet(MapKind, round, out var challenge))
+            {
+                if (!string.IsNullOrEmpty(challenge.Banner))
+                    _hud?.ShowBanner(challenge.Banner, 2.6f);
+
+                yield return StartCoroutine(SpawnChallengeTrash(round, challenge));
+            }
+            else
+            {
+                yield return StartCoroutine(SpawnProbabilisticTrash(round, bossRound));
+            }
+
+            if (bossRound)
+            {
+                yield return new WaitForSeconds(0.35f);
+                SpawnEnemy(round, true, roundTwentyBoss, roundThirtyBoss, roundFortyBoss, roundFiftyBoss);
+                _hud?.ShowBossWarning(
+                    roundTwentyBoss || roundThirtyBoss || roundFortyBoss || roundFiftyBoss);
+            }
+
+            _spawning = false;
+        }
+
+        IEnumerator SpawnChallengeTrash(int round, ChallengeRoundDef challenge)
+        {
+            if (challenge.Specs == null || challenge.Specs.Length == 0) yield break;
+
+            for (var s = 0; s < challenge.Specs.Length; s++)
+            {
+                var spec = challenge.Specs[s];
+                var count = Mathf.Max(1, spec.Count);
+                for (var i = 0; i < count; i++)
+                {
+                    SpawnEnemy(
+                        round,
+                        boss: false,
+                        roundTwentyBoss: false,
+                        roundThirtyBoss: false,
+                        roundFortyBoss: false,
+                        roundFiftyBoss: false,
+                        forcedKind: spec.Kind,
+                        forcedRanged: spec.Ranged || spec.Mode == EnemyMovementMode.Kite,
+                        forcedElite: spec.Elite,
+                        forcedMode: spec.Mode);
+                    if (i % 3 == 0) yield return null;
+                }
+
+                if (s < challenge.Specs.Length - 1)
+                    yield return new WaitForSeconds(GetWaveDelay(round) * 0.85f);
+            }
+        }
+
+        IEnumerator SpawnProbabilisticTrash(int round, bool bossRound)
+        {
+            // R1–20: original density. R21+: slower growth so late rounds are tougher packs, not walls.
+            var total = round <= 20
+                ? 6 + round * 5
+                : 6 + 20 * 5 + (round - 20) * 2;
             if (bossRound) total = Mathf.Max(total - 1, 1);
 
             var waveCount = GetWaveCount(round);
@@ -263,16 +317,6 @@ namespace ProjectZx.Waves
                 if (wave < waveCount - 1)
                     yield return new WaitForSeconds(GetWaveDelay(round));
             }
-
-            if (bossRound)
-            {
-                yield return new WaitForSeconds(0.35f);
-                SpawnEnemy(round, true, roundTwentyBoss, roundThirtyBoss, roundFortyBoss, roundFiftyBoss);
-                _hud?.ShowBossWarning(
-                    roundTwentyBoss || roundThirtyBoss || roundFortyBoss || roundFiftyBoss);
-            }
-
-            _spawning = false;
         }
 
         static int GetWaveCount(int round)
@@ -303,15 +347,19 @@ namespace ProjectZx.Waves
             bool roundTwentyBoss,
             bool roundThirtyBoss,
             bool roundFortyBoss,
-            bool roundFiftyBoss)
+            bool roundFiftyBoss,
+            EnemyZombieKind? forcedKind = null,
+            bool? forcedRanged = null,
+            bool? forcedElite = null,
+            EnemyMovementMode? forcedMode = null)
         {
             var origin = _player != null ? (Vector2)_player.position : Vector2.zero;
             // Mix rings, edges, open field, and flanks so wave entries stay hard to camp.
             var spawnPos = ArenaBounds.RandomWaveSpawn(origin, preferDistance: boss);
-            var zombieKind = ResolveZombieKind(round);
-            var ranged = !boss && ShouldSpawnRanged(round);
+            var zombieKind = forcedKind ?? ResolveZombieKind(round);
+            var ranged = forcedRanged ?? (!boss && ShouldSpawnRanged(round));
             // After R20: occasional elites (1.3× size, stronger stats/loot). Early rounds stay clean.
-            var elite = !boss && round > 20 && Random.value < EliteSpawnChance(round);
+            var elite = forcedElite ?? (!boss && round > 20 && Random.value < EliteSpawnChance(round));
 
             GameFactory.CreateEnemy(
                 spawnPos,
@@ -323,7 +371,8 @@ namespace ProjectZx.Waves
                 roundFortyBoss,
                 isRanged: ranged,
                 isRoundFiftyBoss: roundFiftyBoss,
-                isElite: elite);
+                isElite: elite,
+                forcedMovementMode: forcedMode);
             EnemiesRemaining++;
         }
 

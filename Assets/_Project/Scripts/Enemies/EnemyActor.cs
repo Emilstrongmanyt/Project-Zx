@@ -59,6 +59,18 @@ namespace ProjectZx.Enemies
         const float RangedPreferredMin = 4.2f;
         const float RangedPreferredMax = 7.5f;
         const float RangedShootRange = 9f;
+        const float ChargeWindupSeconds = 0.35f;
+        const float ChargeDashSeconds = 0.42f;
+        const float ChargeRecoverSeconds = 0.55f;
+        const float ChargeDashSpeedMultiplier = 3.6f;
+        const float ChargeMinRange = 2.4f;
+        const float ChargeMaxRange = 8.5f;
+        const float ChargeCooldown = 4.5f;
+        const float OrbitPreferredMin = 2.8f;
+        const float OrbitPreferredMax = 5.2f;
+        const float OrbitBiteSeconds = 1.1f;
+        const float OrbitCircleSeconds = 2.4f;
+        const float StrafeFlipSeconds = 0.55f;
         const float RangedProjectileInterval = 2.1f;
         const float RangedProjectileLifetime = 3.2f;
         const float RangedProjectileSpeed = 5.5f;
@@ -83,6 +95,7 @@ namespace ProjectZx.Enemies
         public bool IsRoundFiftyBoss { get; private set; }
         /// <summary>Post-R20 elite trash: stronger stats/rewards, 1.3× visual scale applied by factory.</summary>
         public bool IsElite { get; private set; }
+        public EnemyMovementMode MovementMode { get; private set; } = EnemyMovementMode.Chase;
 
         int _hp;
         int _maxHp;
@@ -122,6 +135,16 @@ namespace ProjectZx.Enemies
         bool _sprinting;
         float _sprintTimer;
         float _sprintCooldown;
+        enum ChargePhase { Ready, Windup, Dash, Recover }
+        ChargePhase _chargePhase = ChargePhase.Ready;
+        float _chargeTimer;
+        float _chargeCooldown;
+        Vector2 _chargeDir = Vector2.right;
+        float _orbitSign = 1f;
+        float _orbitPhaseTimer;
+        bool _orbitBiting;
+        float _strafeSign = 1f;
+        float _strafeFlipTimer;
         float _bossProjectileCooldown;
         float _rangedProjectileCooldown;
         float _rangedAttackAnimTimer;
@@ -146,7 +169,8 @@ namespace ProjectZx.Enemies
             bool isRoundFortyBoss = false,
             bool isRanged = false,
             bool isRoundFiftyBoss = false,
-            bool isElite = false)
+            bool isElite = false,
+            EnemyMovementMode? forcedMovementMode = null)
         {
             _round = round;
             IsBoss = isBoss;
@@ -296,7 +320,10 @@ namespace ProjectZx.Enemies
                 isBoss,
                 isRoundTwentyBoss || isRoundThirtyBoss || isRoundFortyBoss || isRoundFiftyBoss,
                 zombieKind,
-                IsRanged);
+                IsRanged,
+                forcedMovementMode);
+
+            ResolveMovementMode(forcedMovementMode, round);
 
             if (_renderer != null)
             {
@@ -311,12 +338,16 @@ namespace ProjectZx.Enemies
             if (isRoundFortyBoss || isRoundFiftyBoss)
                 _bossProjectileCooldown = BossProjectileInterval * 0.5f;
 
-            if (IsRanged)
+            if (IsRanged || MovementMode == EnemyMovementMode.Kite)
             {
                 // Slightly squishier casters that hang back and shoot.
-                _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * 0.85f));
-                _maxHp = Mathf.Max(1, _hp);
-                _speed *= 0.9f;
+                if (IsRanged)
+                {
+                    _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * 0.85f));
+                    _maxHp = Mathf.Max(1, _hp);
+                    _speed *= 0.9f;
+                }
+
                 _rangedProjectileCooldown = Random.Range(0.4f, RangedProjectileInterval * 0.6f);
             }
 
@@ -334,12 +365,80 @@ namespace ProjectZx.Enemies
                 _contactRange = IsBoss ? 1.2f : BaseContactRange;
             }
 
-            // Flying packs already ignore chill; keep them from sprinting past the player.
-            _canSprint = !isBoss && !IsRanged && !IsFlying && round >= 10;
-            _sprintCooldown = Random.Range(2f, SprintCooldown);
+            // Sprint mode (and legacy chase with sprint unlocked) may burst.
+            _canSprint = !isBoss
+                        && MovementMode is EnemyMovementMode.Sprint or EnemyMovementMode.Chase
+                        && !IsRanged
+                        && !IsFlying
+                        && (MovementMode == EnemyMovementMode.Sprint || round >= 10);
+            if (MovementMode == EnemyMovementMode.Sprint)
+                _canSprint = !isBoss && !IsFlying;
+            _sprintCooldown = Random.Range(1.2f, SprintCooldown * 0.6f);
+            _chargeCooldown = Random.Range(0.8f, ChargeCooldown * 0.5f);
+            _orbitSign = Random.value < 0.5f ? -1f : 1f;
+            _strafeSign = Random.value < 0.5f ? -1f : 1f;
+            _strafeFlipTimer = StrafeFlipSeconds;
+            _orbitPhaseTimer = OrbitCircleSeconds;
 
             if (IsFlying)
                 CapFlyingMoveSpeed();
+        }
+
+        void ResolveMovementMode(EnemyMovementMode? forced, int round)
+        {
+            if (IsBoss)
+            {
+                MovementMode = EnemyMovementMode.Chase;
+                return;
+            }
+
+            if (forced.HasValue)
+            {
+                MovementMode = forced.Value;
+            }
+            else if (IsRanged)
+            {
+                MovementMode = EnemyMovementMode.Kite;
+            }
+            else if (IsFlying)
+            {
+                MovementMode = EnemyMovementMode.Fly;
+            }
+            else
+            {
+                MovementMode = RollAmbientMovementMode(round);
+            }
+
+            // Explicit mode wins over art-name flying for ground pressure packs.
+            if (MovementMode == EnemyMovementMode.Fly)
+                IsFlying = true;
+            else if (MovementMode is EnemyMovementMode.Chase or EnemyMovementMode.Sprint
+                     or EnemyMovementMode.Charge or EnemyMovementMode.Orbit or EnemyMovementMode.Strafe)
+                IsFlying = false;
+
+            if (MovementMode == EnemyMovementMode.Kite)
+                IsRanged = true;
+        }
+
+        static EnemyMovementMode RollAmbientMovementMode(int round)
+        {
+            if (round < 6) return EnemyMovementMode.Chase;
+            var roll = Random.value;
+            if (round < 10)
+                return roll < 0.7f ? EnemyMovementMode.Chase : EnemyMovementMode.Strafe;
+            if (round < 20)
+            {
+                if (roll < 0.45f) return EnemyMovementMode.Chase;
+                if (roll < 0.7f) return EnemyMovementMode.Sprint;
+                if (roll < 0.85f) return EnemyMovementMode.Strafe;
+                return EnemyMovementMode.Charge;
+            }
+
+            if (roll < 0.35f) return EnemyMovementMode.Chase;
+            if (roll < 0.55f) return EnemyMovementMode.Sprint;
+            if (roll < 0.7f) return EnemyMovementMode.Charge;
+            if (roll < 0.85f) return EnemyMovementMode.Strafe;
+            return EnemyMovementMode.Orbit;
         }
 
         public float HpRatio => _maxHp > 0 ? (float)_hp / _maxHp : 0f;
@@ -388,7 +487,12 @@ namespace ProjectZx.Enemies
 
         public void ApplyChill(float duration = ChillDuration) => ApplyFreeze(duration);
 
-        void ApplySprites(bool isBoss, bool isRoundTwentyBoss, EnemyZombieKind zombieKind, bool isRanged = false)
+        void ApplySprites(
+            bool isBoss,
+            bool isStageBoss,
+            EnemyZombieKind zombieKind,
+            bool isRanged,
+            EnemyMovementMode? forcedMode = null)
         {
             if (IsRoundFiftyBoss)
             {
@@ -405,16 +509,40 @@ namespace ProjectZx.Enemies
 
             if (isBoss)
             {
-                // Outside R20 / Inside R30 / wave bosses → Golem packs.
+                // Decade Rogue Adventure bosses when available; else classic golem.
+                if (BossArtCatalog.TryGetDecadeBossSet(
+                        GameSessionContext.SurvivalMap,
+                        _round,
+                        IsRoundTwentyBoss,
+                        IsRoundThirtyBoss,
+                        IsRoundFortyBoss,
+                        IsRoundFiftyBoss,
+                        out var rogueSet))
+                {
+                    ApplyAnimSet(rogueSet);
+                    return;
+                }
+
                 ApplyAnimSet(ArtLibrary.GetGolemBossAnimSet());
                 return;
             }
 
-            // Ranged casters prefer warlock/bat/wing packs; melee use map-tier demons.
-            if (isRanged)
+            if (forcedMode == EnemyMovementMode.Fly)
+            {
+                ApplyAnimSet(ArtLibrary.GetFlyingEnemyAnimSet());
+                return;
+            }
+
+            if (isRanged || forcedMode == EnemyMovementMode.Kite)
+            {
                 ApplyAnimSet(ArtLibrary.GetRangedEnemyAnimSet());
-            else
-                ApplyAnimSet(ArtLibrary.GetEnemyAnimSet(zombieKind));
+                return;
+            }
+
+            // Ground pressure packs must not accidentally roll flying art.
+            var forbidFlying = forcedMode is EnemyMovementMode.Chase or EnemyMovementMode.Sprint
+                or EnemyMovementMode.Charge or EnemyMovementMode.Orbit or EnemyMovementMode.Strafe;
+            ApplyAnimSet(ArtLibrary.GetEnemyAnimSet(zombieKind, forbidFlying: forbidFlying));
         }
 
         void ApplyAnimSet(MonsterAnimSet set)
@@ -552,7 +680,8 @@ namespace ProjectZx.Enemies
             // Hold still while casting a ranged bolt or swinging in melee.
             // Fire-breath bosses still move (at FireBreathMoveSpeedMultiplier via GetMoveSpeed).
             if (!_fireBreathing
-                && ((IsRanged && _rangedAttackAnimTimer > 0f) || _meleeAttackAnimTimer > 0f))
+                && ((IsRanged && _rangedAttackAnimTimer > 0f) || _meleeAttackAnimTimer > 0f)
+                && _chargePhase != ChargePhase.Dash)
             {
                 _rb.linearVelocity = Vector2.zero;
                 UpdateFacingToward(_player.position);
@@ -560,41 +689,164 @@ namespace ProjectZx.Enemies
             }
 
             var toPlayer = (Vector2)_player.position - (Vector2)transform.position;
-            if (toPlayer.sqrMagnitude < 0.0001f)
+            if (toPlayer.sqrMagnitude < 0.0001f && _chargePhase != ChargePhase.Dash)
             {
                 _rb.linearVelocity = Vector2.zero;
                 return;
             }
 
-            var dist = toPlayer.magnitude;
-            Vector2 dir;
-            if (_fireBreathing)
+            if (!TryComputeMoveDirection(toPlayer, out var dir, out var speedMul))
             {
-                // Keep pressure while the stream is active — still walk toward the player.
-                dir = toPlayer.normalized;
-            }
-            else if (IsRanged)
-            {
-                // Kite: close if too far, back off if too close, hold preferred band.
-                if (dist > RangedPreferredMax)
-                    dir = toPlayer.normalized;
-                else if (dist < RangedPreferredMin)
-                    dir = -toPlayer.normalized;
-                else
-                {
-                    _rb.linearVelocity = Vector2.zero;
-                    UpdateFacingToward(_player.position);
-                    return;
-                }
-            }
-            else
-            {
-                // Path straight at the player — packs stack so every melee can hit.
-                dir = toPlayer.normalized;
+                _rb.linearVelocity = Vector2.zero;
+                UpdateFacingToward(_player.position);
+                return;
             }
 
-            MoveByDelta(dir * (GetMoveSpeed() * Time.fixedDeltaTime));
+            MoveByDelta(dir * (GetMoveSpeed() * speedMul * Time.fixedDeltaTime));
             UpdateFacingToward(_player.position);
+        }
+
+        /// <summary>
+        /// Returns false when the unit should stand still this tick (e.g. kite band / charge windup).
+        /// </summary>
+        bool TryComputeMoveDirection(Vector2 toPlayer, out Vector2 dir, out float speedMul)
+        {
+            dir = Vector2.zero;
+            speedMul = 1f;
+            var dist = toPlayer.magnitude;
+            var toward = dist > 0.0001f ? toPlayer / dist : Vector2.right;
+
+            if (_fireBreathing)
+            {
+                dir = toward;
+                return true;
+            }
+
+            switch (MovementMode)
+            {
+                case EnemyMovementMode.Kite:
+                    if (dist > RangedPreferredMax) { dir = toward; return true; }
+                    if (dist < RangedPreferredMin) { dir = -toward; return true; }
+                    return false;
+
+                case EnemyMovementMode.Charge:
+                    return TryComputeChargeDirection(toward, dist, out dir, out speedMul);
+
+                case EnemyMovementMode.Orbit:
+                    return TryComputeOrbitDirection(toward, dist, out dir);
+
+                case EnemyMovementMode.Strafe:
+                {
+                    _strafeFlipTimer -= Time.fixedDeltaTime;
+                    if (_strafeFlipTimer <= 0f)
+                    {
+                        _strafeSign = -_strafeSign;
+                        _strafeFlipTimer = StrafeFlipSeconds * Random.Range(0.75f, 1.25f);
+                    }
+
+                    var side = new Vector2(-toward.y, toward.x) * _strafeSign;
+                    dir = (toward * 0.72f + side * 0.85f).normalized;
+                    return true;
+                }
+
+                case EnemyMovementMode.Fly:
+                    // Flying melee chase; flying kite uses Kite mode + IsFlying.
+                    dir = toward;
+                    return true;
+
+                case EnemyMovementMode.Sprint:
+                case EnemyMovementMode.Chase:
+                default:
+                    dir = toward;
+                    return true;
+            }
+        }
+
+        bool TryComputeChargeDirection(Vector2 toward, float dist, out Vector2 dir, out float speedMul)
+        {
+            dir = toward;
+            speedMul = 1f;
+            _chargeCooldown -= Time.fixedDeltaTime;
+
+            switch (_chargePhase)
+            {
+                case ChargePhase.Ready:
+                    if (_chargeCooldown <= 0f && dist >= ChargeMinRange && dist <= ChargeMaxRange)
+                    {
+                        _chargePhase = ChargePhase.Windup;
+                        _chargeTimer = ChargeWindupSeconds;
+                        _chargeDir = toward;
+                    }
+
+                    dir = toward;
+                    return true;
+
+                case ChargePhase.Windup:
+                    _chargeTimer -= Time.fixedDeltaTime;
+                    _chargeDir = toward;
+                    if (_chargeTimer <= 0f)
+                    {
+                        _chargePhase = ChargePhase.Dash;
+                        _chargeTimer = ChargeDashSeconds;
+                    }
+
+                    return false;
+
+                case ChargePhase.Dash:
+                    _chargeTimer -= Time.fixedDeltaTime;
+                    dir = _chargeDir;
+                    speedMul = ChargeDashSpeedMultiplier;
+                    if (_chargeTimer <= 0f)
+                    {
+                        _chargePhase = ChargePhase.Recover;
+                        _chargeTimer = ChargeRecoverSeconds;
+                    }
+
+                    return true;
+
+                case ChargePhase.Recover:
+                    _chargeTimer -= Time.fixedDeltaTime;
+                    if (_chargeTimer <= 0f)
+                    {
+                        _chargePhase = ChargePhase.Ready;
+                        _chargeCooldown = ChargeCooldown;
+                    }
+
+                    dir = toward * 0.35f;
+                    return dir.sqrMagnitude > 0.01f;
+            }
+
+            return true;
+        }
+
+        bool TryComputeOrbitDirection(Vector2 toward, float dist, out Vector2 dir)
+        {
+            _orbitPhaseTimer -= Time.fixedDeltaTime;
+            if (_orbitPhaseTimer <= 0f)
+            {
+                _orbitBiting = !_orbitBiting;
+                _orbitPhaseTimer = _orbitBiting
+                    ? OrbitBiteSeconds * Random.Range(0.8f, 1.2f)
+                    : OrbitCircleSeconds * Random.Range(0.8f, 1.2f);
+                if (!_orbitBiting && Random.value < 0.35f)
+                    _orbitSign = -_orbitSign;
+            }
+
+            if (_orbitBiting || dist > OrbitPreferredMax)
+            {
+                dir = toward;
+                return true;
+            }
+
+            if (dist < OrbitPreferredMin)
+            {
+                dir = -toward;
+                return true;
+            }
+
+            var tangent = new Vector2(-toward.y, toward.x) * _orbitSign;
+            dir = (tangent * 0.9f + toward * 0.15f).normalized;
+            return true;
         }
 
         void MoveByDelta(Vector2 delta)
@@ -733,7 +985,7 @@ namespace ProjectZx.Enemies
                 UpdateFireBreath();
                 if (_fireBreathing) return;
             }
-            else if (IsRanged)
+            else if (IsRanged || MovementMode == EnemyMovementMode.Kite)
             {
                 UpdateRangedAttack();
             }
@@ -755,7 +1007,8 @@ namespace ProjectZx.Enemies
         float GetMoveSpeed()
         {
             var speed = _speed;
-            if (_sprinting) speed *= SprintSpeedMultiplier;
+            if (_sprinting || (MovementMode == EnemyMovementMode.Sprint && _sprinting))
+                speed *= SprintSpeedMultiplier;
             if (IsChilled) speed *= ChillSpeedMultiplier;
             if (_fireBreathing) speed *= FireBreathMoveSpeedMultiplier;
             if (IsFlying)
