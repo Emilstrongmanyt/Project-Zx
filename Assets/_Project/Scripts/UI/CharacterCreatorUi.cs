@@ -53,6 +53,7 @@ namespace ProjectZx.UI
         GameObject _root;
         Text _titleText;
         Text _categoryText;
+        Text _statusText;
         CharacterAppearance _appearance;
         HeroEditorCharacterView _previewView;
         GameObject _previewRoot;
@@ -104,8 +105,9 @@ namespace ProjectZx.UI
 
             _previewRoot = new GameObject("CreatorPreview");
             _previewRoot.transform.SetParent(transform, false);
-            _previewRoot.transform.position = new Vector3(0f, -1.2f, 0f);
-            _previewRoot.transform.localScale = Vector3.one * 0.7f;
+            // Centered for landscape orthographic camera (size ~6).
+            _previewRoot.transform.position = new Vector3(0f, -0.35f, 0f);
+            _previewRoot.transform.localScale = Vector3.one * 0.85f;
 
             // Dummy sprite renderer so Attach can disable it.
             _previewRoot.AddComponent<SpriteRenderer>().enabled = false;
@@ -150,8 +152,11 @@ namespace ProjectZx.UI
             var canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 250;
-            canvasGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            canvasGo.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1080, 1920);
+            var scaler = canvasGo.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            // Match HubUi — portrait 1080x1920 put every control off-screen on devices.
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.matchWidthOrHeight = 0.5f;
             canvasGo.AddComponent<GraphicRaycaster>();
 
             _root = new GameObject("CreatorPanel");
@@ -159,26 +164,28 @@ namespace ProjectZx.UI
             var rootRt = _root.AddComponent<RectTransform>();
             StretchFull(rootRt);
 
-            // Top/bottom chrome only — center stays clear so the world-space preview is visible
-            // against the solid camera clear color (camp is not loaded yet).
-            CreateChromePanel(_root.transform, new Vector2(0, 700), new Vector2(1200, 520));
-            CreateChromePanel(_root.transform, new Vector2(0, -720), new Vector2(1200, 560));
+            // Landscape chrome: top title strip + bottom control dock; center open for preview.
+            CreateChromePanel(_root.transform, new Vector2(0, 470), new Vector2(2000, 160));
+            CreateChromePanel(_root.transform, new Vector2(0, -420), new Vector2(2000, 280));
 
-            _titleText = CreateLabel(_root.transform, "Create Your Hero", 42, new Vector2(0, 820), new Vector2(900, 70));
+            _titleText = CreateLabel(_root.transform, "Create Your Hero", 40, new Vector2(0, 500), new Vector2(900, 56));
             CreateLabel(_root.transform, "Customize look — weapons & gear apply in-game", 22,
-                new Vector2(0, 760), new Vector2(900, 40));
+                new Vector2(0, 452), new Vector2(1000, 36));
 
-            _categoryText = CreateLabel(_root.transform, "Hair", 28, new Vector2(0, -520), new Vector2(700, 48));
+            _categoryText = CreateLabel(_root.transform, "Hair", 26, new Vector2(0, -320), new Vector2(900, 40));
+            _statusText = CreateLabel(_root.transform, "", 18, new Vector2(0, -352), new Vector2(1000, 28));
+            if (_statusText != null)
+                _statusText.color = new Color(0.75f, 0.8f, 0.9f, 1f);
 
-            CreateButton(_root.transform, "◀ Prev", new Vector2(-220, -620), () => Cycle(-1));
-            CreateButton(_root.transform, "Next ▶", new Vector2(220, -620), () => Cycle(1));
-            CreateButton(_root.transform, "Hair", new Vector2(-360, -720), () => SetCategory(Category.Hair), compact: true);
-            CreateButton(_root.transform, "Eyes", new Vector2(-180, -720), () => SetCategory(Category.Eyes), compact: true);
-            CreateButton(_root.transform, "Mouth", new Vector2(0, -720), () => SetCategory(Category.Mouth), compact: true);
-            CreateButton(_root.transform, "Brows", new Vector2(180, -720), () => SetCategory(Category.Eyebrows), compact: true);
-            CreateButton(_root.transform, "Hair Dye", new Vector2(-220, -800), () => SetCategory(Category.HairColor), compact: true);
-            CreateButton(_root.transform, "Skin", new Vector2(220, -800), () => SetCategory(Category.SkinColor), compact: true);
-            CreateButton(_root.transform, "Confirm", new Vector2(0, -900), Confirm, large: true);
+            CreateButton(_root.transform, "◀ Prev", new Vector2(-260, -400), () => Cycle(-1));
+            CreateButton(_root.transform, "Next ▶", new Vector2(260, -400), () => Cycle(1));
+            CreateButton(_root.transform, "Hair", new Vector2(-520, -470), () => SetCategory(Category.Hair), compact: true);
+            CreateButton(_root.transform, "Eyes", new Vector2(-350, -470), () => SetCategory(Category.Eyes), compact: true);
+            CreateButton(_root.transform, "Mouth", new Vector2(-180, -470), () => SetCategory(Category.Mouth), compact: true);
+            CreateButton(_root.transform, "Brows", new Vector2(-10, -470), () => SetCategory(Category.Eyebrows), compact: true);
+            CreateButton(_root.transform, "Hair Dye", new Vector2(180, -470), () => SetCategory(Category.HairColor), compact: true);
+            CreateButton(_root.transform, "Skin", new Vector2(350, -470), () => SetCategory(Category.SkinColor), compact: true);
+            CreateButton(_root.transform, "Confirm", new Vector2(560, -400), Confirm, large: true);
         }
 
         static void CreateChromePanel(Transform parent, Vector2 anchoredPos, Vector2 sizeDelta)
@@ -307,6 +314,7 @@ namespace ProjectZx.UI
         void RefreshLabels()
         {
             if (_categoryText == null) return;
+            var count = CurrentCount();
             var name = _category switch
             {
                 Category.Hair => ShortName(_appearance.Hair),
@@ -317,7 +325,15 @@ namespace ProjectZx.UI
                 Category.SkinColor => $"Skin tone {_optionIndex + 1}/{SkinColors.Length}",
                 _ => ""
             };
-            _categoryText.text = $"{_category}: {name}";
+            _categoryText.text = $"{_category}: {name}  ({_optionIndex + 1}/{count})";
+
+            if (_statusText != null)
+            {
+                var ready = _previewView != null && _previewView.IsReady;
+                _statusText.text = ready
+                    ? $"Options loaded — Hair {_hair.Count} · Eyes {_eyes.Count} · Mouth {_mouth.Count} · Brows {_eyebrows.Count}"
+                    : "Preview failed to load — check HeroEditor Human prefab / SpriteCollection";
+            }
         }
 
         static string ShortName(string id)

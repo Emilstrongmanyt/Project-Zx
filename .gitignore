@@ -123,25 +123,17 @@ Assets/_Project/Resources/Knight2.png.meta
 Assets/_Project/Resources/Overworld.png
 Assets/_Project/Resources/Overworld.png.meta
 
-# HeroEditor: ship Common + FantasyHeroes runtime + InventorySystem (needed to compile HE scripts); skip demos / icon dump
+# HeroEditor: ship Common + FantasyHeroes runtime + InventorySystem + Icons; skip demos / scenes
 Assets/HeroEditor/FantasyHeroes/TestRoom/
 Assets/HeroEditor/FantasyHeroes/TestRoom.meta
-Assets/HeroEditor/FantasyHeroes/Icons/
-Assets/HeroEditor/FantasyHeroes/Icons.meta
 Assets/HeroEditor/FantasyHeroes/Scenes/
 Assets/HeroEditor/FantasyHeroes/Scenes.meta
 Assets/HeroEditor/FantasyHeroes.unity
 Assets/HeroEditor/FantasyHeroes.unity.meta
 Assets/HeroEditor/QuickStart.unity
 Assets/HeroEditor/QuickStart.unity.meta
-
-
-Assets/HeroEditor/FantasyHeroes/Resources/IconCollection.asset
-Assets/HeroEditor/FantasyHeroes/Resources/IconCollection.asset.meta
 Assets/HeroEditor/Manual.pdf
 Assets/HeroEditor/Manual.pdf.meta
 Assets/HeroEditor/SpriteSequenceCapture.unity
 Assets/HeroEditor/SpriteSequenceCapture.unity.meta
-Assets/HeroEditor/FantasyHeroes.unity
-Assets/HeroEditor/FantasyHeroes.unity.meta
 
