@@ -65,9 +65,9 @@ namespace ProjectZx.Core
         public static readonly QuestDefinition GrandWizardsPeril = new(
             QuestId.GrandWizardsPeril,
             "Grand Wizard's Peril",
-            "Help me brave clanker! I have lost my most special Twin Lightning Pendant my great great grandfather gave to me after the second war. The foul golem beast came through the camp and ran off with it! Please hurry, I cannot cast any spells without it!",
+            "Help me brave adventurer! I have lost my most special Twin Lightning Pendant my great great grandfather gave to me after the second war. The foul golem beast came through the camp and ran off with it! Please hurry, I cannot cast any spells without it!",
             "The foul golem still has my Twin Lightning Pendant. Defeat the Outside Survival round 20 boss and bring it back!",
-            "You found my Twin Lightning Pendant! My spells return — take this gold, brave clanker!",
+            "You found my Twin Lightning Pendant! My spells return — take this gold, brave adventurer!",
             "Thank you again for returning my pendant. The camp is safer with heroes like you.",
             "In progress  ·  Retrieve the pendant from Outside R20",
             800,
@@ -90,7 +90,7 @@ namespace ProjectZx.Core
             "I fled the Dungeon without my greatsword — a knight's best friend. Recover it from the Dungeon Survival final boss and I will share the wizard's fire weapon enchantment, and 1000 gold.",
             "The Dungeon Survival final boss still has my greatsword. Defeat round 40 and bring the blade home.",
             "My greatsword! Take this gold — and the Flame Enchant. May your weapons burn true.",
-            "My blade is whole again. Fight well, clanker.",
+            "My blade is whole again. Fight well, adventurer.",
             "In progress  ·  Recover the greatsword from Dungeon R40 boss",
             1000,
             () => GameSave.DungeonKnightReturnedToCamp);

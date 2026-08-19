@@ -164,28 +164,28 @@ namespace ProjectZx.UI
             var rootRt = _root.AddComponent<RectTransform>();
             StretchFull(rootRt);
 
-            // Landscape chrome: top title strip + bottom control dock; center open for preview.
-            CreateChromePanel(_root.transform, new Vector2(0, 470), new Vector2(2000, 160));
-            CreateChromePanel(_root.transform, new Vector2(0, -420), new Vector2(2000, 280));
+            // Landscape chrome pulled toward center so safe-area / notches don't clip controls.
+            CreateChromePanel(_root.transform, new Vector2(0, 340), new Vector2(1600, 130));
+            CreateChromePanel(_root.transform, new Vector2(0, -300), new Vector2(1600, 250));
 
-            _titleText = CreateLabel(_root.transform, "Create Your Hero", 40, new Vector2(0, 500), new Vector2(900, 56));
+            _titleText = CreateLabel(_root.transform, "Create Your Hero", 40, new Vector2(0, 365), new Vector2(900, 56));
             CreateLabel(_root.transform, "Customize look — weapons & gear apply in-game", 22,
-                new Vector2(0, 452), new Vector2(1000, 36));
+                new Vector2(0, 318), new Vector2(1000, 36));
 
-            _categoryText = CreateLabel(_root.transform, "Hair", 26, new Vector2(0, -320), new Vector2(900, 40));
-            _statusText = CreateLabel(_root.transform, "", 18, new Vector2(0, -352), new Vector2(1000, 28));
+            _categoryText = CreateLabel(_root.transform, "Hair", 26, new Vector2(0, -210), new Vector2(900, 40));
+            _statusText = CreateLabel(_root.transform, "", 18, new Vector2(0, -242), new Vector2(1000, 28));
             if (_statusText != null)
-                _statusText.color = new Color(0.75f, 0.8f, 0.9f, 1f);
+                _statusText.color = new Color(0.88f, 0.9f, 0.95f, 1f);
 
-            CreateButton(_root.transform, "◀ Prev", new Vector2(-260, -400), () => Cycle(-1));
-            CreateButton(_root.transform, "Next ▶", new Vector2(260, -400), () => Cycle(1));
-            CreateButton(_root.transform, "Hair", new Vector2(-520, -470), () => SetCategory(Category.Hair), compact: true);
-            CreateButton(_root.transform, "Eyes", new Vector2(-350, -470), () => SetCategory(Category.Eyes), compact: true);
-            CreateButton(_root.transform, "Mouth", new Vector2(-180, -470), () => SetCategory(Category.Mouth), compact: true);
-            CreateButton(_root.transform, "Brows", new Vector2(-10, -470), () => SetCategory(Category.Eyebrows), compact: true);
-            CreateButton(_root.transform, "Hair Dye", new Vector2(180, -470), () => SetCategory(Category.HairColor), compact: true);
-            CreateButton(_root.transform, "Skin", new Vector2(350, -470), () => SetCategory(Category.SkinColor), compact: true);
-            CreateButton(_root.transform, "Confirm", new Vector2(560, -400), Confirm, large: true);
+            CreateButton(_root.transform, "◀ Prev", new Vector2(-240, -290), () => Cycle(-1));
+            CreateButton(_root.transform, "Next ▶", new Vector2(240, -290), () => Cycle(1));
+            CreateButton(_root.transform, "Hair", new Vector2(-480, -370), () => SetCategory(Category.Hair), compact: true);
+            CreateButton(_root.transform, "Eyes", new Vector2(-320, -370), () => SetCategory(Category.Eyes), compact: true);
+            CreateButton(_root.transform, "Mouth", new Vector2(-160, -370), () => SetCategory(Category.Mouth), compact: true);
+            CreateButton(_root.transform, "Brows", new Vector2(0, -370), () => SetCategory(Category.Eyebrows), compact: true);
+            CreateButton(_root.transform, "Hair Dye", new Vector2(180, -370), () => SetCategory(Category.HairColor), compact: true);
+            CreateButton(_root.transform, "Skin", new Vector2(340, -370), () => SetCategory(Category.SkinColor), compact: true);
+            CreateButton(_root.transform, "Confirm", new Vector2(520, -290), Confirm, large: true);
         }
 
         static void CreateChromePanel(Transform parent, Vector2 anchoredPos, Vector2 sizeDelta)
@@ -196,7 +196,8 @@ namespace ProjectZx.UI
             rt.sizeDelta = sizeDelta;
             rt.anchoredPosition = anchoredPos;
             var img = go.AddComponent<Image>();
-            img.color = new Color(0.05f, 0.07f, 0.12f, 0.96f);
+            // Match HubUi panel / onboarding dark blue-gray.
+            img.color = new Color(0.08f, 0.1f, 0.14f, 0.94f);
             img.raycastTarget = false;
         }
 
@@ -397,7 +398,10 @@ namespace ProjectZx.UI
             rt.sizeDelta = compact ? new Vector2(150, 56) : large ? new Vector2(320, 90) : new Vector2(200, 70);
             rt.anchoredPosition = pos;
             var img = go.AddComponent<Image>();
-            img.color = large ? new Color(0.2f, 0.55f, 0.35f, 1f) : new Color(0.18f, 0.22f, 0.32f, 1f);
+            // Match HubUi shop/loadout button colors.
+            img.color = large
+                ? new Color(0.28f, 0.5f, 0.32f, 0.98f)
+                : new Color(0.2f, 0.35f, 0.55f, 0.95f);
             var btn = go.AddComponent<Button>();
             btn.targetGraphic = img;
             btn.onClick.AddListener(() => onClick?.Invoke());

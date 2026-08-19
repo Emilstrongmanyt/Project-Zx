@@ -44,7 +44,8 @@ namespace ProjectZx.Core
             // First launch: customize before any camp world / characters spawn.
             if (!GameSave.CharacterCreated)
             {
-                SetupCamera(new Color(0.05f, 0.07f, 0.12f));
+                // Match HubUi menu backdrop tone.
+                SetupCamera(new Color(0.08f, 0.1f, 0.14f));
                 CharacterCreatorUi.Show(BuildCampWorld);
                 return;
             }

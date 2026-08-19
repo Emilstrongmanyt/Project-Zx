@@ -24,7 +24,7 @@ namespace ProjectZx.UI
             new("quest_wizard", "Hint: The Grand Wizard offers quests — gold and unique rewards."),
             new("whirlwind", "Hint: Whirlwind is a very powerful upgrade — consider purchasing it first!"),
             new("joystick", "Hint: You can move the joystick in Settings."),
-            new("water", "Hint: Robots may get stuck in water — use Retreat → Unstuck once per run."),
+            new("water", "Hint: Heroes may get stuck in water — use Retreat → Unstuck once per run."),
             new("achievements", "Hint: Earning achievements rewards Gold and extra XP (+5% each)."),
             new("rowzi_assist", "Hint: After you meet RowZi, she joins runs and copies your loadout!"),
             new("inside_unlock", "Hint: Clear Outside round 20, talk to RowZi, then enter the door for Inside Survival."),

@@ -152,7 +152,7 @@ namespace ProjectZx.UI
             "Talk to the Wizard (left of the campfire) to buy permanent upgrades.\nWhirlwind is a strong early pick.",
             "Talk to the Knight (right of the campfire) to start Outside Survival.\nSurvive waves, level up, and bank gold on death or retreat.",
             "Talk to the Grand Wizard for quests.\nQuests teach the map unlock chain and pay gold rewards.",
-            "Tip: Use Retreat anytime to bank gold safely.\nUnstuck (once per run) returns you to the map spawn.\n\nGood luck, clanker!"
+            "Tip: Use Retreat anytime to bank gold safely.\nUnstuck (once per run) returns you to the map spawn.\n\nGood luck, hero!"
         };
 
         void Awake()
