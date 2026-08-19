@@ -123,9 +123,7 @@ Assets/_Project/Resources/Knight2.png.meta
 Assets/_Project/Resources/Overworld.png
 Assets/_Project/Resources/Overworld.png.meta
 
-# HeroEditor: ship Common + FantasyHeroes runtime; skip demos / inventory UI / icon dump
-Assets/HeroEditor/InventorySystem/
-Assets/HeroEditor/InventorySystem.meta
+# HeroEditor: ship Common + FantasyHeroes runtime + InventorySystem (needed to compile HE scripts); skip demos / icon dump
 Assets/HeroEditor/FantasyHeroes/TestRoom/
 Assets/HeroEditor/FantasyHeroes/TestRoom.meta
 Assets/HeroEditor/FantasyHeroes/Icons/
