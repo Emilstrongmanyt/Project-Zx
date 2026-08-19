@@ -897,8 +897,9 @@ namespace ProjectZx.Core
             LoadRandomMonsterSet(highPhase ? LordBossHighSets : LordBossLowSets);
 
         /// <summary>
-        /// Rogue Adventure boss packs under Resources/RogueBosses/{folder}/BossXX_A..E.
-        /// A=idle, B=walk, C–E=attack (hit uses mid attack).
+        /// Rogue Adventure boss packs under Resources/RogueBosses/{folder}/.
+        /// Each A–E PNG is a multi-frame sheet (not a single pose):
+        /// A=idle, B=walk/float, C–E=attack/spell variants.
         /// </summary>
         public static MonsterAnimSet GetRogueBossAnimSet(BossArtCatalog.RogueBossId id)
         {
@@ -908,35 +909,48 @@ namespace ProjectZx.Core
                 return cached;
 
             var prefix = RogueBossFilePrefix(id);
+            var cell = RogueBossCellSize(id);
             var root = "RogueBosses/" + folder + "/";
-            var a = TryLoadSprite(root + prefix + "_A", TilePixelsPerUnit);
-            var b = TryLoadSprite(root + prefix + "_B", TilePixelsPerUnit);
-            var c = TryLoadSprite(root + prefix + "_C", TilePixelsPerUnit);
-            var d = TryLoadSprite(root + prefix + "_D", TilePixelsPerUnit);
-            var e = TryLoadSprite(root + prefix + "_E", TilePixelsPerUnit);
 
-            if (a == null)
+            var stand = LoadRogueBossSheet(root + prefix + "_A", cell);
+            var walk = LoadRogueBossSheet(root + prefix + "_B", cell);
+            var attackC = LoadRogueBossSheet(root + prefix + "_C", cell);
+            var attackD = LoadRogueBossSheet(root + prefix + "_D", cell);
+            var attackE = LoadRogueBossSheet(root + prefix + "_E", cell);
+
+            if (stand.Length == 0)
             {
                 MonsterSetCache[folder] = default;
                 return default;
             }
 
-            var stand = new[] { a };
-            var walk = b != null ? new[] { a, b } : stand;
-            var attackList = new List<Sprite>(3);
-            if (c != null) attackList.Add(c);
-            if (d != null) attackList.Add(d);
-            if (e != null) attackList.Add(e);
-            if (attackList.Count == 0) attackList.Add(a);
-            var attack = attackList.ToArray();
+            if (walk.Length == 0) walk = stand;
 
-            var hit = d ?? (attack.Length >= 2 ? attack[1] : a);
-            var hitAttack = e ?? hit;
-            var attackPose = c ?? attack[^1];
+            // Prefer the dedicated attack sheets; fall back through the pack.
+            var attack = attackD.Length > 0 ? attackD
+                : attackC.Length > 0 ? attackC
+                : attackE.Length > 0 ? attackE
+                : stand;
+            if (attackC.Length > 0 && attackD.Length > 0)
+            {
+                // Spell/shout (C) + primary attack (D) reads better for bosses with both.
+                var merged = new List<Sprite>(attackC.Length + attackD.Length);
+                merged.AddRange(attackC);
+                merged.AddRange(attackD);
+                if (attackE.Length > 0) merged.AddRange(attackE);
+                attack = merged.ToArray();
+            }
+
+            var idle = stand[0];
+            var hit = attack.Length >= 3 ? attack[attack.Length / 2] : attack[0];
+            var hitAttack = attackE.Length > 0
+                ? attackE[Mathf.Min(attackE.Length - 1, attackE.Length / 2)]
+                : (attack.Length >= 2 ? attack[^1] : hit);
+            var attackPose = attack[Mathf.Min(attack.Length - 1, attack.Length * 2 / 3)];
 
             var set = new MonsterAnimSet
             {
-                Idle = a,
+                Idle = idle,
                 Hit = hit,
                 Attack = attackPose,
                 HitAttack = hitAttack,
@@ -974,9 +988,110 @@ namespace ProjectZx.Core
             BossArtCatalog.RogueBossId.Molarbeast => "Boss07",
             BossArtCatalog.RogueBossId.Abysslime => "Boss08",
             BossArtCatalog.RogueBossId.TitanGuard => "Boss09",
-            BossArtCatalog.RogueBossId.PumpkinJack => "Boss10",
+            BossArtCatalog.RogueBossId.PumpkinJack => "Boss_Halloween",
             _ => "Boss01"
         };
+
+        /// <summary>ElvGames Rogue Adventure cell size per boss pack.</summary>
+        static int RogueBossCellSize(BossArtCatalog.RogueBossId id) => id switch
+        {
+            BossArtCatalog.RogueBossId.AncientBear => 80,
+            BossArtCatalog.RogueBossId.Osiris => 80,
+            BossArtCatalog.RogueBossId.TitanGuard => 80,
+            BossArtCatalog.RogueBossId.Molarbeast => 48,
+            _ => 64 // ChompBug, ToxicVermin, Werewolf, Abysslime, PumpkinJack
+        };
+
+        /// <summary>
+        /// Loads a Rogue boss multi-frame sheet (Unity sliced sprites, or grid fallback).
+        /// Skips fully-transparent padding cells when the texture is readable.
+        /// </summary>
+        static Sprite[] LoadRogueBossSheet(string resourcePath, int cell)
+        {
+            if (string.IsNullOrEmpty(resourcePath) || cell <= 0)
+                return System.Array.Empty<Sprite>();
+
+            var multi = Resources.LoadAll<Sprite>(resourcePath);
+            if (multi != null && multi.Length > 1)
+            {
+                System.Array.Sort(multi, (a, b) =>
+                    GetTrailingFrameIndex(a != null ? a.name : null)
+                        .CompareTo(GetTrailingFrameIndex(b != null ? b.name : null)));
+
+                var list = new List<Sprite>(multi.Length);
+                Texture2D sharedTex = null;
+                for (var i = 0; i < multi.Length; i++)
+                {
+                    var s = multi[i];
+                    if (s == null) continue;
+                    sharedTex ??= s.texture;
+                    if (IsMostlyTransparentSprite(s, sharedTex)) continue;
+                    list.Add(s);
+                }
+
+                if (list.Count > 0) return list.ToArray();
+            }
+
+            var tex = Resources.Load<Texture2D>(resourcePath);
+            if (tex == null) return System.Array.Empty<Sprite>();
+
+            var cols = Mathf.Max(1, tex.width / cell);
+            var rows = Mathf.Max(1, tex.height / cell);
+            var ppu = (float)cell;
+            var frames = new List<Sprite>(cols * rows);
+            // Sheets are authored top-left first; Unity rects use bottom-left origin.
+            for (var row = rows - 1; row >= 0; row--)
+            for (var col = 0; col < cols; col++)
+            {
+                var rect = new Rect(col * cell, row * cell, cell, cell);
+                if (rect.xMax > tex.width || rect.yMax > tex.height) continue;
+                if (IsMostlyTransparentRect(tex, rect)) continue;
+                frames.Add(Sprite.Create(tex, rect, new Vector2(0.5f, 0.15f), ppu));
+            }
+
+            if (frames.Count > 0) return frames.ToArray();
+
+            // Last resort: single full-sheet sprite (should not happen for valid packs).
+            if (multi != null && multi.Length == 1 && multi[0] != null)
+                return new[] { multi[0] };
+
+            return new[]
+            {
+                Sprite.Create(
+                    tex,
+                    new Rect(0f, 0f, tex.width, tex.height),
+                    new Vector2(0.5f, 0.15f),
+                    ppu)
+            };
+        }
+
+        static bool IsMostlyTransparentSprite(Sprite sprite, Texture2D tex)
+        {
+            if (sprite == null || tex == null || !tex.isReadable) return false;
+            return IsMostlyTransparentRect(tex, sprite.textureRect);
+        }
+
+        static bool IsMostlyTransparentRect(Texture2D tex, Rect rect)
+        {
+            if (tex == null || !tex.isReadable) return false;
+
+            var x0 = Mathf.Clamp(Mathf.FloorToInt(rect.x), 0, tex.width - 1);
+            var y0 = Mathf.Clamp(Mathf.FloorToInt(rect.y), 0, tex.height - 1);
+            var x1 = Mathf.Clamp(Mathf.FloorToInt(rect.xMax) - 1, 0, tex.width - 1);
+            var y1 = Mathf.Clamp(Mathf.FloorToInt(rect.yMax) - 1, 0, tex.height - 1);
+            if (x1 < x0 || y1 < y0) return true;
+
+            // Sparse sample — padding cells are fully empty in these packs.
+            var stepX = Mathf.Max(1, (x1 - x0) / 4);
+            var stepY = Mathf.Max(1, (y1 - y0) / 4);
+            for (var y = y0; y <= y1; y += stepY)
+            for (var x = x0; x <= x1; x += stepX)
+            {
+                if (tex.GetPixel(x, y).a > 0.08f) return false;
+            }
+
+            return true;
+        }
 
         static MonsterAnimSet _minotaurBossSet;
         static bool _minotaurBossLoaded;

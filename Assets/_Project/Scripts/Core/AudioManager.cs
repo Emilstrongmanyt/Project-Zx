@@ -19,13 +19,15 @@ namespace ProjectZx.Core
         AudioSource _bgmSource;
         AudioSource _bossSource;
         AudioSource _sfxSource;
-        AudioClip _bossClip;
+        readonly List<AudioClip> _bossRoars = new();
+        int _bossRoarIndex = -1;
         AudioClip _swing1;
         AudioClip _swing2;
         readonly List<AudioClip> _brothersPlaylist = new();
         int _playlistIndex = -1;
         bool _playlistActive;
         float _bossProximityVolume;
+        bool _bossNearby;
 
         void Awake()
         {
@@ -43,7 +45,7 @@ namespace ProjectZx.Core
             _bgmSource.playOnAwake = false;
 
             _bossSource = gameObject.AddComponent<AudioSource>();
-            _bossSource.loop = true;
+            _bossSource.loop = false;
             _bossSource.playOnAwake = false;
             _bossSource.volume = 0f;
 
@@ -51,11 +53,31 @@ namespace ProjectZx.Core
             _sfxSource.loop = false;
             _sfxSource.playOnAwake = false;
 
-            _bossClip = Resources.Load<AudioClip>("BossJ_SFX");
+            BuildBossRoarPlaylist();
             _swing1 = Resources.Load<AudioClip>("SwingSFX1");
             _swing2 = Resources.Load<AudioClip>("SwingSFX2");
             BuildBrothersPlaylist();
             ApplySavedVolumes();
+        }
+
+        void BuildBossRoarPlaylist()
+        {
+            _bossRoars.Clear();
+            TryAddBossRoar("BossRoar_Deep");
+            TryAddBossRoar("BossRoar_Vocal");
+            TryAddBossRoar("BossRoar_Troll");
+            TryAddBossRoar("BossRoar_Avian");
+
+            // Legacy fallback if the new pack is missing from a build.
+            if (_bossRoars.Count == 0)
+                TryAddBossRoar("BossJ_SFX");
+        }
+
+        void TryAddBossRoar(string resourceName)
+        {
+            var clip = Resources.Load<AudioClip>(resourceName);
+            if (clip != null && !_bossRoars.Contains(clip))
+                _bossRoars.Add(clip);
         }
 
         /// <summary>Re-apply BGM/SFX levels from GameSave (settings menu).</summary>
@@ -79,9 +101,12 @@ namespace ProjectZx.Core
 
         void Update()
         {
-            if (!_playlistActive || _bgmSource == null || _brothersPlaylist.Count == 0) return;
-            if (_bgmSource.isPlaying) return;
-            PlayNextBrothersTrack();
+            if (_playlistActive && _bgmSource != null && _brothersPlaylist.Count > 0 && !_bgmSource.isPlaying)
+                PlayNextBrothersTrack();
+
+            // Short roar clips: keep cycling while a boss is in range.
+            if (_bossNearby && _bossSource != null && _bossRoars.Count > 0 && !_bossSource.isPlaying)
+                PlayNextBossRoar();
         }
 
         public void PlayCampBgm()
@@ -205,6 +230,7 @@ namespace ProjectZx.Core
 
         public void StopBossSfx()
         {
+            _bossNearby = false;
             if (_bossSource == null) return;
             _bossSource.Stop();
             _bossSource.volume = 0f;
@@ -212,7 +238,7 @@ namespace ProjectZx.Core
 
         public void UpdateBossJProximity(Transform player)
         {
-            if (_bossSource == null || _bossClip == null)
+            if (_bossSource == null || _bossRoars.Count == 0)
                 return;
 
             EnemyActor closestBoss = null;
@@ -236,15 +262,38 @@ namespace ProjectZx.Core
                 return;
             }
 
-            if (_bossSource.clip != _bossClip)
-                _bossSource.clip = _bossClip;
-
-            if (!_bossSource.isPlaying)
-                _bossSource.Play();
-
+            _bossNearby = true;
             var t = 1f - Mathf.Clamp01(bestDist / BossMaxHearDistance);
             _bossProximityVolume = Mathf.Lerp(BossMinVolume, BossMaxVolume, t);
             _bossSource.volume = _bossProximityVolume * GameSave.SfxVolume;
+
+            if (!_bossSource.isPlaying)
+                PlayNextBossRoar();
+        }
+
+        void PlayNextBossRoar()
+        {
+            if (_bossSource == null || _bossRoars.Count == 0) return;
+
+            if (_bossRoars.Count == 1)
+            {
+                _bossRoarIndex = 0;
+            }
+            else
+            {
+                // Avoid immediate repeat when multiple roars are available.
+                var next = Random.Range(0, _bossRoars.Count);
+                if (next == _bossRoarIndex)
+                    next = (_bossRoarIndex + 1) % _bossRoars.Count;
+                _bossRoarIndex = next;
+            }
+
+            var clip = _bossRoars[_bossRoarIndex];
+            if (clip == null) return;
+            _bossSource.clip = clip;
+            _bossSource.loop = false;
+            _bossSource.volume = _bossProximityVolume * GameSave.SfxVolume;
+            _bossSource.Play();
         }
 
         public void PlaySwingSfx()
