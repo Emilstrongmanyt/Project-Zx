@@ -37,6 +37,24 @@ namespace ProjectZx.Core
         {
             EnsureAudioManager();
             GameSave.EnsureCharacterAppearanceMigrated();
+            // Player is always RollZy; RowZi is companion-only.
+            GameSave.SelectedHero = PlayableHero.RollZy;
+            ArenaBounds.SetWorldWrap(false);
+
+            // First launch: customize before any camp world / characters spawn.
+            if (!GameSave.CharacterCreated)
+            {
+                SetupCamera(new Color(0.05f, 0.07f, 0.12f));
+                CharacterCreatorUi.Show(BuildCampWorld);
+                return;
+            }
+
+            BuildCampWorld();
+        }
+
+        static void BuildCampWorld()
+        {
+            EnsureAudioManager();
             AudioManager.Instance?.PlayCampBgm();
             ArenaBounds.SetWorldWrap(false);
             // Deep water clear color so the ring reads clearly past the tile edge.
@@ -199,13 +217,10 @@ namespace ProjectZx.Core
             if (!GameSessionContext.FreshSurvivalRun)
                 playerStats?.RestoreSnapshot(GameSessionContext.RunSnapshot);
 
-            // After RowZi unlock, the standby hero follows and assists with their own loadout.
+            // After RowZi unlock, she follows as companion using the player's class/loadout.
             var standby = GameSave.GetStandbyHero();
             if (standby.HasValue && playerStats != null)
-            {
-                var companionClass = GameSave.GetHeroClass(standby.Value);
-                GameFactory.CreateCompanion(player.transform, playerStats, standby.Value, companionClass);
-            }
+                GameFactory.CreateCompanion(player.transform, playerStats, standby.Value, activeClass);
 
             var hud = new GameObject("GameHud").AddComponent<GameHud>();
             hud.BindPlayer(player.transform);

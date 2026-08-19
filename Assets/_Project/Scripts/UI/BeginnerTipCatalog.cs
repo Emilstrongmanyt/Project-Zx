@@ -26,7 +26,7 @@ namespace ProjectZx.UI
             new("joystick", "Hint: You can move the joystick in Settings."),
             new("water", "Hint: Robots may get stuck in water — use Retreat → Unstuck once per run."),
             new("achievements", "Hint: Earning achievements rewards Gold and extra XP (+5% each)."),
-            new("dual_builds", "Hint: You can customize both RollZy and RowZi's builds!"),
+            new("rowzi_assist", "Hint: After you meet RowZi, she joins runs and copies your loadout!"),
             new("inside_unlock", "Hint: Clear Outside round 20, talk to RowZi, then enter the door for Inside Survival."),
             new("bank_gold", "Hint: Run gold banks when you die, retreat, or take a stage portal home."),
             new("retreat", "Hint: Retreat anytime to bank gold and return to camp safely."),
@@ -42,7 +42,7 @@ namespace ProjectZx.UI
             return id switch
             {
                 "whirlwind" => !GameSave.WhirlwindUnlocked,
-                "dual_builds" => GameSave.RowZiUnlocked,
+                "rowzi_assist" => GameSave.RowZiUnlocked,
                 "quest_wizard" => !GameSave.QuestGrandWizardsPerilCompleted,
                 "inside_unlock" => !GameSave.InsideMapUnlocked,
                 "map_knight" => GameSave.HighestRoundReached < 3,

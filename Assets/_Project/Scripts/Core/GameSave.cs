@@ -719,10 +719,11 @@ namespace ProjectZx.Core
             }
         }
 
+        /// <summary>Companion hero for runs/camp décor. Always RowZi when unlocked — no hero swap.</summary>
         public static PlayableHero? GetStandbyHero()
         {
             if (!RowZiUnlocked) return null;
-            return SelectedHero == PlayableHero.RollZy ? PlayableHero.RowZi : PlayableHero.RollZy;
+            return PlayableHero.RowZi;
         }
 
         public static string GetHeroDisplayName(PlayableHero hero)
@@ -730,10 +731,10 @@ namespace ProjectZx.Core
             return hero == PlayableHero.RowZi ? "RowZi" : "RollZy";
         }
 
+        /// <summary>Player is always RollZy; RowZi is companion-only and mirrors the player loadout.</summary>
         public static PlayableHero SanitizeHero(PlayableHero hero)
         {
-            if (hero == PlayableHero.RowZi && !RowZiUnlocked) return PlayableHero.RollZy;
-            return hero;
+            return PlayableHero.RollZy;
         }
 
         public static MovementControlType SelectedMovementControl

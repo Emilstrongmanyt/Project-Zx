@@ -79,6 +79,8 @@ namespace ProjectZx.UI
 
         void Open()
         {
+            EventSystemSetup.EnsureExists();
+
             if (_root == null)
                 BuildUi();
 
@@ -157,9 +159,10 @@ namespace ProjectZx.UI
             var rootRt = _root.AddComponent<RectTransform>();
             StretchFull(rootRt);
 
-            // Leave the center relatively clear so the live world-space preview stays visible.
-            var dim = _root.AddComponent<Image>();
-            dim.color = new Color(0.05f, 0.07f, 0.12f, 0.55f);
+            // Top/bottom chrome only — center stays clear so the world-space preview is visible
+            // against the solid camera clear color (camp is not loaded yet).
+            CreateChromePanel(_root.transform, new Vector2(0, 700), new Vector2(1200, 520));
+            CreateChromePanel(_root.transform, new Vector2(0, -720), new Vector2(1200, 560));
 
             _titleText = CreateLabel(_root.transform, "Create Your Hero", 42, new Vector2(0, 820), new Vector2(900, 70));
             CreateLabel(_root.transform, "Customize look — weapons & gear apply in-game", 22,
@@ -176,6 +179,18 @@ namespace ProjectZx.UI
             CreateButton(_root.transform, "Hair Dye", new Vector2(-220, -800), () => SetCategory(Category.HairColor), compact: true);
             CreateButton(_root.transform, "Skin", new Vector2(220, -800), () => SetCategory(Category.SkinColor), compact: true);
             CreateButton(_root.transform, "Confirm", new Vector2(0, -900), Confirm, large: true);
+        }
+
+        static void CreateChromePanel(Transform parent, Vector2 anchoredPos, Vector2 sizeDelta)
+        {
+            var go = new GameObject("Chrome");
+            go.transform.SetParent(parent, false);
+            var rt = go.AddComponent<RectTransform>();
+            rt.sizeDelta = sizeDelta;
+            rt.anchoredPosition = anchoredPos;
+            var img = go.AddComponent<Image>();
+            img.color = new Color(0.05f, 0.07f, 0.12f, 0.96f);
+            img.raycastTarget = false;
         }
 
         void SetCategory(Category category)

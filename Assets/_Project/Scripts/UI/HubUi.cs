@@ -166,21 +166,10 @@ namespace ProjectZx.UI
         void Start()
         {
             TryShowLastRunToast();
-            TryShowCharacterCreatorThenOnboarding();
+            // Character creator runs before camp world spawn (GameBootstrap); only onboarding remains here.
+            TryShowOnboarding();
             RefreshCampObjectiveTracker(force: true);
             TryShowReadyTurnInToast();
-        }
-
-        void TryShowCharacterCreatorThenOnboarding()
-        {
-            GameSave.EnsureCharacterAppearanceMigrated();
-            if (!GameSave.CharacterCreated)
-            {
-                CharacterCreatorUi.Show(TryShowOnboarding);
-                return;
-            }
-
-            TryShowOnboarding();
         }
 
         void OnDestroy()
@@ -732,7 +721,7 @@ namespace ProjectZx.UI
         {
             var panel = CreateDialogPanel(parent, "LoadoutPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
             CreateText(panel.transform, "Build Loadout", 38, TextAnchor.MiddleCenter, new Vector2(0, 360), new Vector2(620, 52));
-            CreateText(panel.transform, "Class is saved per hero. Swap heroes at camp to set the companion build.\nMovement & audio live in Settings.", 18, TextAnchor.MiddleCenter, new Vector2(0, 312), new Vector2(820, 48));
+            CreateText(panel.transform, "Your class & technique apply to you and RowZi (she copies this loadout).\nMovement & audio live in Settings.", 18, TextAnchor.MiddleCenter, new Vector2(0, 312), new Vector2(820, 48));
 
             // Class section (3 rows: Batter/Spearman, Bowman/Samurai, Magician)
             _loadoutClassPicker = BuildClassPicker(panel.transform, 255f, 210f, 135f);
@@ -1642,8 +1631,8 @@ namespace ProjectZx.UI
 
             GameSessionContext.ClearPendingNextMap();
             GameSessionContext.SurvivalMap = mapKind;
-            GameSessionContext.SelectedHero = GameSave.SanitizeHero(GameSave.SelectedHero);
-            GameSessionContext.SelectedClass = GameSave.GetHeroClass(GameSessionContext.SelectedHero);
+            GameSessionContext.SelectedHero = PlayableHero.RollZy;
+            GameSessionContext.SelectedClass = GameSave.SelectedClass;
             GameSessionContext.FreshSurvivalRun = true;
             GameSessionContext.CarryRound = 0;
             // Every map starts a fresh run at round 1 (StartingRound 0 → ++).
@@ -2320,12 +2309,12 @@ namespace ProjectZx.UI
             var technique = AttackModeCatalog.GetLabel(attackMode, selected);
             var standby = GameSave.GetStandbyHero();
             var companionLine = standby.HasValue
-                ? $"Companion: {GameSave.GetHeroDisplayName(standby.Value)} ({GetClassDisplayName(GameSave.GetHeroClass(standby.Value))}, 20% dmg)\n"
+                ? $"Companion: RowZi (copies your {className} loadout, 20% dmg)\n"
                 : "Companion: Unlock RowZi at R20 door\n";
 
             _statsBodyText.text =
                 "CURRENT BUILD\n" +
-                $"Hero: {GameSave.GetHeroDisplayName(GameSave.SelectedHero)}\n" +
+                $"Hero: RollZy\n" +
                 $"Class: {className}\n" +
                 $"Technique: {technique}\n" +
                 companionLine +

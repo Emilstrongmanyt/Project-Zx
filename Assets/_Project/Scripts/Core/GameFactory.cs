@@ -527,7 +527,7 @@ namespace ProjectZx.Core
         }
 
         /// <summary>
-        /// Inactive hero companion for survival — follows the player, uses that hero's loadout,
+        /// Inactive hero companion for survival — follows the player, uses the leader's class/loadout,
         /// deals 20% damage, and collects loot for the leader.
         /// </summary>
         public static GameObject CreateCompanion(
@@ -746,9 +746,15 @@ namespace ProjectZx.Core
             return go;
         }
 
-        public static GameObject CreateHeroCampNpc(Vector3 position, PlayableHero hero, float scale = 0.38f)
+        public static GameObject CreateHeroCampNpc(
+            Vector3 position,
+            PlayableHero hero,
+            float scale = 0.38f,
+            bool interactive = false)
         {
             var go = CreateSprite($"{GameSave.GetHeroDisplayName(hero)}CampNpc", ArtLibrary.GetHeroIdleSprite(hero), position, scale, 9);
+            if (!interactive) return go;
+
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 0.55f;
             col.isTrigger = true;
@@ -768,14 +774,14 @@ namespace ProjectZx.Core
             {
                 if (GameSave.RowZiUnlocked)
                 {
-                    GameHud.Instance?.ShowBanner("RowZi is already at camp — tap her to swap!", 2.5f);
+                    GameHud.Instance?.ShowBanner("RowZi already joins your runs!", 2.5f);
                     return;
                 }
 
                 GameSave.RowZiUnlocked = true;
                 Achievements.UnlockTogetherAgain();
-                // Keep current hero; standby RowZi appears after return to camp.
-                GameHud.Instance?.ShowBanner("RowZi unlocked! Swap heroes at camp.", 3.5f);
+                // Companion appears after return to camp; she mirrors your loadout.
+                GameHud.Instance?.ShowBanner("RowZi unlocked! She joins runs with your loadout.", 3.5f);
             });
             return go;
         }
