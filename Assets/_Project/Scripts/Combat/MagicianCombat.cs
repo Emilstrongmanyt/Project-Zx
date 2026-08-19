@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using ProjectZx.Core;
 using ProjectZx.Enemies;
+using ProjectZx.HeroEditor;
 using ProjectZx.Player;
 using ProjectZx.World;
 using UnityEngine;
@@ -46,6 +47,8 @@ namespace ProjectZx.Combat
             _bodyRenderer = GetComponent<SpriteRenderer>();
             SetupStaff();
         }
+
+        void Start() => HeroEditorCombatBridge.HideLegacyWeapons(this);
 
         void SetupStaff()
         {
@@ -102,10 +105,10 @@ namespace ProjectZx.Combat
             _casting = true;
             _castTimer = castDuration;
 
-            if (_bodyRenderer != null)
-                _bodyRenderer.flipX = enemy.transform.position.x < transform.position.x;
+            var faceRight = enemy.transform.position.x >= transform.position.x;
+            HeroEditorCombatBridge.Slash(this, faceRight, _bodyRenderer);
 
-            if (_staffPivot != null)
+            if (_staffPivot != null && !HeroEditorCombatBridge.IsActive(this))
                 _staffPivot.localRotation = Quaternion.Euler(0f, 0f, StaffCastAngle);
 
             var stats = GetComponent<PlayerStats>();

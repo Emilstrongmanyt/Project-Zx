@@ -59,6 +59,7 @@ namespace ProjectZx.Core
         const string EquippedRingKey = "zx_equipped_ring";
         const string EquippedNecklaceKey = "zx_equipped_necklace";
         const string EquippedCapeKey = "zx_equipped_cape";
+        const string EquippedHelmKey = "zx_equipped_helm";
         const string QuestGwpAcceptedKey = "zx_quest_gwp_accepted";
         const string QuestGwpCompletedKey = "zx_quest_gwp_completed";
         const string QuestCrowAcceptedKey = "zx_quest_crow_accepted";
@@ -74,6 +75,9 @@ namespace ProjectZx.Core
         const string OnboardingDoneKey = "zx_onboarding_done";
         const string LargeDamageNumbersKey = "zx_large_damage_numbers";
         const string SettingsOpenedKey = "zx_settings_opened";
+        const string CharacterCreatedKey = "zx_character_created";
+        const string CharacterAppearanceKey = "zx_character_appearance";
+        const string CharacterMigratedKey = "zx_character_migrated_v1";
 
         /// <summary>Gold banked from the most recent survival exit (death, retreat, or portal).</summary>
         public static int LastRunGoldBanked { get; set; }
@@ -95,6 +99,72 @@ namespace ProjectZx.Core
                 PlayerPrefs.SetInt(OnboardingDoneKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
+        }
+
+        /// <summary>
+        /// True after the player finished (or was migrated through) the HeroEditor creator.
+        /// RollZy-only cosmetics; RowZi stays sheet-based.
+        /// </summary>
+        public static bool CharacterCreated
+        {
+            get => PlayerPrefs.GetInt(CharacterCreatedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(CharacterCreatedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>JsonUtility dump of HeroEditor CharacterAppearance for RollZy.</summary>
+        public static string CharacterAppearanceJson
+        {
+            get => PlayerPrefs.GetString(CharacterAppearanceKey, string.Empty);
+            set
+            {
+                PlayerPrefs.SetString(CharacterAppearanceKey, value ?? string.Empty);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>
+        /// Veterans with existing progress skip the creator and get a default appearance.
+        /// Brand-new installs keep CharacterCreated false until the maker completes.
+        /// </summary>
+        public static void EnsureCharacterAppearanceMigrated()
+        {
+            if (PlayerPrefs.GetInt(CharacterMigratedKey, 0) == 1) return;
+
+            PlayerPrefs.SetInt(CharacterMigratedKey, 1);
+
+            if (CharacterCreated)
+            {
+                PlayerPrefs.Save();
+                return;
+            }
+
+            var isVeteran = OnboardingCompleted
+                            || Gold > 0
+                            || LifetimeZombieKills > 0
+                            || HighestRoundReached > 0
+                            || UnlimitedHighestRoundReached > 0
+                            || DungeonHighestRoundReached > 0
+                            || CryptHighestRoundReached > 0
+                            || PlayerPrefs.GetInt(OwnedEquipmentKey, 0) != 0;
+
+            if (isVeteran)
+            {
+                if (string.IsNullOrEmpty(CharacterAppearanceJson))
+                    CharacterAppearanceJson = CreateDefaultAppearanceJson();
+                CharacterCreated = true;
+            }
+
+            PlayerPrefs.Save();
+        }
+
+        public static string CreateDefaultAppearanceJson()
+        {
+            // Matches HeroEditor CharacterAppearance defaults (BuzzCut + warm body).
+            return "{\"Hair\":\"Common.Basic.Hair.BuzzCut\",\"Beard\":null,\"Ears\":\"Common.Basic.Ears.HumanEars\",\"Eyebrows\":\"Common.Basic.Eyebrows.Eyebrows1\",\"Eyes\":\"Common.Basic.Eyes.Male\",\"Mouth\":\"Common.Basic.Mouth.Normal\",\"Head\":\"Common.Basic.Head.Human\",\"HairColor\":{\"r\":150,\"g\":50,\"b\":0,\"a\":255},\"BeardColor\":{\"r\":150,\"g\":50,\"b\":0,\"a\":255},\"EyesColor\":{\"r\":0,\"g\":200,\"b\":255,\"a\":255},\"BodyColor\":{\"r\":255,\"g\":200,\"b\":120,\"a\":255}}";
         }
 
         /// <summary>Accessibility: larger combat damage floaters.</summary>
@@ -509,6 +579,17 @@ namespace ProjectZx.Core
             }
         }
 
+        public static EquipmentId EquippedHelm
+        {
+            get => SanitizeEquipped((EquipmentId)PlayerPrefs.GetInt(EquippedHelmKey, 0), EquipmentSlot.Helm);
+            set
+            {
+                var id = SanitizeEquipped(value, EquipmentSlot.Helm);
+                PlayerPrefs.SetInt(EquippedHelmKey, (int)id);
+                PlayerPrefs.Save();
+            }
+        }
+
         public static bool OwnsEquipment(EquipmentId id)
         {
             if (id == EquipmentId.None || !EquipmentCatalog.IsValid(id)) return false;
@@ -544,6 +625,9 @@ namespace ProjectZx.Core
                 case EquipmentSlot.Cape:
                     EquippedCape = id;
                     break;
+                case EquipmentSlot.Helm:
+                    EquippedHelm = id;
+                    break;
             }
         }
 
@@ -559,6 +643,9 @@ namespace ProjectZx.Core
                     break;
                 case EquipmentSlot.Cape:
                     EquippedCape = EquipmentId.None;
+                    break;
+                case EquipmentSlot.Helm:
+                    EquippedHelm = EquipmentId.None;
                     break;
             }
         }

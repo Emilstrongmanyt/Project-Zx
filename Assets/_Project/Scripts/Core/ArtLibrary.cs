@@ -31,13 +31,15 @@ namespace ProjectZx.Core
 
     /// <summary>
     /// Loads NARt art from Resources/Art with procedural fallbacks for camp-specific tiles.
-    /// Curated Admurin item sprites live under Resources/Items/Admurin.
+        /// Curated Admurin item sprites live under Resources/Items/Admurin.
+        /// HeroEditor cape/helm UI icons live under Resources/Items/HeroEditor.
     /// Demon / golem / lord packs live under Resources/Monsters.
     /// </summary>
     public static class ArtLibrary
     {
         public const float TilePixelsPerUnit = 64f;
         const string Admurin = "Items/Admurin/";
+        const string HeroEditorItems = "Items/HeroEditor/";
         const string Monsters = "Monsters/";
 
         static readonly string[] OutsideDemonSets =
@@ -116,6 +118,9 @@ namespace ProjectZx.Core
             _sentinelCape = null;
             _ironweaveCape = null;
             _guardianCape = null;
+            _leatherHelm = null;
+            _guardHelm = null;
+            _ironHelm = null;
             _staff = null;
             _treasureChest = null;
             _gateway = null;
@@ -196,6 +201,9 @@ namespace ProjectZx.Core
         static Sprite _sentinelCape;
         static Sprite _ironweaveCape;
         static Sprite _guardianCape;
+        static Sprite _leatherHelm;
+        static Sprite _guardHelm;
+        static Sprite _ironHelm;
         static Sprite _staff;
         static Sprite _treasureChest;
         static Sprite _gateway;
@@ -450,14 +458,38 @@ namespace ProjectZx.Core
         /// <summary>Protector Necklace icon — Admurin defensive charm.</summary>
         public static Sprite ProtectorNecklace => _protectorNecklace ??=
             TryLoadSprite(Admurin + "protector_necklace", TilePixelsPerUnit) ?? Necklace;
+        /// <summary>Cotton Cape UI icon (HeroEditor CotttonCape).</summary>
         public static Sprite WoolCape => _woolCape ??=
-            TryLoadSprite(Admurin + "wool_cape", TilePixelsPerUnit) ?? Sparkles;
+            TryLoadSprite(HeroEditorItems + "cotton_cape", TilePixelsPerUnit)
+            ?? TryLoadSprite(Admurin + "wool_cape", TilePixelsPerUnit)
+            ?? Sparkles;
+        /// <summary>Heroic Cape UI icon (HeroEditor HeroicCape).</summary>
         public static Sprite SentinelCape => _sentinelCape ??=
-            TryLoadSprite(Admurin + "sentinel_cape", TilePixelsPerUnit) ?? Sparkles;
+            TryLoadSprite(HeroEditorItems + "heroic_cape", TilePixelsPerUnit)
+            ?? TryLoadSprite(Admurin + "sentinel_cape", TilePixelsPerUnit)
+            ?? Sparkles;
+        /// <summary>Royal Cape UI icon (HeroEditor RoyalCape).</summary>
         public static Sprite IronweaveCape => _ironweaveCape ??=
-            TryLoadSprite(Admurin + "ironweave_cape", TilePixelsPerUnit) ?? Sparkles;
+            TryLoadSprite(HeroEditorItems + "royal_cape", TilePixelsPerUnit)
+            ?? TryLoadSprite(Admurin + "ironweave_cape", TilePixelsPerUnit)
+            ?? Sparkles;
         public static Sprite GuardianCape => _guardianCape ??=
             TryLoadSprite(Admurin + "guardian_cape", TilePixelsPerUnit) ?? Sparkles;
+        /// <summary>Leather Helm UI icon (HeroEditor LeatherHelm).</summary>
+        public static Sprite LeatherHelm => _leatherHelm ??=
+            TryLoadSprite(HeroEditorItems + "leather_helm", TilePixelsPerUnit)
+            ?? TryLoadSprite(Admurin + "leather_helm", TilePixelsPerUnit)
+            ?? CreateHelmIconSprite(new Color(0.55f, 0.38f, 0.22f));
+        /// <summary>Guard Helm UI icon (HeroEditor Knights GuardHelm).</summary>
+        public static Sprite GuardHelm => _guardHelm ??=
+            TryLoadSprite(HeroEditorItems + "guard_helm", TilePixelsPerUnit)
+            ?? TryLoadSprite(Admurin + "guard_helm", TilePixelsPerUnit)
+            ?? CreateHelmIconSprite(new Color(0.45f, 0.52f, 0.62f));
+        /// <summary>Falcon Iron Helm UI icon (HeroEditor FalconIronHelm).</summary>
+        public static Sprite IronHelm => _ironHelm ??=
+            TryLoadSprite(HeroEditorItems + "falcon_iron_helm", TilePixelsPerUnit)
+            ?? TryLoadSprite(Admurin + "iron_helm", TilePixelsPerUnit)
+            ?? CreateHelmIconSprite(new Color(0.62f, 0.64f, 0.7f));
         /// <summary>Camp equipment chest — Layer Lab gold lucky-box when present.</summary>
         public static Sprite TreasureChest => _treasureChest ??= LoadOrCreateTreasureChest();
         public static Sprite Gateway => _gateway ??= LoadOrCreateGateway();
@@ -2529,6 +2561,59 @@ namespace ProjectZx.Core
 
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.12f, 0.5f), 4f);
+        }
+
+        static Sprite CreateHelmIconSprite(Color baseColor)
+        {
+            const int size = 16;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp
+            };
+
+            void Set(int x, int y, Color c)
+            {
+                if (x >= 0 && x < size && y >= 0 && y < size) tex.SetPixel(x, y, c);
+            }
+
+            var clear = new Color(0, 0, 0, 0);
+            var dark = new Color(baseColor.r * 0.55f, baseColor.g * 0.55f, baseColor.b * 0.55f, 1f);
+            var light = new Color(
+                Mathf.Min(1f, baseColor.r * 1.25f),
+                Mathf.Min(1f, baseColor.g * 1.25f),
+                Mathf.Min(1f, baseColor.b * 1.25f),
+                1f);
+
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+                Set(x, y, clear);
+
+            // Dome
+            for (var y = 7; y <= 13; y++)
+            for (var x = 3; x <= 12; x++)
+            {
+                var dx = x - 7.5f;
+                var dy = y - 8f;
+                if (dx * dx + dy * dy * 1.4f <= 28f)
+                    Set(x, y, y >= 12 ? light : baseColor);
+            }
+
+            // Brim
+            for (var x = 2; x <= 13; x++)
+            {
+                Set(x, 6, dark);
+                Set(x, 5, baseColor);
+            }
+
+            // Visor slit
+            for (var x = 5; x <= 10; x++)
+                Set(x, 9, dark);
+
+            tex.Apply();
+            var sprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), TilePixelsPerUnit);
+            sprite.name = "HelmIcon";
+            return sprite;
         }
 
         static Sprite CreateStoneSprite()

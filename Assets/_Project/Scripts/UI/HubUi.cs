@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ProjectZx.Core;
+using ProjectZx.HeroEditor;
 using ProjectZx.Player;
 using UnityEngine;
 using UnityEngine.UI;
@@ -16,7 +17,8 @@ namespace ProjectZx.UI
             IsPanelOpen(_shopPanel) || IsPanelOpen(_loadoutPanel) || IsPanelOpen(_statsPanel)
             || IsPanelOpen(_achievementsPanel) || IsPanelOpen(_mapPanel) || IsPanelOpen(_campfirePanel)
             || IsPanelOpen(_equipmentPanel) || IsPanelOpen(_settingsPanel) || IsPanelOpen(_questPanel)
-            || IsPanelOpen(_onboardingPanel);
+            || IsPanelOpen(_onboardingPanel)
+            || CharacterCreatorUi.IsOpen;
 
         static bool IsPanelOpen(GameObject panel) => panel != null && panel.activeSelf;
 
@@ -65,6 +67,11 @@ namespace ProjectZx.UI
         Text _equipmentStatusText;
         Text _bgmVolumeLabel;
         Text _sfxVolumeLabel;
+        Text _campObjectiveText;
+        Image _campObjectiveBg;
+        GameObject _campObjectiveChip;
+        float _campObjectivePulse;
+        bool _readyTurnInToastShown;
         readonly List<Button> _equipmentButtons = new();
 
         struct ClassPickerRefs
@@ -159,6 +166,20 @@ namespace ProjectZx.UI
         void Start()
         {
             TryShowLastRunToast();
+            TryShowCharacterCreatorThenOnboarding();
+            RefreshCampObjectiveTracker(force: true);
+            TryShowReadyTurnInToast();
+        }
+
+        void TryShowCharacterCreatorThenOnboarding()
+        {
+            GameSave.EnsureCharacterAppearanceMigrated();
+            if (!GameSave.CharacterCreated)
+            {
+                CharacterCreatorUi.Show(TryShowOnboarding);
+                return;
+            }
+
             TryShowOnboarding();
         }
 
@@ -189,6 +210,7 @@ namespace ProjectZx.UI
 
             // Always available on the campfire map.
             CreateTopRightButton(canvasGo.transform, "Settings", new Vector2(-SafeRight, -SafeTop - 70f), OpenSettings);
+            BuildCampObjectiveTracker(canvasGo.transform);
 
             _shopPanel = BuildShopPanel(canvasGo.transform);
             _loadoutPanel = BuildLoadoutPanel(canvasGo.transform);
@@ -207,6 +229,136 @@ namespace ProjectZx.UI
         {
             AnimateQuestPortraitTalk();
             TickRunToast();
+            RefreshCampObjectiveTracker(force: false);
+            PulseCampObjectiveChip();
+        }
+
+        void BuildCampObjectiveTracker(Transform parent)
+        {
+            _campObjectiveChip = new GameObject("CampObjectiveTracker");
+            _campObjectiveChip.transform.SetParent(parent, false);
+            var chipRect = _campObjectiveChip.AddComponent<RectTransform>();
+            chipRect.anchorMin = new Vector2(1f, 1f);
+            chipRect.anchorMax = new Vector2(1f, 1f);
+            chipRect.pivot = new Vector2(1f, 1f);
+            chipRect.anchoredPosition = new Vector2(-SafeRight, -SafeTop - 150f);
+            chipRect.sizeDelta = new Vector2(440f, 100f);
+
+            _campObjectiveBg = _campObjectiveChip.AddComponent<Image>();
+            if (StoneUi.Available && StoneUi.ResourceBarBg != null)
+            {
+                _campObjectiveBg.sprite = StoneUi.ResourceBarBg;
+                _campObjectiveBg.type = Image.Type.Sliced;
+                _campObjectiveBg.color = new Color(1f, 1f, 1f, 0.92f);
+            }
+            else
+            {
+                _campObjectiveBg.color = new Color(0.06f, 0.07f, 0.12f, 0.78f);
+            }
+
+            var button = _campObjectiveChip.AddComponent<Button>();
+            button.targetGraphic = _campObjectiveBg;
+            button.onClick.AddListener(OnCampObjectiveClicked);
+
+            var textGo = new GameObject("ObjectiveText");
+            textGo.transform.SetParent(_campObjectiveChip.transform, false);
+            var textRect = textGo.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(16f, 10f);
+            textRect.offsetMax = new Vector2(-16f, -10f);
+            _campObjectiveText = textGo.AddComponent<Text>();
+            _campObjectiveText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            _campObjectiveText.fontSize = 22;
+            _campObjectiveText.fontStyle = FontStyle.Bold;
+            _campObjectiveText.color = new Color(1f, 0.94f, 0.8f);
+            _campObjectiveText.alignment = TextAnchor.UpperRight;
+            _campObjectiveText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _campObjectiveText.verticalOverflow = VerticalWrapMode.Truncate;
+            _campObjectiveText.raycastTarget = false;
+            _campObjectiveText.text = "";
+            _campObjectiveChip.SetActive(false);
+        }
+
+        float _campObjectiveRefreshTimer;
+
+        void RefreshCampObjectiveTracker(bool force)
+        {
+            if (_campObjectiveText == null || _campObjectiveChip == null) return;
+            if (IsAnyMenuOpen)
+            {
+                _campObjectiveChip.SetActive(false);
+                return;
+            }
+
+            _campObjectiveRefreshTimer -= Time.unscaledDeltaTime;
+            if (!force && _campObjectiveRefreshTimer > 0f) return;
+            _campObjectiveRefreshTimer = 0.5f;
+
+            var line = QuestCatalog.BuildHudObjectiveLine();
+            if (string.IsNullOrEmpty(line))
+            {
+                _campObjectiveChip.SetActive(false);
+                _campObjectiveText.text = "";
+                return;
+            }
+
+            _campObjectiveChip.SetActive(true);
+            _campObjectiveText.text = line;
+
+            var ready = QuestCatalog.HasReadyToTurnInQuest();
+            if (_campObjectiveBg != null)
+            {
+                _campObjectiveBg.color = ready
+                    ? new Color(1f, 0.86f, 0.35f, 0.95f)
+                    : StoneUi.Available && StoneUi.ResourceBarBg != null
+                        ? new Color(1f, 1f, 1f, 0.92f)
+                        : new Color(0.06f, 0.07f, 0.12f, 0.78f);
+            }
+
+            if (_campObjectiveText != null)
+            {
+                _campObjectiveText.color = ready
+                    ? new Color(0.18f, 0.12f, 0.04f)
+                    : new Color(1f, 0.94f, 0.8f);
+            }
+        }
+
+        void PulseCampObjectiveChip()
+        {
+            if (_campObjectiveChip == null || !_campObjectiveChip.activeSelf) return;
+            if (!QuestCatalog.HasReadyToTurnInQuest()) return;
+
+            _campObjectivePulse += Time.unscaledDeltaTime * 3.2f;
+            var scale = 1f + Mathf.Sin(_campObjectivePulse) * 0.035f;
+            _campObjectiveChip.transform.localScale = new Vector3(scale, scale, 1f);
+        }
+
+        void TryShowReadyTurnInToast()
+        {
+            if (_readyTurnInToastShown) return;
+            if (!QuestCatalog.TryGetReadyToTurnInQuest(out var def)) return;
+            _readyTurnInToastShown = true;
+            SparkleBurst.Play(transform, new Vector2(520f, 280f), 14);
+            // Chip pulse + gold tint already call attention; sparkle reinforces once per camp visit.
+            _ = def;
+        }
+
+        void OnCampObjectiveClicked()
+        {
+            if (QuestCatalog.TryGetReadyToTurnInQuest(out var ready))
+            {
+                OpenQuestDialogue(ready.Id);
+                return;
+            }
+
+            if (QuestCatalog.TryGetActiveQuest(out var active))
+            {
+                OpenQuestDialogue(active.Id);
+                return;
+            }
+
+            OpenQuestGiver();
         }
 
         GameObject BuildOnboardingPanel(Transform parent)
@@ -677,11 +829,29 @@ namespace ProjectZx.UI
             return panel;
         }
 
-        GameObject BuildMapPanel(Transform parent)
+        GameObject BuildMapPanel(Transform parent) =>
+            BuildSharedMapSelectPanel(
+                parent,
+                "MapPanel",
+                "Survival Challenge",
+                "Set class & technique at the Wizard shop first.\nUnlocked maps start fresh at round 1.");
+
+        GameObject BuildCampfirePanel(Transform parent) =>
+            BuildSharedMapSelectPanel(
+                parent,
+                "CampfirePanel",
+                "Campfire Travel",
+                "Choose an unlocked map. Each run starts at round 1.\nRecommended map is marked below.");
+
+        GameObject BuildSharedMapSelectPanel(
+            Transform parent,
+            string panelName,
+            string title,
+            string subtitle)
         {
-            var panel = CreateDialogPanel(parent, "MapPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, "Survival Challenge", 40, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(700, 56));
-            CreateText(panel.transform, "Set class & technique at the Wizard shop first.\nUnlocked maps start fresh at round 1.", 24, TextAnchor.MiddleCenter, new Vector2(0, 175), new Vector2(760, 72));
+            var panel = CreateDialogPanel(parent, panelName, Vector2.zero, HubMenuPanelSize, ArtLibrary.ChallengeBoardUi);
+            CreateText(panel.transform, title, 40, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(700, 56));
+            CreateText(panel.transform, subtitle, 22, TextAnchor.MiddleCenter, new Vector2(0, 175), new Vector2(760, 72));
             CreateButton(panel.transform, "Outside Survival", new Vector2(0, 80), () => EnterSurvival(SurvivalMapKind.Outside), large: true);
             CreateButton(panel.transform, "Inside Survival", new Vector2(0, 15), () => EnterSurvival(SurvivalMapKind.Inside), large: true);
             CreateButton(panel.transform, "Dungeon Survival", new Vector2(0, -50), () => EnterSurvival(SurvivalMapKind.Dungeon), large: true);
@@ -692,31 +862,17 @@ namespace ProjectZx.UI
             return panel;
         }
 
-        GameObject BuildCampfirePanel(Transform parent)
-        {
-            var panel = CreateDialogPanel(parent, "CampfirePanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, "Campfire Travel", 34, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(640, 48));
-            CreateText(panel.transform, "Choose an unlocked map. Each run starts at round 1.", 20, TextAnchor.MiddleCenter, new Vector2(0, 185), new Vector2(680, 48));
-            CreateButton(panel.transform, "Outside Survival", new Vector2(0, 100), () => EnterSurvival(SurvivalMapKind.Outside));
-            CreateButton(panel.transform, "Inside Survival", new Vector2(0, 40), () => EnterSurvival(SurvivalMapKind.Inside));
-            CreateButton(panel.transform, "Dungeon Survival", new Vector2(0, -20), () => EnterSurvival(SurvivalMapKind.Dungeon));
-            CreateButton(panel.transform, "Crypt Survival", new Vector2(0, -80), () => EnterSurvival(SurvivalMapKind.Crypt));
-            CreateButton(panel.transform, "Unlimited Survival", new Vector2(0, -140), () => EnterSurvival(SurvivalMapKind.Unlimited));
-            CreateButton(panel.transform, "Close", new Vector2(0, -210), () => panel.SetActive(false));
-            panel.SetActive(false);
-            return panel;
-        }
-
         GameObject BuildEquipmentPanel(Transform parent)
         {
             var panel = CreateDialogPanel(parent, "EquipmentPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
-            CreateText(panel.transform, "Treasure Chest", 36, TextAnchor.MiddleCenter, new Vector2(0, 390), new Vector2(700, 48));
-            CreateText(panel.transform, "One ring, necklace, and cape. Drops unlock here after you find them.", 18, TextAnchor.MiddleCenter, new Vector2(0, 345), new Vector2(920, 36));
-            _equipmentStatusText = CreateText(panel.transform, "", 20, TextAnchor.MiddleCenter, new Vector2(0, 300), new Vector2(920, 40));
+            CreateText(panel.transform, "Treasure Chest", 36, TextAnchor.MiddleCenter, new Vector2(0, 420), new Vector2(700, 48));
+            CreateText(panel.transform, "One ring, necklace, cape, and helm. Find drops in survival to unlock them here.", 18, TextAnchor.MiddleCenter, new Vector2(0, 375), new Vector2(960, 36));
+            _equipmentStatusText = CreateText(panel.transform, "", 18, TextAnchor.MiddleCenter, new Vector2(0, 335), new Vector2(960, 40));
 
-            CreateText(panel.transform, "Rings", 24, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(400, 32));
-            CreateText(panel.transform, "Necklaces", 24, TextAnchor.MiddleCenter, new Vector2(0, 70), new Vector2(400, 32));
-            CreateText(panel.transform, "Capes", 24, TextAnchor.MiddleCenter, new Vector2(0, -110), new Vector2(400, 32));
+            CreateText(panel.transform, "Rings", 22, TextAnchor.MiddleCenter, new Vector2(0, 290), new Vector2(400, 28));
+            CreateText(panel.transform, "Necklaces", 22, TextAnchor.MiddleCenter, new Vector2(0, 145), new Vector2(400, 28));
+            CreateText(panel.transform, "Capes", 22, TextAnchor.MiddleCenter, new Vector2(0, 0), new Vector2(400, 28));
+            CreateText(panel.transform, "Helms", 22, TextAnchor.MiddleCenter, new Vector2(0, -145), new Vector2(400, 28));
 
             _equipmentButtons.Clear();
             // Unequip + 3 items per type (4 columns).
@@ -724,9 +880,11 @@ namespace ProjectZx.UI
             var ringIndex = 0;
             var neckIndex = 0;
             var capeIndex = 0;
-            const float ringY = 190f;
-            const float neckY = 10f;
-            const float capeY = -170f;
+            var helmIndex = 0;
+            const float ringY = 240f;
+            const float neckY = 95f;
+            const float capeY = -50f;
+            const float helmY = -195f;
 
             // Unequip slots first (refresh order depends on this).
             _equipmentButtons.Add(CreateButton(panel.transform, "No Ring", new Vector2(slotX[ringIndex++], ringY), () =>
@@ -743,6 +901,13 @@ namespace ProjectZx.UI
             {
                 GameSave.UnequipSlot(EquipmentSlot.Cape);
                 RefreshEquipmentPanel();
+                HeroEditorCombatBridge.RefreshLoadoutOnPlayer();
+            }));
+            _equipmentButtons.Add(CreateButton(panel.transform, "No Helm", new Vector2(slotX[helmIndex++], helmY), () =>
+            {
+                GameSave.UnequipSlot(EquipmentSlot.Helm);
+                RefreshEquipmentPanel();
+                HeroEditorCombatBridge.RefreshLoadoutOnPlayer();
             }));
 
             foreach (var def in EquipmentCatalog.All)
@@ -768,10 +933,16 @@ namespace ProjectZx.UI
                         _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, new Vector2(x, capeY), () => SelectEquipment(id)));
                         break;
                     }
+                    case EquipmentSlot.Helm:
+                    {
+                        var x = helmIndex < slotX.Length ? slotX[helmIndex++] : 0f;
+                        _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, new Vector2(x, helmY), () => SelectEquipment(id)));
+                        break;
+                    }
                 }
             }
 
-            CreateButton(panel.transform, "Close", new Vector2(0, -360), () => panel.SetActive(false), large: true);
+            CreateButton(panel.transform, "Close", new Vector2(0, -380), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
         }
@@ -781,6 +952,7 @@ namespace ProjectZx.UI
             if (!GameSave.OwnsEquipment(id)) return;
             GameSave.Equip(id);
             RefreshEquipmentPanel();
+            HeroEditorCombatBridge.RefreshLoadoutOnPlayer();
             SparkleBurst.Play(_equipmentPanel != null ? _equipmentPanel.transform : transform, Vector2.zero, 12);
         }
 
@@ -791,17 +963,21 @@ namespace ProjectZx.UI
                 var ring = EquipmentCatalog.Get(GameSave.EquippedRing);
                 var neck = EquipmentCatalog.Get(GameSave.EquippedNecklace);
                 var cape = EquipmentCatalog.Get(GameSave.EquippedCape);
+                var helm = EquipmentCatalog.Get(GameSave.EquippedHelm);
                 var ringName = ring.Id != EquipmentId.None ? ring.DisplayName : "None";
                 var neckName = neck.Id != EquipmentId.None ? neck.DisplayName : "None";
                 var capeName = cape.Id != EquipmentId.None ? cape.DisplayName : "None";
-                _equipmentStatusText.text = $"Equipped: {ringName}  ·  {neckName}  ·  {capeName}";
+                var helmName = helm.Id != EquipmentId.None ? helm.DisplayName : "None";
+                _equipmentStatusText.text =
+                    $"Equipped: {ringName}  ·  {neckName}  ·  {capeName}  ·  {helmName}";
             }
 
-            // Button order: No Ring, No Necklace, No Cape, then catalog All in order.
+            // Button order: No Ring/Necklace/Cape/Helm, then catalog All in order.
             var buttonIndex = 0;
             RefreshEquipButton(GetEquipButton(buttonIndex++), EquipmentId.None, EquipmentSlot.Ring, "No Ring");
             RefreshEquipButton(GetEquipButton(buttonIndex++), EquipmentId.None, EquipmentSlot.Necklace, "No Necklace");
             RefreshEquipButton(GetEquipButton(buttonIndex++), EquipmentId.None, EquipmentSlot.Cape, "No Cape");
+            RefreshEquipButton(GetEquipButton(buttonIndex++), EquipmentId.None, EquipmentSlot.Helm, "No Helm");
 
             foreach (var def in EquipmentCatalog.All)
                 RefreshEquipButton(GetEquipButton(buttonIndex++), def.Id, def.Slot, def.DisplayName);
@@ -856,6 +1032,7 @@ namespace ProjectZx.UI
             EquipmentSlot.Ring => GameSave.EquippedRing,
             EquipmentSlot.Necklace => GameSave.EquippedNecklace,
             EquipmentSlot.Cape => GameSave.EquippedCape,
+            EquipmentSlot.Helm => GameSave.EquippedHelm,
             _ => EquipmentId.None
         };
 
@@ -1287,6 +1464,8 @@ namespace ProjectZx.UI
             if (playerClass == PlayerClass.Magician && !GameSave.MagicianUnlocked) return;
             GameSave.SelectedClass = playerClass;
             RefreshLoadoutPanel();
+            CampHeroManager.Instance?.RefreshAppearance();
+            HeroEditorCombatBridge.RefreshLoadoutOnPlayer();
         }
 
         void SelectAttackMode(AttackMode mode)
@@ -1461,6 +1640,7 @@ namespace ProjectZx.UI
             if (mapKind == SurvivalMapKind.Crypt && !GameSave.CryptMapUnlocked) return;
             if (mapKind == SurvivalMapKind.Unlimited && !GameSave.UnlimitedMapUnlocked) return;
 
+            GameSessionContext.ClearPendingNextMap();
             GameSessionContext.SurvivalMap = mapKind;
             GameSessionContext.SelectedHero = GameSave.SanitizeHero(GameSave.SelectedHero);
             GameSessionContext.SelectedClass = GameSave.GetHeroClass(GameSessionContext.SelectedHero);
@@ -2170,6 +2350,7 @@ namespace ProjectZx.UI
                 $"Ring: {EquipName(GameSave.EquippedRing)}\n" +
                 $"Necklace: {EquipName(GameSave.EquippedNecklace)}\n" +
                 $"Cape: {EquipName(GameSave.EquippedCape)}\n" +
+                $"Helm: {EquipName(GameSave.EquippedHelm)}\n" +
                 $"Equip DR: {EquipmentCatalog.CombinedDamageReduction() * 100f:0}%   Equip Block: {EquipmentCatalog.CombinedBlockChance() * 100f:0}%\n" +
                 $"Spearman: {(GameSave.SpearmanUnlocked ? "Unlocked" : "Locked")}\n" +
                 $"Bowman: {(GameSave.BowmanUnlocked ? "Unlocked" : "Locked")}\n" +
@@ -2212,6 +2393,8 @@ namespace ProjectZx.UI
         static void RefreshMapButtons(GameObject panel)
         {
             if (panel == null) return;
+            var recommended = GetRecommendedMap();
+
             foreach (var button in panel.GetComponentsInChildren<Button>(true))
             {
                 if (button == null) continue;
@@ -2220,39 +2403,79 @@ namespace ProjectZx.UI
                 var text = label.text ?? string.Empty;
 
                 // Match by map name substring so locked labels still refresh next open.
-                if (text.Contains("Inside Survival") || text.Contains("Outside R20"))
+                if (text.Contains("Outside Survival") && !text.Contains("Inside"))
+                {
+                    button.interactable = true;
+                    label.text = FormatMapButtonLabel(
+                        "Outside Survival",
+                        unlocked: true,
+                        lockedHint: null,
+                        recommended == SurvivalMapKind.Outside);
+                }
+                else if (text.Contains("Inside Survival") || text.Contains("Outside R20") || text.Contains("Inside —"))
                 {
                     var unlocked = GameSave.InsideMapUnlocked;
                     button.interactable = unlocked;
-                    label.text = unlocked
-                        ? "Inside Survival"
-                        : "Inside — clear Outside R20 door";
+                    label.text = FormatMapButtonLabel(
+                        "Inside Survival",
+                        unlocked,
+                        "Inside — clear Outside R20 door",
+                        unlocked && recommended == SurvivalMapKind.Inside);
                 }
-                else if (text.Contains("Dungeon Survival") || text.Contains("Inside R30"))
+                else if (text.Contains("Dungeon Survival") || text.Contains("Inside R30") || text.Contains("Dungeon —"))
                 {
                     var unlocked = GameSave.DungeonMapUnlocked;
                     button.interactable = unlocked;
-                    label.text = unlocked
-                        ? "Dungeon Survival"
-                        : "Dungeon — clear Inside R30 gateway";
+                    label.text = FormatMapButtonLabel(
+                        "Dungeon Survival",
+                        unlocked,
+                        "Dungeon — clear Inside R30 gateway",
+                        unlocked && recommended == SurvivalMapKind.Dungeon);
                 }
-                else if (text.Contains("Crypt Survival") || text.Contains("Dungeon R40"))
+                else if (text.Contains("Crypt Survival") || text.Contains("Dungeon R40") || text.Contains("Crypt —"))
                 {
                     var unlocked = GameSave.CryptMapUnlocked;
                     button.interactable = unlocked;
-                    label.text = unlocked
-                        ? "Crypt Survival"
-                        : "Crypt — clear Dungeon R40 portal";
+                    label.text = FormatMapButtonLabel(
+                        "Crypt Survival",
+                        unlocked,
+                        "Crypt — clear Dungeon R40 portal",
+                        unlocked && recommended == SurvivalMapKind.Crypt);
                 }
-                else if (text.Contains("Unlimited Survival") || text.Contains("Crypt R50"))
+                else if (text.Contains("Unlimited Survival") || text.Contains("Crypt R50") || text.Contains("Unlimited —"))
                 {
                     var unlocked = GameSave.UnlimitedMapUnlocked;
                     button.interactable = unlocked;
-                    label.text = unlocked
-                        ? "Unlimited Survival"
-                        : "Unlimited — clear Crypt R50";
+                    label.text = FormatMapButtonLabel(
+                        "Unlimited Survival",
+                        unlocked,
+                        "Unlimited — clear Crypt R50",
+                        unlocked && recommended == SurvivalMapKind.Unlimited);
                 }
             }
+        }
+
+        /// <summary>
+        /// Next map in the unlock chain the player should play (or Unlimited once fully unlocked).
+        /// </summary>
+        public static SurvivalMapKind GetRecommendedMap()
+        {
+            if (!GameSave.InsideMapUnlocked) return SurvivalMapKind.Outside;
+            if (!GameSave.DungeonMapUnlocked) return SurvivalMapKind.Inside;
+            if (!GameSave.CryptMapUnlocked) return SurvivalMapKind.Dungeon;
+            if (!GameSave.UnlimitedMapUnlocked) return SurvivalMapKind.Crypt;
+            return SurvivalMapKind.Unlimited;
+        }
+
+        static string FormatMapButtonLabel(
+            string unlockedLabel,
+            bool unlocked,
+            string lockedHint,
+            bool recommended)
+        {
+            if (!unlocked)
+                return lockedHint ?? unlockedLabel;
+            return recommended ? $"{unlockedLabel}  ★ Recommended" : unlockedLabel;
         }
 
         public void RefreshGold()

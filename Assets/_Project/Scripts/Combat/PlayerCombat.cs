@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using ProjectZx.Core;
 using ProjectZx.Enemies;
+using ProjectZx.HeroEditor;
 using ProjectZx.Player;
 using ProjectZx.World;
 using UnityEngine;
@@ -53,6 +54,8 @@ namespace ProjectZx.Combat
             _bodyRenderer = GetComponent<SpriteRenderer>();
             SetupBat();
         }
+
+        void Start() => HeroEditorCombatBridge.HideLegacyWeapons(this);
 
         void SetupBat()
         {
@@ -110,9 +113,7 @@ namespace ProjectZx.Combat
             _whirlwindDamageApplied = false;
             _swingTimer = swingDuration;
             _swingFacingRight = enemy.transform.position.x >= transform.position.x;
-
-            if (_bodyRenderer != null)
-                _bodyRenderer.flipX = !_swingFacingRight;
+            HeroEditorCombatBridge.Slash(this, _swingFacingRight, _bodyRenderer);
 
             CombatDamage.Apply(GetComponent<PlayerStats>(), enemy, StandardDamageMultiplier, canApplyFrost: true);
         }
@@ -126,9 +127,7 @@ namespace ProjectZx.Combat
             _whirlwindDamageApplied = false;
             _swingTimer = whirlwindDuration;
             _swingFacingRight = true;
-
-            if (_bodyRenderer != null)
-                _bodyRenderer.flipX = false;
+            HeroEditorCombatBridge.Slash(this, true, _bodyRenderer);
 
             if (_batPivot != null)
                 _batPivot.localScale = Vector3.one;
@@ -136,15 +135,19 @@ namespace ProjectZx.Combat
 
         void UpdateSwingAnimation()
         {
-            if (!_swinging || _batPivot == null) return;
+            if (!_swinging) return;
 
             _swingTimer -= Time.deltaTime;
+            var useHeroEditor = HeroEditorCombatBridge.IsActive(this);
 
             if (_whirlwindSwing)
             {
                 var progress = 1f - Mathf.Clamp01(_swingTimer / whirlwindDuration);
-                var angle = Mathf.Lerp(0f, 360f, progress);
-                _batPivot.localRotation = Quaternion.Euler(0f, 0f, angle);
+                if (!useHeroEditor && _batPivot != null)
+                {
+                    var angle = Mathf.Lerp(0f, 360f, progress);
+                    _batPivot.localRotation = Quaternion.Euler(0f, 0f, angle);
+                }
 
                 if (!_whirlwindDamageApplied && progress >= 0.55f)
                 {
@@ -152,7 +155,7 @@ namespace ProjectZx.Combat
                     DamageEnemiesInRange(WhirlwindAttackRange);
                 }
             }
-            else
+            else if (!useHeroEditor && _batPivot != null)
             {
                 var progress = 1f - Mathf.Clamp01(_swingTimer / swingDuration);
                 var eased = Mathf.Sin(progress * Mathf.PI);
@@ -167,8 +170,11 @@ namespace ProjectZx.Combat
 
             _swinging = false;
             _whirlwindSwing = false;
-            _batPivot.localRotation = Quaternion.Euler(0f, 0f, RestAngle);
-            _batPivot.localScale = Vector3.one;
+            if (_batPivot != null)
+            {
+                _batPivot.localRotation = Quaternion.Euler(0f, 0f, RestAngle);
+                _batPivot.localScale = Vector3.one;
+            }
         }
 
         void DamageEnemiesInRange(float range)

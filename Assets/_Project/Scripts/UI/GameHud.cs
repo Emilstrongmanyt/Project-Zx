@@ -50,12 +50,17 @@ namespace ProjectZx.UI
         Text _runResultsBody;
         Button _unstuckButton;
         Text _unstuckLabel;
+        GameObject _runResultsRetryButton;
+        GameObject _runResultsCampButton;
+        GameObject _runResultsNextButton;
         bool _unstuckUsedThisRun;
         bool _choosingLevelUp;
         bool _choosingEpic;
         bool _runResultsOpen;
         bool _runResultsHandled;
         SurvivalMapKind _runResultsMap = SurvivalMapKind.Outside;
+        SurvivalMapKind _runResultsNextMap = SurvivalMapKind.Outside;
+        bool _runResultsHasNext;
 
         public static GameHud Instance { get; private set; }
         public bool IsChoosingUpgrade => _choosingLevelUp || _choosingEpic;
@@ -354,19 +359,26 @@ namespace ProjectZx.UI
             _runResultsBody.verticalOverflow = VerticalWrapMode.Truncate;
             _runResultsBody.color = new Color(0.93f, 0.95f, 0.98f);
 
-            CreateHudButton(panel.transform, "Retry", new Vector2(-150, -230), ConfirmRunResultsRetry);
-            CreateHudButton(panel.transform, "Camp", new Vector2(150, -230), ConfirmRunResultsCamp);
+            _runResultsRetryButton = CreateHudButton(panel.transform, "Retry", new Vector2(-220, -230), ConfirmRunResultsRetry).gameObject;
+            _runResultsCampButton = CreateHudButton(panel.transform, "Camp", new Vector2(0, -230), ConfirmRunResultsCamp).gameObject;
+            _runResultsNextButton = CreateHudButton(panel.transform, "Next Map", new Vector2(220, -230), ConfirmRunResultsNext).gameObject;
             panel.SetActive(false);
             return panel;
         }
 
-        /// <summary>Death results — pauses game until Retry or Camp is chosen.</summary>
+        /// <summary>
+        /// Death / stage-clear / victory results — pauses until the player picks a button.
+        /// Stage clears pass <paramref name="nextMap"/> to offer Enter Next Map.
+        /// </summary>
         public IEnumerator ShowRunResultsAndWait(
             bool died,
             int round,
             int kills,
             int goldBanked,
-            SurvivalMapKind mapKind)
+            SurvivalMapKind mapKind,
+            SurvivalMapKind? nextMap = null,
+            string titleOverride = null,
+            string unlockSummary = null)
         {
             if (_runResultsPanel == null)
             {
@@ -375,6 +387,10 @@ namespace ProjectZx.UI
             }
 
             _runResultsMap = mapKind;
+            _runResultsHasNext = nextMap.HasValue;
+            if (nextMap.HasValue)
+                _runResultsNextMap = nextMap.Value;
+
             _runResultsHandled = false;
             _runResultsOpen = true;
             Time.timeScale = 0f;
@@ -386,7 +402,11 @@ namespace ProjectZx.UI
                 _retreatPanel.SetActive(false);
 
             if (_runResultsTitle != null)
-                _runResultsTitle.text = died ? "You Fell" : "Run Complete";
+            {
+                _runResultsTitle.text = !string.IsNullOrEmpty(titleOverride)
+                    ? titleOverride
+                    : died ? "You Fell" : "Run Complete";
+            }
 
             var mapLabel = mapKind switch
             {
@@ -397,17 +417,61 @@ namespace ProjectZx.UI
                 _ => "Outside"
             };
 
+            var footer = died
+                ? "Your run gold is safe at camp.\nRetry this map or return home."
+                : _runResultsHasNext
+                    ? "Gold is banked. Return to camp or enter the next map."
+                    : "Victory! Gold is banked at camp.";
+
+            var unlockBlock = string.IsNullOrEmpty(unlockSummary) ? "" : $"\n{unlockSummary}\n";
+
             var body =
                 $"{mapLabel} Survival\n\n" +
                 $"Round reached: {round}\n" +
                 $"Kills: {kills}\n" +
-                $"Gold banked: {GoldFormat.Abbreviate(goldBanked)}\n\n" +
-                (died
-                    ? "Your run gold is safe at camp.\nRetry this map or return home."
-                    : "Victory! Gold is banked at camp.");
+                $"Gold banked: {GoldFormat.Abbreviate(goldBanked)}\n" +
+                unlockBlock +
+                $"\n{footer}";
 
             if (_runResultsBody != null)
                 _runResultsBody.text = body;
+
+            // Death: Retry + Camp. Stage clear: Camp + Next Map. Victory: Camp only.
+            if (_runResultsRetryButton != null)
+                _runResultsRetryButton.SetActive(died);
+            if (_runResultsNextButton != null)
+                _runResultsNextButton.SetActive(!died && _runResultsHasNext);
+            if (_runResultsCampButton != null)
+            {
+                _runResultsCampButton.SetActive(true);
+                var campRect = _runResultsCampButton.GetComponent<RectTransform>();
+                if (campRect != null)
+                {
+                    if (died)
+                        campRect.anchoredPosition = new Vector2(150, -230);
+                    else if (_runResultsHasNext)
+                        campRect.anchoredPosition = new Vector2(-150, -230);
+                    else
+                        campRect.anchoredPosition = new Vector2(0, -230);
+                }
+            }
+
+            if (_runResultsRetryButton != null && died)
+            {
+                var retryRect = _runResultsRetryButton.GetComponent<RectTransform>();
+                if (retryRect != null)
+                    retryRect.anchoredPosition = new Vector2(-150, -230);
+            }
+
+            if (_runResultsNextButton != null && !died && _runResultsHasNext)
+            {
+                var nextRect = _runResultsNextButton.GetComponent<RectTransform>();
+                if (nextRect != null)
+                    nextRect.anchoredPosition = new Vector2(150, -230);
+                var nextLabel = _runResultsNextButton.GetComponentInChildren<Text>();
+                if (nextLabel != null)
+                    nextLabel.text = NextMapButtonLabel(_runResultsNextMap);
+            }
 
             _runResultsPanel.transform.SetAsLastSibling();
             _runResultsPanel.SetActive(true);
@@ -416,17 +480,23 @@ namespace ProjectZx.UI
                 yield return null;
         }
 
+        static string NextMapButtonLabel(SurvivalMapKind map) => map switch
+        {
+            SurvivalMapKind.Inside => "Enter Inside",
+            SurvivalMapKind.Dungeon => "Enter Dungeon",
+            SurvivalMapKind.Crypt => "Enter Crypt",
+            SurvivalMapKind.Unlimited => "Enter Unlimited",
+            _ => "Next Map"
+        };
+
         void ConfirmRunResultsRetry()
         {
             if (!_runResultsOpen) return;
-            _runResultsHandled = true;
-            _runResultsOpen = false;
-            if (_runResultsPanel != null)
-                _runResultsPanel.SetActive(false);
-            Time.timeScale = 1f;
+            CloseRunResultsPanel();
 
             // Keep banked gold toast meaningful after a death retry (fresh run, no camp visit).
             GameSave.ClearLastRunToast();
+            GameSessionContext.ClearPendingNextMap();
             GameSessionContext.SurvivalMap = _runResultsMap;
             GameSessionContext.FreshSurvivalRun = true;
             GameSessionContext.StartingRound = 0;
@@ -438,17 +508,38 @@ namespace ProjectZx.UI
         void ConfirmRunResultsCamp()
         {
             if (!_runResultsOpen) return;
-            _runResultsHandled = true;
-            _runResultsOpen = false;
-            if (_runResultsPanel != null)
-                _runResultsPanel.SetActive(false);
-            Time.timeScale = 1f;
+            CloseRunResultsPanel();
 
+            GameSessionContext.ClearPendingNextMap();
             GameSessionContext.FreshSurvivalRun = true;
             GameSessionContext.StartingRound = 0;
             GameSessionContext.CarryRound = 0;
             GameSessionContext.RunSnapshot = default;
             GameFactory.LoadScene(GameScenes.MainMenuMap);
+        }
+
+        void ConfirmRunResultsNext()
+        {
+            if (!_runResultsOpen || !_runResultsHasNext) return;
+            CloseRunResultsPanel();
+
+            GameSave.ClearLastRunToast();
+            GameSessionContext.SurvivalMap = _runResultsNextMap;
+            GameSessionContext.ClearPendingNextMap();
+            GameSessionContext.FreshSurvivalRun = true;
+            GameSessionContext.StartingRound = 0;
+            GameSessionContext.CarryRound = 0;
+            GameSessionContext.RunSnapshot = default;
+            GameFactory.LoadScene(GameScenes.SurvivalArena);
+        }
+
+        void CloseRunResultsPanel()
+        {
+            _runResultsHandled = true;
+            _runResultsOpen = false;
+            if (_runResultsPanel != null)
+                _runResultsPanel.SetActive(false);
+            Time.timeScale = 1f;
         }
 
         void RefreshRetreatStats()

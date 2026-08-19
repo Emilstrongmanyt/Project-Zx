@@ -36,6 +36,7 @@ namespace ProjectZx.Core
         static void BuildMainMenu()
         {
             EnsureAudioManager();
+            GameSave.EnsureCharacterAppearanceMigrated();
             AudioManager.Instance?.PlayCampBgm();
             ArenaBounds.SetWorldWrap(false);
             // Deep water clear color so the ring reads clearly past the tile edge.

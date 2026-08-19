@@ -22,6 +22,7 @@ namespace ProjectZx.Waves
         SurvivalMapKind _activeBiome;
         bool _darkBirdSpawned;
         bool _stageHoldActive;
+        bool _stageClearExitStarted;
 
         public static SurvivalSession Instance { get; private set; }
 
@@ -149,8 +150,78 @@ namespace ProjectZx.Waves
                 yield break;
             }
 
-            // Successful clear / natural end — brief pause, then camp with banked toast.
-            yield return new WaitForSeconds(2f);
+            // Natural map completion (e.g. Unlimited R100) — win recap, then Camp.
+            if (_hud != null)
+            {
+                var title = MapKind == SurvivalMapKind.Unlimited
+                    ? "Unlimited Complete!"
+                    : "Run Complete";
+                yield return _hud.ShowRunResultsAndWait(
+                    died: false,
+                    CurrentRound,
+                    RunKills,
+                    goldBanked,
+                    MapKind,
+                    nextMap: null,
+                    titleOverride: title,
+                    unlockSummary: null);
+                yield break;
+            }
+
+            GameSessionContext.ClearPendingNextMap();
+            GameSessionContext.FreshSurvivalRun = true;
+            GameSessionContext.StartingRound = 0;
+            GameSessionContext.CarryRound = 0;
+            GameSessionContext.RunSnapshot = default;
+            GameFactory.LoadScene(GameScenes.MainMenuMap);
+        }
+
+        /// <summary>
+        /// Stage portal / victory gate: stop the run loop and show win recap
+        /// (Camp, and optionally Enter Next Map).
+        /// </summary>
+        public void BeginStageClearExit(
+            SurvivalMapKind? nextMap,
+            string title,
+            string unlockSummary)
+        {
+            if (_stageClearExitStarted) return;
+            _stageClearExitStarted = true;
+            _roundActive = false;
+            _stageHoldActive = false;
+            StopAllCoroutines();
+            StartCoroutine(StageClearExitRoutine(nextMap, title, unlockSummary));
+        }
+
+        IEnumerator StageClearExitRoutine(
+            SurvivalMapKind? nextMap,
+            string title,
+            string unlockSummary)
+        {
+            TryRecordWeaponProgress(CurrentRound);
+            var goldBanked = GameSave.LastRunGoldBanked;
+            GameSave.RecordLastRunSummary(goldBanked, CurrentRound, RunKills, died: false);
+
+            if (nextMap.HasValue)
+                GameSessionContext.SetPendingNextMap(nextMap.Value);
+            else
+                GameSessionContext.ClearPendingNextMap();
+
+            if (_hud != null)
+            {
+                yield return _hud.ShowRunResultsAndWait(
+                    died: false,
+                    CurrentRound,
+                    RunKills,
+                    goldBanked,
+                    MapKind,
+                    nextMap,
+                    title,
+                    unlockSummary);
+                yield break;
+            }
+
+            GameSessionContext.ClearPendingNextMap();
             GameSessionContext.FreshSurvivalRun = true;
             GameSessionContext.StartingRound = 0;
             GameSessionContext.CarryRound = 0;
@@ -332,6 +403,7 @@ namespace ProjectZx.Waves
             if (MapKind != SurvivalMapKind.Inside || round < 30 || GameSave.BowmanUnlocked) return;
             GameSave.BowmanUnlocked = true;
             Achievements.UnlockInsideArcher();
+            _hud?.ShowBanner("Bowman unlocked!", 3.5f);
         }
 
         void TryUnlockMagician(int round)

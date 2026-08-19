@@ -514,6 +514,15 @@ namespace ProjectZx.Core
             if (survivalMode)
                 AttachCombatForClass(go, playerClass);
 
+            // Custom HeroEditor body replaces RollZy sheet art (RowZi stays companion sheets).
+            if (sanitizedHero == PlayableHero.RollZy)
+            {
+                ProjectZx.HeroEditor.HeroEditorCharacterView.Attach(
+                    go,
+                    GameSave.SanitizeClass(playerClass),
+                    applyLoadout: true);
+            }
+
             return go;
         }
 
@@ -558,6 +567,14 @@ namespace ProjectZx.Core
             stats.ConfigureAsCompanion(leaderStats);
 
             AttachCombatForClass(go, playerClass);
+
+            if (sanitizedHero == PlayableHero.RollZy)
+            {
+                ProjectZx.HeroEditor.HeroEditorCharacterView.Attach(
+                    go,
+                    GameSave.SanitizeClass(playerClass),
+                    applyLoadout: true);
+            }
 
             var follower = go.AddComponent<CompanionFollower>();
             follower.Bind(leader, leaderStats, sanitizedHero);

@@ -1,12 +1,14 @@
 using ProjectZx.Core;
 using ProjectZx.Player;
+using ProjectZx.UI;
+using ProjectZx.Waves;
 using UnityEngine;
 
 namespace ProjectZx.World
 {
     /// <summary>
     /// Door dropped after clearing Outside survival round 20.
-    /// Starts a fresh Inside survival run (round 1, level 1).
+    /// Requires talking to RowZi first, then shows a win recap (Camp / Enter Inside).
     /// </summary>
     public class ArenaDoor : MonoBehaviour
     {
@@ -26,22 +28,33 @@ namespace ProjectZx.World
             if (_used || player == null) return false;
             if (Vector2.Distance(player.position, transform.position) > 2.2f) return false;
 
+            if (!GameSave.RowZiUnlocked)
+            {
+                GameHud.Instance?.ShowBanner("Talk to RowZi before entering the door!", 2.6f);
+                return false;
+            }
+
             _used = true;
             Achievements.UnlockDungeonDelver();
             GameSave.InsideMapUnlocked = true;
 
-            // Bank Outside run gold before wiping the run into a fresh Inside map.
             var stats = player.GetComponent<PlayerStats>();
             stats?.BankRunGoldToSave();
 
-            // Fresh Inside run — round 1 / level 1, not a continuation of Outside.
-            GameSessionContext.SurvivalMap = SurvivalMapKind.Inside;
-            GameSessionContext.FreshSurvivalRun = true;
-            GameSessionContext.StartingRound = 0;
-            GameSessionContext.CarryRound = 0;
-            GameSessionContext.RunSnapshot = default;
+            var session = SurvivalSession.Instance;
+            if (session != null)
+            {
+                session.BeginStageClearExit(
+                    nextMap: SurvivalMapKind.Inside,
+                    title: "Outside Cleared!",
+                    unlockSummary: "Inside Survival unlocked!\nSpearman class unlocked at camp.");
+            }
+            else
+            {
+                GameSessionContext.ClearPendingNextMap();
+                GameFactory.LoadScene(GameScenes.MainMenuMap);
+            }
 
-            GameFactory.LoadScene(GameScenes.SurvivalArena);
             return true;
         }
     }

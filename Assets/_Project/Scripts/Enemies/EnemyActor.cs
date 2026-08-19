@@ -40,7 +40,7 @@ namespace ProjectZx.Enemies
         const float HpPotionDropChance = 0.05f;
         const float BossHpPotionDropChance = 0.12f;
         const float MapLootDropChance = 0.005f;
-        /// <summary>Very rare ring/necklace drops for the camp treasure chest (halved from original rates).</summary>
+        /// <summary>Very rare ring/necklace/cape/helm drops for the camp treasure chest.</summary>
         // ~half prior rates so jewelry/capes stay rare.
         const float EquipmentDropChance = 0.000875f;
         const float BossEquipmentDropChance = 0.05f;
@@ -1460,7 +1460,7 @@ namespace ProjectZx.Enemies
             if (Random.value < MapLootDropChance)
                 GameFactory.CreatePickup(pos + Vector2.down * 0.3f, PickupType.MapLoot, 1);
 
-            // Very low chance for equipment (rings / necklaces) usable from the camp chest.
+            // Very low chance for equipment (rings / necklaces / capes / helms) for the camp chest.
             // Owned/discovered items are excluded from the roll pool and never re-drop.
             var equipmentChance = IsBoss ? BossEquipmentDropChance : EquipmentDropChance;
             if (Random.value < equipmentChance)
@@ -1502,6 +1502,7 @@ namespace ProjectZx.Enemies
                 GameSave.SpearmanUnlocked = true;
                 GameSave.InsideMapUnlocked = true;
                 ArenaDoor.Spawn(pos + Vector2.up * 0.5f);
+                GameHud.Instance?.ShowBanner("Spearman unlocked!", 3.5f);
             }
 
             if (IsRoundThirtyBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Inside)
@@ -1514,6 +1515,7 @@ namespace ProjectZx.Enemies
             {
                 GameSave.SamuraiUnlocked = true;
                 ArenaCryptPortal.Spawn(pos + Vector2.up * 0.5f);
+                GameHud.Instance?.ShowBanner("Samurai unlocked!", 3.5f);
             }
 
             if (IsRoundFiftyBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Crypt)

@@ -1,12 +1,13 @@
 using ProjectZx.Core;
 using ProjectZx.Player;
+using ProjectZx.Waves;
 using UnityEngine;
 
 namespace ProjectZx.World
 {
     /// <summary>
     /// Portal dropped after clearing Inside survival round 30.
-    /// Starts a fresh Dungeon survival run (round 1, level 1).
+    /// Shows a win recap (Camp / Enter Dungeon) instead of jumping straight into Dungeon.
     /// </summary>
     public class ArenaGateway : MonoBehaviour
     {
@@ -27,17 +28,23 @@ namespace ProjectZx.World
             GameSave.DungeonMapUnlocked = true;
             GameSave.InsideSurvivalCleared = true;
 
-            // Bank Inside run gold before wiping the run into a fresh Dungeon map.
             var stats = player.GetComponent<PlayerStats>();
             stats?.BankRunGoldToSave();
 
-            GameSessionContext.SurvivalMap = SurvivalMapKind.Dungeon;
-            GameSessionContext.FreshSurvivalRun = true;
-            GameSessionContext.StartingRound = 0;
-            GameSessionContext.CarryRound = 0;
-            GameSessionContext.RunSnapshot = default;
+            var session = SurvivalSession.Instance;
+            if (session != null)
+            {
+                session.BeginStageClearExit(
+                    nextMap: SurvivalMapKind.Dungeon,
+                    title: "Inside Cleared!",
+                    unlockSummary: "Dungeon Survival unlocked!\nBowman class unlocked at camp.");
+            }
+            else
+            {
+                GameSessionContext.ClearPendingNextMap();
+                GameFactory.LoadScene(GameScenes.MainMenuMap);
+            }
 
-            GameFactory.LoadScene(GameScenes.SurvivalArena);
             return true;
         }
     }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using ProjectZx.Combat;
 using ProjectZx.Core;
+using ProjectZx.HeroEditor;
 using ProjectZx.UI;
 using ProjectZx.Enemies;
 using ProjectZx.World;
@@ -693,7 +694,8 @@ namespace ProjectZx.Player
 
         void UpdateSprite()
         {
-            if (_renderer == null) return;
+            var heroView = GetComponent<HeroEditorCharacterView>();
+            var useHeroEditor = heroView != null && heroView.IsReady;
 
             var batter = GetComponent<PlayerCombat>();
             if (batter != null && batter.IsSwinging) return;
@@ -710,6 +712,23 @@ namespace ProjectZx.Player
                 ? MovementJoystick.Instance.Direction
                 : Vector2.zero;
             var moving = joyDir.sqrMagnitude > 0.01f || _moveTarget != null || _rb.linearVelocity.sqrMagnitude > 0.01f;
+
+            if (useHeroEditor)
+            {
+                heroView.SetMoving(moving);
+
+                var faceXHe = joyDir.sqrMagnitude > 0.01f
+                    ? joyDir.x
+                    : _moveTarget.HasValue
+                        ? _moveTarget.Value.x - transform.position.x
+                        : _rb.linearVelocity.x;
+                if (faceXHe != 0f)
+                    heroView.SetFacing(faceXHe > 0f);
+                return;
+            }
+
+            if (_renderer == null) return;
+
             if (!moving)
             {
                 _walkAnimTimer = 0f;

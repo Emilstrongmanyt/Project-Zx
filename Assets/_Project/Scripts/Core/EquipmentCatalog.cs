@@ -7,7 +7,8 @@ namespace ProjectZx.Core
     {
         Ring,
         Necklace,
-        Cape
+        Cape,
+        Helm
     }
 
     public enum EquipmentId
@@ -25,13 +26,18 @@ namespace ProjectZx.Core
         NimbleRing = 5,
         /// <summary>Admurin protector necklace — +max HP.</summary>
         ProtectorNecklace = 6,
-        /// <summary>Soft wool cape — damage reduction.</summary>
+        /// <summary>HeroEditor Cotton Cape — damage reduction. Save id kept as WoolCape.</summary>
         WoolCape = 7,
-        /// <summary>Sentinel cape — block chance.</summary>
+        /// <summary>HeroEditor Heroic Cape — block chance. Save id kept as SentinelCape.</summary>
         SentinelCape = 8,
-        /// <summary>Heavy ironweave cape — stronger damage reduction.</summary>
-        IronweaveCape = 9
-        // GuardianCape = 10 reserved (removed so each slot type has 3 items).
+        /// <summary>HeroEditor Royal Cape — stronger damage reduction. Save id kept as IronweaveCape.</summary>
+        IronweaveCape = 9,
+        /// <summary>HeroEditor Leather Helm — damage reduction (cape-tier defense).</summary>
+        LeatherHelm = 10,
+        /// <summary>HeroEditor Guard Helm — block chance (cape-tier defense).</summary>
+        GuardHelm = 11,
+        /// <summary>HeroEditor Falcon Iron Helm — stronger damage reduction (cape-tier defense).</summary>
+        IronHelm = 12
     }
 
     public readonly struct EquipmentDef
@@ -93,11 +99,17 @@ namespace ProjectZx.Core
                 "+10% attack speed", attackSpeedMultiplier: 1.1f),
             new(EquipmentId.ProtectorNecklace, EquipmentSlot.Necklace, "Protector Necklace",
                 "+40 Max HP", bonusMaxHp: 40),
-            new(EquipmentId.WoolCape, EquipmentSlot.Cape, "Wool Cape",
+            new(EquipmentId.WoolCape, EquipmentSlot.Cape, "Cotton Cape",
                 "−8% damage taken", damageReduction: 0.08f),
-            new(EquipmentId.SentinelCape, EquipmentSlot.Cape, "Sentinel Cape",
+            new(EquipmentId.SentinelCape, EquipmentSlot.Cape, "Heroic Cape",
                 "+12% block chance", blockChance: 0.12f),
-            new(EquipmentId.IronweaveCape, EquipmentSlot.Cape, "Ironweave Cape",
+            new(EquipmentId.IronweaveCape, EquipmentSlot.Cape, "Royal Cape",
+                "−12% damage taken", damageReduction: 0.12f),
+            new(EquipmentId.LeatherHelm, EquipmentSlot.Helm, "Leather Helm",
+                "−8% damage taken", damageReduction: 0.08f),
+            new(EquipmentId.GuardHelm, EquipmentSlot.Helm, "Guard Helm",
+                "+12% block chance", blockChance: 0.12f),
+            new(EquipmentId.IronHelm, EquipmentSlot.Helm, "Falcon Iron Helm",
                 "−12% damage taken", damageReduction: 0.12f)
         };
 
@@ -126,6 +138,9 @@ namespace ProjectZx.Core
                 EquipmentId.WoolCape => ArtLibrary.WoolCape,
                 EquipmentId.SentinelCape => ArtLibrary.SentinelCape,
                 EquipmentId.IronweaveCape => ArtLibrary.IronweaveCape,
+                EquipmentId.LeatherHelm => ArtLibrary.LeatherHelm,
+                EquipmentId.GuardHelm => ArtLibrary.GuardHelm,
+                EquipmentId.IronHelm => ArtLibrary.IronHelm,
                 _ => null
             };
         }
@@ -153,6 +168,7 @@ namespace ProjectZx.Core
             ApplyOne(GameSave.EquippedRing, apply);
             ApplyOne(GameSave.EquippedNecklace, apply);
             ApplyOne(GameSave.EquippedCape, apply);
+            ApplyOne(GameSave.EquippedHelm, apply);
 
             static void ApplyOne(EquipmentId id, System.Action<EquipmentDef> action)
             {

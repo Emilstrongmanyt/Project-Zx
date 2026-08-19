@@ -323,7 +323,7 @@ namespace ProjectZx.Core
         public static string BuildHudObjectiveLine()
         {
             if (TryFindHudQuest(QuestProgress.ReadyToTurnIn, out var readyDef, out _))
-                return $"Quest: {readyDef.Title} — return to camp to turn in!";
+                return $"Quest: {readyDef.Title} — ready to turn in!";
 
             if (TryFindHudQuest(QuestProgress.Active, out var activeDef, out _))
             {
@@ -335,6 +335,19 @@ namespace ProjectZx.Core
 
             return string.Empty;
         }
+
+        public static bool TryGetReadyToTurnInQuest(out QuestDefinition def)
+        {
+            return TryFindHudQuest(QuestProgress.ReadyToTurnIn, out def, out _);
+        }
+
+        public static bool TryGetActiveQuest(out QuestDefinition def)
+        {
+            return TryFindHudQuest(QuestProgress.Active, out def, out _);
+        }
+
+        public static bool HasReadyToTurnInQuest() =>
+            TryGetReadyToTurnInQuest(out _);
 
         static bool TryFindHudQuest(
             QuestProgress wanted,

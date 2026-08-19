@@ -81,6 +81,25 @@ namespace ProjectZx.Core
         public static SurvivalRunSnapshot RunSnapshot;
 
         /// <summary>
+        /// Optional next map after a stage-clear win recap ("Enter Next Map").
+        /// Cleared when the player picks Camp or starts any survival run from hub.
+        /// </summary>
+        public static bool HasPendingNextMap;
+        public static SurvivalMapKind PendingNextMap;
+
+        public static void ClearPendingNextMap()
+        {
+            HasPendingNextMap = false;
+            PendingNextMap = SurvivalMapKind.Outside;
+        }
+
+        public static void SetPendingNextMap(SurvivalMapKind map)
+        {
+            HasPendingNextMap = true;
+            PendingNextMap = map;
+        }
+
+        /// <summary>
         /// Visual / enemy biome for Unlimited mode by round.
         /// R1–20 Outside, R21–50 Inside, R51–100 Dungeon.
         /// </summary>

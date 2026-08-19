@@ -109,4 +109,41 @@ InitTestScene*.unity*
 
 # Layer Lab source packages (editor-only, large)
 Assets/Layer Lab/GUI-TheStone/PSD,AI/
+Assets/Layer Lab/Scripts/
+
+# Bulk art packs kept local-only (not shipped in TestFlight builds)
+Assets/Admurin's Pixel Items/
+Assets/Admurin's Pixel Items.meta
+Assets/ElvGames/
+Assets/ElvGames.meta
+Assets/sanctum_pixel/
+Assets/sanctum_pixel.meta
+Assets/_Project/Resources/Knight2.png
+Assets/_Project/Resources/Knight2.png.meta
+Assets/_Project/Resources/Overworld.png
+Assets/_Project/Resources/Overworld.png.meta
+
+# HeroEditor: ship Common + FantasyHeroes runtime; skip demos / inventory UI / icon dump
+Assets/HeroEditor/InventorySystem/
+Assets/HeroEditor/InventorySystem.meta
+Assets/HeroEditor/FantasyHeroes/TestRoom/
+Assets/HeroEditor/FantasyHeroes/TestRoom.meta
+Assets/HeroEditor/FantasyHeroes/Icons/
+Assets/HeroEditor/FantasyHeroes/Icons.meta
+Assets/HeroEditor/FantasyHeroes/Scenes/
+Assets/HeroEditor/FantasyHeroes/Scenes.meta
+Assets/HeroEditor/FantasyHeroes.unity
+Assets/HeroEditor/FantasyHeroes.unity.meta
+Assets/HeroEditor/QuickStart.unity
+Assets/HeroEditor/QuickStart.unity.meta
+
+
+Assets/HeroEditor/FantasyHeroes/Resources/IconCollection.asset
+Assets/HeroEditor/FantasyHeroes/Resources/IconCollection.asset.meta
+Assets/HeroEditor/Manual.pdf
+Assets/HeroEditor/Manual.pdf.meta
+Assets/HeroEditor/SpriteSequenceCapture.unity
+Assets/HeroEditor/SpriteSequenceCapture.unity.meta
+Assets/HeroEditor/FantasyHeroes.unity
+Assets/HeroEditor/FantasyHeroes.unity.meta
 

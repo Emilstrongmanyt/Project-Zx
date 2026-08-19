@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using ProjectZx.Core;
 using ProjectZx.Enemies;
+using ProjectZx.HeroEditor;
 using ProjectZx.Player;
 using ProjectZx.World;
 using UnityEngine;
@@ -62,6 +63,8 @@ namespace ProjectZx.Combat
             _bodyRenderer = GetComponent<SpriteRenderer>();
             SetupSpear();
         }
+
+        void Start() => HeroEditorCombatBridge.HideLegacyWeapons(this);
 
         void SetupSpear()
         {
@@ -127,9 +130,7 @@ namespace ProjectZx.Combat
             var toEnemy = (Vector2)enemy.transform.position - (Vector2)transform.position;
             _thrustDir = toEnemy.sqrMagnitude > 0.0001f ? toEnemy.normalized : Vector2.right;
             _attackFacingRight = _thrustDir.x >= 0f;
-
-            if (_bodyRenderer != null)
-                _bodyRenderer.flipX = !_attackFacingRight;
+            HeroEditorCombatBridge.Jab(this, _attackFacingRight, _bodyRenderer);
         }
 
         void PerformWhirlwind()
@@ -154,8 +155,7 @@ namespace ProjectZx.Combat
             }
 
             _attackFacingRight = _thrustDir.x >= 0f;
-            if (_bodyRenderer != null)
-                _bodyRenderer.flipX = !_attackFacingRight;
+            HeroEditorCombatBridge.Jab(this, _attackFacingRight, _bodyRenderer);
 
             if (_spearPivot != null)
                 _spearPivot.localScale = Vector3.one;
@@ -163,18 +163,22 @@ namespace ProjectZx.Combat
 
         void UpdateAttackAnimation()
         {
-            if (!_attacking || _spearPivot == null) return;
+            if (!_attacking) return;
 
             _attackTimer -= Time.deltaTime;
+            var useHeroEditor = HeroEditorCombatBridge.IsActive(this);
 
             if (_whirlwindSwing)
             {
                 // 180° sweep in front of the hero (not a full 360 spin).
                 var progress = 1f - Mathf.Clamp01(_attackTimer / whirlwindDuration);
-                var faceAngle = Mathf.Atan2(_thrustDir.y, _thrustDir.x) * Mathf.Rad2Deg;
-                var angle = faceAngle + Mathf.Lerp(-90f, 90f, progress);
-                _spearPivot.localScale = Vector3.one;
-                _spearPivot.localRotation = Quaternion.Euler(0f, 0f, angle);
+                if (!useHeroEditor && _spearPivot != null)
+                {
+                    var faceAngle = Mathf.Atan2(_thrustDir.y, _thrustDir.x) * Mathf.Rad2Deg;
+                    var angle = faceAngle + Mathf.Lerp(-90f, 90f, progress);
+                    _spearPivot.localScale = Vector3.one;
+                    _spearPivot.localRotation = Quaternion.Euler(0f, 0f, angle);
+                }
 
                 if (!_whirlwindDamageApplied && progress >= 0.5f)
                 {
@@ -185,16 +189,19 @@ namespace ProjectZx.Combat
             else
             {
                 var progress = 1f - Mathf.Clamp01(_attackTimer / thrustDuration);
-                var eased = Mathf.Sin(progress * Mathf.PI);
-                var faceAngle = Mathf.Atan2(_thrustDir.y, _thrustDir.x) * Mathf.Rad2Deg;
-                var swing = Mathf.Lerp(RestAngle, ThrustAngle, eased);
-                _spearPivot.localScale = Vector3.one;
-                _spearPivot.localRotation = Quaternion.Euler(0f, 0f, faceAngle + swing);
-
-                if (_spearTip != null)
+                if (!useHeroEditor && _spearPivot != null)
                 {
-                    var extend = Mathf.Lerp(0f, ThrustExtend, eased);
-                    _spearTip.localPosition = new Vector3(0.42f + extend, 0.02f, 0f);
+                    var eased = Mathf.Sin(progress * Mathf.PI);
+                    var faceAngle = Mathf.Atan2(_thrustDir.y, _thrustDir.x) * Mathf.Rad2Deg;
+                    var swing = Mathf.Lerp(RestAngle, ThrustAngle, eased);
+                    _spearPivot.localScale = Vector3.one;
+                    _spearPivot.localRotation = Quaternion.Euler(0f, 0f, faceAngle + swing);
+
+                    if (_spearTip != null)
+                    {
+                        var extend = Mathf.Lerp(0f, ThrustExtend, eased);
+                        _spearTip.localPosition = new Vector3(0.42f + extend, 0.02f, 0f);
+                    }
                 }
 
                 if (!_standardDamageApplied && progress >= 0.45f)
@@ -209,8 +216,12 @@ namespace ProjectZx.Combat
             _attacking = false;
             _whirlwindSwing = false;
             _primaryTarget = null;
-            _spearPivot.localRotation = Quaternion.Euler(0f, 0f, RestAngle);
-            _spearPivot.localScale = Vector3.one;
+            if (_spearPivot != null)
+            {
+                _spearPivot.localRotation = Quaternion.Euler(0f, 0f, RestAngle);
+                _spearPivot.localScale = Vector3.one;
+            }
+
             if (_spearTip != null)
                 _spearTip.localPosition = new Vector3(0.42f, 0.02f, 0f);
         }

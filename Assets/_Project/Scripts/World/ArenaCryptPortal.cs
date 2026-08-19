@@ -1,12 +1,13 @@
 using ProjectZx.Core;
 using ProjectZx.Player;
+using ProjectZx.Waves;
 using UnityEngine;
 
 namespace ProjectZx.World
 {
     /// <summary>
     /// Portal after clearing Dungeon survival round 40.
-    /// Starts a fresh Crypt survival run (round 1, level 1).
+    /// Shows a win recap (Camp / Enter Crypt) instead of jumping straight into Crypt.
     /// </summary>
     public class ArenaCryptPortal : MonoBehaviour
     {
@@ -34,13 +35,20 @@ namespace ProjectZx.World
             var stats = player.GetComponent<PlayerStats>();
             stats?.BankRunGoldToSave();
 
-            GameSessionContext.SurvivalMap = SurvivalMapKind.Crypt;
-            GameSessionContext.FreshSurvivalRun = true;
-            GameSessionContext.StartingRound = 0;
-            GameSessionContext.CarryRound = 0;
-            GameSessionContext.RunSnapshot = default;
+            var session = SurvivalSession.Instance;
+            if (session != null)
+            {
+                session.BeginStageClearExit(
+                    nextMap: SurvivalMapKind.Crypt,
+                    title: "Dungeon Cleared!",
+                    unlockSummary: "Crypt Survival unlocked!\nSamurai class unlocked at camp.");
+            }
+            else
+            {
+                GameSessionContext.ClearPendingNextMap();
+                GameFactory.LoadScene(GameScenes.MainMenuMap);
+            }
 
-            GameFactory.LoadScene(GameScenes.SurvivalArena);
             return true;
         }
     }

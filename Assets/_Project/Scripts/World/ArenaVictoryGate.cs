@@ -6,7 +6,7 @@ using UnityEngine;
 namespace ProjectZx.World
 {
     /// <summary>
-    /// Portal after Crypt R50 Minotaur. Returns to campfire and unlocks Unlimited Survival.
+    /// Portal after Crypt R50 Minotaur. Win recap unlocks Unlimited, then Camp.
     /// </summary>
     public class ArenaVictoryGate : MonoBehaviour
     {
@@ -35,16 +35,19 @@ namespace ProjectZx.World
             var stats = player.GetComponent<PlayerStats>();
             stats?.BankRunGoldToSave();
 
-            GameSessionContext.FreshSurvivalRun = true;
-            GameSessionContext.StartingRound = 0;
-            GameSessionContext.CarryRound = 0;
-            GameSessionContext.RunSnapshot = default;
-
             var session = SurvivalSession.Instance;
             if (session != null)
-                session.RetreatToCamp();
+            {
+                session.BeginStageClearExit(
+                    nextMap: null,
+                    title: "Crypt Conquered!",
+                    unlockSummary: "Unlimited Survival unlocked at camp!");
+            }
             else
+            {
+                GameSessionContext.ClearPendingNextMap();
                 GameFactory.LoadScene(GameScenes.MainMenuMap);
+            }
 
             return true;
         }

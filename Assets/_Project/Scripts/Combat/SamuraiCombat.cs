@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using ProjectZx.Core;
 using ProjectZx.Enemies;
+using ProjectZx.HeroEditor;
 using ProjectZx.Player;
 using ProjectZx.World;
 using UnityEngine;
@@ -63,6 +64,8 @@ namespace ProjectZx.Combat
             SetupKatana();
         }
 
+        void Start() => HeroEditorCombatBridge.HideLegacyWeapons(this);
+
         void SetupKatana()
         {
             var pivotGo = new GameObject("KatanaPivot");
@@ -120,19 +123,20 @@ namespace ProjectZx.Combat
             var toEnemy = (Vector2)enemy.transform.position - (Vector2)transform.position;
             _slashDir = toEnemy.sqrMagnitude > 0.0001f ? toEnemy.normalized : Vector2.right;
             _attackFacingRight = _slashDir.x >= 0f;
-
-            if (_bodyRenderer != null)
-                _bodyRenderer.flipX = !_attackFacingRight;
+            HeroEditorCombatBridge.Slash(this, _attackFacingRight, _bodyRenderer);
         }
 
         void UpdateAttackAnimation()
         {
-            if (!_attacking || _katanaPivot == null) return;
+            if (!_attacking) return;
+            if (_katanaPivot == null && !HeroEditorCombatBridge.IsActive(this)) return;
 
             _attackTimer -= Time.deltaTime;
             var progress = 1f - Mathf.Clamp01(_attackTimer / Mathf.Max(0.001f, _attackDuration));
+            var useHeroEditor = HeroEditorCombatBridge.IsActive(this);
 
-            ApplySwipeAngle(progress);
+            if (!useHeroEditor)
+                ApplySwipeAngle(progress);
             TryApplyHits(progress);
 
             if (_attackTimer > 0f) return;
@@ -143,12 +147,17 @@ namespace ProjectZx.Combat
 
             _attacking = false;
             _primaryTarget = null;
-            _katanaPivot.localRotation = Quaternion.Euler(0f, 0f, RestAngle);
-            _katanaPivot.localScale = Vector3.one;
+            if (_katanaPivot != null)
+            {
+                _katanaPivot.localRotation = Quaternion.Euler(0f, 0f, RestAngle);
+                _katanaPivot.localScale = Vector3.one;
+            }
         }
 
         void ApplySwipeAngle(float progress)
         {
+            if (_katanaPivot == null) return;
+
             // Double swipe: two full half-swings. Triple: three half-swings.
             var segments = _hitsPlanned;
             var segment = Mathf.Min(segments - 1, Mathf.FloorToInt(progress * segments));

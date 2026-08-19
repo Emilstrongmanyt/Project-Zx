@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using ProjectZx.Core;
 using ProjectZx.Enemies;
+using ProjectZx.HeroEditor;
 using ProjectZx.Player;
 using ProjectZx.World;
 using UnityEngine;
@@ -45,6 +46,8 @@ namespace ProjectZx.Combat
             _bodyRenderer = GetComponent<SpriteRenderer>();
             SetupBow();
         }
+
+        void Start() => HeroEditorCombatBridge.HideLegacyWeapons(this);
 
         void SetupBow()
         {
@@ -96,9 +99,7 @@ namespace ProjectZx.Combat
             _drawing = true;
             _drawTimer = drawDuration;
             _drawFacingRight = enemy.transform.position.x >= transform.position.x;
-
-            if (_bodyRenderer != null)
-                _bodyRenderer.flipX = !_drawFacingRight;
+            HeroEditorCombatBridge.BowShot(this, _drawFacingRight, _bodyRenderer);
 
             var stats = GetComponent<PlayerStats>();
             var origin = GetArrowSpawnPoint(enemy);
