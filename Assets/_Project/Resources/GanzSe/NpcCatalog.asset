@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8e4f1a2c3d0456789abcdef01234502, type: 3}
   m_Name: NpcCatalog
   m_EditorClassIdentifier: 
-  modularCharacterPrefab: {fileID: 100100000, guid: 094cd1418e634464ebab9c4a1fdcbde4, type: 3}
+  modularCharacterPrefab: {fileID: 100100000, guid: c9d8e7f6a5b44321a0b1c2d3e4f50607, type: 3}

@@ -150,9 +150,9 @@ namespace ProjectZx.UI
         static readonly string[] OnboardingSteps =
         {
             "Welcome to Project Zx!\n\nThis is your camp. Upgrades and gold you bank from runs stay here forever.",
-            "Talk to the Wizard (left of the campfire) to buy permanent upgrades.\nWhirlwind is a strong early pick.",
-            "Talk to the Knight (right of the campfire) to start Outside Survival.\nSurvive waves, level up, and bank gold on death or retreat.",
-            "Talk to the Grand Wizard for quests.\nQuests teach the map unlock chain and pay gold rewards.",
+            "Talk to Mira the Outfitter (left of the campfire) for permanent upgrades.\nWhirlwind is a strong early pick.",
+            "Talk to Captain Bren (right of the campfire) to start Outside Survival.\nSurvive waves, level up, and bank gold on death or retreat.",
+            "Talk to Archmage Thalor for quests.\nQuests teach the map unlock chain and pay gold rewards.",
             "Tip: Use Retreat anytime to bank gold safely.\nUnstuck (once per run) returns you to the map spawn.\n\nGood luck, hero!"
         };
 
@@ -793,7 +793,7 @@ namespace ProjectZx.UI
                 parent,
                 "MapPanel",
                 "Survival Challenge",
-                "Set class & technique at the Wizard shop first.\nUnlocked maps start fresh at round 1.");
+                "Set class & technique at Mira's shop first.\nUnlocked maps start fresh at round 1.");
 
         GameObject BuildCampfirePanel(Transform parent) =>
             BuildSharedMapSelectPanel(
@@ -2311,7 +2311,7 @@ namespace ProjectZx.UI
                 $"Whirlwind: {(GameSave.WhirlwindUnlocked ? "Owned" : "Locked")}\n" +
                 $"Piercing Shot: {(GameSave.PiercingShotUnlocked ? "Owned" : "Locked")}\n" +
                 $"Frost Tip: {(GameSave.FrostTipUnlocked ? "Owned" : "Locked")}\n" +
-                $"Flame Enchant: {(GameSave.FlameEnchantUnlocked ? "Owned" : "Knight quest reward")}\n" +
+                $"Flame Enchant: {(GameSave.FlameEnchantUnlocked ? "Owned" : "Sir Aldric quest reward")}\n" +
                 $"Gold Magnet: {(GameSave.GoldMagnetUnlocked ? "Owned" : "Locked")}\n" +
                 $"Thick Hide: T{GameSave.ThickHideLevel} ({(1f - GameSave.ThickHideDamageTakenMultiplier) * 100f:0}% DR)\n" +
                 $"Second Wind: {GameSave.SecondWindMaxCharges} charge(s)/run\n" +

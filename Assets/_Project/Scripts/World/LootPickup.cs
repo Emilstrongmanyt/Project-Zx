@@ -232,7 +232,7 @@ namespace ProjectZx.World
         {
             GameSave.HasTwinLightningPendant = true;
             GameHud.Instance?.ShowBanner(
-                $"{QuestCatalog.TwinLightningPendantName} recovered! Return it to the Grand Wizard at camp.",
+                $"{QuestCatalog.TwinLightningPendantName} recovered! Return it to Archmage Thalor at camp.",
                 3.4f);
         }
 

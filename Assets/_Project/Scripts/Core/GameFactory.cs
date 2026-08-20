@@ -764,8 +764,8 @@ namespace ProjectZx.Core
         }
 
         /// <summary>
-        /// Camp / survival NPC using GanzSe modular RT billboard.
-        /// Falls back to the legacy sprite if the pack cannot be loaded.
+        /// Camp / survival NPC using GanzSe modular character art.
+        /// Falls back to the legacy sprite at a sane scale if the pack cannot load.
         /// </summary>
         public static GameObject CreateGanzSeNpc(
             string name,
@@ -774,9 +774,11 @@ namespace ProjectZx.Core
             Vector3 position,
             System.Action onInteract,
             float billboardHeight = 1.55f,
-            float proximityRadius = 2.8f)
+            float proximityRadius = 2.8f,
+            float fallbackSpriteScale = 0.475f)
         {
-            var go = CreateSprite(name, fallbackSprite, position, 1f, 6);
+            // Start at the legacy scale so a failed GanzSe load never leaves giant placeholders.
+            var go = CreateSprite(name, fallbackSprite, position, fallbackSpriteScale, 6);
             go.AddComponent<YSortRenderer>().Configure(3);
             var proximity = go.AddComponent<CircleCollider2D>();
             proximity.isTrigger = true;
@@ -785,7 +787,12 @@ namespace ProjectZx.Core
                 go.AddComponent<NpcInteractable>().Initialize(onInteract);
 
             var billboard = go.AddComponent<GanzSeNpcBillboard>();
-            billboard.Initialize(role, billboardHeight);
+            if (!billboard.Initialize(role, billboardHeight))
+            {
+                Debug.LogWarning($"[GanzSe] NPC '{name}' using legacy sprite fallback.");
+                go.transform.localScale = Vector3.one * fallbackSpriteScale;
+            }
+
             return go;
         }
 

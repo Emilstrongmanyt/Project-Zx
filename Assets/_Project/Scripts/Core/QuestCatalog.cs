@@ -64,34 +64,34 @@ namespace ProjectZx.Core
 
         public static readonly QuestDefinition GrandWizardsPeril = new(
             QuestId.GrandWizardsPeril,
-            "Grand Wizard's Peril",
-            "Help me brave adventurer! I have lost my most special Twin Lightning Pendant my great great grandfather gave to me after the second war. The foul golem beast came through the camp and ran off with it! Please hurry, I cannot cast any spells without it!",
-            "The foul golem still has my Twin Lightning Pendant. Defeat the Outside Survival round 20 boss and bring it back!",
-            "You found my Twin Lightning Pendant! My spells return — take this gold, brave adventurer!",
-            "Thank you again for returning my pendant. The camp is safer with heroes like you.",
-            "In progress  ·  Retrieve the pendant from Outside R20",
+            "Thalor's Pendant",
+            "Adventurer — I am Archmage Thalor. A golem tore through camp and stole my Twin Lightning Pendant, heirloom of the second war. Without it my circle is muted. Hunt the Outside Survival round 20 boss and bring the pendant home!",
+            "The Outside R20 golem still clutches my Twin Lightning Pendant. Strike it down and return to me at the campfire.",
+            "The pendant sings again! My thanks — and this gold. Camp owes you, hero.",
+            "Thalor keeps the circle warm. Speak again if the wilds call you to new work.",
+            "In progress  ·  Retrieve Thalor's pendant from Outside R20",
             800,
             () => true);
 
         public static readonly QuestDefinition GreyWizardsCrow = new(
             QuestId.GreyWizardsCrow,
-            "Grey Wizard's Crow",
-            "My colleague the Grey Wizard used a crow transformation to spy on the enemy base inside the caverns. He never returned. Please enter Inside Survival, and after round 10 find the dark crow and free him — he will know the way home.",
-            "Search Inside Survival after round 10. Tap the dark crow when you are near it to break the spell.",
-            "You freed him! The Grey Wizard is back at camp. Take this gold for your courage!",
-            "The Grey Wizard rests nearby. Your rescue may yet turn the war.",
-            "In progress  ·  Free the crow in Inside Survival (after R10)",
+            "Corvin's Crow",
+            "Ashen Seer Corvin flew as a crow to spy on the cavern foe — and never returned. Enter Inside Survival; after round 10 find the dark crow and free him. He knows the path home.",
+            "Inside Survival after round 10: tap the dark crow when you are close to break the glamour.",
+            "Corvin is flesh again and resting by camp. Gold for your courage — the Ashen Seer will not forget.",
+            "Corvin watches the treeline. Your rescue may yet tip the war.",
+            "In progress  ·  Free Corvin the crow in Inside Survival (after R10)",
             1000,
             () => GameSave.InsideMapUnlocked);
 
         public static readonly QuestDefinition KnightsBestFriend = new(
             QuestId.KnightsBestFriend,
-            "A Knight's Best Friend",
-            "I fled the Dungeon without my greatsword — a knight's best friend. Recover it from the Dungeon Survival final boss and I will share the wizard's fire weapon enchantment, and 1000 gold.",
-            "The Dungeon Survival final boss still has my greatsword. Defeat round 40 and bring the blade home.",
-            "My greatsword! Take this gold — and the Flame Enchant. May your weapons burn true.",
-            "My blade is whole again. Fight well, adventurer.",
-            "In progress  ·  Recover the greatsword from Dungeon R40 boss",
+            "Aldric's Greatsword",
+            "I am Sir Aldric. I fled the Dungeon without my greatsword — a knight's true companion. Recover it from the Dungeon Survival round 40 boss and I will share Flame Enchant, plus 1000 gold.",
+            "The Dungeon R40 boss still bears my greatsword. Cut it down and bring the blade to me north of camp.",
+            "Steel and honor restored! Take the gold — and Flame Enchant. May your weapons burn true.",
+            "Aldric stands ready. Fight well, adventurer.",
+            "In progress  ·  Recover Aldric's greatsword from Dungeon R40 boss",
             1000,
             () => GameSave.DungeonKnightReturnedToCamp);
 

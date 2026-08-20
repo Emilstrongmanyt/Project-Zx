@@ -63,7 +63,7 @@ namespace ProjectZx.World
             var enter = door.GetComponent<ArenaDoor>();
             if (enter != null) Object.Destroy(enter);
 
-            GameHud.Instance?.ShowBanner("The knight opens a door back to camp…", 2.8f);
+            GameHud.Instance?.ShowBanner("Sir Aldric opens a door back to camp…", 2.8f);
             WorldSparkle.Play(transform.position, 8);
 
             var start = transform.position;
@@ -94,7 +94,7 @@ namespace ProjectZx.World
             }
 
             GameSave.DungeonKnightReturnedToCamp = true;
-            GameHud.Instance?.ShowBanner("The knight returned to camp. Speak with him there.", 3.4f);
+            GameHud.Instance?.ShowBanner("Sir Aldric returned to camp. Speak with him there.", 3.4f);
             WorldSparkle.Play(doorPos, 10);
 
             if (door != null) Object.Destroy(door);

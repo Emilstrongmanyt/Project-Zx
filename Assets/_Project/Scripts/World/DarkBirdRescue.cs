@@ -47,7 +47,7 @@ namespace ProjectZx.World
 
             _rescued = true;
             GameSave.QuestGreyWizardRescued = true;
-            GameHud.Instance?.ShowBanner("The crow is free! Return to the Grand Wizard at camp.", 3.5f);
+            GameHud.Instance?.ShowBanner("The crow is free! Return to Archmage Thalor at camp.", 3.5f);
             WorldSparkle.Play(transform.position, 10);
             StartCoroutine(FlyAway());
         }

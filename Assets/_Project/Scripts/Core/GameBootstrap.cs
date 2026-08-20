@@ -92,58 +92,65 @@ namespace ProjectZx.Core
             var hub = new GameObject("HubUi").AddComponent<HubUi>();
             new GameObject("CampHeroManager").AddComponent<CampHeroManager>().Setup();
 
-            // GanzSe modular NPCs (RT billboards). Heights tuned for camp readability.
+            // GanzSe cast: Mira (shop), Captain Bren (maps), Archmage Thalor (quests),
+            // Ashen Seer Corvin (rescued), Sir Aldric (dungeon knight).
             const float campNpcHeight = 1.45f;
             const float questNpcHeight = 1.85f;
             const float knightNpcHeight = 2.15f;
+            const float campFallbackScale = 0.475f;
+            const float questFallbackScale = 0.475f * 1.85f;
+            const float knightFallbackScale = questFallbackScale * 1.5f;
             GanzSeRenderStudio.Warm(GanzSeNpcRole.ShopWizard);
             GanzSeRenderStudio.Warm(GanzSeNpcRole.MapKnight);
             GanzSeRenderStudio.Warm(GanzSeNpcRole.QuestWizard);
 
             GameFactory.CreateGanzSeNpc(
-                "WizardShop",
+                "MiraOutfitter",
                 GanzSeNpcRole.ShopWizard,
                 ArtLibrary.Wizard,
                 new Vector3(-2.1f, 1.1f),
                 () => hub.OpenShop(),
-                campNpcHeight);
+                campNpcHeight,
+                fallbackSpriteScale: campFallbackScale);
             GameFactory.CreateGanzSeNpc(
-                "KnightChallenge",
+                "CaptainBren",
                 GanzSeNpcRole.MapKnight,
                 ArtLibrary.Knight,
                 new Vector3(2.1f, 1.1f),
                 () => hub.OpenMapSelect(),
-                campNpcHeight);
+                campNpcHeight,
+                fallbackSpriteScale: campFallbackScale);
             GameFactory.CreateGanzSeNpc(
-                "QuestWizard",
+                "ArchmageThalor",
                 GanzSeNpcRole.QuestWizard,
                 ArtLibrary.QuestWizard,
                 new Vector3(4.2f, 1.6f),
                 () => hub.OpenQuestGiver(),
-                questNpcHeight);
-            // Grey Wizard returns to camp after the crow rescue (and stays after turn-in).
+                questNpcHeight,
+                fallbackSpriteScale: questFallbackScale);
             if (GameSave.QuestGreyWizardRescued || GameSave.QuestGreyWizardCompleted)
             {
                 GanzSeRenderStudio.Warm(GanzSeNpcRole.GreyWizard);
                 GameFactory.CreateGanzSeNpc(
-                    "GreyWizard",
+                    "AshenSeerCorvin",
                     GanzSeNpcRole.GreyWizard,
                     ArtLibrary.GreyWizard,
                     new Vector3(7.4f, -0.6f),
                     onInteract: null,
-                    billboardHeight: questNpcHeight);
+                    billboardHeight: questNpcHeight,
+                    fallbackSpriteScale: questFallbackScale);
             }
-            // Knight1 returns after the player sends him home from Dungeon Survival.
             if (GameSave.DungeonKnightReturnedToCamp)
             {
                 GanzSeRenderStudio.Warm(GanzSeNpcRole.QuestKnight);
                 GameFactory.CreateGanzSeNpc(
-                    "QuestKnight",
+                    "SirAldric",
                     GanzSeNpcRole.QuestKnight,
                     ArtLibrary.Knight1,
                     new Vector3(7.0f, 6.6f),
                     () => hub.OpenKnightQuestGiver(),
-                    knightNpcHeight);
+                    knightNpcHeight,
+                    fallbackSpriteScale: knightFallbackScale);
             }
             // Layer Lab stage frame + trophy composite (readable world prop).
             GameFactory.CreateNpc("AchievementBoard", ArtLibrary.AchievementKeeper, new Vector3(0f, 2.8f), () => hub.OpenAchievements(), 0.55f);
