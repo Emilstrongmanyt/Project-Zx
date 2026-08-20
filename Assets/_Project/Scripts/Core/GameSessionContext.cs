@@ -41,36 +41,6 @@ namespace ProjectZx.Core
             $"{DisplayName(kind)} Survival";
     }
 
-    /// <summary>
-    /// Player-facing map names (Second War lore). Enum values stay stable for saves.
-    /// Outside→Emberwilds, Inside→Warded Halls, Dungeon→Ironvault,
-    /// Crypt→Silent Ossuary, Unlimited→The Endless Front.
-    /// </summary>
-    public static class SurvivalMapNames
-    {
-        public static string DisplayName(SurvivalMapKind kind) => kind switch
-        {
-            SurvivalMapKind.Inside => "Warded Halls",
-            SurvivalMapKind.Dungeon => "Ironvault",
-            SurvivalMapKind.Crypt => "Silent Ossuary",
-            SurvivalMapKind.Unlimited => "The Endless Front",
-            _ => "Emberwilds"
-        };
-
-        /// <summary>Short label for HUD round chip / compact UI.</summary>
-        public static string ShortName(SurvivalMapKind kind) => kind switch
-        {
-            SurvivalMapKind.Inside => "Warded Halls",
-            SurvivalMapKind.Dungeon => "Ironvault",
-            SurvivalMapKind.Crypt => "Ossuary",
-            SurvivalMapKind.Unlimited => "Endless Front",
-            _ => "Emberwilds"
-        };
-
-        public static string SurvivalButtonLabel(SurvivalMapKind kind) =>
-            $"{DisplayName(kind)} Survival";
-    }
-
     public struct SurvivalRunSnapshot
     {
         public bool HasData;
