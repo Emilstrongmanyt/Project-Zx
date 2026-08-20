@@ -313,8 +313,8 @@ namespace ProjectZx.Core
             return !GameSave.HasKnightsGreatsword;
         }
 
-        /// <summary>No talking portrait asset for the knight yet — hide the portrait frame.</summary>
-        public static bool UsesQuestPortrait(QuestId id) => id != QuestId.KnightsBestFriend;
+        /// <summary>All quest givers show a GanzSe character (or sprite fallback) in the dialogue frame.</summary>
+        public static bool UsesQuestPortrait(QuestId id) => true;
 
         /// <summary>
         /// Compact in-run / camp objective line for the HUD tracker.

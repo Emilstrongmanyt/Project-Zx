@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using ProjectZx.Combat;
 using ProjectZx.Enemies;
+using ProjectZx.GanzSe;
 using ProjectZx.Player;
 using ProjectZx.UI;
 using ProjectZx.World;
@@ -727,6 +728,32 @@ namespace ProjectZx.Core
             proximity.isTrigger = true;
             proximity.radius = 2.8f;
             go.AddComponent<NpcInteractable>().Initialize(onInteract);
+            return go;
+        }
+
+        /// <summary>
+        /// Camp / survival NPC using GanzSe modular RT billboard.
+        /// Falls back to the legacy sprite if the pack cannot be loaded.
+        /// </summary>
+        public static GameObject CreateGanzSeNpc(
+            string name,
+            GanzSeNpcRole role,
+            Sprite fallbackSprite,
+            Vector3 position,
+            System.Action onInteract,
+            float billboardHeight = 1.55f,
+            float proximityRadius = 2.8f)
+        {
+            var go = CreateSprite(name, fallbackSprite, position, 1f, 6);
+            go.AddComponent<YSortRenderer>().Configure(3);
+            var proximity = go.AddComponent<CircleCollider2D>();
+            proximity.isTrigger = true;
+            proximity.radius = proximityRadius;
+            if (onInteract != null)
+                go.AddComponent<NpcInteractable>().Initialize(onInteract);
+
+            var billboard = go.AddComponent<GanzSeNpcBillboard>();
+            billboard.Initialize(role, billboardHeight);
             return go;
         }
 

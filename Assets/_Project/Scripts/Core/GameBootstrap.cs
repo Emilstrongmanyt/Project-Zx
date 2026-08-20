@@ -1,3 +1,4 @@
+using ProjectZx.GanzSe;
 using ProjectZx.Player;
 using ProjectZx.UI;
 using ProjectZx.Waves;
@@ -90,43 +91,58 @@ namespace ProjectZx.Core
             var hub = new GameObject("HubUi").AddComponent<HubUi>();
             new GameObject("CampHeroManager").AddComponent<CampHeroManager>().Setup();
 
-            // Campfire NPCs: +25% scale vs previous default (0.38 → 0.475).
-            const float campNpcScale = 0.38f * 1.25f;
-            GameFactory.CreateNpc("WizardShop", ArtLibrary.Wizard, new Vector3(-2.1f, 1.1f), () => hub.OpenShop(), campNpcScale);
-            GameFactory.CreateNpc("KnightChallenge", ArtLibrary.Knight, new Vector3(2.1f, 1.1f), () => hub.OpenMapSelect(), campNpcScale);
-            // Grand Wizard / Grey Wizard / Knight1 — spread so they do not stack.
-            const float questNpcScale = campNpcScale * 1.85f;
-            const float knight1Scale = questNpcScale * 1.5f;
-            GameFactory.CreateNpc(
+            // GanzSe modular NPCs (RT billboards). Heights tuned for camp readability.
+            const float campNpcHeight = 1.45f;
+            const float questNpcHeight = 1.85f;
+            const float knightNpcHeight = 2.15f;
+            GanzSeRenderStudio.Warm(GanzSeNpcRole.ShopWizard);
+            GanzSeRenderStudio.Warm(GanzSeNpcRole.MapKnight);
+            GanzSeRenderStudio.Warm(GanzSeNpcRole.QuestWizard);
+
+            GameFactory.CreateGanzSeNpc(
+                "WizardShop",
+                GanzSeNpcRole.ShopWizard,
+                ArtLibrary.Wizard,
+                new Vector3(-2.1f, 1.1f),
+                () => hub.OpenShop(),
+                campNpcHeight);
+            GameFactory.CreateGanzSeNpc(
+                "KnightChallenge",
+                GanzSeNpcRole.MapKnight,
+                ArtLibrary.Knight,
+                new Vector3(2.1f, 1.1f),
+                () => hub.OpenMapSelect(),
+                campNpcHeight);
+            GameFactory.CreateGanzSeNpc(
                 "QuestWizard",
+                GanzSeNpcRole.QuestWizard,
                 ArtLibrary.QuestWizard,
                 new Vector3(4.2f, 1.6f),
                 () => hub.OpenQuestGiver(),
-                questNpcScale);
+                questNpcHeight);
             // Grey Wizard returns to camp after the crow rescue (and stays after turn-in).
-            // Decorative only for now — not tappable; flip across Y (mirror left/right).
             if (GameSave.QuestGreyWizardRescued || GameSave.QuestGreyWizardCompleted)
             {
-                var grey = GameFactory.CreateSprite(
+                GanzSeRenderStudio.Warm(GanzSeNpcRole.GreyWizard);
+                GameFactory.CreateGanzSeNpc(
                     "GreyWizard",
+                    GanzSeNpcRole.GreyWizard,
                     ArtLibrary.GreyWizard,
                     new Vector3(7.4f, -0.6f),
-                    questNpcScale,
-                    6);
-                grey.AddComponent<YSortRenderer>().Configure(3);
-                var greySr = grey.GetComponent<SpriteRenderer>();
-                if (greySr != null) greySr.flipX = true;
+                    onInteract: null,
+                    billboardHeight: questNpcHeight);
             }
             // Knight1 returns after the player sends him home from Dungeon Survival.
-            // North of camp near the tree line (wizards stay lower / mid).
             if (GameSave.DungeonKnightReturnedToCamp)
             {
-                GameFactory.CreateNpc(
+                GanzSeRenderStudio.Warm(GanzSeNpcRole.QuestKnight);
+                GameFactory.CreateGanzSeNpc(
                     "QuestKnight",
+                    GanzSeNpcRole.QuestKnight,
                     ArtLibrary.Knight1,
                     new Vector3(7.0f, 6.6f),
                     () => hub.OpenKnightQuestGiver(),
-                    knight1Scale);
+                    knightNpcHeight);
             }
             // Layer Lab stage frame + trophy composite (readable world prop).
             GameFactory.CreateNpc("AchievementBoard", ArtLibrary.AchievementKeeper, new Vector3(0f, 2.8f), () => hub.OpenAchievements(), 0.55f);

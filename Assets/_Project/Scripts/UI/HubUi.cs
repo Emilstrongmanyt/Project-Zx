@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ProjectZx.Core;
+using ProjectZx.GanzSe;
 using ProjectZx.HeroEditor;
 using ProjectZx.Player;
 using UnityEngine;
@@ -53,6 +54,8 @@ namespace ProjectZx.UI
         GameObject _settingsPanel;
         GameObject _questPanel;
         Image _questPortraitImage;
+        RawImage _questPortraitRaw;
+        GanzSePortraitView _questPortraitView;
         GameObject _questPortraitFrame;
         Text _questTitleText;
         Text _questBodyText;
@@ -62,8 +65,6 @@ namespace ProjectZx.UI
         Text _questAcceptLabel;
         Text _questTurnInLabel;
         QuestId _questPanelFocusId = QuestId.GrandWizardsPeril;
-        float _questPortraitAnimTimer;
-        int _questPortraitFrameIndex;
         Text _equipmentStatusText;
         Text _bgmVolumeLabel;
         Text _sfxVolumeLabel;
@@ -216,7 +217,6 @@ namespace ProjectZx.UI
 
         void Update()
         {
-            AnimateQuestPortraitTalk();
             TickRunToast();
             RefreshCampObjectiveTracker(force: false);
             PulseCampObjectiveChip();
@@ -475,43 +475,13 @@ namespace ProjectZx.UI
                 _onboardingPanel.SetActive(false);
         }
 
-        /// <summary>
-        /// Cycles the 6-frame Wizard Portrait (2×3 of 64×64) while the quest dialogue is open
-        /// so the wizard appears to talk during the quest text.
-        /// </summary>
-        void AnimateQuestPortraitTalk()
+        static GanzSeNpcRole PortraitRoleForQuest(QuestId id)
         {
-            if (!IsPanelOpen(_questPanel) || _questPortraitImage == null) return;
-            if (!QuestCatalog.UsesQuestPortrait(_questPanelFocusId)) return;
-
-            var frames = ArtLibrary.WizardPortraitFrames;
-            if (frames == null || frames.Length == 0) return;
-
-            // Single-frame fallback: still nudge slightly so the portrait feels alive.
-            if (frames.Length == 1)
-            {
-                _questPortraitAnimTimer += Time.unscaledDeltaTime;
-                var bob = 1f + Mathf.Sin(_questPortraitAnimTimer * 6f) * 0.012f;
-                _questPortraitImage.rectTransform.localScale = new Vector3(bob, bob, 1f);
-                return;
-            }
-
-            // Talk cadence: slightly irregular frame steps read better than a rigid loop.
-            _questPortraitAnimTimer += Time.unscaledDeltaTime;
-            var step = 0.11f + (_questPortraitFrameIndex % 3) * 0.02f;
-            if (_questPortraitAnimTimer < step) return;
-            _questPortraitAnimTimer = 0f;
-
-            // Hold closed-mouth frame 0 a bit longer between syllables.
-            if (_questPortraitFrameIndex == 0 && UnityEngine.Random.value < 0.35f)
-            {
-                _questPortraitImage.sprite = frames[0];
-                return;
-            }
-
-            _questPortraitFrameIndex = (_questPortraitFrameIndex + 1) % frames.Length;
-            _questPortraitImage.sprite = frames[_questPortraitFrameIndex];
-            _questPortraitImage.rectTransform.localScale = Vector3.one;
+            if (id == QuestId.KnightsBestFriend)
+                return GanzSeNpcRole.QuestKnight;
+            if (id == QuestId.GreyWizardsCrow)
+                return GanzSeNpcRole.GreyWizard;
+            return GanzSeNpcRole.QuestWizard;
         }
 
         GameObject BuildShopPanel(Transform parent)
@@ -1085,19 +1055,33 @@ namespace ProjectZx.UI
 
             _questPortraitFrame = frameGo;
 
-            var portraitGo = new GameObject("WizardPortrait");
+            var portraitGo = new GameObject("QuestPortrait");
             portraitGo.transform.SetParent(frameGo.transform, false);
             var portraitRect = portraitGo.AddComponent<RectTransform>();
             portraitRect.anchorMin = new Vector2(0.5f, 0.5f);
             portraitRect.anchorMax = new Vector2(0.5f, 0.5f);
             portraitRect.pivot = new Vector2(0.5f, 0.5f);
             portraitRect.anchoredPosition = Vector2.zero;
-            // Each talk frame is 64×64 (2×3 grid inside 128×192).
-            portraitRect.sizeDelta = new Vector2(220f, 220f);
+            portraitRect.sizeDelta = new Vector2(240f, 240f);
+            // Legacy sprite fallback if GanzSe RT fails to load.
             _questPortraitImage = portraitGo.AddComponent<Image>();
             _questPortraitImage.sprite = ArtLibrary.WizardPortrait;
             _questPortraitImage.preserveAspect = true;
             _questPortraitImage.raycastTarget = false;
+
+            var rawGo = new GameObject("GanzSePortrait");
+            rawGo.transform.SetParent(frameGo.transform, false);
+            var rawRect = rawGo.AddComponent<RectTransform>();
+            rawRect.anchorMin = new Vector2(0.5f, 0.5f);
+            rawRect.anchorMax = new Vector2(0.5f, 0.5f);
+            rawRect.pivot = new Vector2(0.5f, 0.5f);
+            rawRect.anchoredPosition = Vector2.zero;
+            rawRect.sizeDelta = new Vector2(240f, 240f);
+            _questPortraitRaw = rawGo.AddComponent<RawImage>();
+            _questPortraitRaw.raycastTarget = false;
+            _questPortraitRaw.enabled = false;
+            _questPortraitView = frameGo.AddComponent<GanzSePortraitView>();
+            _questPortraitView.Bind(_questPortraitRaw, _questPortraitImage);
 
             _questTitleText = CreateText(
                 panel.transform,
@@ -1189,23 +1173,22 @@ namespace ProjectZx.UI
             if (_questPortraitFrame != null)
                 _questPortraitFrame.SetActive(showPortrait);
 
-            if (_questPortraitImage != null)
+            if (showPortrait)
             {
-                if (showPortrait)
+                var role = PortraitRoleForQuest(def.Id);
+                if (_questPortraitView != null)
+                    _questPortraitView.Show(role);
+                else if (_questPortraitImage != null)
                 {
-                    var frames = ArtLibrary.WizardPortraitFrames;
-                    _questPortraitImage.sprite = frames != null && frames.Length > 0
-                        ? frames[0]
-                        : ArtLibrary.WizardPortrait;
-                    _questPortraitFrameIndex = 0;
-                    _questPortraitAnimTimer = 0f;
-                    _questPortraitImage.rectTransform.localScale = Vector3.one;
+                    _questPortraitImage.sprite = ArtLibrary.WizardPortrait;
                     _questPortraitImage.enabled = true;
                 }
-                else
-                {
-                    _questPortraitImage.enabled = false;
-                }
+            }
+            else
+            {
+                _questPortraitView?.Hide();
+                if (_questPortraitImage != null) _questPortraitImage.enabled = false;
+                if (_questPortraitRaw != null) _questPortraitRaw.enabled = false;
             }
 
             // When no portrait, use full dialogue width for body/title.
