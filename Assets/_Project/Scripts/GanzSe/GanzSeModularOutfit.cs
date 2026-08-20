@@ -1,11 +1,12 @@
+using GanzSe;
 using UnityEngine;
 
 namespace ProjectZx.GanzSe
 {
     /// <summary>
-    /// Assembles GanzSe NPCs. Body armor uses the modular skinned parts; heads use the
-    /// pack's Non-Skinned Mesh Parts parented to the head bone (skinned HEADS render as
-    /// a neck stump in our off-screen bake path).
+    /// Build NPCs the same way the pack demo does:
+    /// ModularHeroController + one skinned part per armor category + helmet ON
+    /// (HEADS active, FACE DETAILS off). Do not disable the skinned HEADS folder.
     /// </summary>
     public static class GanzSeModularOutfit
     {
@@ -17,141 +18,120 @@ namespace ProjectZx.GanzSe
             var face = FindChild(characterRoot.transform, "FACE DETAILS PARTS");
             if (armor == null)
             {
-                Debug.LogWarning("[GanzSe] ARMOR PARTS not found on modular character.");
+                Debug.LogWarning("[GanzSe] ARMOR PARTS not found.");
                 return;
             }
 
-            ClearCategory(FindChild(armor, "HEADS"));
-            ClearCategory(FindChild(armor, "CHESTS"));
-            ClearCategory(FindChild(armor, "ARMS"));
-            ClearCategory(FindChild(armor, "LEGS"));
-            ClearCategory(FindChild(armor, "FEET"));
-            ClearCategory(FindChild(armor, "BELTS"));
+            // Demo ships with every variant on — clear, then enable one per slot.
+            ClearCategory(armor.Find("HEADS"));
+            ClearCategory(armor.Find("CHESTS"));
+            ClearCategory(armor.Find("ARMS"));
+            ClearCategory(armor.Find("LEGS"));
+            ClearCategory(armor.Find("FEET"));
+            ClearCategory(armor.Find("BELTS"));
             if (face != null)
             {
-                ClearCategory(FindChild(face, "HAIRS"));
-                ClearCategory(FindChild(face, "FACE HAIRS"));
-                ClearCategory(FindChild(face, "EYEBROWS"));
-                ClearCategory(FindChild(face, "EYES"));
-                ClearCategory(FindChild(face, "NOSES"));
-                ClearCategory(FindChild(face, "EARS"));
-                face.gameObject.SetActive(false);
+                ClearCategory(face.Find("HAIRS"));
+                ClearCategory(face.Find("FACE HAIRS"));
+                ClearCategory(face.Find("EYEBROWS"));
+                ClearCategory(face.Find("EYES"));
+                ClearCategory(face.Find("NOSES"));
+                ClearCategory(face.Find("EARS"));
             }
 
-            // Skinned HEADS do not show in our bake — keep the folder off.
-            var skinnedHeads = FindChild(armor, "HEADS");
-            if (skinnedHeads != null)
-                skinnedHeads.gameObject.SetActive(false);
-
+            string head, chest, arms, legs, feet, belt;
             switch (role)
             {
                 case GanzSeNpcRole.ShopWizard:
-                    ApplyBody(armor,
-                        chest: "Chest Armor Type 4 Color 2",
-                        arms: "Arm Armor Type 4 Color 2",
-                        legs: "Legs Armor Type 4 Color 2",
-                        feet: "Feet Armor Type 4 Color 2",
-                        belt: "Belt Armor Type 4 Color 2");
-                    AttachHeadPart(characterRoot, "Head Armor Type 4 Color 2 Part");
+                    head = "Head Armor Type 4 Color 2";
+                    chest = "Chest Armor Type 4 Color 2";
+                    arms = "Arm Armor Type 4 Color 2";
+                    legs = "Legs Armor Type 4 Color 2";
+                    feet = "Feet Armor Type 4 Color 2";
+                    belt = "Belt Armor Type 4 Color 2";
                     break;
-
                 case GanzSeNpcRole.QuestWizard:
-                    ApplyBody(armor,
-                        chest: "Chest Armor Type 5 Color 3",
-                        arms: "Arm Armor Type 5 Color 3",
-                        legs: "Legs Armor Type 5 Color 3",
-                        feet: "Feet Armor Type 5 Color 3",
-                        belt: "Belt Armor Type 5 Color 3");
-                    AttachHeadPart(characterRoot, "Head Armor Type 5 Color 3 Part");
+                    head = "Head Armor Type 5 Color 3";
+                    chest = "Chest Armor Type 5 Color 3";
+                    arms = "Arm Armor Type 5 Color 3";
+                    legs = "Legs Armor Type 5 Color 3";
+                    feet = "Feet Armor Type 5 Color 3";
+                    belt = "Belt Armor Type 5 Color 3";
                     break;
-
                 case GanzSeNpcRole.GreyWizard:
-                    ApplyBody(armor,
-                        chest: "Chest Armor Type 3 Color 1",
-                        arms: "Arm Armor Type 3 Color 1",
-                        legs: "Legs Armor Type 3 Color 1",
-                        feet: "Feet Armor Type 3 Color 1",
-                        belt: "Belt Armor Type 3 Color 1");
-                    AttachHeadPart(characterRoot, "Head Armor Type 3 Color 1 Part");
+                    head = "Head Armor Type 3 Color 1";
+                    chest = "Chest Armor Type 3 Color 1";
+                    arms = "Arm Armor Type 3 Color 1";
+                    legs = "Legs Armor Type 3 Color 1";
+                    feet = "Feet Armor Type 3 Color 1";
+                    belt = "Belt Armor Type 3 Color 1";
                     break;
-
                 case GanzSeNpcRole.MapKnight:
-                    ApplyBody(armor,
-                        chest: "Chest Armor Type 1 Color 1",
-                        arms: "Arm Armor Type 1 Color 1",
-                        legs: "Legs Armor Type 1 Color 1",
-                        feet: "Feet Armor Type 1 Color 1",
-                        belt: "Belt Armor Type 1 Color 1");
-                    AttachHeadPart(characterRoot, "Head Armor Type 2 Color 1 Part");
+                    head = "Head Armor Type 2 Color 1";
+                    chest = "Chest Armor Type 1 Color 1";
+                    arms = "Arm Armor Type 1 Color 1";
+                    legs = "Legs Armor Type 1 Color 1";
+                    feet = "Feet Armor Type 1 Color 1";
+                    belt = "Belt Armor Type 1 Color 1";
                     break;
-
-                case GanzSeNpcRole.QuestKnight:
-                    ApplyBody(armor,
-                        chest: "Chest Armor Type 2 Color 2",
-                        arms: "Arm Armor Type 2 Color 2",
-                        legs: "Legs Armor Type 2 Color 2",
-                        feet: "Feet Armor Type 2 Color 2",
-                        belt: "Belt Armor Type 2 Color 2");
-                    AttachHeadPart(characterRoot, "Head Armor Type 1 Color 2 Part");
+                default: // QuestKnight
+                    head = "Head Armor Type 1 Color 2";
+                    chest = "Chest Armor Type 2 Color 2";
+                    arms = "Arm Armor Type 2 Color 2";
+                    legs = "Legs Armor Type 2 Color 2";
+                    feet = "Feet Armor Type 2 Color 2";
+                    belt = "Belt Armor Type 2 Color 2";
                     break;
             }
-        }
 
-        static void ApplyBody(
-            Transform armor,
-            string chest,
-            string arms,
-            string legs,
-            string feet,
-            string belt)
-        {
-            ActivateExclusive(FindChild(armor, "CHESTS"), chest);
-            ActivateExclusive(FindChild(armor, "ARMS"), arms);
-            ActivateExclusive(FindChild(armor, "LEGS"), legs);
-            ActivateExclusive(FindChild(armor, "FEET"), feet);
-            ActivateExclusive(FindChild(armor, "BELTS"), belt);
-        }
-
-        /// <summary>
-        /// Parent a non-skinned head/helmet mesh to the head bone so it always shows.
-        /// </summary>
-        static void AttachHeadPart(GameObject characterRoot, string resourcesPartName)
-        {
-            var headBone = FindChild(characterRoot.transform, "head");
-            if (headBone == null)
+            var heads = armor.Find("HEADS");
+            if (heads != null)
             {
-                Debug.LogWarning("[GanzSe] head bone missing — cannot attach helmet.");
-                return;
+                heads.gameObject.SetActive(true);
+                ActivateExclusive(heads, head);
             }
 
-            // Remove any previous attachment (re-warm / rebuild).
-            for (var i = headBone.childCount - 1; i >= 0; i--)
+            ActivateExclusive(armor.Find("CHESTS"), chest);
+            ActivateExclusive(armor.Find("ARMS"), arms);
+            ActivateExclusive(armor.Find("LEGS"), legs);
+            ActivateExclusive(armor.Find("FEET"), feet);
+            ActivateExclusive(armor.Find("BELTS"), belt);
+
+            // Exact demo ModularHeroController.ToggleHelmet with showHelmet=true.
+            var hero = characterRoot.GetComponent<ModularHeroController>();
+            if (hero == null)
+                hero = characterRoot.AddComponent<ModularHeroController>();
+            hero.armorPartsRoot = armor;
+            hero.facePartsRoot = face;
+            hero.showHelmet = true;
+            hero.ToggleHelmet();
+
+            // Belt-and-suspenders: if skinned head still inactive, force it.
+            if (heads != null)
             {
-                var child = headBone.GetChild(i);
-                if (child.name.StartsWith("HeadArmor_"))
-                    Object.Destroy(child.gameObject);
+                heads.gameObject.SetActive(true);
+                var anyHead = false;
+                for (var i = 0; i < heads.childCount; i++)
+                {
+                    if (!heads.GetChild(i).gameObject.activeSelf) continue;
+                    anyHead = true;
+                    foreach (var smr in heads.GetChild(i).GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                    {
+                        smr.enabled = true;
+                        smr.updateWhenOffscreen = true;
+                        smr.forceMatrixRecalculationPerRender = true;
+                    }
+                }
+
+                if (!anyHead)
+                {
+                    Debug.LogWarning("[GanzSe] No active head after ToggleHelmet — forcing first head.");
+                    ActivateExclusive(heads, head);
+                }
             }
 
-            var prefab = Resources.Load<GameObject>("GanzSe/Parts/" + resourcesPartName);
-            if (prefab == null)
-            {
-                Debug.LogWarning($"[GanzSe] Missing Resources/GanzSe/Parts/{resourcesPartName}");
-                return;
-            }
-
-            var head = Object.Instantiate(prefab, headBone, false);
-            head.name = "HeadArmor_" + resourcesPartName;
-            head.transform.localPosition = Vector3.zero;
-            head.transform.localRotation = Quaternion.identity;
-            head.transform.localScale = Vector3.one;
-            head.SetActive(true);
-
-            foreach (var r in head.GetComponentsInChildren<Renderer>(true))
-            {
-                if (r == null) continue;
-                r.enabled = true;
-                r.gameObject.layer = characterRoot.layer;
-            }
+            if (face != null)
+                face.gameObject.SetActive(false);
         }
 
         static void ClearCategory(Transform category)
@@ -164,19 +144,18 @@ namespace ProjectZx.GanzSe
         static void ActivateExclusive(Transform category, string childName)
         {
             if (category == null) return;
-
             Transform match = null;
             for (var i = 0; i < category.childCount; i++)
             {
                 var child = category.GetChild(i);
-                var on = !string.IsNullOrEmpty(childName) && child.name == childName;
+                var on = child.name == childName;
                 child.gameObject.SetActive(on);
                 if (on) match = child;
             }
 
             if (match == null && category.childCount > 0)
             {
-                Debug.LogWarning($"[GanzSe] Missing part '{childName}' under {category.name}; using first child.");
+                Debug.LogWarning($"[GanzSe] Missing '{childName}' under {category.name}; using first.");
                 category.GetChild(0).gameObject.SetActive(true);
             }
         }

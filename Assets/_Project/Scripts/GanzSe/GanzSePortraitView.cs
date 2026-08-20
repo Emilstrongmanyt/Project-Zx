@@ -24,6 +24,18 @@ namespace ProjectZx.GanzSe
             _role = role;
             _active = true;
 
+            // Prefer the baked sprite (same pixels as camp NPCs). Live RT was showing
+            // headless T-poses when skinned heads failed to update.
+            if (GanzSeRenderStudio.TryGetSprite(role, out var sprite) && sprite != null && _fallbackImage != null)
+            {
+                if (_raw != null) _raw.enabled = false;
+                _fallbackImage.sprite = sprite;
+                _fallbackImage.enabled = true;
+                _fallbackImage.color = Color.white;
+                _fallbackImage.preserveAspect = true;
+                return;
+            }
+
             if (GanzSeRenderStudio.TryGetTexture(role, out var rt) && rt != null && _raw != null)
             {
                 _raw.texture = rt;
@@ -34,7 +46,6 @@ namespace ProjectZx.GanzSe
                 return;
             }
 
-            // Prefab missing — keep legacy sprite portrait.
             if (_raw != null) _raw.enabled = false;
             if (_fallbackImage != null) _fallbackImage.enabled = true;
         }
@@ -51,11 +62,14 @@ namespace ProjectZx.GanzSe
 
         void LateUpdate()
         {
-            if (!_active || _raw == null || !_raw.enabled) return;
-            // Soft bob complementary to studio yaw sway.
+            if (!_active) return;
             var t = Time.unscaledTime;
             var bob = 1f + Mathf.Sin(t * 2.4f) * 0.015f;
-            _raw.rectTransform.localScale = new Vector3(bob, bob, 1f);
+            var scale = new Vector3(bob, bob, 1f);
+            if (_raw != null && _raw.enabled)
+                _raw.rectTransform.localScale = scale;
+            else if (_fallbackImage != null && _fallbackImage.enabled)
+                _fallbackImage.rectTransform.localScale = scale;
         }
     }
 }

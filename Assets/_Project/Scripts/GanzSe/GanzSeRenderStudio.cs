@@ -264,12 +264,14 @@ namespace ProjectZx.GanzSe
 
         static void StripDemoComponents(GameObject character)
         {
+            // Keep ModularHeroController — the demo uses it to toggle helmet/face.
             var behaviours = character.GetComponentsInChildren<MonoBehaviour>(true);
             foreach (var b in behaviours)
             {
                 if (b == null) continue;
-                if (b.GetType().Namespace == "GanzSe")
-                    Destroy(b);
+                if (b.GetType().Namespace != "GanzSe") continue;
+                if (b is global::GanzSe.ModularHeroController) continue;
+                Destroy(b);
             }
         }
 
