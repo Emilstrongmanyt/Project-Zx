@@ -157,6 +157,7 @@ namespace ProjectZx.GanzSe
             SetLayerRecursive(character, _layer);
             StripDemoComponents(character);
             GanzSeModularOutfit.Apply(character, role);
+            GanzSeIdlePose.Apply(character);
 
             var rt = new RenderTexture(RtSize, RtSize, 24, RenderTextureFormat.ARGB32)
             {
@@ -168,13 +169,14 @@ namespace ProjectZx.GanzSe
 
             var camGo = new GameObject("StageCamera");
             camGo.transform.SetParent(root.transform, false);
-            camGo.transform.localPosition = new Vector3(0f, 1.05f, 2.2f);
-            camGo.transform.localRotation = Quaternion.Euler(6f, 180f, 0f);
+            // Frame standing idle (arms down) with head fully in view.
+            camGo.transform.localPosition = new Vector3(0f, 1.15f, 2.45f);
+            camGo.transform.localRotation = Quaternion.Euler(4f, 180f, 0f);
             var cam = camGo.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.1f, 0.12f, 0.16f, 0f);
             cam.orthographic = false;
-            cam.fieldOfView = 30f;
+            cam.fieldOfView = 28f;
             cam.nearClipPlane = 0.05f;
             cam.farClipPlane = 20f;
             cam.cullingMask = 1 << _layer;
