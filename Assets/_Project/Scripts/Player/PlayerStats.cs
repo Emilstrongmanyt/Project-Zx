@@ -949,6 +949,7 @@ namespace ProjectZx.Player
                     if (session.MapKind == SurvivalMapKind.Unlimited)
                     {
                         GameSave.RecordUnlimitedRound(session.CurrentRound);
+                        QuestCatalog.NotifyUnlimitedRound(session.CurrentRound);
                         GameSave.RecordWeaponUnlimitedRound(weaponClass, session.CurrentRound);
                     }
                     else if (session.MapKind == SurvivalMapKind.Dungeon)

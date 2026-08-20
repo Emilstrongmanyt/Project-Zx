@@ -91,8 +91,8 @@ namespace ProjectZx.Core
             var hub = new GameObject("HubUi").AddComponent<HubUi>();
             new GameObject("CampHeroManager").AddComponent<CampHeroManager>().Setup();
 
-            // Fantasy Medieval cast: Mira (shop), Captain Bren (maps), Archmage Thalor (quests),
-            // Ashen Seer Corvin (rescued), Sir Aldric (dungeon knight).
+            // Fantasy Medieval cast: Mira, Bren, Thalor, Corvin (rescued), Aldric (returned),
+            // Sister Lyra (Silent Ossuary unlocked).
             MedievalNpcLibrary.Create(
                 "MiraOutfitter",
                 MedievalNpcLibrary.Cast.Mira,
@@ -103,7 +103,7 @@ namespace ProjectZx.Core
                 "CaptainBren",
                 MedievalNpcLibrary.Cast.Bren,
                 new Vector3(2.1f, 1.1f),
-                () => hub.OpenMapSelect(),
+                () => hub.OpenBren(),
                 MedievalNpcLibrary.CampScale);
             MedievalNpcLibrary.Create(
                 "ArchmageThalor",
@@ -117,7 +117,7 @@ namespace ProjectZx.Core
                     "AshenSeerCorvin",
                     MedievalNpcLibrary.Cast.Corvin,
                     new Vector3(7.4f, -0.6f),
-                    onInteract: null,
+                    () => hub.OpenCorvinQuestGiver(),
                     MedievalNpcLibrary.QuestScale);
             }
             if (GameSave.DungeonKnightReturnedToCamp)
@@ -128,6 +128,15 @@ namespace ProjectZx.Core
                     new Vector3(7.0f, 6.6f),
                     () => hub.OpenKnightQuestGiver(),
                     MedievalNpcLibrary.KnightScale);
+            }
+            if (GameSave.CryptMapUnlocked)
+            {
+                MedievalNpcLibrary.Create(
+                    "SisterLyra",
+                    MedievalNpcLibrary.Cast.Lyra,
+                    new Vector3(-4.8f, 2.2f),
+                    () => hub.OpenLyraQuestGiver(),
+                    MedievalNpcLibrary.QuestScale);
             }
             // Layer Lab stage frame + trophy composite (readable world prop).
             GameFactory.CreateNpc("AchievementBoard", ArtLibrary.AchievementKeeper, new Vector3(0f, 2.8f), () => hub.OpenAchievements(), 0.55f);

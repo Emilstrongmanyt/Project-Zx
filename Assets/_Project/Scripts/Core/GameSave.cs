@@ -65,6 +65,12 @@ namespace ProjectZx.Core
         const string QuestWardensPathAcceptedKey = "zx_quest_wardens_path_accepted";
         const string QuestWardensPathBossKey = "zx_quest_wardens_path_boss";
         const string QuestWardensPathCompletedKey = "zx_quest_wardens_path_completed";
+        const string QuestLyraAcceptedKey = "zx_quest_lyra_accepted";
+        const string QuestLyraBossKey = "zx_quest_lyra_boss";
+        const string QuestLyraCompletedKey = "zx_quest_lyra_completed";
+        const string QuestBrenAcceptedKey = "zx_quest_bren_accepted";
+        const string QuestBrenMilestoneKey = "zx_quest_bren_milestone";
+        const string QuestBrenCompletedKey = "zx_quest_bren_completed";
         const string QuestCrowAcceptedKey = "zx_quest_crow_accepted";
         const string QuestCrowRescuedKey = "zx_quest_crow_rescued";
         const string QuestCrowCompletedKey = "zx_quest_crow_completed";
@@ -1049,6 +1055,68 @@ namespace ProjectZx.Core
             set
             {
                 PlayerPrefs.SetInt(QuestWardensPathCompletedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Lyra's Vigil — accepted from Sister Lyra after Silent Ossuary unlocks.</summary>
+        public static bool QuestLyraVigilAccepted
+        {
+            get => PlayerPrefs.GetInt(QuestLyraAcceptedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestLyraAcceptedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestLyraVigilBossDefeated
+        {
+            get => PlayerPrefs.GetInt(QuestLyraBossKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestLyraBossKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestLyraVigilCompleted
+        {
+            get => PlayerPrefs.GetInt(QuestLyraCompletedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestLyraCompletedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Bren's Watch — accepted from Captain Bren after Endless Front unlocks.</summary>
+        public static bool QuestBrensWatchAccepted
+        {
+            get => PlayerPrefs.GetInt(QuestBrenAcceptedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestBrenAcceptedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestBrensWatchMilestone
+        {
+            get => PlayerPrefs.GetInt(QuestBrenMilestoneKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestBrenMilestoneKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestBrensWatchCompleted
+        {
+            get => PlayerPrefs.GetInt(QuestBrenCompletedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestBrenCompletedKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
         }

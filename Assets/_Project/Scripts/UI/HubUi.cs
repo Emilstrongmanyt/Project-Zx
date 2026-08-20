@@ -58,11 +58,15 @@ namespace ProjectZx.UI
         Text _questTitleText;
         Text _questBodyText;
         Text _questStatusText;
+        Text _questLogText;
         Button _questAcceptButton;
         Button _questTurnInButton;
+        Button _questNextButton;
+        Button _questMapsButton;
         Text _questAcceptLabel;
         Text _questTurnInLabel;
         QuestId _questPanelFocusId = QuestId.GrandWizardsPeril;
+        QuestId[] _questPanelPool = Array.Empty<QuestId>();
         Text _equipmentStatusText;
         Text _bgmVolumeLabel;
         Text _sfxVolumeLabel;
@@ -479,6 +483,10 @@ namespace ProjectZx.UI
                 return MedievalNpcLibrary.Cast.Aldric;
             if (id == QuestId.GreyWizardsCrow)
                 return MedievalNpcLibrary.Cast.Corvin;
+            if (id == QuestId.LyraVigil)
+                return MedievalNpcLibrary.Cast.Lyra;
+            if (id == QuestId.BrensWatch)
+                return MedievalNpcLibrary.Cast.Bren;
             return MedievalNpcLibrary.Cast.Thalor;
         }
 
@@ -1086,20 +1094,34 @@ namespace ProjectZx.UI
             _questStatusText.alignment = TextAnchor.MiddleLeft;
             _questStatusText.color = new Color(1f, 0.9f, 0.55f);
 
+            _questLogText = CreateText(
+                panel.transform,
+                "",
+                16,
+                TextAnchor.MiddleCenter,
+                new Vector2(140f, 118f),
+                new Vector2(520f, 52f));
+            _questLogText.alignment = TextAnchor.UpperLeft;
+            _questLogText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _questLogText.verticalOverflow = VerticalWrapMode.Overflow;
+            _questLogText.color = new Color(0.75f, 0.82f, 0.9f);
+
             _questBodyText = CreateText(
                 panel.transform,
                 "",
                 22,
                 TextAnchor.MiddleCenter,
-                new Vector2(140f, -10f),
-                new Vector2(520f, 280f));
+                new Vector2(140f, -30f),
+                new Vector2(520f, 240f));
             _questBodyText.alignment = TextAnchor.UpperLeft;
             _questBodyText.horizontalOverflow = HorizontalWrapMode.Wrap;
             _questBodyText.verticalOverflow = VerticalWrapMode.Overflow;
             _questBodyText.color = new Color(0.94f, 0.96f, 0.98f);
 
-            _questAcceptButton = CreateButton(panel.transform, "Accept", new Vector2(40f, -210f), AcceptFocusedQuest);
-            _questTurnInButton = CreateButton(panel.transform, "Turn In", new Vector2(300f, -210f), TurnInFocusedQuest);
+            _questAcceptButton = CreateButton(panel.transform, "Accept", new Vector2(-120f, -210f), AcceptFocusedQuest);
+            _questTurnInButton = CreateButton(panel.transform, "Turn In", new Vector2(80f, -210f), TurnInFocusedQuest);
+            _questNextButton = CreateButton(panel.transform, "Next Task", new Vector2(280f, -210f), CycleQuestFocus);
+            _questMapsButton = CreateButton(panel.transform, "Maps", new Vector2(420f, -210f), OpenMapSelectFromQuest);
             _questAcceptLabel = _questAcceptButton.GetComponentInChildren<Text>();
             _questTurnInLabel = _questTurnInButton.GetComponentInChildren<Text>();
             CreateButton(panel.transform, "Close", new Vector2(170f, -280f), () => panel.SetActive(false));
@@ -1108,25 +1130,64 @@ namespace ProjectZx.UI
             return panel;
         }
 
-        /// <summary>Grand Wizard only — never shows the knight's quest dialogue.</summary>
+        /// <summary>Archmage Thalor — pendant, gate, and crow while still hunting.</summary>
         public void OpenQuestGiver()
         {
-            if (!QuestCatalog.TryGetPrimaryOpenQuest(
-                    QuestCatalog.GrandWizardQuestIds, out var def, out _))
-            {
-                def = QuestCatalog.GrandWizardsPeril;
-            }
-
-            OpenQuestDialogue(def.Id);
+            OpenQuestGiverWithPool(QuestCatalog.GetThalorQuestIds(), QuestCatalog.GrandWizardsPeril.Id);
         }
 
-        /// <summary>Knight1 only — always opens his own quest, never the wizard's.</summary>
+        /// <summary>Ashen Seer Corvin — crow turn-in and aftermath.</summary>
+        public void OpenCorvinQuestGiver()
+        {
+            OpenQuestGiverWithPool(QuestCatalog.CorvinQuestIds, QuestId.GreyWizardsCrow);
+        }
+
+        /// <summary>Sir Aldric — Ironvault greatsword quest.</summary>
         public void OpenKnightQuestGiver()
         {
-            if (!QuestCatalog.TryGetPrimaryOpenQuest(
-                    QuestCatalog.KnightQuestIds, out var def, out _))
+            OpenQuestGiverWithPool(QuestCatalog.KnightQuestIds, QuestId.KnightsBestFriend);
+        }
+
+        /// <summary>Sister Lyra — Silent Ossuary vigil.</summary>
+        public void OpenLyraQuestGiver()
+        {
+            OpenQuestGiverWithPool(QuestCatalog.LyraQuestIds, QuestId.LyraVigil);
+        }
+
+        /// <summary>
+        /// Captain Bren: briefing when Endless Front quest is open; otherwise map select.
+        /// </summary>
+        public void OpenBren()
+        {
+            var progress = QuestCatalog.GetProgress(QuestId.BrensWatch);
+            if (progress == QuestProgress.Available
+                || progress == QuestProgress.Active
+                || progress == QuestProgress.ReadyToTurnIn)
             {
-                def = QuestCatalog.KnightsBestFriend;
+                OpenBrenQuestGiver();
+                return;
+            }
+
+            OpenMapSelect();
+        }
+
+        public void OpenBrenQuestGiver()
+        {
+            OpenQuestGiverWithPool(QuestCatalog.BrenQuestIds, QuestId.BrensWatch);
+        }
+
+        void OpenMapSelectFromQuest()
+        {
+            OpenMapSelect();
+        }
+
+        void OpenQuestGiverWithPool(QuestId[] pool, QuestId fallbackId)
+        {
+            _questPanelPool = pool ?? Array.Empty<QuestId>();
+            if (!QuestCatalog.TryGetPrimaryOpenQuest(pool, out var def, out _))
+            {
+                if (!QuestCatalog.TryGet(fallbackId, out def))
+                    def = QuestCatalog.GrandWizardsPeril;
             }
 
             OpenQuestDialogue(def.Id);
@@ -1138,12 +1199,29 @@ namespace ProjectZx.UI
             RefreshGold();
             CloseAllHubPanels();
             _questPanelFocusId = questId;
+            if (_questPanelPool == null || _questPanelPool.Length == 0)
+                _questPanelPool = QuestCatalog.GetThalorQuestIds();
             RefreshQuestPanel();
             if (_questPanel != null)
             {
                 _questPanel.SetActive(true);
                 var sparkleX = QuestCatalog.UsesQuestPortrait(questId) ? -300f : 0f;
                 SparkleBurst.Play(_questPanel.transform, new Vector2(sparkleX, 40f), 8);
+            }
+        }
+
+        void CycleQuestFocus()
+        {
+            if (_questPanelPool == null || _questPanelPool.Length <= 1) return;
+            var start = Array.IndexOf(_questPanelPool, _questPanelFocusId);
+            if (start < 0) start = 0;
+            for (var step = 1; step <= _questPanelPool.Length; step++)
+            {
+                var next = _questPanelPool[(start + step) % _questPanelPool.Length];
+                if (QuestCatalog.GetProgress(next) == QuestProgress.Locked) continue;
+                _questPanelFocusId = next;
+                RefreshQuestPanel();
+                return;
             }
         }
 
@@ -1171,7 +1249,6 @@ namespace ProjectZx.UI
                 _questPortraitImage.enabled = false;
             }
 
-            // When no portrait, use full dialogue width for body/title.
             var textX = showPortrait ? 140f : -20f;
             var textW = showPortrait ? 520f : 860f;
             if (_questTitleText != null)
@@ -1184,9 +1261,7 @@ namespace ProjectZx.UI
 
             if (_questStatusText != null)
             {
-                var rewardSuffix = def.Id == QuestId.KnightsBestFriend
-                    ? $"{def.GoldReward} Gold + Flame Enchant"
-                    : $"{def.GoldReward} Gold";
+                var rewardSuffix = QuestCatalog.RewardSummary(def);
                 _questStatusText.text = progress switch
                 {
                     QuestProgress.Available => $"Available  ·  Reward: {rewardSuffix}",
@@ -1202,6 +1277,16 @@ namespace ProjectZx.UI
                 statusRect.sizeDelta = new Vector2(textW, 28f);
             }
 
+            if (_questLogText != null)
+            {
+                var log = QuestCatalog.BuildQuestLog(_questPanelPool, def.Id);
+                _questLogText.text = log;
+                _questLogText.gameObject.SetActive(!string.IsNullOrEmpty(log) && _questPanelPool.Length > 1);
+                var logRect = _questLogText.rectTransform;
+                logRect.anchoredPosition = new Vector2(textX, 118f);
+                logRect.sizeDelta = new Vector2(textW, 52f);
+            }
+
             if (_questBodyText != null)
             {
                 _questBodyText.text = progress switch
@@ -1213,12 +1298,18 @@ namespace ProjectZx.UI
                     _ => "Come back when you are ready for a new task."
                 };
                 var bodyRect = _questBodyText.rectTransform;
-                bodyRect.anchoredPosition = new Vector2(textX, -10f);
-                bodyRect.sizeDelta = new Vector2(textW, 280f);
+                var bodyY = _questPanelPool != null && _questPanelPool.Length > 1 ? -40f : -10f;
+                var bodyH = _questPanelPool != null && _questPanelPool.Length > 1 ? 220f : 280f;
+                bodyRect.anchoredPosition = new Vector2(textX, bodyY);
+                bodyRect.sizeDelta = new Vector2(textW, bodyH);
             }
 
             var canAccept = progress == QuestProgress.Available;
             var canTurnIn = progress == QuestProgress.ReadyToTurnIn;
+            var canCycle = _questPanelPool != null && _questPanelPool.Length > 1;
+            var isBrenPool = _questPanelPool != null
+                && _questPanelPool.Length > 0
+                && _questPanelPool[0] == QuestId.BrensWatch;
             if (_questAcceptButton != null)
             {
                 _questAcceptButton.gameObject.SetActive(canAccept);
@@ -1229,6 +1320,18 @@ namespace ProjectZx.UI
             {
                 _questTurnInButton.gameObject.SetActive(canTurnIn);
                 _questTurnInButton.interactable = canTurnIn;
+            }
+
+            if (_questNextButton != null)
+            {
+                _questNextButton.gameObject.SetActive(canCycle);
+                _questNextButton.interactable = canCycle;
+            }
+
+            if (_questMapsButton != null)
+            {
+                _questMapsButton.gameObject.SetActive(isBrenPool);
+                _questMapsButton.interactable = isBrenPool;
             }
 
             if (_questAcceptLabel != null) _questAcceptLabel.text = "Accept";

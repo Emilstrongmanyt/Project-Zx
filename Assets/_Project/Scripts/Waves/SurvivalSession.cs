@@ -597,6 +597,7 @@ namespace ProjectZx.Waves
             if (MapKind != SurvivalMapKind.Unlimited) return;
 
             GameSave.RecordUnlimitedRound(round);
+            QuestCatalog.NotifyUnlimitedRound(round);
 
             var prevUnlimited = GameSave.GetWeaponUnlimitedBest(weaponClass);
             if (GameSave.RecordWeaponUnlimitedRound(weaponClass, round))

@@ -32,8 +32,10 @@ namespace ProjectZx.UI
             new("retreat", "Hint: Retreat anytime to bank gold and return to camp safely."),
             new("equipment", "Hint: Find gear in runs, then equip rings / necklaces / capes at the treasure chest."),
             new("pendant_r10", "Hint: Thalor's pendant drops from the Emberwilds R10 boss — turn it in, then clear R20."),
-            new("corvin", "Hint: After Warded Halls R10, free the dark crow — Ashen Seer Corvin returns to camp."),
+            new("corvin", "Hint: After Warded Halls R10, free the dark crow — then turn in with Corvin at camp."),
             new("aldric", "Hint: Help Sir Aldric leave Ironvault, then recover his greatsword from R40."),
+            new("lyra", "Hint: When Silent Ossuary unlocks, Sister Lyra offers Lyra's Vigil — clear the R50 Minotaur."),
+            new("bren_watch", "Hint: After The Endless Front unlocks, Captain Bren offers Bren's Watch — survive to round 50."),
         };
 
         public static int Count => All.Length;
@@ -58,6 +60,8 @@ namespace ProjectZx.UI
                 "joystick" => !GameSave.HasOpenedSettings,
                 "corvin" => GameSave.InsideMapUnlocked && !GameSave.QuestGreyWizardCompleted,
                 "aldric" => GameSave.DungeonMapUnlocked && !GameSave.QuestKnightsBestFriendCompleted,
+                "lyra" => GameSave.CryptMapUnlocked && !GameSave.QuestLyraVigilCompleted,
+                "bren_watch" => GameSave.UnlimitedMapUnlocked && !GameSave.QuestBrensWatchCompleted,
                 _ => true
             };
         }

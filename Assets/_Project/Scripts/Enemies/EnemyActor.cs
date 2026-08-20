@@ -1529,7 +1529,10 @@ namespace ProjectZx.Enemies
             }
 
             if (IsRoundFiftyBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Crypt)
+            {
+                QuestCatalog.NotifyCryptRoundFiftyCleared();
                 ArenaVictoryGate.Spawn(pos + Vector2.up * 0.5f);
+            }
 
             Destroy(gameObject);
         }

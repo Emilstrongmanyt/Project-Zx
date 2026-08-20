@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace ProjectZx.Core
 {
@@ -9,7 +10,11 @@ namespace ProjectZx.Core
         GreyWizardsCrow = 2,
         KnightsBestFriend = 3,
         /// <summary>Thalor follow-up: Emberwilds R20 opens the path to Warded Halls.</summary>
-        WardensPath = 4
+        WardensPath = 4,
+        /// <summary>Sister Lyra: silence the Silent Ossuary R50 Minotaur.</summary>
+        LyraVigil = 5,
+        /// <summary>Captain Bren: hold The Endless Front through round 50.</summary>
+        BrensWatch = 6
     }
 
     public enum QuestProgress
@@ -63,6 +68,7 @@ namespace ProjectZx.Core
     public static class QuestCatalog
     {
         public const string TwinLightningPendantName = "Twin Lightning Pendant";
+        public const string KnightsGreatswordName = "Knight's Greatsword";
 
         public static readonly QuestDefinition GrandWizardsPeril = new(
             QuestId.GrandWizardsPeril,
@@ -91,8 +97,8 @@ namespace ProjectZx.Core
             "Corvin's Crow",
             "Ashen Seer Corvin flew as a crow to spy on the foe in the Warded Halls — and never returned. Enter Warded Halls Survival; after round 10 find the dark crow and free him. He knows the path home.",
             "Warded Halls after round 10: tap the dark crow when you are close to break the glamour.",
-            "Corvin is flesh again and resting by camp. Gold for your courage — the Ashen Seer will not forget.",
-            "Corvin watches the treeline. Your rescue may yet tip the war.",
+            "You broke the glamour. I am Corvin — flesh again, and in your debt. Take this gold. The Ashen Seer will not forget.",
+            "I watch the treeline for what the Second War left unfinished. Call on me when the dead stir.",
             "In progress  ·  Free Corvin the crow in Warded Halls (after R10)",
             1000,
             () => GameSave.InsideMapUnlocked);
@@ -100,22 +106,44 @@ namespace ProjectZx.Core
         public static readonly QuestDefinition KnightsBestFriend = new(
             QuestId.KnightsBestFriend,
             "Aldric's Greatsword",
-            "I am Sir Aldric. I fled Ironvault without my greatsword — a knight's true companion. Recover it from the Ironvault Survival round 40 boss and I will share Flame Enchant, plus 1000 gold.",
-            "The Ironvault R40 boss still bears my greatsword. Cut it down and bring the blade to me north of camp.",
-            "Steel and honor restored! Take the gold — and Flame Enchant. May your weapons burn true.",
-            "Aldric stands ready. Fight well, adventurer.",
+            "I am Sir Aldric of the broken oath. Ironvault was our holdfast in the Second War — I fled when the vault gates failed, and left my greatsword in the beast's grip. Recover it from the Ironvault round 40 boss. Restore my honor, and I will share Flame Enchant — plus 1000 gold.",
+            "The Ironvault R40 boss still bears my greatsword — a knight's true companion. Cut it down and bring the blade to me north of camp.",
+            "Steel and honor restored! Take the gold — and Flame Enchant. May your weapons burn true against whatever wakes next.",
+            "Aldric stands ready by the fire. Ironvault remembers. Fight well, adventurer.",
             "In progress  ·  Recover Aldric's greatsword from Ironvault R40 boss",
             1000,
             () => GameSave.DungeonKnightReturnedToCamp);
 
-        public const string KnightsGreatswordName = "Knight's Greatsword";
+        public static readonly QuestDefinition LyraVigil = new(
+            QuestId.LyraVigil,
+            "Lyra's Vigil",
+            "I am Sister Lyra, keeper of quiet graves. The Silent Ossuary was sealed after the Second War — now something pounds the stone from within. Enter Ossuary Survival and defeat the round 50 Minotaur. Silence that wound, and I will reward you — the Endless Front still waits beyond.",
+            "The Silent Ossuary R50 Minotaur still bellows under the stone. End its vigil, then return to me at camp.",
+            "The ossuary sleeps again. Take this gold. When you are ready, Captain Bren can send you to The Endless Front — the war's last open wound.",
+            "Lyra tends the ashes. The dead are quieter… for now.",
+            "In progress  ·  Defeat Silent Ossuary R50 Minotaur",
+            1200,
+            () => GameSave.CryptMapUnlocked);
+
+        public static readonly QuestDefinition BrensWatch = new(
+            QuestId.BrensWatch,
+            "Bren's Watch",
+            "Captain Bren reporting. The Endless Front is where the Second War never ended — shifting biomes, no mercy. Hold the line through round 50 and return. Do that, and this campfire stays lit a while longer. Gold for every soul who stands with us.",
+            "The Endless Front — survive to round 50, then report back to me at camp. Use the campfire if you need travel while we talk.",
+            "Fifty rounds on the Front… and you still stand. Take the gold, soldier. The war is not over — but tonight, the fire is yours.",
+            "Bren keeps the maps. The Endless Front never sleeps — neither do we.",
+            "In progress  ·  Reach Endless Front round 50",
+            1500,
+            () => GameSave.UnlimitedMapUnlocked);
 
         static readonly QuestDefinition[] AllQuests =
         {
             GrandWizardsPeril,
             WardensPath,
             GreyWizardsCrow,
-            KnightsBestFriend
+            KnightsBestFriend,
+            LyraVigil,
+            BrensWatch
         };
 
         public static IReadOnlyList<QuestDefinition> All => AllQuests;
@@ -150,7 +178,6 @@ namespace ProjectZx.Core
                 case QuestId.WardensPath:
                     if (GameSave.QuestWardensPathCompleted) return QuestProgress.Completed;
                     if (!GameSave.QuestWardensPathAccepted) return QuestProgress.Available;
-                    // Veterans who already cleared R20 can turn in immediately after accept.
                     return GameSave.QuestWardensPathBossDefeated || GameSave.InsideMapUnlocked
                         ? QuestProgress.ReadyToTurnIn
                         : QuestProgress.Active;
@@ -169,31 +196,74 @@ namespace ProjectZx.Core
                         ? QuestProgress.ReadyToTurnIn
                         : QuestProgress.Active;
 
+                case QuestId.LyraVigil:
+                    if (GameSave.QuestLyraVigilCompleted) return QuestProgress.Completed;
+                    if (!GameSave.QuestLyraVigilAccepted) return QuestProgress.Available;
+                    return GameSave.QuestLyraVigilBossDefeated || GameSave.CryptSurvivalCleared
+                        ? QuestProgress.ReadyToTurnIn
+                        : QuestProgress.Active;
+
+                case QuestId.BrensWatch:
+                    if (GameSave.QuestBrensWatchCompleted) return QuestProgress.Completed;
+                    if (!GameSave.QuestBrensWatchAccepted) return QuestProgress.Available;
+                    return GameSave.QuestBrensWatchMilestone
+                        || GameSave.UnlimitedHighestRoundReached >= 50
+                        ? QuestProgress.ReadyToTurnIn
+                        : QuestProgress.Active;
+
                 default:
                     return QuestProgress.Locked;
             }
         }
 
-        /// <summary>Quests offered by Archmage Thalor at camp.</summary>
-        public static readonly QuestId[] GrandWizardQuestIds =
+        /// <summary>
+        /// Thalor's camp pool: pendant + gate always; crow only while still Available/Active
+        /// (turn-in and completed crow dialogue belong to Corvin).
+        /// </summary>
+        public static QuestId[] GetThalorQuestIds()
         {
-            QuestId.GrandWizardsPeril,
-            QuestId.WardensPath,
+            var crow = GetProgress(QuestId.GreyWizardsCrow);
+            if (crow == QuestProgress.Available || crow == QuestProgress.Active)
+            {
+                return new[]
+                {
+                    QuestId.GrandWizardsPeril,
+                    QuestId.WardensPath,
+                    QuestId.GreyWizardsCrow
+                };
+            }
+
+            return new[]
+            {
+                QuestId.GrandWizardsPeril,
+                QuestId.WardensPath
+            };
+        }
+
+        /// <summary>Ashen Seer Corvin — crow turn-in and aftermath.</summary>
+        public static readonly QuestId[] CorvinQuestIds =
+        {
             QuestId.GreyWizardsCrow
         };
 
-        /// <summary>Quests offered only by Sir Aldric at camp.</summary>
         public static readonly QuestId[] KnightQuestIds =
         {
             QuestId.KnightsBestFriend
         };
 
-        /// <summary>
-        /// Prefer turn-in, then active, then available so a ready crow reward is not
-        /// hidden behind another in-progress quest. Scoped to a giver's quest list.
-        /// </summary>
+        public static readonly QuestId[] LyraQuestIds =
+        {
+            QuestId.LyraVigil
+        };
+
+        public static readonly QuestId[] BrenQuestIds =
+        {
+            QuestId.BrensWatch
+        };
+
+        /// <summary>Legacy helper — Thalor pool.</summary>
         public static bool TryGetPrimaryOpenQuest(out QuestDefinition def, out QuestProgress progress)
-            => TryGetPrimaryOpenQuest(GrandWizardQuestIds, out def, out progress);
+            => TryGetPrimaryOpenQuest(GetThalorQuestIds(), out def, out progress);
 
         public static bool TryGetPrimaryOpenQuest(
             QuestId[] pool, out QuestDefinition def, out QuestProgress progress)
@@ -254,6 +324,42 @@ namespace ProjectZx.Core
             return false;
         }
 
+        /// <summary>Compact multi-quest status list for a giver's dialogue panel.</summary>
+        public static string BuildQuestLog(QuestId[] pool, QuestId focusId)
+        {
+            if (pool == null || pool.Length == 0) return string.Empty;
+            var sb = new StringBuilder();
+            var first = true;
+            for (var i = 0; i < pool.Length; i++)
+            {
+                if (!TryGet(pool[i], out var def)) continue;
+                var progress = GetProgress(def.Id);
+                if (progress == QuestProgress.Locked) continue;
+                if (!first) sb.Append('\n');
+                first = false;
+                var mark = def.Id == focusId ? ">" : "-";
+                sb.Append(mark).Append(' ').Append(def.Title).Append(" — ").Append(ProgressLabel(progress));
+            }
+
+            return sb.ToString();
+        }
+
+        public static string ProgressLabel(QuestProgress progress) => progress switch
+        {
+            QuestProgress.Available => "Available",
+            QuestProgress.Active => "In progress",
+            QuestProgress.ReadyToTurnIn => "Ready to turn in",
+            QuestProgress.Completed => "Completed",
+            _ => "Locked"
+        };
+
+        public static string RewardSummary(QuestDefinition def)
+        {
+            if (def.Id == QuestId.KnightsBestFriend)
+                return $"{def.GoldReward} Gold + Flame Enchant";
+            return $"{def.GoldReward} Gold";
+        }
+
         public static bool TryAccept(QuestId id)
         {
             if (GetProgress(id) != QuestProgress.Available) return false;
@@ -270,6 +376,12 @@ namespace ProjectZx.Core
                     return true;
                 case QuestId.KnightsBestFriend:
                     GameSave.QuestKnightsBestFriendAccepted = true;
+                    return true;
+                case QuestId.LyraVigil:
+                    GameSave.QuestLyraVigilAccepted = true;
+                    return true;
+                case QuestId.BrensWatch:
+                    GameSave.QuestBrensWatchAccepted = true;
                     return true;
                 default:
                     return false;
@@ -288,9 +400,7 @@ namespace ProjectZx.Core
                     if (!GameSave.HasTwinLightningPendant) return false;
                     GameSave.HasTwinLightningPendant = false;
                     GameSave.QuestGrandWizardsPerilCompleted = true;
-                    goldAwarded = def.GoldReward;
-                    GameSave.Gold += goldAwarded;
-                    GameSave.LifetimeGoldEarned += goldAwarded;
+                    AwardGold(def.GoldReward, out goldAwarded);
                     return true;
 
                 case QuestId.WardensPath:
@@ -298,17 +408,13 @@ namespace ProjectZx.Core
                         return false;
                     GameSave.QuestWardensPathBossDefeated = true;
                     GameSave.QuestWardensPathCompleted = true;
-                    goldAwarded = def.GoldReward;
-                    GameSave.Gold += goldAwarded;
-                    GameSave.LifetimeGoldEarned += goldAwarded;
+                    AwardGold(def.GoldReward, out goldAwarded);
                     return true;
 
                 case QuestId.GreyWizardsCrow:
                     if (!GameSave.QuestGreyWizardRescued) return false;
                     GameSave.QuestGreyWizardCompleted = true;
-                    goldAwarded = def.GoldReward;
-                    GameSave.Gold += goldAwarded;
-                    GameSave.LifetimeGoldEarned += goldAwarded;
+                    AwardGold(def.GoldReward, out goldAwarded);
                     return true;
 
                 case QuestId.KnightsBestFriend:
@@ -316,9 +422,23 @@ namespace ProjectZx.Core
                     GameSave.HasKnightsGreatsword = false;
                     GameSave.QuestKnightsBestFriendCompleted = true;
                     GameSave.FlameEnchantUnlocked = true;
-                    goldAwarded = def.GoldReward;
-                    GameSave.Gold += goldAwarded;
-                    GameSave.LifetimeGoldEarned += goldAwarded;
+                    AwardGold(def.GoldReward, out goldAwarded);
+                    return true;
+
+                case QuestId.LyraVigil:
+                    if (!GameSave.QuestLyraVigilBossDefeated && !GameSave.CryptSurvivalCleared)
+                        return false;
+                    GameSave.QuestLyraVigilBossDefeated = true;
+                    GameSave.QuestLyraVigilCompleted = true;
+                    AwardGold(def.GoldReward, out goldAwarded);
+                    return true;
+
+                case QuestId.BrensWatch:
+                    if (!GameSave.QuestBrensWatchMilestone && GameSave.UnlimitedHighestRoundReached < 50)
+                        return false;
+                    GameSave.QuestBrensWatchMilestone = true;
+                    GameSave.QuestBrensWatchCompleted = true;
+                    AwardGold(def.GoldReward, out goldAwarded);
                     return true;
 
                 default:
@@ -326,7 +446,13 @@ namespace ProjectZx.Core
             }
         }
 
-        /// <summary>Emberwilds R10 boss drops the pendant while the quest is active.</summary>
+        static void AwardGold(int amount, out int goldAwarded)
+        {
+            goldAwarded = amount;
+            GameSave.Gold += amount;
+            GameSave.LifetimeGoldEarned += amount;
+        }
+
         public static bool ShouldDropTwinLightningPendant(bool isOutsideRoundTenBoss)
         {
             if (!isOutsideRoundTenBoss) return false;
@@ -334,13 +460,24 @@ namespace ProjectZx.Core
             return !GameSave.HasTwinLightningPendant;
         }
 
-        /// <summary>Mark Emberwilds R20 clear for The Warded Path (door unlock remains separate).</summary>
         public static void NotifyOutsideRoundTwentyCleared()
         {
             GameSave.QuestWardensPathBossDefeated = true;
         }
 
-        /// <summary>Warded Halls crow after R10 while the rescue quest is active.</summary>
+        public static void NotifyCryptRoundFiftyCleared()
+        {
+            GameSave.QuestLyraVigilBossDefeated = true;
+        }
+
+        /// <summary>Call when Endless Front depth is recorded.</summary>
+        public static void NotifyUnlimitedRound(int round)
+        {
+            if (round < 50) return;
+            if (GetProgress(QuestId.BrensWatch) != QuestProgress.Active) return;
+            GameSave.QuestBrensWatchMilestone = true;
+        }
+
         public static bool ShouldSpawnDarkBird(SurvivalMapKind mapKind, int round)
         {
             if (mapKind != SurvivalMapKind.Inside) return false;
@@ -349,7 +486,6 @@ namespace ProjectZx.Core
             return !GameSave.QuestGreyWizardRescued;
         }
 
-        /// <summary>Ironvault R40 boss drops the greatsword while the knight quest is active.</summary>
         public static bool ShouldDropKnightsGreatsword(bool isDungeonRoundFortyBoss)
         {
             if (!isDungeonRoundFortyBoss) return false;
@@ -357,13 +493,8 @@ namespace ProjectZx.Core
             return !GameSave.HasKnightsGreatsword;
         }
 
-        /// <summary>All quest givers show a Fantasy Medieval portrait in the dialogue frame.</summary>
         public static bool UsesQuestPortrait(QuestId id) => true;
 
-        /// <summary>
-        /// Compact in-run / camp objective line for the HUD tracker.
-        /// Prefers ready-to-turn-in, then active quests across all givers.
-        /// </summary>
         public static string BuildHudObjectiveLine()
         {
             if (TryFindHudQuest(QuestProgress.ReadyToTurnIn, out var readyDef, out _))

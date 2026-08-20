@@ -6,7 +6,6 @@ namespace ProjectZx.World
 {
     /// <summary>
     /// Fantasy Medieval Character Pack idle frames shipped under Resources/MedievalNpc.
-    /// Cast: Mira, Bren, Thalor, Corvin, Aldric — more heroes available for later expansions.
     /// </summary>
     public static class MedievalNpcLibrary
     {
@@ -15,13 +14,14 @@ namespace ProjectZx.World
         public const string ThalorFolder = "MedievalNpc/Thalor";
         public const string CorvinFolder = "MedievalNpc/Corvin";
         public const string AldricFolder = "MedievalNpc/Aldric";
+        public const string LyraFolder = "MedievalNpc/Lyra";
 
         public const float CampScale = 0.58f;
         public const float QuestScale = 0.68f;
         public const float KnightScale = 0.78f;
         public const float IdleFps = 8f;
 
-        static readonly Sprite[][] Cache = new Sprite[5][];
+        static readonly Sprite[][] Cache = new Sprite[6][];
 
         public enum Cast
         {
@@ -29,7 +29,8 @@ namespace ProjectZx.World
             Bren = 1,
             Thalor = 2,
             Corvin = 3,
-            Aldric = 4
+            Aldric = 4,
+            Lyra = 5
         }
 
         public static string FolderFor(Cast cast) => cast switch
@@ -39,6 +40,7 @@ namespace ProjectZx.World
             Cast.Thalor => ThalorFolder,
             Cast.Corvin => CorvinFolder,
             Cast.Aldric => AldricFolder,
+            Cast.Lyra => LyraFolder,
             _ => MiraFolder
         };
 

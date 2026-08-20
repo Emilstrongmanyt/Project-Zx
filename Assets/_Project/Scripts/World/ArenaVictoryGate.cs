@@ -41,7 +41,7 @@ namespace ProjectZx.World
                 session.BeginStageClearExit(
                     nextMap: null,
                     title: "Silent Ossuary Conquered!",
-                    unlockSummary: "The Endless Front unlocked at camp!");
+                    unlockSummary: "The Endless Front unlocked at camp!\nReturn to Sister Lyra to finish Lyra's Vigil.");
             }
             else
             {
