@@ -154,9 +154,12 @@ namespace ProjectZx.GanzSe
             character.transform.localPosition = Vector3.zero;
             character.transform.localRotation = Quaternion.identity;
             character.transform.localScale = Vector3.one;
-            SetLayerRecursive(character, _layer);
             StripDemoComponents(character);
+            // Disable empty Humanoid Animator immediately so it cannot reset bones mid-bake.
+            GanzSeIdlePose.Apply(character);
+            SetLayerRecursive(character, _layer);
             GanzSeModularOutfit.Apply(character, role);
+            // Re-assert mesh visibility after outfit toggles (heads must stay enabled).
             GanzSeIdlePose.Apply(character);
 
             var rt = new RenderTexture(RtSize, RtSize, 24, RenderTextureFormat.ARGB32)
@@ -169,14 +172,14 @@ namespace ProjectZx.GanzSe
 
             var camGo = new GameObject("StageCamera");
             camGo.transform.SetParent(root.transform, false);
-            // Frame standing idle (arms down) with head fully in view.
-            camGo.transform.localPosition = new Vector3(0f, 1.15f, 2.45f);
-            camGo.transform.localRotation = Quaternion.Euler(4f, 180f, 0f);
+            // Pull back so helmet/hood is never cropped from the bake.
+            camGo.transform.localPosition = new Vector3(0f, 1.05f, 2.8f);
+            camGo.transform.localRotation = Quaternion.Euler(5f, 180f, 0f);
             var cam = camGo.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.1f, 0.12f, 0.16f, 0f);
             cam.orthographic = false;
-            cam.fieldOfView = 28f;
+            cam.fieldOfView = 32f;
             cam.nearClipPlane = 0.05f;
             cam.farClipPlane = 20f;
             cam.cullingMask = 1 << _layer;

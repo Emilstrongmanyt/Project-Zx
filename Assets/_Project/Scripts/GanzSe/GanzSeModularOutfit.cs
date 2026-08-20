@@ -3,9 +3,8 @@ using UnityEngine;
 namespace ProjectZx.GanzSe
 {
     /// <summary>
-    /// Assembles GanzSe modular parts the same way the pack demo does:
-    /// exactly one mesh per armor/face category, and a head piece always equipped.
-    /// (Face-only mode without HEADS reads as a headless neck stump on this pack.)
+    /// Assembles GanzSe modular parts like the pack demo:
+    /// one mesh per category, head armor always on, face details off under helmet/hood.
     /// </summary>
     public static class GanzSeModularOutfit
     {
@@ -21,27 +20,26 @@ namespace ProjectZx.GanzSe
                 return;
             }
 
-            // Pack prefab ships with every variant active — clear that first.
-            ClearCategory(armor.Find("HEADS"));
-            ClearCategory(armor.Find("CHESTS"));
-            ClearCategory(armor.Find("ARMS"));
-            ClearCategory(armor.Find("LEGS"));
-            ClearCategory(armor.Find("FEET"));
-            ClearCategory(armor.Find("BELTS"));
+            // Prefab ships with every variant enabled — clear categories first.
+            ClearCategory(FindChild(armor, "HEADS"));
+            ClearCategory(FindChild(armor, "CHESTS"));
+            ClearCategory(FindChild(armor, "ARMS"));
+            ClearCategory(FindChild(armor, "LEGS"));
+            ClearCategory(FindChild(armor, "FEET"));
+            ClearCategory(FindChild(armor, "BELTS"));
             if (face != null)
             {
-                ClearCategory(face.Find("HAIRS"));
-                ClearCategory(face.Find("FACE HAIRS"));
-                ClearCategory(face.Find("EYEBROWS"));
-                ClearCategory(face.Find("EYES"));
-                ClearCategory(face.Find("NOSES"));
-                ClearCategory(face.Find("EARS"));
+                ClearCategory(FindChild(face, "HAIRS"));
+                ClearCategory(FindChild(face, "FACE HAIRS"));
+                ClearCategory(FindChild(face, "EYEBROWS"));
+                ClearCategory(FindChild(face, "EYES"));
+                ClearCategory(FindChild(face, "NOSES"));
+                ClearCategory(FindChild(face, "EARS"));
             }
 
             switch (role)
             {
                 case GanzSeNpcRole.ShopWizard:
-                    // Soft mage set + matching hood (demo-style: helmet/hood on, face off).
                     ApplyHelmetSet(armor, face,
                         head: "Head Armor Type 4 Color 2",
                         chest: "Chest Armor Type 4 Color 2",
@@ -93,9 +91,6 @@ namespace ProjectZx.GanzSe
             }
         }
 
-        /// <summary>
-        /// Matches ModularHeroController with showHelmet=true: HEADS on, FACE DETAILS off.
-        /// </summary>
         static void ApplyHelmetSet(
             Transform armor,
             Transform face,
@@ -106,21 +101,41 @@ namespace ProjectZx.GanzSe
             string feet,
             string belt)
         {
-            var heads = armor.Find("HEADS");
+            var heads = FindChild(armor, "HEADS");
             if (heads != null)
             {
                 heads.gameObject.SetActive(true);
                 ActivateExclusive(heads, head);
             }
+            else
+            {
+                Debug.LogWarning("[GanzSe] HEADS category missing — NPC will look headless.");
+            }
 
-            ActivateExclusive(armor.Find("CHESTS"), chest);
-            ActivateExclusive(armor.Find("ARMS"), arms);
-            ActivateExclusive(armor.Find("LEGS"), legs);
-            ActivateExclusive(armor.Find("FEET"), feet);
-            ActivateExclusive(armor.Find("BELTS"), belt);
+            ActivateExclusive(FindChild(armor, "CHESTS"), chest);
+            ActivateExclusive(FindChild(armor, "ARMS"), arms);
+            ActivateExclusive(FindChild(armor, "LEGS"), legs);
+            ActivateExclusive(FindChild(armor, "FEET"), feet);
+            ActivateExclusive(FindChild(armor, "BELTS"), belt);
 
+            // Demo default: helmet/hood on ⇒ face detail folder off.
             if (face != null)
                 face.gameObject.SetActive(false);
+
+            // Make sure the chosen head renderer is actually on.
+            if (heads != null)
+            {
+                for (var i = 0; i < heads.childCount; i++)
+                {
+                    var child = heads.GetChild(i);
+                    if (!child.gameObject.activeSelf) continue;
+                    foreach (var smr in child.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                    {
+                        smr.enabled = true;
+                        smr.updateWhenOffscreen = true;
+                    }
+                }
+            }
         }
 
         static void ClearCategory(Transform category)
