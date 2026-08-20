@@ -6,7 +6,7 @@ using UnityEngine;
 namespace ProjectZx.World
 {
     /// <summary>
-    /// Knight stranded in Dungeon Survival. Tap while near to open a door home;
+    /// Sir Aldric stranded in Ironvault. Tap while near to open a door home;
     /// he walks through and later appears at camp for his quest.
     /// </summary>
     public class DungeonKnightEncounter : MonoBehaviour

@@ -149,7 +149,7 @@ namespace ProjectZx.UI
         {
             "Welcome to Project Zx!\n\nThis is your camp. Upgrades and gold you bank from runs stay here forever.",
             "Talk to Mira the Outfitter (left of the campfire) for permanent upgrades.\nWhirlwind is a strong early pick.",
-            "Talk to Captain Bren (right of the campfire) to start Outside Survival.\nSurvive waves, level up, and bank gold on death or retreat.",
+            "Talk to Captain Bren (right of the campfire) to start Emberwilds Survival.\nSurvive waves, level up, and bank gold on death or retreat.",
             "Talk to Archmage Thalor for quests.\nQuests teach the map unlock chain and pay gold rewards.",
             "Tip: Use Retreat anytime to bank gold safely.\nUnstuck (once per run) returns you to the map spawn.\n\nGood luck, hero!"
         };
@@ -809,11 +809,11 @@ namespace ProjectZx.UI
             var panel = CreateDialogPanel(parent, panelName, Vector2.zero, HubMenuPanelSize, ArtLibrary.ChallengeBoardUi);
             CreateText(panel.transform, title, 40, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(700, 56));
             CreateText(panel.transform, subtitle, 22, TextAnchor.MiddleCenter, new Vector2(0, 175), new Vector2(760, 72));
-            CreateButton(panel.transform, "Outside Survival", new Vector2(0, 80), () => EnterSurvival(SurvivalMapKind.Outside), large: true);
-            CreateButton(panel.transform, "Inside Survival", new Vector2(0, 15), () => EnterSurvival(SurvivalMapKind.Inside), large: true);
-            CreateButton(panel.transform, "Dungeon Survival", new Vector2(0, -50), () => EnterSurvival(SurvivalMapKind.Dungeon), large: true);
-            CreateButton(panel.transform, "Crypt Survival", new Vector2(0, -115), () => EnterSurvival(SurvivalMapKind.Crypt), large: true);
-            CreateButton(panel.transform, "Unlimited Survival", new Vector2(0, -180), () => EnterSurvival(SurvivalMapKind.Unlimited), large: true);
+            CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Outside), new Vector2(0, 80), () => EnterSurvival(SurvivalMapKind.Outside), large: true);
+            CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Inside), new Vector2(0, 15), () => EnterSurvival(SurvivalMapKind.Inside), large: true);
+            CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Dungeon), new Vector2(0, -50), () => EnterSurvival(SurvivalMapKind.Dungeon), large: true);
+            CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Crypt), new Vector2(0, -115), () => EnterSurvival(SurvivalMapKind.Crypt), large: true);
+            CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Unlimited), new Vector2(0, -180), () => EnterSurvival(SurvivalMapKind.Unlimited), large: true);
             CreateButton(panel.transform, "Close", new Vector2(0, -255), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
@@ -1299,7 +1299,7 @@ namespace ProjectZx.UI
             {
                 _rollZySkinStatusText.text = unlocked
                     ? (usingUpgraded ? "Using upgraded RollZy (Dungeon clear)." : "Using classic RollZy.")
-                    : "Upgraded skin unlocks after clearing Dungeon Survival.";
+                    : "Upgraded skin unlocks after clearing Ironvault Survival.";
             }
 
             RefreshSkinButton(_rollZyClassicSkinButton, selected: !usingUpgraded, interactable: true, "Classic");
@@ -1558,10 +1558,10 @@ namespace ProjectZx.UI
                 picker.StatusText.text = GetClassStatusText(selected);
 
             RefreshClassButton(picker.BatterButton, PlayerClass.Batter, true, "Batter");
-            RefreshClassButton(picker.SpearmanButton, PlayerClass.Spearman, GameSave.SpearmanUnlocked, "Spearman — Outside R20 boss");
-            RefreshClassButton(picker.BowmanButton, PlayerClass.Bowman, GameSave.BowmanUnlocked, "Bowman — Inside R30 clear");
-            RefreshClassButton(picker.SamuraiButton, PlayerClass.Samurai, GameSave.SamuraiUnlocked, "Samurai — Dungeon R40 boss");
-            RefreshClassButton(picker.MagicianButton, PlayerClass.Magician, GameSave.MagicianUnlocked, "Magician — Unlimited R80");
+            RefreshClassButton(picker.SpearmanButton, PlayerClass.Spearman, GameSave.SpearmanUnlocked, "Spearman — Emberwilds R20 boss");
+            RefreshClassButton(picker.BowmanButton, PlayerClass.Bowman, GameSave.BowmanUnlocked, "Bowman — Warded Halls R30 clear");
+            RefreshClassButton(picker.SamuraiButton, PlayerClass.Samurai, GameSave.SamuraiUnlocked, "Samurai — Ironvault R40 boss");
+            RefreshClassButton(picker.MagicianButton, PlayerClass.Magician, GameSave.MagicianUnlocked, "Magician — Endless Front R80");
         }
 
         static void RefreshClassButton(Button button, PlayerClass playerClass, bool unlocked, string lockedLabel)
@@ -1807,15 +1807,15 @@ namespace ProjectZx.UI
                     return
                         "Reduces all damage taken (permanent tiers).\n\n" +
                         "I: −15% damage taken\n" +
-                        "II: −30% damage taken (requires Inside clear)\n" +
-                        "III: −45% damage taken (requires Dungeon clear)\n\n" +
+                        "II: −30% damage taken (requires Warded Halls clear)\n" +
+                        "III: −45% damage taken (requires Ironvault clear)\n\n" +
                         $"Current: T{level} ({dr}% DR)\n" +
                         (level >= 3
                             ? "Status: MAXED"
                             : level == 1 && !GameSave.InsideSurvivalCleared
-                                ? "Next: Locked — clear Inside Survival"
+                                ? "Next: Locked — clear Warded Halls Survival"
                                 : level == 2 && !GameSave.DungeonSurvivalCleared
-                                    ? "Next: Locked — clear Dungeon Survival"
+                                    ? "Next: Locked — clear Ironvault Survival"
                                     : $"Next rank: {ToRoman(level + 1)}  ·  Cost: {ShopCosts.NextThickHideCost}g");
                 }
 
@@ -1825,12 +1825,12 @@ namespace ProjectZx.UI
                     return
                         "Auto-heal when you drop to 20% HP or below.\n\n" +
                         "I: heal 30% Max HP once per run\n" +
-                        "II: two uses per run (requires Inside clear)\n\n" +
+                        "II: two uses per run (requires Warded Halls clear)\n\n" +
                         $"Current charges/run: {GameSave.SecondWindMaxCharges}\n" +
                         (level >= 2
                             ? "Status: MAXED"
                             : level == 1 && !GameSave.InsideSurvivalCleared
-                                ? "Next: Locked — clear Inside Survival"
+                                ? "Next: Locked — clear Warded Halls Survival"
                                 : $"Next rank: {ToRoman(level + 1)}  ·  Cost: {ShopCosts.NextSecondWindCost}g");
                 }
 
@@ -2297,8 +2297,8 @@ namespace ProjectZx.UI
                 $"Second Wind: {GameSave.SecondWindMaxCharges} charge(s)/run\n" +
                 $"Campfire Blessing: {(GameSave.CampfireBlessingUnlocked ? "Owned" : "Locked")}\n" +
                 $"Achievement XP: x{Achievements.AchievementXpMultiplier:0.##}\n" +
-                $"Crypt Map: {(GameSave.CryptMapUnlocked ? "Unlocked" : "Locked")}\n" +
-                $"Unlimited Map: {(GameSave.UnlimitedMapUnlocked ? "Unlocked" : "Clear Crypt R50")}\n" +
+                $"Silent Ossuary: {(GameSave.CryptMapUnlocked ? "Unlocked" : "Locked")}\n" +
+                $"Endless Front: {(GameSave.UnlimitedMapUnlocked ? "Unlocked" : "Clear Silent Ossuary R50")}\n" +
                 $"Ring: {EquipName(GameSave.EquippedRing)}\n" +
                 $"Necklace: {EquipName(GameSave.EquippedNecklace)}\n" +
                 $"Cape: {EquipName(GameSave.EquippedCape)}\n" +
@@ -2307,17 +2307,17 @@ namespace ProjectZx.UI
                 $"Spearman: {(GameSave.SpearmanUnlocked ? "Unlocked" : "Locked")}\n" +
                 $"Bowman: {(GameSave.BowmanUnlocked ? "Unlocked" : "Locked")}\n" +
                 $"Samurai: {(GameSave.SamuraiUnlocked ? "Unlocked" : "Locked")}\n" +
-                $"Magician: {(GameSave.MagicianUnlocked ? "Unlocked" : "Clear Unlimited R80")}\n" +
-                $"RowZi: {(GameSave.RowZiUnlocked ? "Unlocked" : "Meet at R20 door")}\n\n" +
+                $"Magician: {(GameSave.MagicianUnlocked ? "Unlocked" : "Clear Endless Front R80")}\n" +
+                $"RowZi: {(GameSave.RowZiUnlocked ? "Unlocked" : "Meet at Emberwilds R20 door")}\n\n" +
                 "LIFETIME RECORDS\n" +
                 $"Zombie Kills: {GameSave.LifetimeZombieKills}\n" +
                 $"Boss Kills: {GameSave.LifetimeBossKills}\n" +
                 $"Deaths: {GameSave.LifetimeDeaths}\n" +
                 $"Gold Earned: {GameSave.LifetimeGoldEarned}\n" +
                 $"Highest Round: {GameSave.HighestRoundReached}\n" +
-                $"Dungeon Best: {GameSave.DungeonHighestRoundReached}\n" +
-                $"Crypt Best: {GameSave.CryptHighestRoundReached}\n" +
-                $"Unlimited Best: {GameSave.UnlimitedHighestRoundReached}\n" +
+                $"Ironvault Best: {GameSave.DungeonHighestRoundReached}\n" +
+                $"Ossuary Best: {GameSave.CryptHighestRoundReached}\n" +
+                $"Endless Front Best: {GameSave.UnlimitedHighestRoundReached}\n" +
                 $"Weapons ({className}): {WeaponCatalog.GetUnlockProgressSummary(selected)}";
         }
 
@@ -2354,55 +2354,63 @@ namespace ProjectZx.UI
                 if (label == null) continue;
                 var text = label.text ?? string.Empty;
 
-                // Match by map name substring so locked labels still refresh next open.
-                if (text.Contains("Outside Survival") && !text.Contains("Inside"))
+                // Match by lore name (or legacy labels) so locked hints still refresh next open.
+                if (text.Contains("Emberwilds") || (text.Contains("Outside Survival") && !text.Contains("Inside")))
                 {
                     button.interactable = true;
                     label.text = FormatMapButtonLabel(
-                        "Outside Survival",
+                        SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Outside),
                         unlocked: true,
                         lockedHint: null,
                         recommended == SurvivalMapKind.Outside);
                 }
-                else if (text.Contains("Inside Survival") || text.Contains("Outside R20") || text.Contains("Inside —"))
+                else if (text.Contains("Warded Halls") || text.Contains("Inside Survival")
+                         || text.Contains("Emberwilds R20") || text.Contains("Outside R20")
+                         || text.Contains("Warded Halls —") || text.Contains("Inside —"))
                 {
                     var unlocked = GameSave.InsideMapUnlocked;
                     button.interactable = unlocked;
                     label.text = FormatMapButtonLabel(
-                        "Inside Survival",
+                        SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Inside),
                         unlocked,
-                        "Inside — clear Outside R20 door",
+                        "Warded Halls — clear Emberwilds R20 door",
                         unlocked && recommended == SurvivalMapKind.Inside);
                 }
-                else if (text.Contains("Dungeon Survival") || text.Contains("Inside R30") || text.Contains("Dungeon —"))
+                else if (text.Contains("Ironvault") || text.Contains("Dungeon Survival")
+                         || text.Contains("Warded Halls R30") || text.Contains("Inside R30")
+                         || text.Contains("Ironvault —") || text.Contains("Dungeon —"))
                 {
                     var unlocked = GameSave.DungeonMapUnlocked;
                     button.interactable = unlocked;
                     label.text = FormatMapButtonLabel(
-                        "Dungeon Survival",
+                        SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Dungeon),
                         unlocked,
-                        "Dungeon — clear Inside R30 gateway",
+                        "Ironvault — clear Warded Halls R30 gateway",
                         unlocked && recommended == SurvivalMapKind.Dungeon);
                 }
-                else if (text.Contains("Crypt Survival") || text.Contains("Dungeon R40") || text.Contains("Crypt —"))
-                {
-                    var unlocked = GameSave.CryptMapUnlocked;
-                    button.interactable = unlocked;
-                    label.text = FormatMapButtonLabel(
-                        "Crypt Survival",
-                        unlocked,
-                        "Crypt — clear Dungeon R40 portal",
-                        unlocked && recommended == SurvivalMapKind.Crypt);
-                }
-                else if (text.Contains("Unlimited Survival") || text.Contains("Crypt R50") || text.Contains("Unlimited —"))
+                else if (text.Contains("Endless Front") || text.Contains("Unlimited Survival")
+                         || text.Contains("Crypt R50") || text.Contains("Unlimited —")
+                         || text.Contains("Endless Front —"))
                 {
                     var unlocked = GameSave.UnlimitedMapUnlocked;
                     button.interactable = unlocked;
                     label.text = FormatMapButtonLabel(
-                        "Unlimited Survival",
+                        SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Unlimited),
                         unlocked,
-                        "Unlimited — clear Crypt R50",
+                        "Endless Front — clear Silent Ossuary R50",
                         unlocked && recommended == SurvivalMapKind.Unlimited);
+                }
+                else if (text.Contains("Silent Ossuary") || text.Contains("Crypt Survival")
+                         || text.Contains("Ironvault R40") || text.Contains("Dungeon R40")
+                         || text.Contains("Crypt —") || text.Contains("Ossuary —"))
+                {
+                    var unlocked = GameSave.CryptMapUnlocked;
+                    button.interactable = unlocked;
+                    label.text = FormatMapButtonLabel(
+                        SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Crypt),
+                        unlocked,
+                        "Silent Ossuary — clear Ironvault R40 portal",
+                        unlocked && recommended == SurvivalMapKind.Crypt);
                 }
             }
         }

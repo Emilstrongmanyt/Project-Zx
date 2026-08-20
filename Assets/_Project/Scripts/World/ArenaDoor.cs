@@ -7,8 +7,8 @@ using UnityEngine;
 namespace ProjectZx.World
 {
     /// <summary>
-    /// Door dropped after clearing Outside survival round 20.
-    /// Requires talking to RowZi first, then shows a win recap (Camp / Enter Inside).
+    /// Door dropped after clearing Emberwilds (Outside) survival round 20.
+    /// Requires talking to RowZi first, then shows a win recap (Camp / Enter Warded Halls).
     /// </summary>
     public class ArenaDoor : MonoBehaviour
     {
@@ -46,8 +46,8 @@ namespace ProjectZx.World
             {
                 session.BeginStageClearExit(
                     nextMap: SurvivalMapKind.Inside,
-                    title: "Outside Cleared!",
-                    unlockSummary: "Inside Survival unlocked!\nSpearman class unlocked at camp.");
+                    title: "Emberwilds Cleared!",
+                    unlockSummary: "Warded Halls Survival unlocked!\nSpearman class unlocked at camp.");
             }
             else
             {

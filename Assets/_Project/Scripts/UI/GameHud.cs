@@ -408,14 +408,7 @@ namespace ProjectZx.UI
                     : died ? "You Fell" : "Run Complete";
             }
 
-            var mapLabel = mapKind switch
-            {
-                SurvivalMapKind.Inside => "Inside",
-                SurvivalMapKind.Dungeon => "Dungeon",
-                SurvivalMapKind.Crypt => "Crypt",
-                SurvivalMapKind.Unlimited => "Unlimited",
-                _ => "Outside"
-            };
+            var mapLabel = SurvivalMapNames.ShortName(mapKind);
 
             var footer = died
                 ? "Your run gold is safe at camp.\nRetry this map or return home."
@@ -482,10 +475,10 @@ namespace ProjectZx.UI
 
         static string NextMapButtonLabel(SurvivalMapKind map) => map switch
         {
-            SurvivalMapKind.Inside => "Enter Inside",
-            SurvivalMapKind.Dungeon => "Enter Dungeon",
-            SurvivalMapKind.Crypt => "Enter Crypt",
-            SurvivalMapKind.Unlimited => "Enter Unlimited",
+            SurvivalMapKind.Inside => "Enter Warded Halls",
+            SurvivalMapKind.Dungeon => "Enter Ironvault",
+            SurvivalMapKind.Crypt => "Enter Silent Ossuary",
+            SurvivalMapKind.Unlimited => "Enter Endless Front",
             _ => "Next Map"
         };
 
@@ -1014,14 +1007,7 @@ namespace ProjectZx.UI
 
         public void SetRound(int round, SurvivalMapKind mapKind)
         {
-            var mapLabel = mapKind switch
-            {
-                SurvivalMapKind.Inside => "Inside",
-                SurvivalMapKind.Dungeon => "Dungeon",
-                SurvivalMapKind.Crypt => "Crypt",
-                SurvivalMapKind.Unlimited => "Unlimited",
-                _ => "Outside"
-            };
+            var mapLabel = SurvivalMapNames.ShortName(mapKind);
             _roundText.text = $"{mapLabel} — Round {round}";
         }
 

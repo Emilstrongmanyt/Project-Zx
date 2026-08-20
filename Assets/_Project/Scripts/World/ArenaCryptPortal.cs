@@ -6,8 +6,8 @@ using UnityEngine;
 namespace ProjectZx.World
 {
     /// <summary>
-    /// Portal after clearing Dungeon survival round 40.
-    /// Shows a win recap (Camp / Enter Crypt) instead of jumping straight into Crypt.
+    /// Portal after clearing Ironvault (Dungeon) survival round 40.
+    /// Shows a win recap (Camp / Enter Silent Ossuary) instead of jumping straight in.
     /// </summary>
     public class ArenaCryptPortal : MonoBehaviour
     {
@@ -40,8 +40,8 @@ namespace ProjectZx.World
             {
                 session.BeginStageClearExit(
                     nextMap: SurvivalMapKind.Crypt,
-                    title: "Dungeon Cleared!",
-                    unlockSummary: "Crypt Survival unlocked!\nSamurai class unlocked at camp.");
+                    title: "Ironvault Cleared!",
+                    unlockSummary: "Silent Ossuary Survival unlocked!\nSamurai class unlocked at camp.");
             }
             else
             {

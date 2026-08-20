@@ -62,6 +62,9 @@ namespace ProjectZx.Core
         const string EquippedHelmKey = "zx_equipped_helm";
         const string QuestGwpAcceptedKey = "zx_quest_gwp_accepted";
         const string QuestGwpCompletedKey = "zx_quest_gwp_completed";
+        const string QuestWardensPathAcceptedKey = "zx_quest_wardens_path_accepted";
+        const string QuestWardensPathBossKey = "zx_quest_wardens_path_boss";
+        const string QuestWardensPathCompletedKey = "zx_quest_wardens_path_completed";
         const string QuestCrowAcceptedKey = "zx_quest_crow_accepted";
         const string QuestCrowRescuedKey = "zx_quest_crow_rescued";
         const string QuestCrowCompletedKey = "zx_quest_crow_completed";
@@ -1007,13 +1010,45 @@ namespace ProjectZx.Core
             }
         }
 
-        /// <summary>Quest item recovered from Outside Survival R20 boss (not equippable gear).</summary>
+        /// <summary>Quest item recovered from Emberwilds R10 boss (not equippable gear).</summary>
         public static bool HasTwinLightningPendant
         {
             get => PlayerPrefs.GetInt(TwinLightningPendantKey, 0) == 1;
             set
             {
                 PlayerPrefs.SetInt(TwinLightningPendantKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>The Warded Path — accepted from Archmage Thalor after the pendant.</summary>
+        public static bool QuestWardensPathAccepted
+        {
+            get => PlayerPrefs.GetInt(QuestWardensPathAcceptedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestWardensPathAcceptedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Emberwilds R20 boss defeated (door / Warded Halls path opened).</summary>
+        public static bool QuestWardensPathBossDefeated
+        {
+            get => PlayerPrefs.GetInt(QuestWardensPathBossKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestWardensPathBossKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestWardensPathCompleted
+        {
+            get => PlayerPrefs.GetInt(QuestWardensPathCompletedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestWardensPathCompletedKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
         }

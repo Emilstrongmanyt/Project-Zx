@@ -125,7 +125,7 @@ namespace ProjectZx.Waves
 
             // --- Crypt (stage hold R50) ---
             t[(SurvivalMapKind.Crypt, 5)] = Pressure(
-                "Crypt Sprint!",
+                "Ossuary Sprint!",
                 Spec(EnemyMovementMode.Sprint, EnemyZombieKind.InsideElite, 22));
             t[(SurvivalMapKind.Crypt, 10)] = Combo(
                 "Bone Flank!",
@@ -158,7 +158,7 @@ namespace ProjectZx.Waves
 
             // --- Unlimited: every 5 after R10; trash prelude on decade rounds too ---
             AddUnlimited(t, 15, Pressure(
-                "Unlimited Sprint!",
+                "Endless Front Sprint!",
                 Spec(EnemyMovementMode.Sprint, EnemyZombieKind.Outside, 24)));
             AddUnlimited(t, 25, Combo(
                 "Biome Flank!",
@@ -172,7 +172,7 @@ namespace ProjectZx.Waves
                 Spec(EnemyMovementMode.Orbit, EnemyZombieKind.InsideElite, 16),
                 Spec(EnemyMovementMode.Chase, EnemyZombieKind.InsideElite, 14)));
             AddUnlimited(t, 55, Pressure(
-                "Dungeon Charge!",
+                "Ironvault Charge!",
                 Spec(EnemyMovementMode.Charge, EnemyZombieKind.InsideElite, 30)));
             AddUnlimited(t, 65, Combo(
                 "Caster Wall!",

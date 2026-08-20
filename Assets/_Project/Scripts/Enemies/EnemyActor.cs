@@ -1482,9 +1482,10 @@ namespace ProjectZx.Enemies
             if (IsBoss)
                 TryDropEpicCrystal(pos);
 
-            // Grand Wizard's Peril: Outside R20 golem drops the Twin Lightning Pendant.
+            // Thalor's Pendant: Emberwilds R10 boss drops the Twin Lightning Pendant.
             if (QuestCatalog.ShouldDropTwinLightningPendant(
-                    IsRoundTwentyBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Outside))
+                    IsBoss && _round == 10
+                    && GameSessionContext.SurvivalMap == SurvivalMapKind.Outside))
             {
                 GameFactory.CreatePickup(
                     pos + Vector2.up * 0.7f + Vector2.left * 0.35f,
@@ -1492,7 +1493,7 @@ namespace ProjectZx.Enemies
                     1);
             }
 
-            // A Knight's Best Friend: Dungeon R40 boss drops the lost greatsword.
+            // Aldric's Greatsword: Ironvault R40 boss drops the lost blade.
             if (QuestCatalog.ShouldDropKnightsGreatsword(
                     IsRoundFortyBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Dungeon))
             {
@@ -1507,10 +1508,11 @@ namespace ProjectZx.Enemies
 
             if (IsRoundTwentyBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Outside)
             {
+                QuestCatalog.NotifyOutsideRoundTwentyCleared();
                 GameSave.SpearmanUnlocked = true;
                 GameSave.InsideMapUnlocked = true;
                 ArenaDoor.Spawn(pos + Vector2.up * 0.5f);
-                GameHud.Instance?.ShowBanner("Spearman unlocked!", 3.5f);
+                GameHud.Instance?.ShowBanner("Spearman unlocked! Path to the Warded Halls is open.", 3.5f);
             }
 
             if (IsRoundThirtyBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Inside)

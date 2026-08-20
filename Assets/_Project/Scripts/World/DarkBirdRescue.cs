@@ -7,7 +7,7 @@ using UnityEngine;
 namespace ProjectZx.World
 {
     /// <summary>
-    /// Grey Wizard in crow form (Inside Survival, after R10). Tap while near to free him.
+    /// Ashen Seer Corvin in crow form (Warded Halls, after R10). Tap while near to free him.
     /// </summary>
     public class DarkBirdRescue : MonoBehaviour
     {

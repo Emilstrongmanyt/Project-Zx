@@ -40,8 +40,8 @@ namespace ProjectZx.World
             {
                 session.BeginStageClearExit(
                     nextMap: null,
-                    title: "Crypt Conquered!",
-                    unlockSummary: "Unlimited Survival unlocked at camp!");
+                    title: "Silent Ossuary Conquered!",
+                    unlockSummary: "The Endless Front unlocked at camp!");
             }
             else
             {

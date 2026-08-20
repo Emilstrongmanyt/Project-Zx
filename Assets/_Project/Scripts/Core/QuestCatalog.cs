@@ -7,7 +7,9 @@ namespace ProjectZx.Core
     {
         GrandWizardsPeril = 1,
         GreyWizardsCrow = 2,
-        KnightsBestFriend = 3
+        KnightsBestFriend = 3,
+        /// <summary>Thalor follow-up: Emberwilds R20 opens the path to Warded Halls.</summary>
+        WardensPath = 4
     }
 
     public enum QuestProgress
@@ -65,40 +67,56 @@ namespace ProjectZx.Core
         public static readonly QuestDefinition GrandWizardsPeril = new(
             QuestId.GrandWizardsPeril,
             "Thalor's Pendant",
-            "Adventurer — I am Archmage Thalor. A golem tore through camp and stole my Twin Lightning Pendant, heirloom of the second war. Without it my circle is muted. Hunt the Outside Survival round 20 boss and bring the pendant home!",
-            "The Outside R20 golem still clutches my Twin Lightning Pendant. Strike it down and return to me at the campfire.",
-            "The pendant sings again! My thanks — and this gold. Camp owes you, hero.",
-            "Thalor keeps the circle warm. Speak again if the wilds call you to new work.",
-            "In progress  ·  Retrieve Thalor's pendant from Outside R20",
+            "Adventurer — I am Archmage Thalor. After the Second War, this campfire is the last free light. A golem tore from the Emberwilds and stole my Twin Lightning Pendant — without it my circle is muted. Hunt the Emberwilds round 10 boss and bring the pendant home!",
+            "The Emberwilds R10 boss still clutches my Twin Lightning Pendant. Strike it down and return to me at the campfire.",
+            "The pendant sings again! My thanks — and this gold. But the wound in the wilds still yawns… speak with me when you are ready.",
+            "Thalor keeps the circle warm. The Emberwilds still need a stronger hand.",
+            "In progress  ·  Retrieve Thalor's pendant from Emberwilds R10",
             800,
             () => true);
+
+        public static readonly QuestDefinition WardensPath = new(
+            QuestId.WardensPath,
+            "The Warded Path",
+            "With the pendant restored, we can press the Emberwilds wound. Defeat the round 20 boss — seal that breach and a door will open into the Warded Halls, my old inner sanctum, now overrun. Gold and a rumor await your return.",
+            "Defeat the Emberwilds R20 boss. Talk to RowZi at the door, then enter — the Warded Halls wait beyond.",
+            "The path is open! Take this gold. Corvin — an Ashen Seer — flew into those halls as a crow and never returned. When you are ready, I will tell you more.",
+            "The Warded Halls stand open. Ask when the wilds call again.",
+            "In progress  ·  Clear Emberwilds R20 to open the Warded Halls",
+            450,
+            () => GameSave.QuestGrandWizardsPerilCompleted);
 
         public static readonly QuestDefinition GreyWizardsCrow = new(
             QuestId.GreyWizardsCrow,
             "Corvin's Crow",
-            "Ashen Seer Corvin flew as a crow to spy on the cavern foe — and never returned. Enter Inside Survival; after round 10 find the dark crow and free him. He knows the path home.",
-            "Inside Survival after round 10: tap the dark crow when you are close to break the glamour.",
+            "Ashen Seer Corvin flew as a crow to spy on the foe in the Warded Halls — and never returned. Enter Warded Halls Survival; after round 10 find the dark crow and free him. He knows the path home.",
+            "Warded Halls after round 10: tap the dark crow when you are close to break the glamour.",
             "Corvin is flesh again and resting by camp. Gold for your courage — the Ashen Seer will not forget.",
             "Corvin watches the treeline. Your rescue may yet tip the war.",
-            "In progress  ·  Free Corvin the crow in Inside Survival (after R10)",
+            "In progress  ·  Free Corvin the crow in Warded Halls (after R10)",
             1000,
             () => GameSave.InsideMapUnlocked);
 
         public static readonly QuestDefinition KnightsBestFriend = new(
             QuestId.KnightsBestFriend,
             "Aldric's Greatsword",
-            "I am Sir Aldric. I fled the Dungeon without my greatsword — a knight's true companion. Recover it from the Dungeon Survival round 40 boss and I will share Flame Enchant, plus 1000 gold.",
-            "The Dungeon R40 boss still bears my greatsword. Cut it down and bring the blade to me north of camp.",
+            "I am Sir Aldric. I fled Ironvault without my greatsword — a knight's true companion. Recover it from the Ironvault Survival round 40 boss and I will share Flame Enchant, plus 1000 gold.",
+            "The Ironvault R40 boss still bears my greatsword. Cut it down and bring the blade to me north of camp.",
             "Steel and honor restored! Take the gold — and Flame Enchant. May your weapons burn true.",
             "Aldric stands ready. Fight well, adventurer.",
-            "In progress  ·  Recover Aldric's greatsword from Dungeon R40 boss",
+            "In progress  ·  Recover Aldric's greatsword from Ironvault R40 boss",
             1000,
             () => GameSave.DungeonKnightReturnedToCamp);
 
         public const string KnightsGreatswordName = "Knight's Greatsword";
 
         static readonly QuestDefinition[] AllQuests =
-            { GrandWizardsPeril, GreyWizardsCrow, KnightsBestFriend };
+        {
+            GrandWizardsPeril,
+            WardensPath,
+            GreyWizardsCrow,
+            KnightsBestFriend
+        };
 
         public static IReadOnlyList<QuestDefinition> All => AllQuests;
 
@@ -129,6 +147,14 @@ namespace ProjectZx.Core
                         ? QuestProgress.ReadyToTurnIn
                         : QuestProgress.Active;
 
+                case QuestId.WardensPath:
+                    if (GameSave.QuestWardensPathCompleted) return QuestProgress.Completed;
+                    if (!GameSave.QuestWardensPathAccepted) return QuestProgress.Available;
+                    // Veterans who already cleared R20 can turn in immediately after accept.
+                    return GameSave.QuestWardensPathBossDefeated || GameSave.InsideMapUnlocked
+                        ? QuestProgress.ReadyToTurnIn
+                        : QuestProgress.Active;
+
                 case QuestId.GreyWizardsCrow:
                     if (GameSave.QuestGreyWizardCompleted) return QuestProgress.Completed;
                     if (!GameSave.QuestGreyWizardAccepted) return QuestProgress.Available;
@@ -148,14 +174,15 @@ namespace ProjectZx.Core
             }
         }
 
-        /// <summary>Quests offered only by the Grand Wizard (Purple Wizard) at camp.</summary>
+        /// <summary>Quests offered by Archmage Thalor at camp.</summary>
         public static readonly QuestId[] GrandWizardQuestIds =
         {
             QuestId.GrandWizardsPeril,
+            QuestId.WardensPath,
             QuestId.GreyWizardsCrow
         };
 
-        /// <summary>Quests offered only by Knight1 at camp.</summary>
+        /// <summary>Quests offered only by Sir Aldric at camp.</summary>
         public static readonly QuestId[] KnightQuestIds =
         {
             QuestId.KnightsBestFriend
@@ -185,8 +212,6 @@ namespace ProjectZx.Core
             if (TryFindByProgress(pool, QuestProgress.Available, out def, out progress))
                 return true;
 
-            // All done / locked: prefer the latest completed quest in the pool
-            // (e.g. Grey Wizard crow after Grand Wizard peril), not always quest #1.
             for (var i = pool.Length - 1; i >= 0; i--)
             {
                 if (!TryGet(pool[i], out var completedDef)) continue;
@@ -237,6 +262,9 @@ namespace ProjectZx.Core
                 case QuestId.GrandWizardsPeril:
                     GameSave.QuestGrandWizardsPerilAccepted = true;
                     return true;
+                case QuestId.WardensPath:
+                    GameSave.QuestWardensPathAccepted = true;
+                    return true;
                 case QuestId.GreyWizardsCrow:
                     GameSave.QuestGreyWizardAccepted = true;
                     return true;
@@ -265,6 +293,16 @@ namespace ProjectZx.Core
                     GameSave.LifetimeGoldEarned += goldAwarded;
                     return true;
 
+                case QuestId.WardensPath:
+                    if (!GameSave.QuestWardensPathBossDefeated && !GameSave.InsideMapUnlocked)
+                        return false;
+                    GameSave.QuestWardensPathBossDefeated = true;
+                    GameSave.QuestWardensPathCompleted = true;
+                    goldAwarded = def.GoldReward;
+                    GameSave.Gold += goldAwarded;
+                    GameSave.LifetimeGoldEarned += goldAwarded;
+                    return true;
+
                 case QuestId.GreyWizardsCrow:
                     if (!GameSave.QuestGreyWizardRescued) return false;
                     GameSave.QuestGreyWizardCompleted = true;
@@ -288,15 +326,21 @@ namespace ProjectZx.Core
             }
         }
 
-        /// <summary>Outside Survival R20 golem drops the pendant while the quest is active.</summary>
-        public static bool ShouldDropTwinLightningPendant(bool isOutsideRoundTwentyBoss)
+        /// <summary>Emberwilds R10 boss drops the pendant while the quest is active.</summary>
+        public static bool ShouldDropTwinLightningPendant(bool isOutsideRoundTenBoss)
         {
-            if (!isOutsideRoundTwentyBoss) return false;
+            if (!isOutsideRoundTenBoss) return false;
             if (GetProgress(QuestId.GrandWizardsPeril) != QuestProgress.Active) return false;
             return !GameSave.HasTwinLightningPendant;
         }
 
-        /// <summary>Inside Survival crow after R10 while the rescue quest is active.</summary>
+        /// <summary>Mark Emberwilds R20 clear for The Warded Path (door unlock remains separate).</summary>
+        public static void NotifyOutsideRoundTwentyCleared()
+        {
+            GameSave.QuestWardensPathBossDefeated = true;
+        }
+
+        /// <summary>Warded Halls crow after R10 while the rescue quest is active.</summary>
         public static bool ShouldSpawnDarkBird(SurvivalMapKind mapKind, int round)
         {
             if (mapKind != SurvivalMapKind.Inside) return false;
@@ -305,7 +349,7 @@ namespace ProjectZx.Core
             return !GameSave.QuestGreyWizardRescued;
         }
 
-        /// <summary>Dungeon Survival R40 boss drops the greatsword while the knight quest is active.</summary>
+        /// <summary>Ironvault R40 boss drops the greatsword while the knight quest is active.</summary>
         public static bool ShouldDropKnightsGreatsword(bool isDungeonRoundFortyBoss)
         {
             if (!isDungeonRoundFortyBoss) return false;

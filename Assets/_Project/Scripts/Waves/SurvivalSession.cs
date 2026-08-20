@@ -119,14 +119,14 @@ namespace ProjectZx.Waves
                 if (MapKind == SurvivalMapKind.Crypt && CurrentRound >= StatCaps.CryptMaxRound
                     && !IsStageHoldRound(CurrentRound))
                 {
-                    _hud?.ShowBanner("Crypt Survival complete! Returning to camp…", 4f);
+                    _hud?.ShowBanner("Silent Ossuary complete! Returning to camp…", 4f);
                     yield return new WaitForSeconds(3f);
                     break;
                 }
 
                 if (MapKind == SurvivalMapKind.Unlimited && CurrentRound >= StatCaps.UnlimitedMaxRound)
                 {
-                    _hud?.ShowBanner("Unlimited Survival complete! Returning to camp…", 4f);
+                    _hud?.ShowBanner("The Endless Front complete! Returning to camp…", 4f);
                     yield return new WaitForSeconds(3f);
                     break;
                 }
@@ -154,7 +154,7 @@ namespace ProjectZx.Waves
             if (_hud != null)
             {
                 var title = MapKind == SurvivalMapKind.Unlimited
-                    ? "Unlimited Complete!"
+                    ? "Endless Front Complete!"
                     : "Run Complete";
                 yield return _hud.ShowRunResultsAndWait(
                     died: false,
@@ -263,9 +263,9 @@ namespace ProjectZx.Waves
             }
             _hud?.ShowBanner(biome switch
             {
-                SurvivalMapKind.Inside => "Entering the Inside…",
-                SurvivalMapKind.Dungeon => "Descending into the Dungeon…",
-                _ => "Back Outside…"
+                SurvivalMapKind.Inside => "Entering the Warded Halls…",
+                SurvivalMapKind.Dungeon => "Descending into Ironvault…",
+                _ => "Back to the Emberwilds…"
             }, 2.5f);
         }
 
@@ -281,13 +281,13 @@ namespace ProjectZx.Waves
         string GetStageHoldBanner(int round)
         {
             if (round == 20 && MapKind == SurvivalMapKind.Outside)
-                return "Talk to RowZi, then enter the door!";
+                return "Talk to RowZi, then enter the door to the Warded Halls!";
             if (round == 30 && MapKind == SurvivalMapKind.Inside)
-                return "Enter the gateway to Dungeon Survival!";
+                return "Enter the gateway to Ironvault Survival!";
             if (round == 40 && MapKind == SurvivalMapKind.Dungeon)
-                return "Enter the Crypt portal to Crypt Survival!";
+                return "Enter the portal to Silent Ossuary Survival!";
             if (round == StatCaps.CryptMaxRound && MapKind == SurvivalMapKind.Crypt)
-                return "Enter the victory portal — Unlimited Survival awaits!";
+                return "Enter the victory portal — The Endless Front awaits!";
             return "Stage cleared!";
         }
 
@@ -589,7 +589,7 @@ namespace ProjectZx.Waves
             if (MapKind == SurvivalMapKind.Crypt)
             {
                 if (GameSave.RecordCryptRound(round) && round >= StatCaps.CryptMaxRound)
-                    _hud?.ShowBanner("Crypt conquered! Unlimited Survival unlocked at camp.", 4.5f);
+                    _hud?.ShowBanner("Silent Ossuary conquered! The Endless Front unlocked at camp.", 4.5f);
                 Achievements.EvaluateWeaponTierAchievements();
                 return;
             }

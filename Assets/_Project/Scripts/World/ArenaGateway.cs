@@ -6,8 +6,8 @@ using UnityEngine;
 namespace ProjectZx.World
 {
     /// <summary>
-    /// Portal dropped after clearing Inside survival round 30.
-    /// Shows a win recap (Camp / Enter Dungeon) instead of jumping straight into Dungeon.
+    /// Portal dropped after clearing Warded Halls (Inside) survival round 30.
+    /// Shows a win recap (Camp / Enter Ironvault) instead of jumping straight in.
     /// </summary>
     public class ArenaGateway : MonoBehaviour
     {
@@ -36,8 +36,8 @@ namespace ProjectZx.World
             {
                 session.BeginStageClearExit(
                     nextMap: SurvivalMapKind.Dungeon,
-                    title: "Inside Cleared!",
-                    unlockSummary: "Dungeon Survival unlocked!\nBowman class unlocked at camp.");
+                    title: "Warded Halls Cleared!",
+                    unlockSummary: "Ironvault Survival unlocked!\nBowman class unlocked at camp.");
             }
             else
             {
