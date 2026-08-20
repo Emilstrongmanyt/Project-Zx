@@ -265,6 +265,9 @@ namespace ProjectZx.Player
             {
                 _rb.position = next;
                 transform.position = new Vector3(next.x, next.y, transform.position.z);
+                // Keep one-tap destinations on the same relative side after the torus jump.
+                if (_moveTarget.HasValue)
+                    _moveTarget = _moveTarget.Value + wrapDelta;
                 ArenaBounds.ApplyWorldWrapDelta(wrapDelta);
             }
 

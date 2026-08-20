@@ -684,11 +684,12 @@ namespace ProjectZx.Enemies
                 && _chargePhase != ChargePhase.Dash)
             {
                 _rb.linearVelocity = Vector2.zero;
-                UpdateFacingToward(_player.position);
+                UpdateFacingTowardPlayer();
                 return;
             }
 
-            var toPlayer = (Vector2)_player.position - (Vector2)transform.position;
+            // Toroidal delta so chase aims across the wrap seam instead of the long Euclidean way.
+            var toPlayer = ArenaBounds.ToroidalDelta(transform.position, _player.position);
             if (toPlayer.sqrMagnitude < 0.0001f && _chargePhase != ChargePhase.Dash)
             {
                 _rb.linearVelocity = Vector2.zero;
@@ -698,12 +699,19 @@ namespace ProjectZx.Enemies
             if (!TryComputeMoveDirection(toPlayer, out var dir, out var speedMul))
             {
                 _rb.linearVelocity = Vector2.zero;
-                UpdateFacingToward(_player.position);
+                UpdateFacingTowardPlayer();
                 return;
             }
 
             MoveByDelta(dir * (GetMoveSpeed() * speedMul * Time.fixedDeltaTime));
-            UpdateFacingToward(_player.position);
+            UpdateFacingTowardPlayer();
+        }
+
+        void UpdateFacingTowardPlayer()
+        {
+            if (_player == null) return;
+            var delta = ArenaBounds.ToroidalDelta(transform.position, _player.position);
+            UpdateFacingToward(transform.position + (Vector3)delta);
         }
 
         /// <summary>
@@ -991,7 +999,7 @@ namespace ProjectZx.Enemies
             }
 
             if (_contactCooldown > 0f) return;
-            if (Vector2.Distance(transform.position, _player.position) > _contactRange) return;
+            if (ArenaBounds.ToroidalDistance(transform.position, _player.position) > _contactRange) return;
 
             var stats = _player.GetComponent<PlayerStats>();
             if (stats == null || stats.IsDead) return;
@@ -1070,7 +1078,7 @@ namespace ProjectZx.Enemies
 
             if (_sprintCooldown > 0f) return;
 
-            var dist = Vector2.Distance(transform.position, _player.position);
+            var dist = ArenaBounds.ToroidalDistance(transform.position, _player.position);
             if (dist < 2f || dist > 8.5f) return;
 
             _sprinting = true;
@@ -1147,7 +1155,7 @@ namespace ProjectZx.Enemies
         bool IsInMeleeAttackPoseRange()
         {
             if (_player == null || _fireBreathing) return false;
-            var dist = Vector2.Distance(transform.position, _player.position);
+            var dist = ArenaBounds.ToroidalDistance(transform.position, _player.position);
             return dist <= _contactRange * 1.25f;
         }
 
@@ -1155,7 +1163,7 @@ namespace ProjectZx.Enemies
         bool IsInBossAttackPoseRange()
         {
             if (!IsBoss || IsRoundFortyBoss || IsRoundFiftyBoss || _player == null || _fireBreathing) return false;
-            var dist = Vector2.Distance(transform.position, _player.position);
+            var dist = ArenaBounds.ToroidalDistance(transform.position, _player.position);
             if (dist <= _contactRange * 1.25f) return true;
             return dist <= FireBreathEngageRange && _fireBreathCooldown <= 0.35f;
         }
@@ -1171,8 +1179,8 @@ namespace ProjectZx.Enemies
 
         void UpdateFireBreath()
         {
-            var dist = Vector2.Distance(transform.position, _player.position);
-            UpdateFacingToward(_player.position);
+            var dist = ArenaBounds.ToroidalDistance(transform.position, _player.position);
+            UpdateFacingTowardPlayer();
 
             if (_fireBreathing)
             {
@@ -1334,12 +1342,12 @@ namespace ProjectZx.Enemies
         void UpdateBossProjectiles()
         {
             if (!IsAlive || _player == null) return;
-            UpdateFacingToward(_player.position);
+            UpdateFacingTowardPlayer();
             _bossProjectileCooldown -= Time.deltaTime;
             if (_bossProjectileCooldown > 0f) return;
 
             _bossProjectileCooldown = BossProjectileInterval;
-            var aim = (Vector2)(_player.position - transform.position);
+            var aim = ArenaBounds.ToroidalDelta(transform.position, _player.position);
             if (aim.sqrMagnitude < 0.0001f)
                 aim = _renderer != null && _renderer.flipX ? Vector2.right : Vector2.left;
 
@@ -1353,12 +1361,12 @@ namespace ProjectZx.Enemies
         void UpdateRangedAttack()
         {
             if (!IsAlive || _player == null) return;
-            UpdateFacingToward(_player.position);
+            UpdateFacingTowardPlayer();
 
             _rangedProjectileCooldown -= Time.deltaTime;
             if (_rangedProjectileCooldown > 0f) return;
 
-            var dist = Vector2.Distance(transform.position, _player.position);
+            var dist = ArenaBounds.ToroidalDistance(transform.position, _player.position);
             if (dist > RangedShootRange || dist < 0.6f) return;
 
             _rangedProjectileCooldown = RangedProjectileInterval + Random.Range(-0.25f, 0.35f);
@@ -1366,7 +1374,7 @@ namespace ProjectZx.Enemies
             _bodyAnimFrame = 0;
             _bodyAnimTimer = 0f;
 
-            var aim = (Vector2)(_player.position - transform.position);
+            var aim = ArenaBounds.ToroidalDelta(transform.position, _player.position);
             if (aim.sqrMagnitude < 0.0001f)
                 aim = _renderer != null && _renderer.flipX ? Vector2.right : Vector2.left;
 

@@ -59,6 +59,7 @@ namespace ProjectZx.Core
             EnsureAudioManager();
             AudioManager.Instance?.PlayCampBgm();
             ArenaBounds.SetWorldWrap(false);
+            ArenaBounds.ClearWorldRoots();
             // Deep water clear color so the ring reads clearly past the tile edge.
             SetupCamera(new Color(0.1f, 0.2f, 0.48f));
             GameFactory.CreateGrassField("CampGrass", ArenaBounds.CampWidth, ArenaBounds.CampHeight, 1f);
@@ -207,19 +208,28 @@ namespace ProjectZx.Core
                 : isDungeon ? "DungeonFloor"
                 : isInside ? "InsideFloor"
                 : "OutsideFloor";
-            GameFactory.CreateTiledField(floorName, floorW, floorH, floorKind, 1f);
+            var floorRoot = GameFactory.CreateTiledField(floorName, floorW, floorH, floorKind, 1f);
 
             GameFactory.ClearScatterReservations();
             GameFactory.ReserveClearing(Vector2.zero, 4.5f); // player spawn / fight space
-            // Props also fill a band past the wrap edge so the approach to the border is not empty.
-            var propW = ArenaBounds.WorldWrapEnabled ? arenaW + 14f : arenaW;
-            var propH = ArenaBounds.WorldWrapEnabled ? arenaH + 14f : arenaH;
+            // Prop band matches camera reach past the wrap edge (was +14; widen to skirt-ish).
+            var propW = ArenaBounds.WorldWrapEnabled
+                ? arenaW + ArenaBounds.VisualSkirtDepthX * 0.85f
+                : arenaW;
+            var propH = ArenaBounds.WorldWrapEnabled
+                ? arenaH + ArenaBounds.VisualSkirtDepthY * 0.85f
+                : arenaH;
+            GameObject propsRoot;
             if (isInside)
-                GameFactory.ScatterInsideObstacles(propW, propH);
+                propsRoot = GameFactory.ScatterInsideObstacles(propW, propH);
             else if (isDungeon || isCrypt)
-                GameFactory.ScatterCryptObstacles(propW, propH);
+                propsRoot = GameFactory.ScatterCryptObstacles(propW, propH);
             else
-                GameFactory.ScatterArenaObstacles(propW, propH, 18, 14, 4);
+                propsRoot = GameFactory.ScatterArenaObstacles(propW, propH, 18, 14, 4);
+
+            ArenaBounds.RegisterWorldRoots(
+                floorRoot != null ? floorRoot.transform : null,
+                propsRoot != null ? propsRoot.transform : null);
 
             var activeHero = GameSessionContext.SelectedHero;
             var activeClass = GameSave.GetHeroClass(activeHero);

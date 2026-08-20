@@ -248,7 +248,7 @@ namespace ProjectZx.Core
             {
                 if (enemy == null || !enemy.IsAlive || !enemy.IsBoss) continue;
                 var dist = player != null
-                    ? Vector2.Distance(player.position, enemy.transform.position)
+                    ? ProjectZx.World.ArenaBounds.ToroidalDistance(player.position, enemy.transform.position)
                     : BossMaxHearDistance;
                 if (dist >= bestDist) continue;
                 bestDist = dist;

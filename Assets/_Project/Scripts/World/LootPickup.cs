@@ -128,7 +128,8 @@ namespace ProjectZx.World
                 var lootRange = stats != null
                     ? BaseCollectRange * stats.EffectiveLootRangeMultiplier
                     : BaseCollectRange;
-                if (Vector2.Distance(transform.position, playerTransform.position) > lootRange) return;
+                if (ArenaBounds.ToroidalDistance(transform.position, playerTransform.position) > lootRange)
+                    return;
             }
 
             if (stats == null) return;

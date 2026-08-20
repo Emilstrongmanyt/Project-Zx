@@ -58,18 +58,40 @@ namespace ProjectZx.Core
             if (borderDepth > 0 && waterSprite == null)
                 Debug.LogError("[GameFactory] Water tile sprite failed to load; borders will be missing.");
 
+            // Playable tile grid (center of the visual field) — used to clone opposite-edge art into the skirt.
+            var playableCols = Mathf.Max(1, Mathf.RoundToInt(ArenaBounds.ArenaWidth / tileSize));
+            var playableRows = Mathf.Max(1, Mathf.RoundToInt(ArenaBounds.ArenaHeight / tileSize));
+            var playableOriginX = -(playableCols * tileSize) * 0.5f + tileSize * 0.5f;
+            var playableOriginY = -(playableRows * tileSize) * 0.5f + tileSize * 0.5f;
+
             for (var row = 0; row < rows; row++)
             for (var col = 0; col < cols; col++)
             {
                 var pos = new Vector3(originX + col * tileSize, originY + row * tileSize, 0f);
                 var isBorder = borderDepth > 0 && (row < borderDepth || row >= rows - borderDepth
                     || col < borderDepth || col >= cols - borderDepth);
-                var tileIndex = col + row * 7;
+                // Skirt past the wrap edge samples the opposite playable strip so approaching
+                // the border already looks like the destination side of the torus.
+                var sampleCol = col;
+                var sampleRow = row;
+                if (ArenaBounds.WorldWrapEnabled && !isBorder)
+                {
+                    var wrapped = ArenaBounds.WrapToPlayable(new Vector2(pos.x, pos.y));
+                    sampleCol = Mathf.Clamp(
+                        Mathf.RoundToInt((wrapped.x - playableOriginX) / tileSize),
+                        0,
+                        playableCols - 1);
+                    sampleRow = Mathf.Clamp(
+                        Mathf.RoundToInt((wrapped.y - playableOriginY) / tileSize),
+                        0,
+                        playableRows - 1);
+                }
+
+                var tileIndex = sampleCol + sampleRow * 7;
                 Sprite sprite;
                 if (isBorder)
                     sprite = waterSprite;
                 // Dungeon + Crypt share Dungeon_Tile floors; Unlimited uses SandTile.
-                // On wrap maps the skirt past the invisible teleport edge is still biome tiles.
                 else if (mapKind == SurvivalMapKind.Unlimited)
                     sprite = ArtLibrary.GetSandTile(tileIndex);
                 else if (mapKind == SurvivalMapKind.Dungeon || mapKind == SurvivalMapKind.Crypt)
@@ -409,6 +431,7 @@ namespace ProjectZx.Core
         /// </summary>
         public static void RebuildSurvivalEnvironment(SurvivalMapKind visualBiome)
         {
+            ArenaBounds.ClearWorldRoots();
             DestroyNamed("OutsideFloor");
             DestroyNamed("InsideFloor");
             DestroyNamed("DungeonFloor");
@@ -436,18 +459,27 @@ namespace ProjectZx.Core
                 : isInside ? "InsideFloor"
                 : "OutsideFloor";
 
-            CreateTiledField(floorName, floorW, floorH, floorKind, 1f);
+            var floorRoot = CreateTiledField(floorName, floorW, floorH, floorKind, 1f);
 
             ClearScatterReservations();
             ReserveClearing(Vector2.zero, 4.5f);
-            var propW = ArenaBounds.WorldWrapEnabled ? arenaW + 14f : arenaW;
-            var propH = ArenaBounds.WorldWrapEnabled ? arenaH + 14f : arenaH;
+            var propW = ArenaBounds.WorldWrapEnabled
+                ? arenaW + ArenaBounds.VisualSkirtDepthX * 0.85f
+                : arenaW;
+            var propH = ArenaBounds.WorldWrapEnabled
+                ? arenaH + ArenaBounds.VisualSkirtDepthY * 0.85f
+                : arenaH;
+            GameObject propsRoot;
             if (isInside)
-                ScatterInsideObstacles(propW, propH);
+                propsRoot = ScatterInsideObstacles(propW, propH);
             else if (isDungeon || isCrypt)
-                ScatterCryptObstacles(propW, propH);
+                propsRoot = ScatterCryptObstacles(propW, propH);
             else
-                ScatterArenaObstacles(propW, propH, 18, 14, 4);
+                propsRoot = ScatterArenaObstacles(propW, propH, 18, 14, 4);
+
+            ArenaBounds.RegisterWorldRoots(
+                floorRoot != null ? floorRoot.transform : null,
+                propsRoot != null ? propsRoot.transform : null);
 
             var cam = Camera.main;
             if (cam != null)

@@ -34,7 +34,52 @@ namespace ProjectZx.World
         /// </summary>
         public static bool WorldWrapEnabled { get; private set; }
 
-        public static void SetWorldWrap(bool enabled) => WorldWrapEnabled = enabled;
+        /// <summary>Floor tile root — co-moved on wrap so the camera frame stays continuous.</summary>
+        static Transform _floorRoot;
+        /// <summary>Props / obstacles root — co-moved with the floor on wrap.</summary>
+        static Transform _propsRoot;
+
+        public static void SetWorldWrap(bool enabled)
+        {
+            WorldWrapEnabled = enabled;
+            if (!enabled)
+                ClearWorldRoots();
+        }
+
+        public static void RegisterWorldRoots(Transform floorRoot, Transform propsRoot)
+        {
+            _floorRoot = floorRoot;
+            _propsRoot = propsRoot;
+        }
+
+        public static void ClearWorldRoots()
+        {
+            _floorRoot = null;
+            _propsRoot = null;
+        }
+
+        /// <summary>Shortest signed offset from <paramref name="from"/> to <paramref name="to"/> on the torus.</summary>
+        public static Vector2 ToroidalDelta(Vector2 from, Vector2 to)
+        {
+            if (!WorldWrapEnabled)
+                return to - from;
+
+            var dx = to.x - from.x;
+            var dy = to.y - from.y;
+            var w = ArenaWidth;
+            var h = ArenaHeight;
+            if (dx > w * 0.5f) dx -= w;
+            else if (dx < -w * 0.5f) dx += w;
+            if (dy > h * 0.5f) dy -= h;
+            else if (dy < -h * 0.5f) dy += h;
+            return new Vector2(dx, dy);
+        }
+
+        public static float ToroidalDistance(Vector2 from, Vector2 to)
+            => ToroidalDelta(from, to).magnitude;
+
+        public static float ToroidalDistanceSqr(Vector2 from, Vector2 to)
+            => ToroidalDelta(from, to).sqrMagnitude;
 
         public static float WaterMargin => WorldWrapEnabled ? 0f : TileSize * WaterBorderDepth;
 
@@ -95,13 +140,18 @@ namespace ProjectZx.World
         }
 
         /// <summary>
-        /// After the player wraps, co-move mobile combat units only.
-        /// Fixed map props (trees/rocks) stay put so the torus still has obstacles
-        /// on the destination side — shifting them shoved them off the map.
+        /// After the player wraps: co-move combat units, quest props, projectiles,
+        /// AND the floor/props roots so the rendered frame stays continuous.
+        /// Mobiles are then re-wrapped into playable so nothing sits off-map and
+        /// "pops" back a frame later.
         /// </summary>
         public static void ApplyWorldWrapDelta(Vector2 wrapDelta)
         {
             if (!WorldWrapEnabled || wrapDelta.sqrMagnitude < 0.25f) return;
+
+            // Scenery first — same delta as the player keeps underfoot tiles/props stable on camera.
+            ShiftTransform(_floorRoot, wrapDelta);
+            ShiftTransform(_propsRoot, wrapDelta);
 
             // Companion first — force RB + transform so assist hero never trails a map away.
             var companions = Object.FindObjectsByType<CompanionFollower>(FindObjectsSortMode.None);
@@ -111,22 +161,21 @@ namespace ProjectZx.World
                     companions[i].TeleportWithLeader(wrapDelta);
             }
 
-            ShiftAll<EnemyActor>(wrapDelta);
-            ShiftAll<LootPickup>(wrapDelta);
-            // Doors / portals / quest props that spawn mid-run.
-            ShiftAll<ArenaDoor>(wrapDelta);
-            ShiftAll<ArenaGateway>(wrapDelta);
-            ShiftAll<ArenaCryptPortal>(wrapDelta);
-            ShiftAll<ArenaVictoryGate>(wrapDelta);
-            ShiftAll<DarkBirdRescue>(wrapDelta);
-            ShiftAll<DungeonKnightEncounter>(wrapDelta);
-            ShiftAll<ArrowProjectile>(wrapDelta);
-            ShiftAll<BossFireProjectile>(wrapDelta);
-            ShiftAll<EnemyRangedProjectile>(wrapDelta);
-            // ArenaObstacle intentionally NOT shifted — fixed torus layout.
+            ShiftAllAndRewrap<EnemyActor>(wrapDelta);
+            ShiftAllAndRewrap<LootPickup>(wrapDelta);
+            ShiftAllAndRewrap<ArenaDoor>(wrapDelta);
+            ShiftAllAndRewrap<ArenaGateway>(wrapDelta);
+            ShiftAllAndRewrap<ArenaCryptPortal>(wrapDelta);
+            ShiftAllAndRewrap<ArenaVictoryGate>(wrapDelta);
+            ShiftAllAndRewrap<DarkBirdRescue>(wrapDelta);
+            ShiftAllAndRewrap<DungeonKnightEncounter>(wrapDelta);
+            ShiftAllAndRewrap<ArrowProjectile>(wrapDelta);
+            ShiftAllAndRewrap<BossFireProjectile>(wrapDelta);
+            ShiftAllAndRewrap<EnemyRangedProjectile>(wrapDelta);
+            ShiftAllAndRewrap<WorldSparkle>(wrapDelta);
         }
 
-        static void ShiftAll<T>(Vector2 delta) where T : Component
+        static void ShiftAllAndRewrap<T>(Vector2 delta) where T : Component
         {
             var items = Object.FindObjectsByType<T>(FindObjectsSortMode.None);
             for (var i = 0; i < items.Length; i++)
@@ -135,7 +184,29 @@ namespace ProjectZx.World
                 if (item == null) continue;
                 if (item.CompareTag("Player") && item.GetComponent<CompanionFollower>() == null)
                     continue;
+                // Props live under _propsRoot and already moved with the root.
+                if (_propsRoot != null && item.transform.IsChildOf(_propsRoot))
+                    continue;
                 ShiftTransform(item.transform, delta);
+                RewrapMobile(item.transform);
+            }
+        }
+
+        static void RewrapMobile(Transform t)
+        {
+            if (t == null) return;
+            var p = (Vector2)t.position;
+            var wrapped = WrapToPlayable(p);
+            if ((wrapped - p).sqrMagnitude < 0.0001f) return;
+            var rb = t.GetComponent<Rigidbody2D>();
+            if (rb != null)
+            {
+                rb.position = wrapped;
+                t.position = new Vector3(wrapped.x, wrapped.y, t.position.z);
+            }
+            else
+            {
+                t.position = new Vector3(wrapped.x, wrapped.y, t.position.z);
             }
         }
 
