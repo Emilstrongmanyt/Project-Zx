@@ -155,12 +155,12 @@ namespace ProjectZx.GanzSe
             character.transform.localRotation = Quaternion.identity;
             character.transform.localScale = Vector3.one;
             StripDemoComponents(character);
-            // Disable empty Humanoid Animator immediately so it cannot reset bones mid-bake.
+            SetLayerRecursive(character, _layer);
+            // Body armor + non-skinned helmet on the head bone first…
+            GanzSeModularOutfit.Apply(character, role);
+            // …then pose (Humanoid muscles / optional Idle clip). Helmet follows the head bone.
             GanzSeIdlePose.Apply(character);
             SetLayerRecursive(character, _layer);
-            GanzSeModularOutfit.Apply(character, role);
-            // Re-assert mesh visibility after outfit toggles (heads must stay enabled).
-            GanzSeIdlePose.Apply(character);
 
             var rt = new RenderTexture(RtSize, RtSize, 24, RenderTextureFormat.ARGB32)
             {
