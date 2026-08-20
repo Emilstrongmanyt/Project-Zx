@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using ProjectZx.Combat;
 using ProjectZx.Enemies;
-using ProjectZx.GanzSe;
 using ProjectZx.Player;
 using ProjectZx.UI;
 using ProjectZx.World;
@@ -763,40 +762,7 @@ namespace ProjectZx.Core
             return go;
         }
 
-        /// <summary>
-        /// Camp / survival NPC using GanzSe modular character art.
-        /// Falls back to the legacy sprite at a sane scale if the pack cannot load.
-        /// </summary>
-        public static GameObject CreateGanzSeNpc(
-            string name,
-            GanzSeNpcRole role,
-            Sprite fallbackSprite,
-            Vector3 position,
-            System.Action onInteract,
-            float billboardHeight = 1.55f,
-            float proximityRadius = 2.8f,
-            float fallbackSpriteScale = 0.475f)
-        {
-            // Start at the legacy scale so a failed GanzSe load never leaves giant placeholders.
-            var go = CreateSprite(name, fallbackSprite, position, fallbackSpriteScale, 6);
-            go.AddComponent<YSortRenderer>().Configure(3);
-            var proximity = go.AddComponent<CircleCollider2D>();
-            proximity.isTrigger = true;
-            proximity.radius = proximityRadius;
-            if (onInteract != null)
-                go.AddComponent<NpcInteractable>().Initialize(onInteract);
-
-            var billboard = go.AddComponent<GanzSeNpcBillboard>();
-            if (!billboard.Initialize(role, billboardHeight))
-            {
-                Debug.LogWarning($"[GanzSe] NPC '{name}' using legacy sprite fallback.");
-                go.transform.localScale = Vector3.one * fallbackSpriteScale;
-            }
-
-            return go;
-        }
-
-        /// <summary>Camp NPC with multi-frame idle animation (e.g. 16×32 quest wizard).</summary>
+        /// <summary>Camp NPC with multi-frame idle animation (Fantasy Medieval Character Pack).</summary>
         public static GameObject CreateAnimatedNpc(
             string name,
             Sprite[] frames,
@@ -806,7 +772,13 @@ namespace ProjectZx.Core
             float fps = 4f)
         {
             var first = frames != null && frames.Length > 0 ? frames[0] : null;
-            var go = CreateNpc(name, first, position, onInteract, scale);
+            var go = CreateSprite(name, first, position, scale, 6);
+            go.AddComponent<YSortRenderer>().Configure(3);
+            var proximity = go.AddComponent<CircleCollider2D>();
+            proximity.isTrigger = true;
+            proximity.radius = 2.8f;
+            if (onInteract != null)
+                go.AddComponent<NpcInteractable>().Initialize(onInteract);
             if (frames != null && frames.Length > 1)
                 go.AddComponent<SpriteFrameAnimator>().Initialize(frames, fps);
             return go;

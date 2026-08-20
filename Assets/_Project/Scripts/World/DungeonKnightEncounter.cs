@@ -1,9 +1,7 @@
 using System.Collections;
 using ProjectZx.Core;
-using ProjectZx.GanzSe;
 using ProjectZx.UI;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace ProjectZx.World
 {
@@ -17,18 +15,15 @@ namespace ProjectZx.World
 
         bool _leaving;
         SpriteRenderer _renderer;
-        RawImage _billboardRaw;
 
         public static GameObject Spawn(Vector2 position)
         {
-            GanzSeRenderStudio.Warm(GanzSeNpcRole.QuestKnight);
-            var go = GameFactory.CreateGanzSeNpc(
+            var go = MedievalNpcLibrary.Create(
                 "DungeonKnight",
-                GanzSeNpcRole.QuestKnight,
-                ArtLibrary.Knight1,
+                MedievalNpcLibrary.Cast.Aldric,
                 new Vector3(position.x, position.y, 0f),
                 onInteract: null,
-                billboardHeight: 2.15f,
+                MedievalNpcLibrary.KnightScale,
                 proximityRadius: 1.5f);
             var knight = go.AddComponent<DungeonKnightEncounter>();
             go.AddComponent<NpcInteractable>().Initialize(knight.OnInteract);
@@ -45,7 +40,6 @@ namespace ProjectZx.World
         void Awake()
         {
             _renderer = GetComponent<SpriteRenderer>();
-            _billboardRaw = GetComponentInChildren<RawImage>(true);
         }
 
         void OnInteract()
@@ -81,13 +75,6 @@ namespace ProjectZx.World
                     var c = _renderer.color;
                     c.a = alpha;
                     _renderer.color = c;
-                }
-
-                if (_billboardRaw != null)
-                {
-                    var c = _billboardRaw.color;
-                    c.a = alpha;
-                    _billboardRaw.color = c;
                 }
 
                 yield return null;

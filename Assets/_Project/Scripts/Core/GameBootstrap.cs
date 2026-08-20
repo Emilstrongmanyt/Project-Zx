@@ -1,4 +1,3 @@
-using ProjectZx.GanzSe;
 using ProjectZx.Player;
 using ProjectZx.UI;
 using ProjectZx.Waves;
@@ -92,65 +91,43 @@ namespace ProjectZx.Core
             var hub = new GameObject("HubUi").AddComponent<HubUi>();
             new GameObject("CampHeroManager").AddComponent<CampHeroManager>().Setup();
 
-            // GanzSe cast: Mira (shop), Captain Bren (maps), Archmage Thalor (quests),
+            // Fantasy Medieval cast: Mira (shop), Captain Bren (maps), Archmage Thalor (quests),
             // Ashen Seer Corvin (rescued), Sir Aldric (dungeon knight).
-            const float campNpcHeight = 1.45f;
-            const float questNpcHeight = 1.85f;
-            const float knightNpcHeight = 2.15f;
-            const float campFallbackScale = 0.475f;
-            const float questFallbackScale = 0.475f * 1.85f;
-            const float knightFallbackScale = questFallbackScale * 1.5f;
-            GanzSeRenderStudio.Warm(GanzSeNpcRole.ShopWizard);
-            GanzSeRenderStudio.Warm(GanzSeNpcRole.MapKnight);
-            GanzSeRenderStudio.Warm(GanzSeNpcRole.QuestWizard);
-
-            GameFactory.CreateGanzSeNpc(
+            MedievalNpcLibrary.Create(
                 "MiraOutfitter",
-                GanzSeNpcRole.ShopWizard,
-                ArtLibrary.Wizard,
+                MedievalNpcLibrary.Cast.Mira,
                 new Vector3(-2.1f, 1.1f),
                 () => hub.OpenShop(),
-                campNpcHeight,
-                fallbackSpriteScale: campFallbackScale);
-            GameFactory.CreateGanzSeNpc(
+                MedievalNpcLibrary.CampScale);
+            MedievalNpcLibrary.Create(
                 "CaptainBren",
-                GanzSeNpcRole.MapKnight,
-                ArtLibrary.Knight,
+                MedievalNpcLibrary.Cast.Bren,
                 new Vector3(2.1f, 1.1f),
                 () => hub.OpenMapSelect(),
-                campNpcHeight,
-                fallbackSpriteScale: campFallbackScale);
-            GameFactory.CreateGanzSeNpc(
+                MedievalNpcLibrary.CampScale);
+            MedievalNpcLibrary.Create(
                 "ArchmageThalor",
-                GanzSeNpcRole.QuestWizard,
-                ArtLibrary.QuestWizard,
+                MedievalNpcLibrary.Cast.Thalor,
                 new Vector3(4.2f, 1.6f),
                 () => hub.OpenQuestGiver(),
-                questNpcHeight,
-                fallbackSpriteScale: questFallbackScale);
+                MedievalNpcLibrary.QuestScale);
             if (GameSave.QuestGreyWizardRescued || GameSave.QuestGreyWizardCompleted)
             {
-                GanzSeRenderStudio.Warm(GanzSeNpcRole.GreyWizard);
-                GameFactory.CreateGanzSeNpc(
+                MedievalNpcLibrary.Create(
                     "AshenSeerCorvin",
-                    GanzSeNpcRole.GreyWizard,
-                    ArtLibrary.GreyWizard,
+                    MedievalNpcLibrary.Cast.Corvin,
                     new Vector3(7.4f, -0.6f),
                     onInteract: null,
-                    billboardHeight: questNpcHeight,
-                    fallbackSpriteScale: questFallbackScale);
+                    MedievalNpcLibrary.QuestScale);
             }
             if (GameSave.DungeonKnightReturnedToCamp)
             {
-                GanzSeRenderStudio.Warm(GanzSeNpcRole.QuestKnight);
-                GameFactory.CreateGanzSeNpc(
+                MedievalNpcLibrary.Create(
                     "SirAldric",
-                    GanzSeNpcRole.QuestKnight,
-                    ArtLibrary.Knight1,
+                    MedievalNpcLibrary.Cast.Aldric,
                     new Vector3(7.0f, 6.6f),
                     () => hub.OpenKnightQuestGiver(),
-                    knightNpcHeight,
-                    fallbackSpriteScale: knightFallbackScale);
+                    MedievalNpcLibrary.KnightScale);
             }
             // Layer Lab stage frame + trophy composite (readable world prop).
             GameFactory.CreateNpc("AchievementBoard", ArtLibrary.AchievementKeeper, new Vector3(0f, 2.8f), () => hub.OpenAchievements(), 0.55f);

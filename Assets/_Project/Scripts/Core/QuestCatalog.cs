@@ -313,7 +313,7 @@ namespace ProjectZx.Core
             return !GameSave.HasKnightsGreatsword;
         }
 
-        /// <summary>All quest givers show a GanzSe character (or sprite fallback) in the dialogue frame.</summary>
+        /// <summary>All quest givers show a Fantasy Medieval portrait in the dialogue frame.</summary>
         public static bool UsesQuestPortrait(QuestId id) => true;
 
         /// <summary>

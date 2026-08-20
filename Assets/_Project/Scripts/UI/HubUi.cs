@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using ProjectZx.Core;
-using ProjectZx.GanzSe;
 using ProjectZx.HeroEditor;
 using ProjectZx.Player;
+using ProjectZx.World;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -54,8 +54,6 @@ namespace ProjectZx.UI
         GameObject _settingsPanel;
         GameObject _questPanel;
         Image _questPortraitImage;
-        RawImage _questPortraitRaw;
-        GanzSePortraitView _questPortraitView;
         GameObject _questPortraitFrame;
         Text _questTitleText;
         Text _questBodyText;
@@ -475,13 +473,13 @@ namespace ProjectZx.UI
                 _onboardingPanel.SetActive(false);
         }
 
-        static GanzSeNpcRole PortraitRoleForQuest(QuestId id)
+        static MedievalNpcLibrary.Cast PortraitCastForQuest(QuestId id)
         {
             if (id == QuestId.KnightsBestFriend)
-                return GanzSeNpcRole.QuestKnight;
+                return MedievalNpcLibrary.Cast.Aldric;
             if (id == QuestId.GreyWizardsCrow)
-                return GanzSeNpcRole.GreyWizard;
-            return GanzSeNpcRole.QuestWizard;
+                return MedievalNpcLibrary.Cast.Corvin;
+            return MedievalNpcLibrary.Cast.Thalor;
         }
 
         GameObject BuildShopPanel(Transform parent)
@@ -1063,25 +1061,11 @@ namespace ProjectZx.UI
             portraitRect.pivot = new Vector2(0.5f, 0.5f);
             portraitRect.anchoredPosition = Vector2.zero;
             portraitRect.sizeDelta = new Vector2(240f, 240f);
-            // Legacy sprite fallback if GanzSe RT fails to load.
             _questPortraitImage = portraitGo.AddComponent<Image>();
-            _questPortraitImage.sprite = ArtLibrary.WizardPortrait;
+            _questPortraitImage.sprite = MedievalNpcLibrary.Portrait(MedievalNpcLibrary.Cast.Thalor)
+                ?? ArtLibrary.WizardPortrait;
             _questPortraitImage.preserveAspect = true;
             _questPortraitImage.raycastTarget = false;
-
-            var rawGo = new GameObject("GanzSePortrait");
-            rawGo.transform.SetParent(frameGo.transform, false);
-            var rawRect = rawGo.AddComponent<RectTransform>();
-            rawRect.anchorMin = new Vector2(0.5f, 0.5f);
-            rawRect.anchorMax = new Vector2(0.5f, 0.5f);
-            rawRect.pivot = new Vector2(0.5f, 0.5f);
-            rawRect.anchoredPosition = Vector2.zero;
-            rawRect.sizeDelta = new Vector2(240f, 240f);
-            _questPortraitRaw = rawGo.AddComponent<RawImage>();
-            _questPortraitRaw.raycastTarget = false;
-            _questPortraitRaw.enabled = false;
-            _questPortraitView = frameGo.AddComponent<GanzSePortraitView>();
-            _questPortraitView.Bind(_questPortraitRaw, _questPortraitImage);
 
             _questTitleText = CreateText(
                 panel.transform,
@@ -1175,20 +1159,16 @@ namespace ProjectZx.UI
 
             if (showPortrait)
             {
-                var role = PortraitRoleForQuest(def.Id);
-                if (_questPortraitView != null)
-                    _questPortraitView.Show(role);
-                else if (_questPortraitImage != null)
+                if (_questPortraitImage != null)
                 {
-                    _questPortraitImage.sprite = ArtLibrary.WizardPortrait;
+                    _questPortraitImage.sprite = MedievalNpcLibrary.Portrait(PortraitCastForQuest(def.Id))
+                        ?? ArtLibrary.WizardPortrait;
                     _questPortraitImage.enabled = true;
                 }
             }
-            else
+            else if (_questPortraitImage != null)
             {
-                _questPortraitView?.Hide();
-                if (_questPortraitImage != null) _questPortraitImage.enabled = false;
-                if (_questPortraitRaw != null) _questPortraitRaw.enabled = false;
+                _questPortraitImage.enabled = false;
             }
 
             // When no portrait, use full dialogue width for body/title.
