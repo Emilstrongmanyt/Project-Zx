@@ -487,6 +487,14 @@ namespace ProjectZx.UI
                 return MedievalNpcLibrary.Cast.Lyra;
             if (id == QuestId.BrensWatch)
                 return MedievalNpcLibrary.Cast.Bren;
+            if (id == QuestId.KaelsRecon)
+                return MedievalNpcLibrary.Cast.Kael;
+            if (id == QuestId.NessasSalve)
+                return MedievalNpcLibrary.Cast.Nessa;
+            if (id == QuestId.GarricksAnvil)
+                return MedievalNpcLibrary.Cast.Garrick;
+            if (id == QuestId.TovesChart)
+                return MedievalNpcLibrary.Cast.Tove;
             return MedievalNpcLibrary.Cast.Thalor;
         }
 
@@ -817,11 +825,21 @@ namespace ProjectZx.UI
             var panel = CreateDialogPanel(parent, panelName, Vector2.zero, HubMenuPanelSize, ArtLibrary.ChallengeBoardUi);
             CreateText(panel.transform, title, 40, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(700, 56));
             CreateText(panel.transform, subtitle, 22, TextAnchor.MiddleCenter, new Vector2(0, 175), new Vector2(760, 72));
-            CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Outside), new Vector2(0, 80), () => EnterSurvival(SurvivalMapKind.Outside), large: true);
-            CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Inside), new Vector2(0, 15), () => EnterSurvival(SurvivalMapKind.Inside), large: true);
-            CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Dungeon), new Vector2(0, -50), () => EnterSurvival(SurvivalMapKind.Dungeon), large: true);
-            CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Crypt), new Vector2(0, -115), () => EnterSurvival(SurvivalMapKind.Crypt), large: true);
-            CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Unlimited), new Vector2(0, -180), () => EnterSurvival(SurvivalMapKind.Unlimited), large: true);
+            TagMapButton(
+                CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Outside), new Vector2(0, 80), () => EnterSurvival(SurvivalMapKind.Outside), large: true),
+                SurvivalMapKind.Outside);
+            TagMapButton(
+                CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Inside), new Vector2(0, 15), () => EnterSurvival(SurvivalMapKind.Inside), large: true),
+                SurvivalMapKind.Inside);
+            TagMapButton(
+                CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Dungeon), new Vector2(0, -50), () => EnterSurvival(SurvivalMapKind.Dungeon), large: true),
+                SurvivalMapKind.Dungeon);
+            TagMapButton(
+                CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Crypt), new Vector2(0, -115), () => EnterSurvival(SurvivalMapKind.Crypt), large: true),
+                SurvivalMapKind.Crypt);
+            TagMapButton(
+                CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Unlimited), new Vector2(0, -180), () => EnterSurvival(SurvivalMapKind.Unlimited), large: true),
+                SurvivalMapKind.Unlimited);
             CreateButton(panel.transform, "Close", new Vector2(0, -255), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
@@ -1152,6 +1170,30 @@ namespace ProjectZx.UI
         public void OpenLyraQuestGiver()
         {
             OpenQuestGiverWithPool(QuestCatalog.LyraQuestIds, QuestId.LyraVigil);
+        }
+
+        /// <summary>Scout Kael — Emberwilds recon side quest.</summary>
+        public void OpenKaelQuestGiver()
+        {
+            OpenQuestGiverWithPool(QuestCatalog.KaelQuestIds, QuestId.KaelsRecon);
+        }
+
+        /// <summary>Herbalist Nessa — Warded Halls salve side quest.</summary>
+        public void OpenNessaQuestGiver()
+        {
+            OpenQuestGiverWithPool(QuestCatalog.NessaQuestIds, QuestId.NessasSalve);
+        }
+
+        /// <summary>Smith Garrick — Ironvault anvil side quest.</summary>
+        public void OpenGarrickQuestGiver()
+        {
+            OpenQuestGiverWithPool(QuestCatalog.GarrickQuestIds, QuestId.GarricksAnvil);
+        }
+
+        /// <summary>Cartographer Tove — Silent Ossuary chart side quest.</summary>
+        public void OpenToveQuestGiver()
+        {
+            OpenQuestGiverWithPool(QuestCatalog.ToveQuestIds, QuestId.TovesChart);
         }
 
         /// <summary>
@@ -2445,75 +2487,82 @@ namespace ProjectZx.UI
             _campfirePanel.SetActive(true);
         }
 
+        static void TagMapButton(Button button, SurvivalMapKind kind)
+        {
+            if (button == null) return;
+            var tag = button.GetComponent<MapSelectButtonTag>();
+            if (tag == null)
+                tag = button.gameObject.AddComponent<MapSelectButtonTag>();
+            tag.Kind = kind;
+            button.gameObject.name = $"MapBtn_{kind}";
+        }
+
         static void RefreshMapButtons(GameObject panel)
         {
             if (panel == null) return;
             var recommended = GetRecommendedMap();
 
-            foreach (var button in panel.GetComponentsInChildren<Button>(true))
+            foreach (var tag in panel.GetComponentsInChildren<MapSelectButtonTag>(true))
             {
-                if (button == null) continue;
-                var label = button.GetComponentInChildren<Text>();
-                if (label == null) continue;
-                var text = label.text ?? string.Empty;
+                if (tag == null) continue;
+                var button = tag.GetComponent<Button>();
+                var label = tag.GetComponentInChildren<Text>();
+                if (button == null || label == null) continue;
 
-                // Match by lore name (or legacy labels) so locked hints still refresh next open.
-                if (text.Contains("Emberwilds") || (text.Contains("Outside Survival") && !text.Contains("Inside")))
+                switch (tag.Kind)
                 {
-                    button.interactable = true;
-                    label.text = FormatMapButtonLabel(
-                        SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Outside),
-                        unlocked: true,
-                        lockedHint: null,
-                        recommended == SurvivalMapKind.Outside);
-                }
-                else if (text.Contains("Warded Halls") || text.Contains("Inside Survival")
-                         || text.Contains("Emberwilds R20") || text.Contains("Outside R20")
-                         || text.Contains("Warded Halls —") || text.Contains("Inside —"))
-                {
-                    var unlocked = GameSave.InsideMapUnlocked;
-                    button.interactable = unlocked;
-                    label.text = FormatMapButtonLabel(
-                        SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Inside),
-                        unlocked,
-                        "Warded Halls — clear Emberwilds R20 door",
-                        unlocked && recommended == SurvivalMapKind.Inside);
-                }
-                else if (text.Contains("Ironvault") || text.Contains("Dungeon Survival")
-                         || text.Contains("Warded Halls R30") || text.Contains("Inside R30")
-                         || text.Contains("Ironvault —") || text.Contains("Dungeon —"))
-                {
-                    var unlocked = GameSave.DungeonMapUnlocked;
-                    button.interactable = unlocked;
-                    label.text = FormatMapButtonLabel(
-                        SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Dungeon),
-                        unlocked,
-                        "Ironvault — clear Warded Halls R30 gateway",
-                        unlocked && recommended == SurvivalMapKind.Dungeon);
-                }
-                else if (text.Contains("Endless Front") || text.Contains("Unlimited Survival")
-                         || text.Contains("Crypt R50") || text.Contains("Unlimited —")
-                         || text.Contains("Endless Front —"))
-                {
-                    var unlocked = GameSave.UnlimitedMapUnlocked;
-                    button.interactable = unlocked;
-                    label.text = FormatMapButtonLabel(
-                        SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Unlimited),
-                        unlocked,
-                        "Endless Front — clear Silent Ossuary R50",
-                        unlocked && recommended == SurvivalMapKind.Unlimited);
-                }
-                else if (text.Contains("Silent Ossuary") || text.Contains("Crypt Survival")
-                         || text.Contains("Ironvault R40") || text.Contains("Dungeon R40")
-                         || text.Contains("Crypt —") || text.Contains("Ossuary —"))
-                {
-                    var unlocked = GameSave.CryptMapUnlocked;
-                    button.interactable = unlocked;
-                    label.text = FormatMapButtonLabel(
-                        SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Crypt),
-                        unlocked,
-                        "Silent Ossuary — clear Ironvault R40 portal",
-                        unlocked && recommended == SurvivalMapKind.Crypt);
+                    case SurvivalMapKind.Outside:
+                        button.interactable = true;
+                        label.text = FormatMapButtonLabel(
+                            SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Outside),
+                            unlocked: true,
+                            lockedHint: null,
+                            recommended == SurvivalMapKind.Outside);
+                        break;
+                    case SurvivalMapKind.Inside:
+                    {
+                        var unlocked = GameSave.InsideMapUnlocked;
+                        button.interactable = unlocked;
+                        label.text = FormatMapButtonLabel(
+                            SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Inside),
+                            unlocked,
+                            "Locked — clear Emberwilds R20 door",
+                            unlocked && recommended == SurvivalMapKind.Inside);
+                        break;
+                    }
+                    case SurvivalMapKind.Dungeon:
+                    {
+                        var unlocked = GameSave.DungeonMapUnlocked;
+                        button.interactable = unlocked;
+                        label.text = FormatMapButtonLabel(
+                            SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Dungeon),
+                            unlocked,
+                            "Locked — clear Warded Halls R30 gateway",
+                            unlocked && recommended == SurvivalMapKind.Dungeon);
+                        break;
+                    }
+                    case SurvivalMapKind.Crypt:
+                    {
+                        var unlocked = GameSave.CryptMapUnlocked;
+                        button.interactable = unlocked;
+                        label.text = FormatMapButtonLabel(
+                            SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Crypt),
+                            unlocked,
+                            "Locked — clear Ironvault R40 portal",
+                            unlocked && recommended == SurvivalMapKind.Crypt);
+                        break;
+                    }
+                    case SurvivalMapKind.Unlimited:
+                    {
+                        var unlocked = GameSave.UnlimitedMapUnlocked;
+                        button.interactable = unlocked;
+                        label.text = FormatMapButtonLabel(
+                            SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Unlimited),
+                            unlocked,
+                            "Locked — clear Silent Ossuary R50",
+                            unlocked && recommended == SurvivalMapKind.Unlimited);
+                        break;
+                    }
                 }
             }
         }

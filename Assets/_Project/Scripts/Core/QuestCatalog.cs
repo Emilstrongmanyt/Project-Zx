@@ -14,7 +14,15 @@ namespace ProjectZx.Core
         /// <summary>Sister Lyra: silence the Silent Ossuary R50 Minotaur.</summary>
         LyraVigil = 5,
         /// <summary>Captain Bren: hold The Endless Front through round 50.</summary>
-        BrensWatch = 6
+        BrensWatch = 6,
+        /// <summary>Scout Kael: push Emberwilds to round 15.</summary>
+        KaelsRecon = 7,
+        /// <summary>Herbalist Nessa: push Warded Halls to round 15.</summary>
+        NessasSalve = 8,
+        /// <summary>Smith Garrick: push Ironvault to round 20.</summary>
+        GarricksAnvil = 9,
+        /// <summary>Cartographer Tove: push Silent Ossuary to round 25.</summary>
+        TovesChart = 10
     }
 
     public enum QuestProgress
@@ -136,6 +144,50 @@ namespace ProjectZx.Core
             1500,
             () => GameSave.UnlimitedMapUnlocked);
 
+        public static readonly QuestDefinition KaelsRecon = new(
+            QuestId.KaelsRecon,
+            "Kael's Recon",
+            "Scout Kael. Thalor trusts you now — good. I need eyes past the tree line. Push Emberwilds Survival to round 15 and mark what still moves out there. Coin for a clean report.",
+            "Emberwilds Survival — reach round 15, then return to me south-west of the fire.",
+            "Solid work. The wilds are worse than the maps admit. Take this gold — and keep your blade ready.",
+            "Kael keeps watch on the Emberwilds trail. Call if the trees lean wrong.",
+            "In progress  ·  Reach Emberwilds round 15",
+            400,
+            () => GameSave.QuestGrandWizardsPerilCompleted);
+
+        public static readonly QuestDefinition NessasSalve = new(
+            QuestId.NessasSalve,
+            "Nessa's Salve",
+            "I am Nessa — I brew what the war left broken. The Warded Halls still bleed spore and ash. Survive to round 15 there and I can finish a salve that keeps this camp standing. Gold when you return.",
+            "Warded Halls Survival — reach round 15, then find me north of Mira.",
+            "The halls gave you enough. This gold — and the salve is done. Rest when you can.",
+            "Nessa tends herbs by the north stones. The halls still whisper.",
+            "In progress  ·  Reach Warded Halls round 15",
+            500,
+            () => GameSave.InsideMapUnlocked);
+
+        public static readonly QuestDefinition GarricksAnvil = new(
+            QuestId.GarricksAnvil,
+            "Garrick's Anvil",
+            "Name's Garrick. Ironvault ate half my forge when the gates failed. Hold that dungeon through round 20 and prove the vault still answers to steel. I'll pay in gold — and a nod from the anvil.",
+            "Ironvault Survival — reach round 20, then report to me east of Thalor.",
+            "Twenty rounds and the vault didn't break you. Take the gold. The forge remembers.",
+            "Garrick hammers near the east rise. Ironvault never cools.",
+            "In progress  ·  Reach Ironvault round 20",
+            600,
+            () => GameSave.DungeonMapUnlocked);
+
+        public static readonly QuestDefinition TovesChart = new(
+            QuestId.TovesChart,
+            "Tove's Chart",
+            "Cartographer Tove. The Silent Ossuary shifts under every torch. Chart it through round 25 for me — paths, dead ends, anything that moves. Fair gold for a true map.",
+            "Silent Ossuary Survival — reach round 25, then return with what you saw.",
+            "Your marks match the stone. Take this gold. The ossuary is less of a mystery now.",
+            "Tove redraws the war's wounds by the east path. Ask when the maps go blank.",
+            "In progress  ·  Reach Silent Ossuary round 25",
+            700,
+            () => GameSave.CryptMapUnlocked);
+
         static readonly QuestDefinition[] AllQuests =
         {
             GrandWizardsPeril,
@@ -143,7 +195,11 @@ namespace ProjectZx.Core
             GreyWizardsCrow,
             KnightsBestFriend,
             LyraVigil,
-            BrensWatch
+            BrensWatch,
+            KaelsRecon,
+            NessasSalve,
+            GarricksAnvil,
+            TovesChart
         };
 
         public static IReadOnlyList<QuestDefinition> All => AllQuests;
@@ -211,6 +267,34 @@ namespace ProjectZx.Core
                         ? QuestProgress.ReadyToTurnIn
                         : QuestProgress.Active;
 
+                case QuestId.KaelsRecon:
+                    if (GameSave.QuestKaelsReconCompleted) return QuestProgress.Completed;
+                    if (!GameSave.QuestKaelsReconAccepted) return QuestProgress.Available;
+                    return GameSave.QuestKaelsReconMilestone
+                        ? QuestProgress.ReadyToTurnIn
+                        : QuestProgress.Active;
+
+                case QuestId.NessasSalve:
+                    if (GameSave.QuestNessasSalveCompleted) return QuestProgress.Completed;
+                    if (!GameSave.QuestNessasSalveAccepted) return QuestProgress.Available;
+                    return GameSave.QuestNessasSalveMilestone
+                        ? QuestProgress.ReadyToTurnIn
+                        : QuestProgress.Active;
+
+                case QuestId.GarricksAnvil:
+                    if (GameSave.QuestGarricksAnvilCompleted) return QuestProgress.Completed;
+                    if (!GameSave.QuestGarricksAnvilAccepted) return QuestProgress.Available;
+                    return GameSave.QuestGarricksAnvilMilestone
+                        ? QuestProgress.ReadyToTurnIn
+                        : QuestProgress.Active;
+
+                case QuestId.TovesChart:
+                    if (GameSave.QuestTovesChartCompleted) return QuestProgress.Completed;
+                    if (!GameSave.QuestTovesChartAccepted) return QuestProgress.Available;
+                    return GameSave.QuestTovesChartMilestone
+                        ? QuestProgress.ReadyToTurnIn
+                        : QuestProgress.Active;
+
                 default:
                     return QuestProgress.Locked;
             }
@@ -259,6 +343,26 @@ namespace ProjectZx.Core
         public static readonly QuestId[] BrenQuestIds =
         {
             QuestId.BrensWatch
+        };
+
+        public static readonly QuestId[] KaelQuestIds =
+        {
+            QuestId.KaelsRecon
+        };
+
+        public static readonly QuestId[] NessaQuestIds =
+        {
+            QuestId.NessasSalve
+        };
+
+        public static readonly QuestId[] GarrickQuestIds =
+        {
+            QuestId.GarricksAnvil
+        };
+
+        public static readonly QuestId[] ToveQuestIds =
+        {
+            QuestId.TovesChart
         };
 
         /// <summary>Legacy helper — Thalor pool.</summary>
@@ -383,6 +487,18 @@ namespace ProjectZx.Core
                 case QuestId.BrensWatch:
                     GameSave.QuestBrensWatchAccepted = true;
                     return true;
+                case QuestId.KaelsRecon:
+                    GameSave.QuestKaelsReconAccepted = true;
+                    return true;
+                case QuestId.NessasSalve:
+                    GameSave.QuestNessasSalveAccepted = true;
+                    return true;
+                case QuestId.GarricksAnvil:
+                    GameSave.QuestGarricksAnvilAccepted = true;
+                    return true;
+                case QuestId.TovesChart:
+                    GameSave.QuestTovesChartAccepted = true;
+                    return true;
                 default:
                     return false;
             }
@@ -441,6 +557,30 @@ namespace ProjectZx.Core
                     AwardGold(def.GoldReward, out goldAwarded);
                     return true;
 
+                case QuestId.KaelsRecon:
+                    if (!GameSave.QuestKaelsReconMilestone) return false;
+                    GameSave.QuestKaelsReconCompleted = true;
+                    AwardGold(def.GoldReward, out goldAwarded);
+                    return true;
+
+                case QuestId.NessasSalve:
+                    if (!GameSave.QuestNessasSalveMilestone) return false;
+                    GameSave.QuestNessasSalveCompleted = true;
+                    AwardGold(def.GoldReward, out goldAwarded);
+                    return true;
+
+                case QuestId.GarricksAnvil:
+                    if (!GameSave.QuestGarricksAnvilMilestone) return false;
+                    GameSave.QuestGarricksAnvilCompleted = true;
+                    AwardGold(def.GoldReward, out goldAwarded);
+                    return true;
+
+                case QuestId.TovesChart:
+                    if (!GameSave.QuestTovesChartMilestone) return false;
+                    GameSave.QuestTovesChartCompleted = true;
+                    AwardGold(def.GoldReward, out goldAwarded);
+                    return true;
+
                 default:
                     return false;
             }
@@ -476,6 +616,43 @@ namespace ProjectZx.Core
             if (round < 50) return;
             if (GetProgress(QuestId.BrensWatch) != QuestProgress.Active) return;
             GameSave.QuestBrensWatchMilestone = true;
+        }
+
+        /// <summary>Side-quest round milestones keyed to the map the player actually cleared.</summary>
+        public static void NotifySurvivalRound(SurvivalMapKind mapKind, int round)
+        {
+            if (round <= 0) return;
+
+            if (mapKind == SurvivalMapKind.Outside
+                && round >= 15
+                && GetProgress(QuestId.KaelsRecon) == QuestProgress.Active)
+            {
+                GameSave.QuestKaelsReconMilestone = true;
+            }
+
+            if (mapKind == SurvivalMapKind.Inside
+                && round >= 15
+                && GetProgress(QuestId.NessasSalve) == QuestProgress.Active)
+            {
+                GameSave.QuestNessasSalveMilestone = true;
+            }
+
+            if (mapKind == SurvivalMapKind.Dungeon
+                && round >= 20
+                && GetProgress(QuestId.GarricksAnvil) == QuestProgress.Active)
+            {
+                GameSave.QuestGarricksAnvilMilestone = true;
+            }
+
+            if (mapKind == SurvivalMapKind.Crypt
+                && round >= 25
+                && GetProgress(QuestId.TovesChart) == QuestProgress.Active)
+            {
+                GameSave.QuestTovesChartMilestone = true;
+            }
+
+            if (mapKind == SurvivalMapKind.Unlimited)
+                NotifyUnlimitedRound(round);
         }
 
         public static bool ShouldSpawnDarkBird(SurvivalMapKind mapKind, int round)

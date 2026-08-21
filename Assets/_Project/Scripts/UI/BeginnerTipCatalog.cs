@@ -36,6 +36,10 @@ namespace ProjectZx.UI
             new("aldric", "Hint: Help Sir Aldric leave Ironvault, then recover his greatsword from R40."),
             new("lyra", "Hint: When Silent Ossuary unlocks, Sister Lyra offers Lyra's Vigil — clear the R50 Minotaur."),
             new("bren_watch", "Hint: After The Endless Front unlocks, Captain Bren offers Bren's Watch — survive to round 50."),
+            new("kael", "Hint: After Thalor's pendant, Scout Kael appears — push Emberwilds to R15 for gold."),
+            new("nessa", "Hint: When Warded Halls unlock, Herbalist Nessa wants you to reach R15 there."),
+            new("garrick", "Hint: After Ironvault opens, Smith Garrick asks you to hold R20."),
+            new("tove", "Hint: When Silent Ossuary unlocks, Cartographer Tove needs a chart through R25."),
         };
 
         public static int Count => All.Length;
@@ -62,6 +66,10 @@ namespace ProjectZx.UI
                 "aldric" => GameSave.DungeonMapUnlocked && !GameSave.QuestKnightsBestFriendCompleted,
                 "lyra" => GameSave.CryptMapUnlocked && !GameSave.QuestLyraVigilCompleted,
                 "bren_watch" => GameSave.UnlimitedMapUnlocked && !GameSave.QuestBrensWatchCompleted,
+                "kael" => GameSave.QuestGrandWizardsPerilCompleted && !GameSave.QuestKaelsReconCompleted,
+                "nessa" => GameSave.InsideMapUnlocked && !GameSave.QuestNessasSalveCompleted,
+                "garrick" => GameSave.DungeonMapUnlocked && !GameSave.QuestGarricksAnvilCompleted,
+                "tove" => GameSave.CryptMapUnlocked && !GameSave.QuestTovesChartCompleted,
                 _ => true
             };
         }

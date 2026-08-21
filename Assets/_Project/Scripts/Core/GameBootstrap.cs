@@ -81,6 +81,10 @@ namespace ProjectZx.Core
             GameFactory.ReserveClearing(new Vector2(-1.2f, 0.6f), 2.4f);
             GameFactory.ReserveClearing(new Vector2(1.2f, 0.6f), 2.4f);
             GameFactory.ReserveClearing(new Vector2(0f, 1.4f), 2.8f);
+            GameFactory.ReserveClearing(new Vector2(-5.6f, -1.4f), 2.2f);
+            GameFactory.ReserveClearing(new Vector2(-3.2f, 3.5f), 2.2f);
+            GameFactory.ReserveClearing(new Vector2(5.6f, 3.8f), 2.2f);
+            GameFactory.ReserveClearing(new Vector2(6.4f, 0.2f), 2.2f);
 
             GameFactory.ScatterArenaObstacles(
                 ArenaBounds.CampWidth - ArenaBounds.WaterMargin * 2f,
@@ -91,8 +95,8 @@ namespace ProjectZx.Core
             var hub = new GameObject("HubUi").AddComponent<HubUi>();
             new GameObject("CampHeroManager").AddComponent<CampHeroManager>().Setup();
 
-            // Fantasy Medieval cast: Mira, Bren, Thalor, Corvin (rescued), Aldric (returned),
-            // Sister Lyra (Silent Ossuary unlocked).
+            // Fantasy Medieval cast: Mira, Bren (flipped), Thalor, midgame support (Kael/Nessa/
+            // Garrick/Tove), Corvin (rescued), Aldric (returned), Sister Lyra (Ossuary).
             MedievalNpcLibrary.Create(
                 "MiraOutfitter",
                 MedievalNpcLibrary.Cast.Mira,
@@ -104,13 +108,51 @@ namespace ProjectZx.Core
                 MedievalNpcLibrary.Cast.Bren,
                 new Vector3(2.1f, 1.1f),
                 () => hub.OpenBren(),
-                MedievalNpcLibrary.CampScale);
+                MedievalNpcLibrary.CampScale,
+                flipX: true);
             MedievalNpcLibrary.Create(
                 "ArchmageThalor",
                 MedievalNpcLibrary.Cast.Thalor,
                 new Vector3(4.2f, 1.6f),
                 () => hub.OpenQuestGiver(),
                 MedievalNpcLibrary.QuestScale);
+            // Midgame support cast — side quests between main chapters.
+            if (GameSave.QuestGrandWizardsPerilCompleted)
+            {
+                MedievalNpcLibrary.Create(
+                    "ScoutKael",
+                    MedievalNpcLibrary.Cast.Kael,
+                    new Vector3(-5.6f, -1.4f),
+                    () => hub.OpenKaelQuestGiver(),
+                    MedievalNpcLibrary.QuestScale);
+            }
+            if (GameSave.InsideMapUnlocked)
+            {
+                MedievalNpcLibrary.Create(
+                    "HerbalistNessa",
+                    MedievalNpcLibrary.Cast.Nessa,
+                    new Vector3(-3.2f, 3.5f),
+                    () => hub.OpenNessaQuestGiver(),
+                    MedievalNpcLibrary.QuestScale);
+            }
+            if (GameSave.DungeonMapUnlocked)
+            {
+                MedievalNpcLibrary.Create(
+                    "SmithGarrick",
+                    MedievalNpcLibrary.Cast.Garrick,
+                    new Vector3(5.6f, 3.8f),
+                    () => hub.OpenGarrickQuestGiver(),
+                    MedievalNpcLibrary.QuestScale);
+            }
+            if (GameSave.CryptMapUnlocked)
+            {
+                MedievalNpcLibrary.Create(
+                    "CartographerTove",
+                    MedievalNpcLibrary.Cast.Tove,
+                    new Vector3(6.4f, 0.2f),
+                    () => hub.OpenToveQuestGiver(),
+                    MedievalNpcLibrary.QuestScale);
+            }
             if (GameSave.QuestGreyWizardRescued || GameSave.QuestGreyWizardCompleted)
             {
                 MedievalNpcLibrary.Create(

@@ -15,13 +15,17 @@ namespace ProjectZx.World
         public const string CorvinFolder = "MedievalNpc/Corvin";
         public const string AldricFolder = "MedievalNpc/Aldric";
         public const string LyraFolder = "MedievalNpc/Lyra";
+        public const string KaelFolder = "MedievalNpc/Kael";
+        public const string NessaFolder = "MedievalNpc/Nessa";
+        public const string GarrickFolder = "MedievalNpc/Garrick";
+        public const string ToveFolder = "MedievalNpc/Tove";
 
         public const float CampScale = 0.58f;
         public const float QuestScale = 0.68f;
         public const float KnightScale = 0.78f;
         public const float IdleFps = 8f;
 
-        static readonly Sprite[][] Cache = new Sprite[6][];
+        static readonly Sprite[][] Cache = new Sprite[10][];
 
         public enum Cast
         {
@@ -30,7 +34,11 @@ namespace ProjectZx.World
             Thalor = 2,
             Corvin = 3,
             Aldric = 4,
-            Lyra = 5
+            Lyra = 5,
+            Kael = 6,
+            Nessa = 7,
+            Garrick = 8,
+            Tove = 9
         }
 
         public static string FolderFor(Cast cast) => cast switch
@@ -41,6 +49,10 @@ namespace ProjectZx.World
             Cast.Corvin => CorvinFolder,
             Cast.Aldric => AldricFolder,
             Cast.Lyra => LyraFolder,
+            Cast.Kael => KaelFolder,
+            Cast.Nessa => NessaFolder,
+            Cast.Garrick => GarrickFolder,
+            Cast.Tove => ToveFolder,
             _ => MiraFolder
         };
 
@@ -76,13 +88,16 @@ namespace ProjectZx.World
             Vector3 position,
             Action onInteract,
             float scale,
-            float proximityRadius = 2.8f)
+            float proximityRadius = 2.8f,
+            bool flipX = false)
         {
             var frames = LoadIdle(cast);
             if (frames.Length == 0)
             {
                 var fallback = ArtLibrary.Wizard;
-                return GameFactory.CreateNpc(name, fallback, position, onInteract, scale);
+                var fallbackGo = GameFactory.CreateNpc(name, fallback, position, onInteract, scale);
+                ApplyFlipX(fallbackGo, flipX);
+                return fallbackGo;
             }
 
             var go = GameFactory.CreateAnimatedNpc(
@@ -97,7 +112,16 @@ namespace ProjectZx.World
             if (col != null)
                 col.radius = proximityRadius;
 
+            ApplyFlipX(go, flipX);
             return go;
+        }
+
+        static void ApplyFlipX(GameObject go, bool flipX)
+        {
+            if (!flipX || go == null) return;
+            var s = go.transform.localScale;
+            s.x = -Mathf.Abs(s.x);
+            go.transform.localScale = s;
         }
     }
 }

@@ -949,6 +949,7 @@ namespace ProjectZx.Player
                     if (session.MapKind == SurvivalMapKind.Unlimited)
                     {
                         GameSave.RecordUnlimitedRound(session.CurrentRound);
+                        // Depth credit on death (even mid-round) — matches prior Bren milestone behavior.
                         QuestCatalog.NotifyUnlimitedRound(session.CurrentRound);
                         GameSave.RecordWeaponUnlimitedRound(weaponClass, session.CurrentRound);
                     }

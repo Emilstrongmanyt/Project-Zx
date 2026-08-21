@@ -71,6 +71,18 @@ namespace ProjectZx.Core
         const string QuestBrenAcceptedKey = "zx_quest_bren_accepted";
         const string QuestBrenMilestoneKey = "zx_quest_bren_milestone";
         const string QuestBrenCompletedKey = "zx_quest_bren_completed";
+        const string QuestKaelAcceptedKey = "zx_quest_kael_accepted";
+        const string QuestKaelMilestoneKey = "zx_quest_kael_milestone";
+        const string QuestKaelCompletedKey = "zx_quest_kael_completed";
+        const string QuestNessaAcceptedKey = "zx_quest_nessa_accepted";
+        const string QuestNessaMilestoneKey = "zx_quest_nessa_milestone";
+        const string QuestNessaCompletedKey = "zx_quest_nessa_completed";
+        const string QuestGarrickAcceptedKey = "zx_quest_garrick_accepted";
+        const string QuestGarrickMilestoneKey = "zx_quest_garrick_milestone";
+        const string QuestGarrickCompletedKey = "zx_quest_garrick_completed";
+        const string QuestToveAcceptedKey = "zx_quest_tove_accepted";
+        const string QuestToveMilestoneKey = "zx_quest_tove_milestone";
+        const string QuestToveCompletedKey = "zx_quest_tove_completed";
         const string QuestCrowAcceptedKey = "zx_quest_crow_accepted";
         const string QuestCrowRescuedKey = "zx_quest_crow_rescued";
         const string QuestCrowCompletedKey = "zx_quest_crow_completed";
@@ -1117,6 +1129,130 @@ namespace ProjectZx.Core
             set
             {
                 PlayerPrefs.SetInt(QuestBrenCompletedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Kael's Recon — Emberwilds R15 side quest.</summary>
+        public static bool QuestKaelsReconAccepted
+        {
+            get => PlayerPrefs.GetInt(QuestKaelAcceptedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestKaelAcceptedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestKaelsReconMilestone
+        {
+            get => PlayerPrefs.GetInt(QuestKaelMilestoneKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestKaelMilestoneKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestKaelsReconCompleted
+        {
+            get => PlayerPrefs.GetInt(QuestKaelCompletedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestKaelCompletedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Nessa's Salve — Warded Halls R15 side quest.</summary>
+        public static bool QuestNessasSalveAccepted
+        {
+            get => PlayerPrefs.GetInt(QuestNessaAcceptedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestNessaAcceptedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestNessasSalveMilestone
+        {
+            get => PlayerPrefs.GetInt(QuestNessaMilestoneKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestNessaMilestoneKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestNessasSalveCompleted
+        {
+            get => PlayerPrefs.GetInt(QuestNessaCompletedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestNessaCompletedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Garrick's Anvil — Ironvault R20 side quest.</summary>
+        public static bool QuestGarricksAnvilAccepted
+        {
+            get => PlayerPrefs.GetInt(QuestGarrickAcceptedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestGarrickAcceptedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestGarricksAnvilMilestone
+        {
+            get => PlayerPrefs.GetInt(QuestGarrickMilestoneKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestGarrickMilestoneKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestGarricksAnvilCompleted
+        {
+            get => PlayerPrefs.GetInt(QuestGarrickCompletedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestGarrickCompletedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Tove's Chart — Silent Ossuary R25 side quest.</summary>
+        public static bool QuestTovesChartAccepted
+        {
+            get => PlayerPrefs.GetInt(QuestToveAcceptedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestToveAcceptedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestTovesChartMilestone
+        {
+            get => PlayerPrefs.GetInt(QuestToveMilestoneKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestToveMilestoneKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestTovesChartCompleted
+        {
+            get => PlayerPrefs.GetInt(QuestToveCompletedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestToveCompletedKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
         }

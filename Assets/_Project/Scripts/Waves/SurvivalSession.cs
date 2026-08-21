@@ -87,6 +87,7 @@ namespace ProjectZx.Waves
                         _hud?.SetRoundComplete(CurrentRound);
                         GameSave.RecordHighestRound(CurrentRound);
                         TryRecordWeaponProgress(CurrentRound);
+                        QuestCatalog.NotifySurvivalRound(MapKind, CurrentRound);
                         TryUnlockBowman(CurrentRound);
                         TryUnlockMagician(CurrentRound);
 
@@ -597,7 +598,7 @@ namespace ProjectZx.Waves
             if (MapKind != SurvivalMapKind.Unlimited) return;
 
             GameSave.RecordUnlimitedRound(round);
-            QuestCatalog.NotifyUnlimitedRound(round);
+            // Bren milestone is also covered by NotifySurvivalRound on round clear.
 
             var prevUnlimited = GameSave.GetWeaponUnlimitedBest(weaponClass);
             if (GameSave.RecordWeaponUnlimitedRound(weaponClass, round))
