@@ -29,10 +29,16 @@ namespace ProjectZx.World
         static readonly Collider2D[] OverlapBuffer = new Collider2D[12];
 
         /// <summary>
-        /// Survival: wrap (teleport to opposite side) at the playable edge.
+        /// Legacy torus wrap. Survival now uses <see cref="StreamingEnabled"/> instead.
         /// Camp: finite water ring, clamp only.
         /// </summary>
         public static bool WorldWrapEnabled { get; private set; }
+
+        /// <summary>Chunk-streamed endless survival (no edge teleport).</summary>
+        public static bool StreamingEnabled { get; private set; }
+
+        static Vector2 _streamMin = new(-32f, -32f);
+        static Vector2 _streamMax = new(32f, 32f);
 
         /// <summary>Floor tile root — co-moved on wrap so the camera frame stays continuous.</summary>
         static Transform _floorRoot;
@@ -42,8 +48,26 @@ namespace ProjectZx.World
         public static void SetWorldWrap(bool enabled)
         {
             WorldWrapEnabled = enabled;
+            if (enabled)
+                StreamingEnabled = false;
             if (!enabled)
                 ClearWorldRoots();
+        }
+
+        public static void SetStreaming(bool enabled)
+        {
+            StreamingEnabled = enabled;
+            if (enabled)
+            {
+                WorldWrapEnabled = false;
+                ClearWorldRoots();
+            }
+        }
+
+        public static void SetStreamingBounds(Vector2 min, Vector2 max)
+        {
+            _streamMin = min;
+            _streamMax = max;
         }
 
         public static void RegisterWorldRoots(Transform floorRoot, Transform propsRoot)
@@ -109,6 +133,18 @@ namespace ProjectZx.World
         /// </summary>
         public static void ConstrainPosition(Vector2 position, out Vector2 constrained, out Vector2 wrapDelta)
         {
+            wrapDelta = Vector2.zero;
+
+            // Endless streaming: free move inside loaded chunks (soft pad from unloaded void).
+            if (StreamingEnabled)
+            {
+                const float pad = 0.75f;
+                constrained = new Vector2(
+                    Mathf.Clamp(position.x, _streamMin.x + pad, _streamMax.x - pad),
+                    Mathf.Clamp(position.y, _streamMin.y + pad, _streamMax.y - pad));
+                return;
+            }
+
             if (!WorldWrapEnabled)
             {
                 var maxX = PlayableHalfWidth;
@@ -116,7 +152,6 @@ namespace ProjectZx.World
                 constrained = new Vector2(
                     Mathf.Clamp(position.x, -maxX, maxX),
                     Mathf.Clamp(position.y, -maxY, maxY));
-                wrapDelta = Vector2.zero;
                 return;
             }
 
@@ -228,6 +263,13 @@ namespace ProjectZx.World
 
         public static bool IsInsidePlayable(Vector2 position)
         {
+            if (StreamingEnabled)
+            {
+                const float pad = 0.5f;
+                return position.x >= _streamMin.x + pad && position.x <= _streamMax.x - pad
+                       && position.y >= _streamMin.y + pad && position.y <= _streamMax.y - pad;
+            }
+
             return Mathf.Abs(position.x) <= PlayableHalfWidth
                    && Mathf.Abs(position.y) <= PlayableHalfHeight;
         }
@@ -253,13 +295,20 @@ namespace ProjectZx.World
 
         public static Vector2 RandomSpawnAround(Vector2 origin, float minDistance, float maxDistance)
         {
+            if (StreamingEnabled && SurvivalChunkStreamer.Instance != null)
+                return SurvivalChunkStreamer.Instance.RandomSpawnAroundPlayer(
+                    origin, minDistance, maxDistance);
+
             for (var attempt = 0; attempt < 48; attempt++)
             {
                 var angle = Random.Range(0f, Mathf.PI * 2f);
                 var distance = Random.Range(minDistance, maxDistance);
                 var offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
                 var candidate = ClampToPlayable(origin + offset);
-                if (Vector2.Distance(candidate, origin) < minDistance * 0.75f) continue;
+                var dist = WorldWrapEnabled
+                    ? ToroidalDistance(candidate, origin)
+                    : Vector2.Distance(candidate, origin);
+                if (dist < minDistance * 0.75f) continue;
                 if (!IsInsidePlayable(candidate)) continue;
                 if (!IsClearOfObstacles(candidate)) continue;
                 return candidate;
@@ -278,29 +327,43 @@ namespace ProjectZx.World
 
         public static Vector2 RandomWaveSpawn(Vector2 playerPos, bool preferDistance = false)
         {
+            if (StreamingEnabled && SurvivalChunkStreamer.Instance != null)
+            {
+                var min = preferDistance ? 10f : 6f;
+                var max = preferDistance ? 18f : 14f;
+                var roll = Random.value;
+                if (roll < 0.35f)
+                    return SurvivalChunkStreamer.Instance.RandomSpawnAroundPlayer(playerPos, min, max, preferFar: preferDistance);
+                if (roll < 0.7f)
+                    return SurvivalChunkStreamer.Instance.RandomSpawnAroundPlayer(playerPos, min + 2f, max + 4f, preferFar: preferDistance);
+                return SurvivalChunkStreamer.Instance.RandomSpawnAroundPlayer(playerPos, 7f, 16f, preferFar: preferDistance);
+            }
+
             var origin = playerPos + Random.insideUnitCircle * 2.8f;
-            var roll = Random.value;
+            var rollLegacy = Random.value;
 
             if (preferDistance)
-                roll = Mathf.Min(1f, roll + 0.22f);
+                rollLegacy = Mathf.Min(1f, rollLegacy + 0.22f);
 
             Vector2 candidate;
-            if (roll < 0.28f)
+            if (rollLegacy < 0.28f)
                 candidate = RandomSpawnAround(origin, 5.5f, 10f);
-            else if (roll < 0.5f)
+            else if (rollLegacy < 0.5f)
                 candidate = RandomSpawnAround(origin, 9f, 15f);
-            else if (roll < 0.68f)
+            else if (rollLegacy < 0.68f)
                 candidate = RandomSpawnAround(origin, 12f, 20f);
-            else if (roll < 0.84f)
+            else if (rollLegacy < 0.84f)
                 candidate = RandomSpawnAtPlayableEdge(playerPos, minDistanceFromPlayer: 6f);
-            else if (roll < 0.94f)
+            else if (rollLegacy < 0.94f)
                 candidate = RandomSpawnInPlayableAwayFrom(playerPos, minDistance: 8f);
             else
                 candidate = RandomSpawnFlanking(playerPos, minDistance: 6.5f, maxDistance: 14f);
 
             candidate = ClampToPlayable(candidate + Random.insideUnitCircle * 0.55f);
-            if (IsInsidePlayable(candidate) && IsClearOfObstacles(candidate)
-                && Vector2.Distance(candidate, playerPos) >= 4.5f)
+            var nearPlayer = WorldWrapEnabled
+                ? ToroidalDistance(candidate, playerPos)
+                : Vector2.Distance(candidate, playerPos);
+            if (IsInsidePlayable(candidate) && IsClearOfObstacles(candidate) && nearPlayer >= 4.5f)
                 return candidate;
 
             return RandomSpawnAround(playerPos, 7f, 14f);

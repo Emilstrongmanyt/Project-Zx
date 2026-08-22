@@ -40,6 +40,7 @@ namespace ProjectZx.Core
             // Player is always RollZy; RowZi is companion-only.
             GameSave.SelectedHero = PlayableHero.RollZy;
             ArenaBounds.SetWorldWrap(false);
+            ArenaBounds.SetStreaming(false);
 
             // First launch: customize before any camp world / characters spawn.
             if (!GameSave.CharacterCreated)
@@ -58,6 +59,7 @@ namespace ProjectZx.Core
             EnsureAudioManager();
             AudioManager.Instance?.PlayCampBgm();
             ArenaBounds.SetWorldWrap(false);
+            ArenaBounds.SetStreaming(false);
             ArenaBounds.ClearWorldRoots();
             // Deep water clear color so the ring reads clearly past the tile edge.
             SetupCamera(new Color(0.1f, 0.2f, 0.48f));
@@ -218,8 +220,8 @@ namespace ProjectZx.Core
             var isDungeon = visualBiome == SurvivalMapKind.Dungeon;
             var isCrypt = visualBiome == SurvivalMapKind.Crypt;
             var isUnlimited = mapKind == SurvivalMapKind.Unlimited;
-            // Survival maps wrap at the edge (no water border).
-            ArenaBounds.SetWorldWrap(true);
+            // Endless chunk streaming (no torus wrap teleport).
+            ArenaBounds.SetStreaming(true);
             SetupCamera(isUnlimited
                 ? new Color(0.55f, 0.45f, 0.28f) // sand-adjacent clear color
                 : isDungeon || isCrypt
@@ -229,42 +231,10 @@ namespace ProjectZx.Core
                     // Grass-adjacent clear color (no water ring on survival).
                     : new Color(0.16f, 0.32f, 0.14f));
 
-            // Playable wrap area is ArenaSize; floor includes a skirt past the teleport edge.
-            const float arenaW = ArenaBounds.ArenaWidth;
-            const float arenaH = ArenaBounds.ArenaHeight;
-            var floorW = ArenaBounds.VisualFieldWidth;
-            var floorH = ArenaBounds.VisualFieldHeight;
-            // Dungeon/Crypt → Dungeon_Tile; Unlimited → SandTile (props still use visual biome).
+            // Unlimited keeps sand floor; other maps match visual biome tiles.
             var floorKind = isUnlimited
                 ? SurvivalMapKind.Unlimited
                 : visualBiome == SurvivalMapKind.Unlimited ? SurvivalMapKind.Outside : visualBiome;
-            var floorName = isUnlimited ? "UnlimitedFloor"
-                : isCrypt ? "CryptFloor"
-                : isDungeon ? "DungeonFloor"
-                : isInside ? "InsideFloor"
-                : "OutsideFloor";
-            var floorRoot = GameFactory.CreateTiledField(floorName, floorW, floorH, floorKind, 1f);
-
-            GameFactory.ClearScatterReservations();
-            GameFactory.ReserveClearing(Vector2.zero, 4.5f); // player spawn / fight space
-            // Prop band matches camera reach past the wrap edge (was +14; widen to skirt-ish).
-            var propW = ArenaBounds.WorldWrapEnabled
-                ? arenaW + ArenaBounds.VisualSkirtDepthX * 0.85f
-                : arenaW;
-            var propH = ArenaBounds.WorldWrapEnabled
-                ? arenaH + ArenaBounds.VisualSkirtDepthY * 0.85f
-                : arenaH;
-            GameObject propsRoot;
-            if (isInside)
-                propsRoot = GameFactory.ScatterInsideObstacles(propW, propH);
-            else if (isDungeon || isCrypt)
-                propsRoot = GameFactory.ScatterCryptObstacles(propW, propH);
-            else
-                propsRoot = GameFactory.ScatterArenaObstacles(propW, propH, 18, 14, 4);
-
-            ArenaBounds.RegisterWorldRoots(
-                floorRoot != null ? floorRoot.transform : null,
-                propsRoot != null ? propsRoot.transform : null);
 
             var activeHero = GameSessionContext.SelectedHero;
             var activeClass = GameSave.GetHeroClass(activeHero);
@@ -278,6 +248,12 @@ namespace ProjectZx.Core
             var playerStats = player.GetComponent<PlayerStats>();
             if (!GameSessionContext.FreshSurvivalRun)
                 playerStats?.RestoreSnapshot(GameSessionContext.RunSnapshot);
+
+            SurvivalChunkStreamer.Ensure(
+                player.transform,
+                floorKind,
+                propBiome: visualBiome,
+                worldSeed: isUnlimited ? 90210 : isCrypt ? 90213 : isDungeon ? 90212 : isInside ? 90211 : 90210);
 
             // After RowZi unlock, she follows as companion using the player's class/loadout.
             var standby = GameSave.GetStandbyHero();

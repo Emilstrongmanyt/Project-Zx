@@ -71,7 +71,7 @@ namespace ProjectZx.Waves
                 if (MapKind == SurvivalMapKind.Unlimited && CurrentRound > StatCaps.UnlimitedMaxRound)
                     break;
 
-                EnsureBiomeForRound(CurrentRound);
+                yield return StartCoroutine(EnsureBiomeForRoundRoutine(CurrentRound));
                 TrySpawnDarkBird(CurrentRound);
                 _roundActive = true;
                 yield return StartCoroutine(SpawnRound(CurrentRound));
@@ -243,11 +243,21 @@ namespace ProjectZx.Waves
             _hud?.ShowBanner("A dark crow is watching in the distance…", 2.8f);
         }
 
-        void EnsureBiomeForRound(int round)
+        IEnumerator EnsureBiomeForRoundRoutine(int round)
         {
-            if (MapKind != SurvivalMapKind.Unlimited) return;
+            if (MapKind != SurvivalMapKind.Unlimited) yield break;
             var biome = GameSessionContext.GetUnlimitedBiome(round);
-            if (biome == _activeBiome) return;
+            if (biome == _activeBiome) yield break;
+
+            var crossing = biome switch
+            {
+                SurvivalMapKind.Inside => "Crossing into the Warded Halls…",
+                SurvivalMapKind.Dungeon => "The Front shifts — Ironvault rises…",
+                _ => "The Front shifts — Emberwilds ahead…"
+            };
+            _hud?.ShowStickyBanner(crossing);
+            yield return new WaitForSeconds(0.85f);
+
             _activeBiome = biome;
             GameFactory.RebuildSurvivalEnvironment(biome);
             switch (biome)
@@ -262,12 +272,15 @@ namespace ProjectZx.Waves
                     AudioManager.Instance?.PlayOutsideBgm();
                     break;
             }
+
+            _hud?.ClearStickyBanner();
             _hud?.ShowBanner(biome switch
             {
                 SurvivalMapKind.Inside => "Entering the Warded Halls…",
                 SurvivalMapKind.Dungeon => "Descending into Ironvault…",
                 _ => "Back to the Emberwilds…"
             }, 2.5f);
+            yield return new WaitForSeconds(0.35f);
         }
 
         bool IsStageHoldRound(int round)

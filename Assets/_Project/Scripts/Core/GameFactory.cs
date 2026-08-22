@@ -24,6 +24,9 @@ namespace ProjectZx.Core
             return go;
         }
 
+        /// <summary>Used by <see cref="SurvivalChunkStreamer"/> pooled floor tiles.</summary>
+        public static void ApplyFloorMaterialPublic(SpriteRenderer renderer) => ApplyFloorMaterial(renderer);
+
         static void ApplyFloorMaterial(SpriteRenderer renderer)
         {
             if (renderer == null) return;
@@ -426,60 +429,18 @@ namespace ProjectZx.Core
         }
 
         /// <summary>
-        /// Rebuild floor + obstacles for Unlimited mid-run biome transitions.
+        /// Unlimited mid-run biome transition: restyle streamed props (no underfoot nuke).
         /// </summary>
         public static void RebuildSurvivalEnvironment(SurvivalMapKind visualBiome)
         {
-            ArenaBounds.ClearWorldRoots();
-            DestroyNamed("OutsideFloor");
-            DestroyNamed("InsideFloor");
-            DestroyNamed("DungeonFloor");
-            DestroyNamed("CryptFloor");
-            DestroyNamed("UnlimitedFloor");
-            DestroyNamed("ArenaObstacles");
-            DestroyNamed("InsideObstacles");
-            DestroyNamed("CryptObstacles");
+            if (SurvivalChunkStreamer.Instance != null)
+            {
+                SurvivalChunkStreamer.Instance.SetPropBiome(visualBiome);
+            }
 
-            const float arenaW = ArenaBounds.ArenaWidth;
-            const float arenaH = ArenaBounds.ArenaHeight;
-            var floorW = ArenaBounds.VisualFieldWidth;
-            var floorH = ArenaBounds.VisualFieldHeight;
             var isInside = visualBiome == SurvivalMapKind.Inside;
             var isDungeon = visualBiome == SurvivalMapKind.Dungeon;
             var isCrypt = visualBiome == SurvivalMapKind.Crypt;
-            // Unlimited keeps SandTile for every biome phase; props still follow visualBiome.
-            var floorKind = GameSessionContext.SurvivalMap == SurvivalMapKind.Unlimited
-                ? SurvivalMapKind.Unlimited
-                : visualBiome;
-            var floorName = floorKind == SurvivalMapKind.Unlimited
-                ? "UnlimitedFloor"
-                : isCrypt ? "CryptFloor"
-                : isDungeon ? "DungeonFloor"
-                : isInside ? "InsideFloor"
-                : "OutsideFloor";
-
-            var floorRoot = CreateTiledField(floorName, floorW, floorH, floorKind, 1f);
-
-            ClearScatterReservations();
-            ReserveClearing(Vector2.zero, 4.5f);
-            var propW = ArenaBounds.WorldWrapEnabled
-                ? arenaW + ArenaBounds.VisualSkirtDepthX * 0.85f
-                : arenaW;
-            var propH = ArenaBounds.WorldWrapEnabled
-                ? arenaH + ArenaBounds.VisualSkirtDepthY * 0.85f
-                : arenaH;
-            GameObject propsRoot;
-            if (isInside)
-                propsRoot = ScatterInsideObstacles(propW, propH);
-            else if (isDungeon || isCrypt)
-                propsRoot = ScatterCryptObstacles(propW, propH);
-            else
-                propsRoot = ScatterArenaObstacles(propW, propH, 18, 14, 4);
-
-            ArenaBounds.RegisterWorldRoots(
-                floorRoot != null ? floorRoot.transform : null,
-                propsRoot != null ? propsRoot.transform : null);
-
             var cam = Camera.main;
             if (cam != null)
             {
