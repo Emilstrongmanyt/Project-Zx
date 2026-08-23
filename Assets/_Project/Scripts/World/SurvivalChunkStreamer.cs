@@ -369,32 +369,33 @@ namespace ProjectZx.World
             float scale;
             var roll = Mathf.Abs(seed % 100) / 100f;
             // Uniform Cainos pixel props on every survival biome.
+            // Scales bumped ~30% so trees/props read as real cover vs the player.
             switch (_propBiome)
             {
                 case SurvivalMapKind.Inside:
                     sprite = roll < 0.55f
                         ? ArtLibrary.GetCainosPropSprite(seed) ?? ArtLibrary.GetRockSprite(seed)
                         : ArtLibrary.GetRockSprite(seed ^ 17);
-                    scale = 0.65f;
+                    scale = 0.85f;
                     break;
                 case SurvivalMapKind.Dungeon:
                 case SurvivalMapKind.Crypt:
                     sprite = roll < 0.5f
                         ? ArtLibrary.GetRockSprite(seed) ?? ArtLibrary.GetCainosPropSprite(seed)
                         : ArtLibrary.GetCainosPropSprite(seed ^ 23) ?? ArtLibrary.GetRockSprite(seed);
-                    scale = 0.7f;
+                    scale = 0.9f;
                     break;
                 case SurvivalMapKind.Unlimited:
                     // Same Cainos language as Outside — sparse desert props (rocks / dry bush).
                     if (roll < 0.35f)
                     {
                         sprite = ArtLibrary.GetBushSprite(seed) ?? ArtLibrary.GetRockSprite(seed);
-                        scale = 0.5f;
+                        scale = 0.65f;
                     }
                     else
                     {
                         sprite = ArtLibrary.GetRockSprite(seed ^ 91);
-                        scale = 0.6f;
+                        scale = 0.8f;
                     }
 
                     break;
@@ -402,17 +403,17 @@ namespace ProjectZx.World
                     if (roll < 0.42f)
                     {
                         sprite = ArtLibrary.GetTreeSprite(seed);
-                        scale = 0.9f;
+                        scale = 1.2f;
                     }
                     else if (roll < 0.62f)
                     {
                         sprite = ArtLibrary.GetBushSprite(seed ^ 44) ?? ArtLibrary.GetRockSprite(seed ^ 44);
-                        scale = 0.55f;
+                        scale = 0.72f;
                     }
                     else
                     {
                         sprite = ArtLibrary.GetRockSprite(seed ^ 91);
-                        scale = 0.65f;
+                        scale = 0.85f;
                     }
 
                     break;
@@ -423,7 +424,8 @@ namespace ProjectZx.World
             prop.transform.localScale = Vector3.one * scale;
             if (col != null)
             {
-                col.radius = 0.35f;
+                // Keep world blocker size proportional to the larger visuals.
+                col.radius = Mathf.Clamp(0.28f * scale, 0.32f, 0.55f);
                 col.isTrigger = false;
             }
 

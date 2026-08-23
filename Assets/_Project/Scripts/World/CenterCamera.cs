@@ -2,6 +2,8 @@ using UnityEngine;
 
 namespace ProjectZx.World
 {
+    /// <summary>Follow player before Y-sort LateUpdates so streaming sort uses the current view.</summary>
+    [DefaultExecutionOrder(-100)]
     public class CenterCamera : MonoBehaviour
     {
         Transform _target;

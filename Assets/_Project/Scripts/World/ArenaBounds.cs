@@ -132,10 +132,28 @@ namespace ProjectZx.World
         public static float VisualFieldHeight =>
             WorldWrapEnabled ? ArenaHeight + VisualSkirtDepthY * TileSize * 2f : ArenaHeight;
 
+        /// <summary>
+        /// Higher world Y draws behind (lower order). Camp uses the playable midline;
+        /// streaming uses the camera so absolute Y never drives sprites under the floor
+        /// (which happened ~48u north of origin — character "vanished" under tiles).
+        /// </summary>
         public static int GetYSortOrder(float worldY, int offset = 0)
         {
-            var depth = Mathf.RoundToInt((PlayableHalfHeight - worldY) * SortDepthScale);
-            return EntitySortBase + depth + offset;
+            float refY;
+            if (StreamingEnabled)
+            {
+                var cam = Camera.main;
+                refY = cam != null ? cam.transform.position.y : worldY;
+            }
+            else
+            {
+                refY = PlayableHalfHeight;
+            }
+
+            var depth = Mathf.RoundToInt((refY - worldY) * SortDepthScale);
+            // Keep entities above FloorSortOrder (-1000) even at the top of the frustum.
+            var order = EntitySortBase + depth + offset;
+            return Mathf.Max(FloorSortOrder + 50, order);
         }
 
         public static Vector2 ClampToPlayable(Vector2 position)

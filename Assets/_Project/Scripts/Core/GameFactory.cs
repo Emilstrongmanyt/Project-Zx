@@ -661,8 +661,10 @@ namespace ProjectZx.Core
             // Minotaur sheet is denser; pull scale back slightly so it fits the arena.
             if (isRoundFiftyBoss)
                 scale *= 0.72f;
-            // R10 / R20 decade bosses were reading too small after the 4× pass.
-            if (isBoss && (round == 10 || round == 20) && !isRoundFiftyBoss)
+            // Decade bosses need a boost after the 4× pass; R10 was still oversized in play.
+            if (isBoss && round == 10)
+                scale *= 1.3f;
+            else if (isBoss && round == 20 && !isRoundFiftyBoss)
                 scale *= 1.7f;
             // Outside survival R20 stage boss was still ~2× too large in TestFlight.
             if (isRoundTwentyBoss)
@@ -689,7 +691,9 @@ namespace ProjectZx.Core
 
             // Visual scale is large; keep WORLD hitboxes body-sized (local radius = world / scale).
             var worldHitRadius = isStageBoss ? 1.35f : isBoss ? 0.95f : isElite ? 0.65f : 0.55f;
-            if (isBoss && (round == 10 || round == 20) && !isRoundFiftyBoss)
+            if (isBoss && round == 10)
+                worldHitRadius *= 1.15f;
+            else if (isBoss && round == 20 && !isRoundFiftyBoss)
                 worldHitRadius *= 1.35f;
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = worldHitRadius / Mathf.Max(0.001f, scale);
