@@ -368,27 +368,41 @@ namespace ProjectZx.World
             Sprite sprite;
             float scale;
             var roll = Mathf.Abs(seed % 100) / 100f;
+            // Uniform Cainos pixel props on every survival biome.
             switch (_propBiome)
             {
                 case SurvivalMapKind.Inside:
-                    if (roll < 0.55f)
-                        sprite = ArtLibrary.GetInsidePropSprite(seed) ?? ArtLibrary.Stone;
-                    else if (roll < 0.8f)
-                        sprite = ArtLibrary.GetComputerSprite(seed ^ 17) ?? ArtLibrary.Stone;
-                    else
-                        sprite = ArtLibrary.GetWarheadSprite(seed ^ 31) ?? ArtLibrary.Stone;
-                    scale = 0.55f;
+                    sprite = roll < 0.55f
+                        ? ArtLibrary.GetCainosPropSprite(seed) ?? ArtLibrary.GetRockSprite(seed)
+                        : ArtLibrary.GetRockSprite(seed ^ 17);
+                    scale = 0.65f;
                     break;
                 case SurvivalMapKind.Dungeon:
                 case SurvivalMapKind.Crypt:
-                    sprite = ArtLibrary.GetCryptSprite(seed) ?? ArtLibrary.Stone;
-                    scale = 0.6f;
+                    sprite = roll < 0.5f
+                        ? ArtLibrary.GetRockSprite(seed) ?? ArtLibrary.GetCainosPropSprite(seed)
+                        : ArtLibrary.GetCainosPropSprite(seed ^ 23) ?? ArtLibrary.GetRockSprite(seed);
+                    scale = 0.7f;
+                    break;
+                case SurvivalMapKind.Unlimited:
+                    // Same Cainos language as Outside — sparse desert props (rocks / dry bush).
+                    if (roll < 0.35f)
+                    {
+                        sprite = ArtLibrary.GetBushSprite(seed) ?? ArtLibrary.GetRockSprite(seed);
+                        scale = 0.5f;
+                    }
+                    else
+                    {
+                        sprite = ArtLibrary.GetRockSprite(seed ^ 91);
+                        scale = 0.6f;
+                    }
+
                     break;
                 default:
                     if (roll < 0.42f)
                     {
                         sprite = ArtLibrary.GetTreeSprite(seed);
-                        scale = 0.85f;
+                        scale = 0.9f;
                     }
                     else if (roll < 0.62f)
                     {
@@ -398,7 +412,7 @@ namespace ProjectZx.World
                     else
                     {
                         sprite = ArtLibrary.GetRockSprite(seed ^ 91);
-                        scale = 0.6f;
+                        scale = 0.65f;
                     }
 
                     break;

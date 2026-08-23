@@ -496,27 +496,38 @@ namespace ProjectZx.Core
         public static Sprite Stone => _stone ??= GetSheetVariant("RockSheet", 10, 0) ?? CreateStoneSprite();
         public static Sprite Tree => _tree ??= GetSheetVariant("TreeSheet", 9, 0) ?? CreateTreeSprite();
 
+        /// <summary>Cainos Pixel Art Top Down — uniform survival prop language.</summary>
         public static Sprite[] TreeVariants => _treeVariants ??=
-            LoadForestPropSprites("tree") ?? LoadSheetSprites("TreeSheet", 9);
+            LoadPropFolderSprites("Props/Cainos", "tree") ?? LoadSheetSprites("TreeSheet", 9);
         public static Sprite[] RockVariants => _rockVariants ??=
-            LoadForestPropSprites("rock") ?? LoadSheetSprites("RockSheet", 10);
+            LoadPropFolderSprites("Props/Cainos", "rock") ?? LoadSheetSprites("RockSheet", 10);
         public static Sprite[] ComputerVariants => _computerVariants ??= LoadSheetSprites("ComputerSheet", 8);
-        public static Sprite[] InsidePropVariants => _insidePropVariants ??= LoadSheetSprites("Inside1Sheet", 9);
+        public static Sprite[] InsidePropVariants => _insidePropVariants ??=
+            LoadPropFolderSprites("Props/Cainos", "prop") ?? LoadSheetSprites("Inside1Sheet", 9);
         public static Sprite[] WarheadVariants => _warheadVariants ??= LoadSheetSprites("WarheadSheet", 8);
-        /// <summary>Dungeon + Crypt obstacles — CryptSheet props (shared by both maps).</summary>
-        public static Sprite[] CryptVariants => _cryptVariants ??= LoadSheetSprites("CryptSheet", 9);
+        /// <summary>Dungeon + Crypt — Cainos stone props (same style as Outside).</summary>
+        public static Sprite[] CryptVariants => _cryptVariants ??=
+            LoadPropFolderSprites("Props/Cainos", "rock")
+            ?? LoadPropFolderSprites("Props/Cainos", "prop")
+            ?? LoadSheetSprites("CryptSheet", 9);
 
         public static Sprite GetRandomTreeSprite() => PickRandom(TreeVariants) ?? CreateTreeSprite();
 
         public static Sprite GetRandomRockSprite() => PickRandom(RockVariants) ?? CreateStoneSprite();
 
-        /// <summary>Deterministic outside tree (Tiny RPG Forest / legacy sheet) for streamed maps.</summary>
+        /// <summary>Deterministic Cainos tree for streamed maps.</summary>
         public static Sprite GetTreeSprite(int seed) => PickRandom(TreeVariants, seed) ?? CreateTreeSprite();
 
-        /// <summary>Deterministic outside rock for streamed maps.</summary>
+        /// <summary>Deterministic Cainos rock / stone prop for streamed maps.</summary>
         public static Sprite GetRockSprite(int seed) => PickRandom(RockVariants, seed) ?? CreateStoneSprite();
 
-        public static Sprite GetBushSprite(int seed) => PickRandom(LoadForestPropSprites("bush"), seed);
+        public static Sprite GetBushSprite(int seed)
+            => PickRandom(LoadPropFolderSprites("Props/Cainos", "bush"), seed)
+               ?? PickRandom(LoadPropFolderSprites("Props/Cainos", "grassdet"), seed);
+
+        public static Sprite GetCainosPropSprite(int seed)
+            => PickRandom(LoadPropFolderSprites("Props/Cainos", "prop"), seed)
+               ?? GetRockSprite(seed);
 
         public static Sprite GetRandomComputerSprite() => PickRandom(ComputerVariants);
 
@@ -648,21 +659,21 @@ namespace ProjectZx.Core
 
         public static Sprite GetInsideTile(int index)
         {
-            // Prefer Screaming Brain wood floors; fall back to Rectangle Tile.
+            // Cainos stone (wood tint) — same style family as other survival floors.
             _insideTiles ??= LoadTileFolder("Tiles/Inside", "Rectangle Tile");
             return _insideTiles[Mathf.Abs(index) % _insideTiles.Length];
         }
 
         public static Sprite GetDungeonTile(int index)
         {
-            // Prefer Screaming Brain stone floors; fall back to Dungeon_Tile.
+            // Cainos stone ground — shared with Crypt.
             _dungeonTiles ??= LoadTileFolder("Tiles/Dungeon", "Dungeon_Tile");
             return _dungeonTiles[Mathf.Abs(index) % _dungeonTiles.Length];
         }
 
         public static Sprite GetSandTile(int index)
         {
-            // Prefer Screaming Brain / GSP sand; fall back to SandTile.
+            // Cainos stone with sand tint — Unlimited biome, same pixel style.
             _sandTiles ??= LoadTileFolder("Tiles/Sand", "SandTile");
             return _sandTiles[Mathf.Abs(index) % _sandTiles.Length];
         }
@@ -693,12 +704,12 @@ namespace ProjectZx.Core
             return list.ToArray();
         }
 
-        static Sprite[] LoadForestPropSprites(string namePrefix)
+        static Sprite[] LoadPropFolderSprites(string folder, string namePrefix)
         {
-            var textures = Resources.LoadAll<Texture2D>("Props/Forest");
+            var textures = Resources.LoadAll<Texture2D>(folder);
             if (textures == null || textures.Length == 0) return null;
 
-            var list = new List<Sprite>(8);
+            var list = new List<Sprite>(16);
             System.Array.Sort(textures, (a, b) => string.CompareOrdinal(a != null ? a.name : null, b != null ? b.name : null));
             for (var i = 0; i < textures.Length; i++)
             {
@@ -706,7 +717,7 @@ namespace ProjectZx.Core
                 if (tex == null || string.IsNullOrEmpty(tex.name)) continue;
                 if (!tex.name.StartsWith(namePrefix, System.StringComparison.OrdinalIgnoreCase))
                     continue;
-                var sprite = SpriteFromFloorTexture(tex, $"Props/Forest/{tex.name}");
+                var sprite = SpriteFromFloorTexture(tex, $"{folder}/{tex.name}");
                 if (sprite != null) list.Add(sprite);
             }
 

@@ -1,16 +1,20 @@
-﻿Third-party tiles / props used by Project Zx (free / CC0 or author-permitted commercial use)
+﻿Survival map art â€” uniform Cainos pixel style (all biomes)
 
-FLOORS
-- Screaming Brain Studios â€” Top Down Tiles Dungeon Pack (CC0)
-  https://screamingbrainstudios.itch.io/top-down-dungeon-pack
-  Also mirrored on OpenGameArt
-- Ground Sprite Pack (OpenGameArt) â€” extra grass/sand/dirt variants
+Source (textures only; not the full Unity package / project settings):
+  Cainos â€” Pixel Art Top Down - Basic
+  Sibling project: ..\Pixel Art Top Down - Basic\
+  https://assetstore.unity.com/packages/2d/environments/pixel-art-top-down-basic-187605
 
-PROPS
-- Tiny RPG Forest â€” trees, rocks, bushes
-  https://opengameart.org/content/tiny-rpg-forest
-- Kenney.nl â€” RPG Base (CC0) â€” supplemental props
-  https://kenney.nl/assets/rpg-base
+Floors:
+  Outside  = TX Tileset Grass
+  Dungeon/Crypt = TX Tileset Stone Ground
+  Unlimited (sand) = Stone Ground with sand tint (same style family)
+  Inside = Stone Ground with warm wood tint (same style family)
 
-Asset Store packs (Cainos / Chromisu seamless forest) were not auto-downloadable
-without Unity/itch login; SBS + Tiny Forest cover the same biomes for free.
+Props:
+  Trees = TX Plant Lower+Upper composited (full trunk+canopy)
+  Bushes/rocks = TX Plant
+  Crates/pots/pillars/gravestones = TX Props
+
+Chromisu handpainted pack remains in Assets/Handpainted_Grass_and_Ground_Textures
+but is NOT used for survival floors (style uniformity across all survival maps).
