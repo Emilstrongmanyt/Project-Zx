@@ -1,0 +1,16 @@
+﻿Third-party tiles / props used by Project Zx (free / CC0 or author-permitted commercial use)
+
+FLOORS
+- Screaming Brain Studios â€” Top Down Tiles Dungeon Pack (CC0)
+  https://screamingbrainstudios.itch.io/top-down-dungeon-pack
+  Also mirrored on OpenGameArt
+- Ground Sprite Pack (OpenGameArt) â€” extra grass/sand/dirt variants
+
+PROPS
+- Tiny RPG Forest â€” trees, rocks, bushes
+  https://opengameart.org/content/tiny-rpg-forest
+- Kenney.nl â€” RPG Base (CC0) â€” supplemental props
+  https://kenney.nl/assets/rpg-base
+
+Asset Store packs (Cainos / Chromisu seamless forest) were not auto-downloadable
+without Unity/itch login; SBS + Tiny Forest cover the same biomes for free.

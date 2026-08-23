@@ -70,6 +70,23 @@ namespace ProjectZx.World
             _streamMax = max;
         }
 
+        /// <summary>
+        /// Soft-clamp inset so the camera frustum stays over loaded floor.
+        /// Landscape phones need the wider axis (orthoSize * aspect).
+        /// </summary>
+        public static float StreamingViewPad
+        {
+            get
+            {
+                var cam = Camera.main;
+                if (cam == null || !cam.orthographic)
+                    return 14f;
+                var halfH = cam.orthographicSize;
+                var halfW = halfH * Mathf.Max(1f, cam.aspect);
+                return Mathf.Max(halfW, halfH) + 2f;
+            }
+        }
+
         public static void RegisterWorldRoots(Transform floorRoot, Transform propsRoot)
         {
             _floorRoot = floorRoot;
@@ -135,13 +152,25 @@ namespace ProjectZx.World
         {
             wrapDelta = Vector2.zero;
 
-            // Endless streaming: free move inside loaded chunks (soft pad from unloaded void).
+            // Endless streaming: free move. Soft clamp is a last-resort safety net only —
+            // the streamer keeps a camera-sized ring loaded so this rarely engages.
+            // Pad must exceed camera half-extent or the view shows the dark void.
             if (StreamingEnabled)
             {
-                const float pad = 0.75f;
-                constrained = new Vector2(
-                    Mathf.Clamp(position.x, _streamMin.x + pad, _streamMax.x - pad),
-                    Mathf.Clamp(position.y, _streamMin.y + pad, _streamMax.y - pad));
+                var pad = StreamingViewPad;
+                var minX = _streamMin.x + pad;
+                var maxX = _streamMax.x - pad;
+                var minY = _streamMin.y + pad;
+                var maxY = _streamMax.y - pad;
+                // Degenerate if ring smaller than frustum — never invent a wall at the origin.
+                if (minX < maxX && minY < maxY)
+                {
+                    constrained = new Vector2(
+                        Mathf.Clamp(position.x, minX, maxX),
+                        Mathf.Clamp(position.y, minY, maxY));
+                }
+                else
+                    constrained = position;
                 return;
             }
 

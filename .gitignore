@@ -139,3 +139,7 @@ Assets/HeroEditor/Manual.pdf.meta
 Assets/HeroEditor/SpriteSequenceCapture.unity
 Assets/HeroEditor/SpriteSequenceCapture.unity.meta
 
+
+# Local asset download / extract workspace
+_ThirdPartyDownloads/
+

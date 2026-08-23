@@ -8,14 +8,19 @@ using UnityEngine;
 namespace ProjectZx.World
 {
     /// <summary>
-    /// Player-centered chunk ring with floating origin. Replaces survival torus wrap.
+    /// Endless survival land via player-centered chunk streaming + floating origin.
+    /// Chunk identity and decoration use stable logical (true) world coordinates so
+    /// rebase never remints the map and props stay predetermined across seams.
     /// </summary>
     public sealed class SurvivalChunkStreamer : MonoBehaviour
     {
         public const float ChunkSize = 16f;
-        public const int RingRadius = 2; // 5x5 chunks
-        public const float RebaseThreshold = 48f;
         public const float TileSize = 1f;
+        /// <summary>World-grid cell for predetermined props (same cell → same prop forever).</summary>
+        public const float PropCellSize = 4f;
+        public const float RebaseThreshold = 64f;
+        const int MinRingRadius = 3;
+        const float SpawnClearRadius = 4.5f;
 
         public static SurvivalChunkStreamer Instance { get; private set; }
 
@@ -24,6 +29,7 @@ namespace ProjectZx.World
         readonly Stack<GameObject> _propPool = new();
         readonly List<long> _scratchKeys = new();
         readonly List<Vector2Int> _wanted = new();
+        readonly HashSet<long> _wantedKeys = new();
 
         Transform _root;
         Transform _player;
@@ -31,7 +37,9 @@ namespace ProjectZx.World
         SurvivalMapKind _propBiome;
         int _worldSeed;
         Vector2Int _playerChunk;
-        Vector2 _logicalOriginShift;
+        /// <summary>unityPos = trueWorld + _originOffset. Accumulates on each floating-origin rebase.</summary>
+        Vector2 _originOffset;
+        int _ringRadius = MinRingRadius;
 
         public SurvivalMapKind PropBiome => _propBiome;
         public Vector2 LoadedMin { get; private set; }
@@ -85,12 +93,12 @@ namespace ProjectZx.World
         {
             if (_player == null) return;
             MaybeRebase();
-            var chunk = WorldToChunk(_player.position);
+            RefreshRingRadius();
+            var chunk = TrueWorldToChunk(ToTrue(_player.position));
             if (chunk != _playerChunk)
-            {
                 _playerChunk = chunk;
-                SyncRing();
-            }
+            // Always sync — keeps land ahead of the camera even mid-chunk.
+            SyncRing();
         }
 
         public void Configure(
@@ -104,6 +112,7 @@ namespace ProjectZx.World
             _propBiome = propBiome;
             _worldSeed = worldSeed;
             ArenaBounds.SetStreaming(true);
+            RefreshRingRadius();
         }
 
         /// <summary>Unlimited / mid-run biome change: restyle props without nuking underfoot.</summary>
@@ -111,7 +120,6 @@ namespace ProjectZx.World
         {
             if (_propBiome == propBiome) return;
             _propBiome = propBiome;
-            // Rebuild props on all active chunks; keep floor (Unlimited sand stays).
             foreach (var kv in _active)
                 RebuildChunkProps(kv.Value);
         }
@@ -119,14 +127,15 @@ namespace ProjectZx.World
         public void ForceRefresh()
         {
             if (_player == null) return;
-            _playerChunk = WorldToChunk(_player.position);
+            RefreshRingRadius();
+            _playerChunk = TrueWorldToChunk(ToTrue(_player.position));
             SyncRing();
         }
 
-        public bool IsInsideLoaded(Vector2 worldPos)
+        public bool IsInsideLoaded(Vector2 unityPos)
         {
-            return worldPos.x >= LoadedMin.x && worldPos.x <= LoadedMax.x
-                   && worldPos.y >= LoadedMin.y && worldPos.y <= LoadedMax.y;
+            return unityPos.x >= LoadedMin.x && unityPos.x <= LoadedMax.x
+                   && unityPos.y >= LoadedMin.y && unityPos.y <= LoadedMax.y;
         }
 
         /// <summary>Spawn point in loaded land at Euclidean distance from origin.</summary>
@@ -149,7 +158,6 @@ namespace ProjectZx.World
                 return candidate;
             }
 
-            // Fallback: any clear point in loaded ring at mid distance.
             for (var attempt = 0; attempt < 32; attempt++)
             {
                 var t = Random.value;
@@ -164,12 +172,25 @@ namespace ProjectZx.World
             return playerPos + Vector2.up * Mathf.Max(8f, minDist);
         }
 
+        void RefreshRingRadius()
+        {
+            var pad = ArenaBounds.StreamingViewPad;
+            // Cover camera pad + one extra chunk so soft-clamp almost never engages.
+            var needed = Mathf.CeilToInt((pad + ChunkSize) / ChunkSize);
+            _ringRadius = Mathf.Max(MinRingRadius, needed);
+        }
+
         void SyncRing()
         {
             _wanted.Clear();
-            for (var dy = -RingRadius; dy <= RingRadius; dy++)
-            for (var dx = -RingRadius; dx <= RingRadius; dx++)
-                _wanted.Add(new Vector2Int(_playerChunk.x + dx, _playerChunk.y + dy));
+            _wantedKeys.Clear();
+            for (var dy = -_ringRadius; dy <= _ringRadius; dy++)
+            for (var dx = -_ringRadius; dx <= _ringRadius; dx++)
+            {
+                var coord = new Vector2Int(_playerChunk.x + dx, _playerChunk.y + dy);
+                _wanted.Add(coord);
+                _wantedKeys.Add(ChunkToKey(coord));
+            }
 
             _scratchKeys.Clear();
             foreach (var key in _active.Keys)
@@ -178,18 +199,8 @@ namespace ProjectZx.World
             for (var i = 0; i < _scratchKeys.Count; i++)
             {
                 var key = _scratchKeys[i];
-                var coord = KeyToChunk(key);
-                var keep = false;
-                for (var w = 0; w < _wanted.Count; w++)
-                {
-                    if (_wanted[w].x == coord.x && _wanted[w].y == coord.y)
-                    {
-                        keep = true;
-                        break;
-                    }
-                }
-
-                if (!keep && _active.TryGetValue(key, out var chunk))
+                if (_wantedKeys.Contains(key)) continue;
+                if (_active.TryGetValue(key, out var chunk))
                 {
                     UnloadChunk(chunk);
                     _active.Remove(key);
@@ -214,12 +225,12 @@ namespace ProjectZx.World
             foreach (var kv in _active)
             {
                 var c = kv.Value.Coord;
-                var x0 = c.x * ChunkSize - ChunkSize * 0.5f;
-                var y0 = c.y * ChunkSize - ChunkSize * 0.5f;
-                min.x = Mathf.Min(min.x, x0);
-                min.y = Mathf.Min(min.y, y0);
-                max.x = Mathf.Max(max.x, x0 + ChunkSize);
-                max.y = Mathf.Max(max.y, y0 + ChunkSize);
+                var trueMin = ChunkTrueOrigin(c);
+                var unityMin = ToUnity(trueMin);
+                min.x = Mathf.Min(min.x, unityMin.x);
+                min.y = Mathf.Min(min.y, unityMin.y);
+                max.x = Mathf.Max(max.x, unityMin.x + ChunkSize);
+                max.y = Mathf.Max(max.y, unityMin.y + ChunkSize);
             }
 
             if (float.IsInfinity(min.x))
@@ -240,19 +251,15 @@ namespace ProjectZx.World
         {
             var go = new GameObject($"Chunk_{coord.x}_{coord.y}");
             go.transform.SetParent(_root, false);
-            // Chunk (0,0) is centered on world origin so spawn sits in open land.
-            var origin = new Vector3(
-                coord.x * ChunkSize - ChunkSize * 0.5f,
-                coord.y * ChunkSize - ChunkSize * 0.5f,
-                0f);
-            go.transform.position = origin;
+            var trueOrigin = ChunkTrueOrigin(coord);
+            go.transform.position = (Vector3)ToUnity(trueOrigin);
 
             var runtime = new ChunkRuntime
             {
                 Coord = coord,
                 Root = go.transform,
                 Tiles = new List<GameObject>(256),
-                Props = new List<GameObject>(12)
+                Props = new List<GameObject>(16)
             };
 
             BuildChunkFloor(runtime);
@@ -263,22 +270,26 @@ namespace ProjectZx.World
         void BuildChunkFloor(ChunkRuntime chunk)
         {
             var tilesPerSide = Mathf.RoundToInt(ChunkSize / TileSize);
-            var logical = chunk.Coord;
+            var trueOrigin = ChunkTrueOrigin(chunk.Coord);
             for (var row = 0; row < tilesPerSide; row++)
             for (var col = 0; col < tilesPerSide; col++)
             {
-                var local = new Vector3(
-                    col * TileSize + TileSize * 0.5f,
-                    row * TileSize + TileSize * 0.5f,
-                    0f);
-                var tileIndex = HashTile(logical.x, logical.y, col, row);
+                var trueX = trueOrigin.x + col * TileSize + TileSize * 0.5f;
+                var trueY = trueOrigin.y + row * TileSize + TileSize * 0.5f;
+                // Stable across chunk seams: hash absolute true-world tile cells.
+                var tileIx = Mathf.FloorToInt(trueX / TileSize);
+                var tileIy = Mathf.FloorToInt(trueY / TileSize);
+                var tileIndex = Hash2(tileIx, tileIy, _worldSeed);
                 var sprite = FloorSprite(_floorKind, tileIndex);
                 if (sprite == null) continue;
 
                 var tile = RentTile();
-                tile.name = $"Tile_{col}_{row}";
+                tile.name = $"Tile_{tileIx}_{tileIy}";
                 tile.transform.SetParent(chunk.Root, false);
-                tile.transform.localPosition = local;
+                tile.transform.localPosition = new Vector3(
+                    col * TileSize + TileSize * 0.5f,
+                    row * TileSize + TileSize * 0.5f,
+                    0f);
                 tile.SetActive(true);
 
                 var sr = tile.GetComponent<SpriteRenderer>();
@@ -291,10 +302,7 @@ namespace ProjectZx.World
             }
         }
 
-        void BuildChunkProps(ChunkRuntime chunk)
-        {
-            RebuildChunkProps(chunk);
-        }
+        void BuildChunkProps(ChunkRuntime chunk) => RebuildChunkProps(chunk);
 
         void RebuildChunkProps(ChunkRuntime chunk)
         {
@@ -302,35 +310,56 @@ namespace ProjectZx.World
                 ReturnProp(chunk.Props[i]);
             chunk.Props.Clear();
 
-            var rng = new System.Random(ChunkSeed(chunk.Coord));
-            var count = _propBiome switch
+            var trueOrigin = ChunkTrueOrigin(chunk.Coord);
+            var trueMax = trueOrigin + new Vector2(ChunkSize, ChunkSize);
+
+            var cellMinX = Mathf.FloorToInt(trueOrigin.x / PropCellSize);
+            var cellMaxX = Mathf.FloorToInt((trueMax.x - 0.001f) / PropCellSize);
+            var cellMinY = Mathf.FloorToInt(trueOrigin.y / PropCellSize);
+            var cellMaxY = Mathf.FloorToInt((trueMax.y - 0.001f) / PropCellSize);
+
+            var densityThreshold = _propBiome switch
             {
-                SurvivalMapKind.Inside => 5,
-                SurvivalMapKind.Dungeon => 6,
-                SurvivalMapKind.Crypt => 6,
-                _ => 7
+                SurvivalMapKind.Inside => 48,
+                SurvivalMapKind.Dungeon => 42,
+                SurvivalMapKind.Crypt => 42,
+                _ => 38
             };
 
-            for (var i = 0; i < count; i++)
+            for (var cy = cellMinY; cy <= cellMaxY; cy++)
+            for (var cx = cellMinX; cx <= cellMaxX; cx++)
             {
-                var lx = (float)rng.NextDouble() * ChunkSize;
-                var ly = (float)rng.NextDouble() * ChunkSize;
-                var local = new Vector3(lx, ly, 0f);
-                var world = (Vector2)(chunk.Root.position + local);
-                // Keep fight space around world origin clear.
-                if (world.sqrMagnitude < 4.5f * 4.5f) continue;
-                if (!ArenaBounds.IsClearOfObstacles(world, 0.9f)) continue;
+                var h = Hash2(cx, cy, _worldSeed ^ ((int)_propBiome * 374761));
+                // Predetermined occupancy — not random scatter.
+                if ((h % 100) >= densityThreshold) continue;
+
+                var jitterX = ((h >> 8) & 255) / 255f - 0.5f;
+                var jitterY = ((h >> 16) & 255) / 255f - 0.5f;
+                var truePos = new Vector2(
+                    (cx + 0.5f) * PropCellSize + jitterX * PropCellSize * 0.35f,
+                    (cy + 0.5f) * PropCellSize + jitterY * PropCellSize * 0.35f);
+
+                // Keep fight space around true-world origin clear.
+                if (truePos.sqrMagnitude < SpawnClearRadius * SpawnClearRadius) continue;
+                // Only place cells whose center falls inside this chunk (no double-spawn on seams).
+                if (truePos.x < trueOrigin.x || truePos.x >= trueMax.x
+                    || truePos.y < trueOrigin.y || truePos.y >= trueMax.y)
+                    continue;
+
+                var local = truePos - trueOrigin;
+                var unity = ToUnity(truePos);
+                if (!ArenaBounds.IsClearOfObstacles(unity, 0.9f)) continue;
 
                 var prop = RentProp();
                 prop.transform.SetParent(chunk.Root, false);
-                prop.transform.localPosition = local;
+                prop.transform.localPosition = new Vector3(local.x, local.y, 0f);
                 prop.SetActive(true);
-                ConfigureProp(prop, rng.Next());
+                ConfigureProp(prop, h, unity);
                 chunk.Props.Add(prop);
             }
         }
 
-        void ConfigureProp(GameObject prop, int seed)
+        void ConfigureProp(GameObject prop, int seed, Vector2 unityPos)
         {
             var sr = prop.GetComponent<SpriteRenderer>();
             var col = prop.GetComponent<CircleCollider2D>();
@@ -342,30 +371,41 @@ namespace ProjectZx.World
             switch (_propBiome)
             {
                 case SurvivalMapKind.Inside:
-                    sprite = roll < 0.55f
-                        ? ArtLibrary.GetRandomInsidePropSprite()
-                        : roll < 0.8f
-                            ? ArtLibrary.GetRandomComputerSprite()
-                            : ArtLibrary.GetRandomWarheadSprite();
-                    if (sprite == null) sprite = ArtLibrary.Stone;
+                    if (roll < 0.55f)
+                        sprite = ArtLibrary.GetInsidePropSprite(seed) ?? ArtLibrary.Stone;
+                    else if (roll < 0.8f)
+                        sprite = ArtLibrary.GetComputerSprite(seed ^ 17) ?? ArtLibrary.Stone;
+                    else
+                        sprite = ArtLibrary.GetWarheadSprite(seed ^ 31) ?? ArtLibrary.Stone;
                     scale = 0.55f;
                     break;
                 case SurvivalMapKind.Dungeon:
                 case SurvivalMapKind.Crypt:
-                    sprite = ArtLibrary.GetRandomCryptSprite() ?? ArtLibrary.Stone;
+                    sprite = ArtLibrary.GetCryptSprite(seed) ?? ArtLibrary.Stone;
                     scale = 0.6f;
                     break;
                 default:
-                    sprite = roll < 0.45f
-                        ? ArtLibrary.GetRandomTreeSprite()
-                        : ArtLibrary.GetRandomRockSprite();
-                    if (sprite == null) sprite = ArtLibrary.Stone;
-                    scale = roll < 0.45f ? 0.7f : 0.55f;
+                    if (roll < 0.42f)
+                    {
+                        sprite = ArtLibrary.GetTreeSprite(seed);
+                        scale = 0.85f;
+                    }
+                    else if (roll < 0.62f)
+                    {
+                        sprite = ArtLibrary.GetBushSprite(seed ^ 44) ?? ArtLibrary.GetRockSprite(seed ^ 44);
+                        scale = 0.55f;
+                    }
+                    else
+                    {
+                        sprite = ArtLibrary.GetRockSprite(seed ^ 91);
+                        scale = 0.6f;
+                    }
+
                     break;
             }
 
             sr.sprite = sprite;
-            sr.sortingOrder = ArenaBounds.GetYSortOrder(prop.transform.position.y, 1);
+            sr.sortingOrder = ArenaBounds.GetYSortOrder(unityPos.y, 1);
             prop.transform.localScale = Vector3.one * scale;
             if (col != null)
             {
@@ -373,8 +413,7 @@ namespace ProjectZx.World
                 col.isTrigger = false;
             }
 
-            var obstacle = prop.GetComponent<ArenaObstacle>();
-            if (obstacle == null)
+            if (prop.GetComponent<ArenaObstacle>() == null)
                 prop.AddComponent<ArenaObstacle>();
         }
 
@@ -411,27 +450,24 @@ namespace ProjectZx.World
             if (pos.magnitude < RebaseThreshold) return;
 
             var shift = -pos;
-            _logicalOriginShift += shift;
+            _originOffset += shift;
             ShiftWorld(shift);
-            _playerChunk = WorldToChunk(_player.position);
-            SyncRing();
+            // Logical chunk identity is unchanged — only Unity transforms moved.
+            _playerChunk = TrueWorldToChunk(ToTrue(_player.position));
         }
 
         void ShiftWorld(Vector2 delta)
         {
             if (delta.sqrMagnitude < 0.0001f) return;
 
-            // Chunks
             foreach (var kv in _active)
             {
                 if (kv.Value.Root != null)
                     kv.Value.Root.position += (Vector3)delta;
             }
 
-            // Player
             ShiftTransform(_player, delta);
 
-            // Companions
             var companions = Object.FindObjectsByType<CompanionFollower>(FindObjectsSortMode.None);
             for (var i = 0; i < companions.Length; i++)
             {
@@ -527,6 +563,13 @@ namespace ProjectZx.World
             _propPool.Push(prop);
         }
 
+        Vector2 ToTrue(Vector2 unity) => unity - _originOffset;
+        Vector2 ToTrue(Vector3 unity) => ToTrue((Vector2)unity);
+        Vector2 ToUnity(Vector2 trueWorld) => trueWorld + _originOffset;
+
+        static Vector2 ChunkTrueOrigin(Vector2Int coord)
+            => new(coord.x * ChunkSize - ChunkSize * 0.5f, coord.y * ChunkSize - ChunkSize * 0.5f);
+
         static Sprite FloorSprite(SurvivalMapKind kind, int tileIndex) => kind switch
         {
             SurvivalMapKind.Unlimited => ArtLibrary.GetSandTile(tileIndex),
@@ -536,27 +579,30 @@ namespace ProjectZx.World
             _ => ArtLibrary.GetOutsideTile(tileIndex)
         };
 
-        static int HashTile(int cx, int cy, int col, int row)
-            => Mathf.Abs((cx * 73856093) ^ (cy * 19349663) ^ (col * 83492791) ^ (row * 39916801)) % 64;
-
-        int ChunkSeed(Vector2Int coord)
-            => _worldSeed ^ (coord.x * 73856093) ^ (coord.y * 19349663) ^ ((int)_propBiome * 83492791);
-
-        public static Vector2Int WorldToChunk(Vector3 worldPos)
+        static int Hash2(int x, int y, int seed)
         {
-            var x = Mathf.FloorToInt((worldPos.x + ChunkSize * 0.5f) / ChunkSize);
-            var y = Mathf.FloorToInt((worldPos.y + ChunkSize * 0.5f) / ChunkSize);
+            unchecked
+            {
+                var h = (uint)seed;
+                h ^= (uint)(x * 73856093);
+                h ^= (uint)(y * 19349663);
+                h *= 0x9e3779b9u;
+                h ^= h >> 16;
+                return (int)(h & 0x7fffffff);
+            }
+        }
+
+        public static Vector2Int TrueWorldToChunk(Vector2 trueWorld)
+        {
+            var x = Mathf.FloorToInt((trueWorld.x + ChunkSize * 0.5f) / ChunkSize);
+            var y = Mathf.FloorToInt((trueWorld.y + ChunkSize * 0.5f) / ChunkSize);
             return new Vector2Int(x, y);
         }
+
+        /// <summary>Legacy helper — treats the argument as true-world (pre-rebase Unity coincides).</summary>
+        public static Vector2Int WorldToChunk(Vector3 worldPos) => TrueWorldToChunk(worldPos);
 
         static long ChunkToKey(Vector2Int c) => ((long)c.x << 32) ^ (uint)c.y;
-
-        static Vector2Int KeyToChunk(long key)
-        {
-            var x = (int)(key >> 32);
-            var y = (int)(key & 0xffffffff);
-            return new Vector2Int(x, y);
-        }
 
         sealed class ChunkRuntime
         {

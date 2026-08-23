@@ -496,26 +496,43 @@ namespace ProjectZx.Core
         public static Sprite Stone => _stone ??= GetSheetVariant("RockSheet", 10, 0) ?? CreateStoneSprite();
         public static Sprite Tree => _tree ??= GetSheetVariant("TreeSheet", 9, 0) ?? CreateTreeSprite();
 
-        public static Sprite[] TreeVariants => _treeVariants ??= LoadSheetSprites("TreeSheet", 9);
-        public static Sprite[] RockVariants => _rockVariants ??= LoadSheetSprites("RockSheet", 10);
+        public static Sprite[] TreeVariants => _treeVariants ??=
+            LoadForestPropSprites("tree") ?? LoadSheetSprites("TreeSheet", 9);
+        public static Sprite[] RockVariants => _rockVariants ??=
+            LoadForestPropSprites("rock") ?? LoadSheetSprites("RockSheet", 10);
         public static Sprite[] ComputerVariants => _computerVariants ??= LoadSheetSprites("ComputerSheet", 8);
         public static Sprite[] InsidePropVariants => _insidePropVariants ??= LoadSheetSprites("Inside1Sheet", 9);
         public static Sprite[] WarheadVariants => _warheadVariants ??= LoadSheetSprites("WarheadSheet", 8);
         /// <summary>Dungeon + Crypt obstacles — CryptSheet props (shared by both maps).</summary>
         public static Sprite[] CryptVariants => _cryptVariants ??= LoadSheetSprites("CryptSheet", 9);
 
-        // Outside trees/rocks use sheet variants #1 and #2 only (indices 0 and 1).
-        public static Sprite GetRandomTreeSprite() => PickFromFirstTwo(TreeVariants) ?? CreateTreeSprite();
+        public static Sprite GetRandomTreeSprite() => PickRandom(TreeVariants) ?? CreateTreeSprite();
 
-        public static Sprite GetRandomRockSprite() => PickFromFirstTwo(RockVariants) ?? CreateStoneSprite();
+        public static Sprite GetRandomRockSprite() => PickRandom(RockVariants) ?? CreateStoneSprite();
+
+        /// <summary>Deterministic outside tree (Tiny RPG Forest / legacy sheet) for streamed maps.</summary>
+        public static Sprite GetTreeSprite(int seed) => PickRandom(TreeVariants, seed) ?? CreateTreeSprite();
+
+        /// <summary>Deterministic outside rock for streamed maps.</summary>
+        public static Sprite GetRockSprite(int seed) => PickRandom(RockVariants, seed) ?? CreateStoneSprite();
+
+        public static Sprite GetBushSprite(int seed) => PickRandom(LoadForestPropSprites("bush"), seed);
 
         public static Sprite GetRandomComputerSprite() => PickRandom(ComputerVariants);
 
+        public static Sprite GetComputerSprite(int seed) => PickRandom(ComputerVariants, seed);
+
         public static Sprite GetRandomInsidePropSprite() => PickRandom(InsidePropVariants);
+
+        public static Sprite GetInsidePropSprite(int seed) => PickRandom(InsidePropVariants, seed);
 
         public static Sprite GetRandomWarheadSprite() => PickRandom(WarheadVariants);
 
+        public static Sprite GetWarheadSprite(int seed) => PickRandom(WarheadVariants, seed);
+
         public static Sprite GetRandomCryptSprite() => PickRandom(CryptVariants);
+
+        public static Sprite GetCryptSprite(int seed) => PickRandom(CryptVariants, seed);
 
         public static int GetVariantCount(Sprite[] variants) =>
             variants == null ? 0 : System.Array.FindAll(variants, sprite => sprite != null).Length;
@@ -624,34 +641,76 @@ namespace ProjectZx.Core
 
         public static Sprite GetOutsideTile(int index)
         {
-            _outsideTiles ??= new[]
-            {
-                LoadTile("Art/tile1_outside", "tile1Outside"),
-                LoadTile("Art/tile2_outside", "tile2Outside"),
-                LoadTile("Art/tile3_outside", "tile3Outside")
-            };
+            _outsideTiles ??= LoadTileFolder("Tiles/Outside",
+                "Art/tile1_outside", "Art/tile2_outside", "Art/tile3_outside");
             return _outsideTiles[Mathf.Abs(index) % _outsideTiles.Length];
         }
 
         public static Sprite GetInsideTile(int index)
         {
-            // Inside survival floor — Resources/Rectangle Tile.
-            _insideTiles ??= BuildTileSet("Rectangle Tile");
+            // Prefer Screaming Brain wood floors; fall back to Rectangle Tile.
+            _insideTiles ??= LoadTileFolder("Tiles/Inside", "Rectangle Tile");
             return _insideTiles[Mathf.Abs(index) % _insideTiles.Length];
         }
 
         public static Sprite GetDungeonTile(int index)
         {
-            // Dungeon + Crypt floors — Resources/Dungeon_Tile (shared by both maps).
-            _dungeonTiles ??= BuildTileSet("Dungeon_Tile");
+            // Prefer Screaming Brain stone floors; fall back to Dungeon_Tile.
+            _dungeonTiles ??= LoadTileFolder("Tiles/Dungeon", "Dungeon_Tile");
             return _dungeonTiles[Mathf.Abs(index) % _dungeonTiles.Length];
         }
 
         public static Sprite GetSandTile(int index)
         {
-            // Unlimited survival floor — Resources/SandTile.
-            _sandTiles ??= BuildTileSet("SandTile");
+            // Prefer Screaming Brain / GSP sand; fall back to SandTile.
+            _sandTiles ??= LoadTileFolder("Tiles/Sand", "SandTile");
             return _sandTiles[Mathf.Abs(index) % _sandTiles.Length];
+        }
+
+        /// <summary>
+        /// Loads every Texture2D under a Resources folder as a floor sprite (64 PPU).
+        /// Falls back to legacy named tiles if the folder is empty / missing.
+        /// </summary>
+        static Sprite[] LoadTileFolder(string folder, params string[] fallbackPaths)
+        {
+            var list = new List<Sprite>(32);
+            var textures = Resources.LoadAll<Texture2D>(folder);
+            if (textures != null)
+            {
+                System.Array.Sort(textures, (a, b) => string.CompareOrdinal(a != null ? a.name : null, b != null ? b.name : null));
+                for (var i = 0; i < textures.Length; i++)
+                {
+                    var tex = textures[i];
+                    if (tex == null) continue;
+                    var sprite = SpriteFromFloorTexture(tex, $"{folder}/{tex.name}");
+                    if (sprite != null) list.Add(sprite);
+                }
+            }
+
+            if (list.Count == 0)
+                return BuildTileSet(fallbackPaths);
+
+            return list.ToArray();
+        }
+
+        static Sprite[] LoadForestPropSprites(string namePrefix)
+        {
+            var textures = Resources.LoadAll<Texture2D>("Props/Forest");
+            if (textures == null || textures.Length == 0) return null;
+
+            var list = new List<Sprite>(8);
+            System.Array.Sort(textures, (a, b) => string.CompareOrdinal(a != null ? a.name : null, b != null ? b.name : null));
+            for (var i = 0; i < textures.Length; i++)
+            {
+                var tex = textures[i];
+                if (tex == null || string.IsNullOrEmpty(tex.name)) continue;
+                if (!tex.name.StartsWith(namePrefix, System.StringComparison.OrdinalIgnoreCase))
+                    continue;
+                var sprite = SpriteFromFloorTexture(tex, $"Props/Forest/{tex.name}");
+                if (sprite != null) list.Add(sprite);
+            }
+
+            return list.Count > 0 ? list.ToArray() : null;
         }
 
         static Sprite[] BuildTileSet(params string[] paths)
@@ -675,6 +734,22 @@ namespace ProjectZx.Core
             }
 
             return list.ToArray();
+        }
+
+        static Sprite SpriteFromFloorTexture(Texture2D texture, string spriteName)
+        {
+            if (texture == null) return null;
+            texture.filterMode = FilterMode.Point;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            var sprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, texture.width, texture.height),
+                new Vector2(0.5f, 0.5f),
+                TilePixelsPerUnit,
+                0,
+                SpriteMeshType.FullRect);
+            sprite.name = string.IsNullOrEmpty(spriteName) ? texture.name : spriteName;
+            return sprite;
         }
 
         /// <summary>
@@ -1337,6 +1412,39 @@ namespace ProjectZx.Core
             if (first == null) return second;
             if (second == null) return first;
             return Random.Range(0, 2) == 0 ? first : second;
+        }
+
+        static Sprite PickFromFirstTwo(Sprite[] sprites, int seed)
+        {
+            if (sprites == null || sprites.Length == 0) return null;
+            var first = sprites[0];
+            var second = sprites.Length > 1 ? sprites[1] : null;
+            if (first == null) return second;
+            if (second == null) return first;
+            return (seed & 1) == 0 ? first : second;
+        }
+
+        static Sprite PickRandom(Sprite[] sprites, int seed)
+        {
+            if (sprites == null || sprites.Length == 0) return null;
+
+            var validCount = 0;
+            for (var i = 0; i < sprites.Length; i++)
+            {
+                if (sprites[i] != null) validCount++;
+            }
+
+            if (validCount == 0) return null;
+
+            var target = Mathf.Abs(seed) % validCount;
+            for (var i = 0; i < sprites.Length; i++)
+            {
+                if (sprites[i] == null) continue;
+                if (target == 0) return sprites[i];
+                target--;
+            }
+
+            return null;
         }
 
         static Sprite[] LoadHeroSheetSprites(string sheetName, int count)
