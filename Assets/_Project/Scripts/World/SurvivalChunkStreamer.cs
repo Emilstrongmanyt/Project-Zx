@@ -373,10 +373,11 @@ namespace ProjectZx.World
             switch (_propBiome)
             {
                 case SurvivalMapKind.Inside:
+                    // Warded Halls props need ~2× the prior indoor scale to read as furniture/cover.
                     sprite = roll < 0.55f
                         ? ArtLibrary.GetCainosPropSprite(seed) ?? ArtLibrary.GetRockSprite(seed)
                         : ArtLibrary.GetRockSprite(seed ^ 17);
-                    scale = 0.85f;
+                    scale = 1.7f;
                     break;
                 case SurvivalMapKind.Dungeon:
                 case SurvivalMapKind.Crypt:
@@ -483,6 +484,12 @@ namespace ProjectZx.World
             }
 
             ShiftTransform(_player, delta);
+
+            // Keep the camera with the world — otherwise one LateUpdate shows the void (black flash)
+            // and spawn/soft-clamp logic desyncs until the next frame.
+            var cam = Camera.main;
+            if (cam != null)
+                cam.transform.position += (Vector3)delta;
 
             var companions = Object.FindObjectsByType<CompanionFollower>(FindObjectsSortMode.None);
             for (var i = 0; i < companions.Length; i++)

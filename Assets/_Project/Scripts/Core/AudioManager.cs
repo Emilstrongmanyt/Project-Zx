@@ -23,9 +23,11 @@ namespace ProjectZx.Core
         int _bossRoarIndex = -1;
         AudioClip _swing1;
         AudioClip _swing2;
-        readonly List<AudioClip> _brothersPlaylist = new();
+        readonly List<AudioClip> _survivalPlaylist = new();
         int _playlistIndex = -1;
         bool _playlistActive;
+        /// <summary>Resources subfolder under Music/ — default DnB; Metal when settings pick it.</summary>
+        const string DefaultBgmGenreFolder = "DnB";
         float _bossProximityVolume;
         bool _bossNearby;
 
@@ -56,7 +58,7 @@ namespace ProjectZx.Core
             BuildBossRoarPlaylist();
             _swing1 = Resources.Load<AudioClip>("SwingSFX1");
             _swing2 = Resources.Load<AudioClip>("SwingSFX2");
-            BuildBrothersPlaylist();
+            BuildSurvivalPlaylist();
             ApplySavedVolumes();
         }
 
@@ -101,8 +103,8 @@ namespace ProjectZx.Core
 
         void Update()
         {
-            if (_playlistActive && _bgmSource != null && _brothersPlaylist.Count > 0 && !_bgmSource.isPlaying)
-                PlayNextBrothersTrack();
+            if (_playlistActive && _bgmSource != null && _survivalPlaylist.Count > 0 && !_bgmSource.isPlaying)
+                PlayNextSurvivalTrack();
 
             // Short roar clips: keep cycling while a boss is in range.
             if (_bossNearby && _bossSource != null && _bossRoars.Count > 0 && !_bossSource.isPlaying)
@@ -115,19 +117,26 @@ namespace ProjectZx.Core
             PlayBgm("Campfire BGM");
         }
 
-        public void PlayOutsideBgm()
+        public void PlayOutsideBgm() => PlaySurvivalPlaylist();
+
+        public void PlayInsideBgm() => PlaySurvivalPlaylist();
+
+        public void PlayDungeonBgm() => PlaySurvivalPlaylist();
+
+        /// <summary>Reload genre playlist from settings (DnB default / Metal) and restart if already playing.</summary>
+        public void ReloadSurvivalBgmFromSettings()
         {
-            // All survival maps share the 2 Brothers playlist.
-            PlayBrothersPlaylist();
+            BuildSurvivalPlaylist();
+            if (_playlistActive)
+                PlaySurvivalPlaylist();
         }
 
-        public void PlayInsideBgm() => PlayBrothersPlaylist();
-
-        public void PlayDungeonBgm() => PlayBrothersPlaylist();
-
-        void PlayBrothersPlaylist()
+        void PlaySurvivalPlaylist()
         {
-            if (_brothersPlaylist.Count == 0)
+            if (_survivalPlaylist.Count == 0)
+                BuildSurvivalPlaylist();
+
+            if (_survivalPlaylist.Count == 0)
             {
                 _playlistActive = false;
                 PlayBgm("InsideBGM");
@@ -137,14 +146,14 @@ namespace ProjectZx.Core
             _playlistActive = true;
             // Fresh shuffle order each time we enter these maps.
             ShufflePlaylist();
-            PlayNextBrothersTrack();
+            PlayNextSurvivalTrack();
         }
 
-        void PlayNextBrothersTrack()
+        void PlayNextSurvivalTrack()
         {
-            if (_brothersPlaylist.Count == 0 || _bgmSource == null) return;
-            _playlistIndex = (_playlistIndex + 1) % _brothersPlaylist.Count;
-            var clip = _brothersPlaylist[_playlistIndex];
+            if (_survivalPlaylist.Count == 0 || _bgmSource == null) return;
+            _playlistIndex = (_playlistIndex + 1) % _survivalPlaylist.Count;
+            var clip = _survivalPlaylist[_playlistIndex];
             if (clip == null) return;
             if (_bgmSource.clip == clip && _bgmSource.isPlaying) return;
 
@@ -154,48 +163,68 @@ namespace ProjectZx.Core
             _bgmSource.Play();
         }
 
-        void BuildBrothersPlaylist()
+        void BuildSurvivalPlaylist()
         {
-            _brothersPlaylist.Clear();
+            _survivalPlaylist.Clear();
 
-            // Prefer scanning all Resources audio so long track filenames still match.
-            var all = Resources.LoadAll<AudioClip>(string.Empty);
-            if (all != null)
+            var folder = ResolveBgmGenreFolder();
+            var loaded = Resources.LoadAll<AudioClip>("Music/" + folder);
+            if (loaded != null)
             {
-                for (var i = 0; i < all.Length; i++)
+                for (var i = 0; i < loaded.Length; i++)
                 {
-                    var clip = all[i];
-                    if (clip == null || string.IsNullOrEmpty(clip.name)) continue;
-                    if (clip.name.StartsWith("2 Brothers", System.StringComparison.OrdinalIgnoreCase))
-                        _brothersPlaylist.Add(clip);
+                    var clip = loaded[i];
+                    if (clip != null && !_survivalPlaylist.Contains(clip))
+                        _survivalPlaylist.Add(clip);
                 }
             }
 
-            // Explicit fallbacks if LoadAll is empty on some platforms.
-            if (_brothersPlaylist.Count == 0)
+            // If the chosen genre folder is empty, fall back to DnB then Metal.
+            if (_survivalPlaylist.Count == 0 && !string.Equals(folder, DefaultBgmGenreFolder, System.StringComparison.OrdinalIgnoreCase))
             {
-                TryAddBrothersClip("2 Brothers On The 4th Floor - Come Take My Hand (Extended Version) (From the album 2 1996)");
-                TryAddBrothersClip("2 Brothers On The 4th Floor - Fairytales (Charly Lownoise & Mental Theo Rave Edit) (2 1996)");
-                TryAddBrothersClip("2 Brothers On The 4th Floor - Fly (From the album 2 1996)");
-                TryAddBrothersClip("2 Brothers On The 4th Floor - Happy (Hardcore Megamix) (From the album 2 1996)");
+                loaded = Resources.LoadAll<AudioClip>("Music/" + DefaultBgmGenreFolder);
+                if (loaded != null)
+                {
+                    for (var i = 0; i < loaded.Length; i++)
+                    {
+                        var clip = loaded[i];
+                        if (clip != null && !_survivalPlaylist.Contains(clip))
+                            _survivalPlaylist.Add(clip);
+                    }
+                }
             }
 
-            _brothersPlaylist.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+            if (_survivalPlaylist.Count == 0)
+            {
+                loaded = Resources.LoadAll<AudioClip>("Music/Metal");
+                if (loaded != null)
+                {
+                    for (var i = 0; i < loaded.Length; i++)
+                    {
+                        var clip = loaded[i];
+                        if (clip != null && !_survivalPlaylist.Contains(clip))
+                            _survivalPlaylist.Add(clip);
+                    }
+                }
+            }
+
+            _survivalPlaylist.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
         }
 
-        void TryAddBrothersClip(string resourceName)
+        static string ResolveBgmGenreFolder()
         {
-            var clip = Resources.Load<AudioClip>(resourceName);
-            if (clip != null && !_brothersPlaylist.Contains(clip))
-                _brothersPlaylist.Add(clip);
+            var genre = GameSave.BgmGenre;
+            if (string.Equals(genre, "Metal", System.StringComparison.OrdinalIgnoreCase))
+                return "Metal";
+            return DefaultBgmGenreFolder;
         }
 
         void ShufflePlaylist()
         {
-            for (var i = _brothersPlaylist.Count - 1; i > 0; i--)
+            for (var i = _survivalPlaylist.Count - 1; i > 0; i--)
             {
                 var j = Random.Range(0, i + 1);
-                (_brothersPlaylist[i], _brothersPlaylist[j]) = (_brothersPlaylist[j], _brothersPlaylist[i]);
+                (_survivalPlaylist[i], _survivalPlaylist[j]) = (_survivalPlaylist[j], _survivalPlaylist[i]);
             }
 
             _playlistIndex = -1;

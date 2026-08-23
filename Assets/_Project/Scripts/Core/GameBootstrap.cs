@@ -35,6 +35,12 @@ namespace ProjectZx.Core
 
         static void BuildMainMenu()
         {
+            // SoloDreams logo once per cold start (MyClicker BootLoader timing), then camp/create.
+            SoloDreamsIntro.PlayOnceThen(BuildMainMenuAfterIntro);
+        }
+
+        static void BuildMainMenuAfterIntro()
+        {
             EnsureAudioManager();
             GameSave.EnsureCharacterAppearanceMigrated();
             // Player is always RollZy; RowZi is companion-only.

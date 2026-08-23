@@ -21,10 +21,10 @@ namespace ProjectZx.Enemies
         const float FireBreathTick = 0.45f;
         /// <summary>World-space breath size (independent of huge boss transform scale). +20% vs prior 2.55.</summary>
         const float FireBreathWorldScale = 3.06f;
-        /// <summary>World distance from boss center to the breath mouth along the aim direction.</summary>
-        const float FireBreathMouthWorldOffset = 1.35f;
-        /// <summary>Slight vertical bias so breath leaves near the boss head (world units).</summary>
-        const float FireBreathMouthBiasWorldY = 0.55f;
+        /// <summary>Mouth sits on the front of the sprite toward aim (fraction of max extents).</summary>
+        const float FireBreathMouthForwardFrac = 0.42f;
+        /// <summary>Mouth sits slightly above sprite center so the stream leaves the face, not the torso.</summary>
+        const float FireBreathMouthUpFrac = 0.28f;
         const int FireBreathSortOffset = 40;
         /// <summary>Cosine of half-angle for breath damage cone (~35° half-angle — tighter to VFX).</summary>
         const float FireBreathConeDot = 0.82f;
@@ -328,11 +328,15 @@ namespace ProjectZx.Enemies
             if (_renderer != null)
             {
                 _renderer.sprite = _idleSprite;
-                _baseColor = _renderer.color;
+                _baseColor = Color.white;
+                _renderer.color = _baseColor;
+                var flash = GetComponent<HitFlash>();
+                if (flash != null) flash.SetBaseColor(_baseColor);
             }
 
-            // Classic bosses use fire breath; R40 Lord + R50 Minotaur use projectiles instead.
-            if (isBoss && !isRoundFortyBoss && !isRoundFiftyBoss)
+            // Fire breath only on each map's final boss (Outside R20 / Inside R30).
+            // Decade R10 bosses stay melee; R40 / R50 use projectiles instead.
+            if (isRoundTwentyBoss || isRoundThirtyBoss)
                 SetupFireBreathFx();
 
             if (isRoundFortyBoss || isRoundFiftyBoss)
@@ -503,7 +507,8 @@ namespace ProjectZx.Enemies
             if (IsRoundFortyBoss)
             {
                 _bossBLowPhase = HpRatio <= 0.5f;
-                ApplyAnimSet(ArtLibrary.GetLordBossAnimSet(highPhase: !_bossBLowPhase));
+                // Stable lord variant for this boss instance (no mid-fight palette swap).
+                ApplyAnimSet(ArtLibrary.GetLordBossAnimSet(highPhase: !_bossBLowPhase, seed: _round * 17 + 40));
                 return;
             }
 
@@ -523,7 +528,7 @@ namespace ProjectZx.Enemies
                     return;
                 }
 
-                ApplyAnimSet(ArtLibrary.GetGolemBossAnimSet());
+                ApplyAnimSet(ArtLibrary.GetGolemBossAnimSet(seed: _round * 31 + 7));
                 return;
             }
 
@@ -588,7 +593,7 @@ namespace ProjectZx.Enemies
             var low = HpRatio <= 0.5f;
             if (low == _bossBLowPhase && _idleSprite != null) return;
             _bossBLowPhase = low;
-            ApplyAnimSet(ArtLibrary.GetLordBossAnimSet(highPhase: !low));
+            ApplyAnimSet(ArtLibrary.GetLordBossAnimSet(highPhase: !low, seed: _round * 17 + 40));
             if (_renderer != null && _hitSpriteTimer <= 0f && !_fireBreathing)
                 _renderer.sprite = _idleSprite;
         }
@@ -643,29 +648,45 @@ namespace ProjectZx.Enemies
 
             _fireBreathAim = GetFireBreathAim(target);
 
-            // Boss transform is huge; convert world mouth offset / breath size into local space.
+            // Boss transform is huge; keep breath size in world space via inverse parent scale.
             var parentScale = Mathf.Max(0.001f, Mathf.Abs(transform.lossyScale.x));
             var inv = 1f / parentScale;
-            var mouth = (_fireBreathAim * FireBreathMouthWorldOffset
-                         + new Vector2(0f, FireBreathMouthBiasWorldY)) * inv;
-            _fireBreathFx.transform.localPosition = new Vector3(mouth.x, mouth.y, 0f);
+            _fireBreathFx.transform.position = GetFireBreathMouthWorld();
             _fireBreathFx.transform.localScale = Vector3.one * (FireBreathWorldScale * inv);
 
             // Unity 2D: 0° = +X. Authored tip points left (-X), so add 180° to aim at the player.
+            // World rotation so parent flip/scale does not skew the stream angle.
             var angle = Mathf.Atan2(_fireBreathAim.y, _fireBreathAim.x) * Mathf.Rad2Deg + 180f;
-            _fireBreathFx.transform.localRotation = Quaternion.Euler(0f, 0f, angle);
+            _fireBreathFx.transform.rotation = Quaternion.Euler(0f, 0f, angle);
 
             if (_fireBreathRenderer != null)
                 _fireBreathRenderer.flipX = false;
+        }
+
+        /// <summary>
+        /// Place the flame tip on the boss mouth: front of the sprite toward aim,
+        /// slightly above center so it sits on the face rather than the torso.
+        /// </summary>
+        Vector3 GetFireBreathMouthWorld()
+        {
+            if (_renderer == null)
+            {
+                var fallbackAim = _fireBreathAim.sqrMagnitude > 0.0001f ? _fireBreathAim.normalized : Vector2.left;
+                return transform.position + (Vector3)(fallbackAim * 1.2f);
+            }
+
+            var b = _renderer.bounds;
+            var dir = _fireBreathAim.sqrMagnitude > 0.0001f ? _fireBreathAim.normalized : Vector2.left;
+            var forward = Mathf.Max(b.extents.x, b.extents.y) * FireBreathMouthForwardFrac;
+            var up = b.extents.y * FireBreathMouthUpFrac;
+            return b.center + (Vector3)(dir * forward) + Vector3.up * up;
         }
 
         bool IsPlayerInFireBreathCone(float maxRange)
         {
             if (_player == null) return false;
             // Measure from the breath mouth so side/back hits outside the stream do not damage.
-            var mouthWorld = (Vector2)transform.position
-                             + _fireBreathAim * FireBreathMouthWorldOffset
-                             + new Vector2(0f, FireBreathMouthBiasWorldY);
+            var mouthWorld = (Vector2)GetFireBreathMouthWorld();
             var toPlayer = (Vector2)_player.position - mouthWorld;
             var dist = toPlayer.magnitude;
             if (dist > maxRange) return false;
@@ -988,7 +1009,7 @@ namespace ProjectZx.Enemies
 
             if (IsRoundFortyBoss || IsRoundFiftyBoss)
                 UpdateBossProjectiles();
-            else if (IsBoss)
+            else if (IsRoundTwentyBoss || IsRoundThirtyBoss)
             {
                 UpdateFireBreath();
                 if (_fireBreathing) return;
@@ -1119,9 +1140,20 @@ namespace ProjectZx.Enemies
             if (IsPlayingAttackAnim())
             {
                 _hitSpriteTimer = 0f;
-                AdvanceAnimFrames(_attackFrames, ref _bodyAnimFrame, ref _bodyAnimTimer);
-                if (_attackFrames.Length > 0)
+                // Only cycle full attack sheets during real wind-ups. Engage-range pose uses a
+                // single frame — Rogue C/D/E packs include bright VFX that looked like constant
+                // color swapping when looped the whole time the boss was near the player.
+                var activeSwing = _fireBreathing || _rangedAttackAnimTimer > 0f || _meleeAttackAnimTimer > 0f;
+                if (activeSwing && _attackFrames != null && _attackFrames.Length > 0)
+                {
+                    AdvanceAnimFrames(_attackFrames, ref _bodyAnimFrame, ref _bodyAnimTimer);
                     _renderer.sprite = _attackFrames[Mathf.Clamp(_bodyAnimFrame, 0, _attackFrames.Length - 1)];
+                }
+                else if (_attackSprite != null)
+                {
+                    _renderer.sprite = _attackSprite;
+                }
+
                 return;
             }
 
@@ -1159,10 +1191,10 @@ namespace ProjectZx.Enemies
             return dist <= _contactRange * 1.25f;
         }
 
-        /// <summary>Boss wind-up only while breathing, about to breathe, or in melee — not the whole engage range.</summary>
+        /// <summary>Map-final boss wind-up while breathing / about to breathe — not the whole engage range.</summary>
         bool IsInBossAttackPoseRange()
         {
-            if (!IsBoss || IsRoundFortyBoss || IsRoundFiftyBoss || _player == null || _fireBreathing) return false;
+            if ((!IsRoundTwentyBoss && !IsRoundThirtyBoss) || _player == null || _fireBreathing) return false;
             var dist = ArenaBounds.ToroidalDistance(transform.position, _player.position);
             if (dist <= _contactRange * 1.25f) return true;
             return dist <= FireBreathEngageRange && _fireBreathCooldown <= 0.35f;

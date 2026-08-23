@@ -237,10 +237,17 @@ namespace ProjectZx.Waves
 
             _darkBirdSpawned = true;
             var origin = _player != null ? (Vector2)_player.position : Vector2.zero;
-            // Prefer a far/edge pick so the crow is a find, not a spawn-camp target.
-            var pos = ArenaBounds.RandomWaveSpawn(origin, preferDistance: true);
+            // Readable find near the player (not 18u into unloaded fog). Keep on loaded land.
+            var pos = origin + new Vector2(6.5f, 4.5f);
+            if (SurvivalChunkStreamer.Instance != null
+                && !SurvivalChunkStreamer.Instance.IsInsideLoaded(pos))
+            {
+                pos = SurvivalChunkStreamer.Instance.RandomSpawnAroundPlayer(origin, 5f, 9f);
+            }
+
             DarkBirdRescue.Spawn(pos);
-            _hud?.ShowBanner("A dark crow is watching in the distance…", 2.8f);
+            WorldSparkle.Play(pos, 14);
+            _hud?.ShowBanner("A dark crow is watching nearby — find and free it!", 3.2f);
         }
 
         IEnumerator EnsureBiomeForRoundRoutine(int round)

@@ -41,6 +41,9 @@ namespace ProjectZx.Core
         const string JoystickPosYKey = "zx_joystick_pos_y";
         const string BgmVolumeKey = "zx_bgm_volume";
         const string SfxVolumeKey = "zx_sfx_volume";
+        const string BgmGenreKey = "zx_bgm_genre";
+        public const string BgmGenreDnB = "DnB";
+        public const string BgmGenreMetal = "Metal";
         const string RowZiUnlockedKey = "zx_rowzi_unlocked";
         const string AttackModeBatterKey = "zx_attack_batter";
         const string AttackModeSpearmanKey = "zx_attack_spearman";
@@ -814,6 +817,26 @@ namespace ProjectZx.Core
             set
             {
                 PlayerPrefs.SetFloat(SfxVolumeKey, Mathf.Clamp01(value));
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Survival BGM pack folder name under Resources/Music. Default DnB.</summary>
+        public static string BgmGenre
+        {
+            get
+            {
+                var raw = PlayerPrefs.GetString(BgmGenreKey, BgmGenreDnB);
+                if (string.Equals(raw, BgmGenreMetal, System.StringComparison.OrdinalIgnoreCase))
+                    return BgmGenreMetal;
+                return BgmGenreDnB;
+            }
+            set
+            {
+                var next = string.Equals(value, BgmGenreMetal, System.StringComparison.OrdinalIgnoreCase)
+                    ? BgmGenreMetal
+                    : BgmGenreDnB;
+                PlayerPrefs.SetString(BgmGenreKey, next);
                 PlayerPrefs.Save();
             }
         }

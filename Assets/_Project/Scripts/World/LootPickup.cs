@@ -64,7 +64,11 @@ namespace ProjectZx.World
                         ? (EquipmentId)amount
                         : EquipmentCatalog.RollRandomDrop();
                     _renderer.sprite = EquipmentCatalog.GetIcon(_equipmentId) ?? ArtLibrary.GoldCoin;
-                    transform.localScale = Vector3.one * EquipmentPickupScale;
+                    // HeroEditor helm canvases are huge vs Admurin rings — shrink ground drops only.
+                    var equipScale = EquipmentCatalog.Get(_equipmentId).Slot == EquipmentSlot.Helm
+                        ? EquipmentPickupScale / 3f
+                        : EquipmentPickupScale;
+                    transform.localScale = Vector3.one * equipScale;
                     break;
                 case PickupType.EpicCrystal:
                     _renderer.sprite = ArtLibrary.EpicCrystal;

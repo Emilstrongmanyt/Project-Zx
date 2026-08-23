@@ -717,11 +717,23 @@ namespace ProjectZx.Core
                 if (tex == null || string.IsNullOrEmpty(tex.name)) continue;
                 if (!tex.name.StartsWith(namePrefix, System.StringComparison.OrdinalIgnoreCase))
                     continue;
+                // Survival décor: skip doors / gates / open-state duplicates (look like portals).
+                if (IsExcludedCainosPropName(tex.name))
+                    continue;
                 var sprite = SpriteFromFloorTexture(tex, $"{folder}/{tex.name}");
                 if (sprite != null) list.Add(sprite);
             }
 
             return list.Count > 0 ? list.ToArray() : null;
+        }
+
+        static bool IsExcludedCainosPropName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return true;
+            return name.IndexOf("Gate", System.StringComparison.OrdinalIgnoreCase) >= 0
+                   || name.IndexOf("Door", System.StringComparison.OrdinalIgnoreCase) >= 0
+                   || name.IndexOf("Opened", System.StringComparison.OrdinalIgnoreCase) >= 0
+                   || name.IndexOf("Open", System.StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         static Sprite[] BuildTileSet(params string[] paths)
@@ -1007,12 +1019,15 @@ namespace ProjectZx.Core
             LoadRandomMonsterSet(FlyingDemonSets, requireFlying: true);
 
         /// <summary>Golem boss set (Outside R20 / Inside R30 / regular bosses).</summary>
-        public static MonsterAnimSet GetGolemBossAnimSet() =>
-            LoadRandomMonsterSet(GolemBossSets);
+        public static MonsterAnimSet GetGolemBossAnimSet(int seed = -1) =>
+            seed < 0 ? LoadRandomMonsterSet(GolemBossSets) : LoadMonsterSetBySeed(GolemBossSets, seed);
 
-        /// <summary>Lord boss set for Dungeon R40 (phase by HP).</summary>
-        public static MonsterAnimSet GetLordBossAnimSet(bool highPhase) =>
-            LoadRandomMonsterSet(highPhase ? LordBossHighSets : LordBossLowSets);
+        /// <summary>Lord boss set for Dungeon R40 (phase by HP). Same seed → same palette both phases.</summary>
+        public static MonsterAnimSet GetLordBossAnimSet(bool highPhase, int seed = -1)
+        {
+            var pool = highPhase ? LordBossHighSets : LordBossLowSets;
+            return seed < 0 ? LoadRandomMonsterSet(pool) : LoadMonsterSetBySeed(pool, seed);
+        }
 
         /// <summary>
         /// Rogue Adventure boss packs under Resources/RogueBosses/{folder}/.
@@ -1321,6 +1336,26 @@ namespace ProjectZx.Core
                 if (!fallback.IsValid) fallback = set;
                 if (forbidFlying && set.IsFlying) continue;
                 if (requireFlying && !set.IsFlying) continue;
+                return set;
+            }
+
+            return fallback;
+        }
+
+        /// <summary>Deterministic palette pick so a boss keeps one tint for its whole fight.</summary>
+        static MonsterAnimSet LoadMonsterSetBySeed(string[] pool, int seed)
+        {
+            if (pool == null || pool.Length == 0)
+                return default;
+
+            var start = Mathf.Abs(seed) % pool.Length;
+            MonsterAnimSet fallback = default;
+            for (var n = 0; n < pool.Length; n++)
+            {
+                var key = pool[(start + n) % pool.Length];
+                var set = LoadMonsterAnimSet(key);
+                if (!set.IsValid) continue;
+                if (!fallback.IsValid) fallback = set;
                 return set;
             }
 
