@@ -507,13 +507,14 @@ namespace ProjectZx.Core
             if (survivalMode)
                 AttachCombatForClass(go, playerClass);
 
-            // Custom HeroEditor body replaces RollZy sheet art (RowZi stays companion sheets).
+            // Custom HeroEditor body replaces RollZy sheet art.
             if (sanitizedHero == PlayableHero.RollZy)
             {
                 ProjectZx.HeroEditor.HeroEditorCharacterView.Attach(
                     go,
                     GameSave.SanitizeClass(playerClass),
-                    applyLoadout: true);
+                    applyLoadout: true,
+                    ProjectZx.HeroEditor.HeroAppearanceSource.PlayerSave);
             }
 
             return go;
@@ -533,11 +534,12 @@ namespace ProjectZx.Core
         {
             if (leader == null || leaderStats == null) return null;
 
-            var sanitizedHero = GameSave.SanitizeHero(hero);
+            // Keep RowZi identity — do not SanitizeHero (that forces RollZy for the player slot).
+            var companionHero = hero == PlayableHero.RowZi ? PlayableHero.RowZi : PlayableHero.RollZy;
             var spawn = leader.position + Vector3.left * 1.5f;
             var go = CreateSprite(
-                $"Companion_{GameSave.GetHeroDisplayName(sanitizedHero)}",
-                ArtLibrary.GetHeroIdleSprite(sanitizedHero),
+                $"Companion_{GameSave.GetHeroDisplayName(companionHero)}",
+                ArtLibrary.GetHeroIdleSprite(companionHero),
                 spawn,
                 scale,
                 0);
@@ -561,16 +563,17 @@ namespace ProjectZx.Core
 
             AttachCombatForClass(go, playerClass);
 
-            if (sanitizedHero == PlayableHero.RollZy)
-            {
-                ProjectZx.HeroEditor.HeroEditorCharacterView.Attach(
-                    go,
-                    GameSave.SanitizeClass(playerClass),
-                    applyLoadout: true);
-            }
+            // RowZi uses a fixed HeroEditor alt look (not pink sheets, not the player's face).
+            ProjectZx.HeroEditor.HeroEditorCharacterView.Attach(
+                go,
+                GameSave.SanitizeClass(playerClass),
+                applyLoadout: true,
+                companionHero == PlayableHero.RowZi
+                    ? ProjectZx.HeroEditor.HeroAppearanceSource.RowZiAlt
+                    : ProjectZx.HeroEditor.HeroAppearanceSource.PlayerSave);
 
             var follower = go.AddComponent<CompanionFollower>();
-            follower.Bind(leader, leaderStats, sanitizedHero);
+            follower.Bind(leader, leaderStats, companionHero);
             return go;
         }
 
@@ -756,6 +759,16 @@ namespace ProjectZx.Core
             bool interactive = false)
         {
             var go = CreateSprite($"{GameSave.GetHeroDisplayName(hero)}CampNpc", ArtLibrary.GetHeroIdleSprite(hero), position, scale, 9);
+            if (hero == PlayableHero.RowZi)
+            {
+                // Camp décor: same fixed HeroEditor alt as the survival companion (no pink robot).
+                ProjectZx.HeroEditor.HeroEditorCharacterView.Attach(
+                    go,
+                    GameSave.SanitizeClass(GameSave.SelectedClass),
+                    applyLoadout: true,
+                    ProjectZx.HeroEditor.HeroAppearanceSource.RowZiAlt);
+            }
+
             if (!interactive) return go;
 
             var col = go.AddComponent<CircleCollider2D>();
@@ -769,6 +782,11 @@ namespace ProjectZx.Core
         public static GameObject CreateRowZiUnlockNpc(Vector3 position)
         {
             var go = CreateSprite("RowZiUnlockNpc", ArtLibrary.GetHeroIdleSprite(PlayableHero.RowZi), position, 0.55f, 12);
+            ProjectZx.HeroEditor.HeroEditorCharacterView.Attach(
+                go,
+                GameSave.SanitizeClass(GameSave.SelectedClass),
+                applyLoadout: true,
+                ProjectZx.HeroEditor.HeroAppearanceSource.RowZiAlt);
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 0.85f;
             col.isTrigger = true;
@@ -783,7 +801,7 @@ namespace ProjectZx.Core
 
                 GameSave.RowZiUnlocked = true;
                 Achievements.UnlockTogetherAgain();
-                // Companion appears after return to camp; she mirrors your loadout.
+                // Companion appears after return to camp; she mirrors your class/loadout, not your face.
                 GameHud.Instance?.ShowBanner("RowZi unlocked! She joins runs with your loadout.", 3.5f);
             });
             return go;

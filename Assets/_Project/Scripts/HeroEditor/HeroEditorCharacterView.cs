@@ -8,6 +8,15 @@ using UnityEngine;
 
 namespace ProjectZx.HeroEditor
 {
+    /// <summary>Which CharacterAppearance JSON to apply on a HeroEditor body.</summary>
+    public enum HeroAppearanceSource
+    {
+        /// <summary>RollZy — player's saved creator look.</summary>
+        PlayerSave,
+        /// <summary>RowZi — fixed alt look (not the pink sheet, not a player clone).</summary>
+        RowZiAlt
+    }
+
     /// <summary>
     /// Owns a FantasyHeroes Human Character under the Player/companion root.
     /// Drives idle/walk, facing, cape/helm/weapon visuals. Combat math stays on *Combat scripts.
@@ -24,18 +33,20 @@ namespace ProjectZx.HeroEditor
         bool _faceRight = true;
         bool _moving;
         PlayerClass _weaponClass = PlayerClass.Batter;
+        HeroAppearanceSource _appearanceSource = HeroAppearanceSource.PlayerSave;
 
         public Character Character => _character;
         public bool IsReady => _character != null;
 
         /// <summary>
-        /// Attach HeroEditor body for RollZy. Hides the root sheet SpriteRenderer.
+        /// Attach HeroEditor body. Hides the root sheet SpriteRenderer.
         /// Returns null if the prefab cannot be loaded (pack missing).
         /// </summary>
         public static HeroEditorCharacterView Attach(
             GameObject playerRoot,
             PlayerClass weaponClass,
-            bool applyLoadout)
+            bool applyLoadout,
+            HeroAppearanceSource appearanceSource = HeroAppearanceSource.PlayerSave)
         {
             if (playerRoot == null) return null;
 
@@ -43,6 +54,7 @@ namespace ProjectZx.HeroEditor
             if (existing != null)
             {
                 existing._weaponClass = weaponClass;
+                existing._appearanceSource = appearanceSource;
                 existing.RefreshAll(applyLoadout);
                 return existing;
             }
@@ -56,6 +68,7 @@ namespace ProjectZx.HeroEditor
 
             var view = playerRoot.AddComponent<HeroEditorCharacterView>();
             view._weaponClass = weaponClass;
+            view._appearanceSource = appearanceSource;
             view.Build(prefab, applyLoadout);
             return view;
         }
@@ -86,7 +99,7 @@ namespace ProjectZx.HeroEditor
             var melee = instance.GetComponent<MeleeWeapon>();
             if (melee != null) melee.enabled = false;
 
-            ApplyAppearanceFromSave();
+            ApplyAppearance();
             if (applyLoadout)
                 RefreshEquipmentAndWeapon();
             else
@@ -100,7 +113,7 @@ namespace ProjectZx.HeroEditor
         public void RefreshAll(bool applyWeapon)
         {
             if (_character == null) return;
-            ApplyAppearanceFromSave();
+            ApplyAppearance();
             if (applyWeapon)
                 RefreshEquipmentAndWeapon();
             else
@@ -109,13 +122,21 @@ namespace ProjectZx.HeroEditor
             ApplyFacing();
         }
 
-        public void ApplyAppearanceFromSave()
+        public void ApplyAppearanceFromSave() => ApplyAppearance();
+
+        public void ApplyAppearance()
         {
             if (_character == null) return;
 
-            var json = GameSave.CharacterAppearanceJson;
-            if (string.IsNullOrEmpty(json))
-                json = GameSave.CreateDefaultAppearanceJson();
+            string json;
+            if (_appearanceSource == HeroAppearanceSource.RowZiAlt)
+                json = GameSave.CreateRowZiAppearanceJson();
+            else
+            {
+                json = GameSave.CharacterAppearanceJson;
+                if (string.IsNullOrEmpty(json))
+                    json = GameSave.CreateDefaultAppearanceJson();
+            }
 
             try
             {

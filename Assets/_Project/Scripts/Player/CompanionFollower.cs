@@ -1,5 +1,6 @@
 using ProjectZx.Combat;
 using ProjectZx.Core;
+using ProjectZx.HeroEditor;
 using ProjectZx.World;
 using UnityEngine;
 
@@ -26,6 +27,7 @@ namespace ProjectZx.Player
         PlayerStats _stats;
         Rigidbody2D _rb;
         SpriteRenderer _renderer;
+        HeroEditorCharacterView _heroView;
         Sprite _idle;
         Sprite _walkA;
         Sprite _walkB;
@@ -42,6 +44,7 @@ namespace ProjectZx.Player
             _stats = GetComponent<PlayerStats>();
             _rb = GetComponent<Rigidbody2D>();
             _renderer = GetComponent<SpriteRenderer>();
+            _heroView = GetComponent<HeroEditorCharacterView>();
 
             var set = ArtLibrary.GetHeroSprites(hero);
             _idle = set.Idle;
@@ -49,8 +52,14 @@ namespace ProjectZx.Player
             _walkB = set.WalkB != null ? set.WalkB : _walkA;
             _facesRightByDefault = set.FacesRightByDefault;
 
-            if (_renderer != null)
+            if (_heroView != null && _heroView.IsReady)
+            {
+                if (_renderer != null) _renderer.enabled = false;
+            }
+            else if (_renderer != null)
+            {
                 _renderer.sprite = _idle;
+            }
 
             if (_leader != null)
                 SetWorldPosition((Vector2)_leader.position + Vector2.left * FollowDistance);
@@ -165,7 +174,7 @@ namespace ProjectZx.Player
 
         void UpdateFacingAndWalk()
         {
-            if (_renderer == null || _leader == null) return;
+            if (_leader == null) return;
             if (IsBusyAttacking()) return;
 
             var leaderPos = (Vector2)_leader.position;
@@ -173,9 +182,18 @@ namespace ProjectZx.Player
             if (leaderRb != null) leaderPos = leaderRb.position;
 
             var moving = (leaderPos - GetWorldPosition()).sqrMagnitude > 0.12f;
+            var faceRight = _lastLeaderDir.x >= 0f;
+
+            if (_heroView != null && _heroView.IsReady)
+            {
+                _heroView.SetFacing(faceRight);
+                _heroView.SetMoving(moving);
+                return;
+            }
+
+            if (_renderer == null) return;
             if (moving)
             {
-                var faceRight = _lastLeaderDir.x >= 0f;
                 _renderer.flipX = _facesRightByDefault ? !faceRight : faceRight;
 
                 _walkAnimTimer += Time.deltaTime;
@@ -195,9 +213,15 @@ namespace ProjectZx.Player
 
         void ApplyIdleSprite()
         {
-            if (_renderer == null) return;
             _walkAnimTimer = 0f;
             _useWalkFrameA = true;
+            if (_heroView != null && _heroView.IsReady)
+            {
+                _heroView.SetMoving(false);
+                return;
+            }
+
+            if (_renderer == null) return;
             _renderer.sprite = _idle;
         }
 

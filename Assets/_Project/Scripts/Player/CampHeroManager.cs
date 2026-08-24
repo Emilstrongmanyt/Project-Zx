@@ -41,7 +41,7 @@ namespace ProjectZx.Player
             Refresh(playerPos, standbyPos);
         }
 
-        /// <summary>Hero swap is disabled — RowZi is companion-only and mirrors the player loadout.</summary>
+        /// <summary>Hero swap is disabled — RowZi is companion-only (fixed look, copies class/loadout).</summary>
         public void SelectHeroFromNpc(PlayableHero hero, Vector3 npcPosition)
         {
         }

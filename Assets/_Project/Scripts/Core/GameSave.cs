@@ -191,6 +191,15 @@ namespace ProjectZx.Core
             return "{\"Hair\":\"Common.Basic.Hair.BuzzCut\",\"Beard\":null,\"Ears\":\"Common.Basic.Ears.HumanEars\",\"Eyebrows\":\"Common.Basic.Eyebrows.Eyebrows1\",\"Eyes\":\"Common.Basic.Eyes.Male\",\"Mouth\":\"Common.Basic.Mouth.Normal\",\"Head\":\"Common.Basic.Head.Human\",\"HairColor\":{\"r\":150,\"g\":50,\"b\":0,\"a\":255},\"BeardColor\":{\"r\":150,\"g\":50,\"b\":0,\"a\":255},\"EyesColor\":{\"r\":0,\"g\":200,\"b\":255,\"a\":255},\"BodyColor\":{\"r\":255,\"g\":200,\"b\":120,\"a\":255}}";
         }
 
+        /// <summary>
+        /// Fixed HeroEditor look for RowZi — same Human rig as RollZy, clearly different hair/face/colors
+        /// so she is never the pink robot sheet and never a clone of the player's saved appearance.
+        /// </summary>
+        public static string CreateRowZiAppearanceJson()
+        {
+            return "{\"Hair\":\"Common.Basic.Hair.LongHair\",\"Beard\":null,\"Ears\":\"Common.Basic.Ears.HumanEars\",\"Eyebrows\":\"Common.Basic.Eyebrows.Eyebrows1\",\"Eyes\":\"Common.Basic.Eyes.Female\",\"Mouth\":\"Common.Basic.Mouth.Smirk\",\"Head\":\"Common.Basic.Head.Human\",\"HairColor\":{\"r\":45,\"g\":35,\"b\":90,\"a\":255},\"BeardColor\":{\"r\":45,\"g\":35,\"b\":90,\"a\":255},\"EyesColor\":{\"r\":90,\"g\":210,\"b\":140,\"a\":255},\"BodyColor\":{\"r\":255,\"g\":215,\"b\":175,\"a\":255}}";
+        }
+
         /// <summary>Accessibility: larger combat damage floaters.</summary>
         public static bool LargeDamageNumbers
         {

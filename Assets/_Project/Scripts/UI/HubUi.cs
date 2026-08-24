@@ -70,6 +70,9 @@ namespace ProjectZx.UI
         Text _equipmentStatusText;
         Text _bgmVolumeLabel;
         Text _sfxVolumeLabel;
+        Text _bgmGenreStatusText;
+        Button _bgmDnBButton;
+        Button _bgmMetalButton;
         Text _campObjectiveText;
         Image _campObjectiveBg;
         GameObject _campObjectiveChip;
@@ -96,9 +99,7 @@ namespace ProjectZx.UI
         Button _weaponTierNextButton;
         Button _movementJoystickButton;
         Button _movementTapHoldButton;
-        Button _rollZyClassicSkinButton;
-        Button _rollZyUpgradedSkinButton;
-        Text _rollZySkinStatusText;
+
 
         enum ShopUpgradeKind
         {
@@ -745,10 +746,11 @@ namespace ProjectZx.UI
             _movementTapHoldButton = CreateButton(panel.transform, "Tap / Hold", new Vector2(160, 185), () => SelectMovementControl(MovementControlType.TapHold));
             CreateText(panel.transform, "Drag the on-screen joystick to place it. Position locks when you close Settings.", 18, TextAnchor.MiddleCenter, new Vector2(0, 125), new Vector2(900, 40));
 
-            CreateText(panel.transform, "RollZy Skin", 26, TextAnchor.MiddleCenter, new Vector2(0, 70), new Vector2(400, 36));
-            _rollZySkinStatusText = CreateText(panel.transform, "", 18, TextAnchor.MiddleCenter, new Vector2(0, 35), new Vector2(900, 32));
-            _rollZyClassicSkinButton = CreateButton(panel.transform, "Classic", new Vector2(-160, -15), () => SelectRollZySkin(upgraded: false));
-            _rollZyUpgradedSkinButton = CreateButton(panel.transform, "Upgraded", new Vector2(160, -15), () => SelectRollZySkin(upgraded: true));
+            // Survival map playlist genre (campfire BGM stays separate).
+            CreateText(panel.transform, "Survival Music", 26, TextAnchor.MiddleCenter, new Vector2(0, 70), new Vector2(400, 36));
+            _bgmGenreStatusText = CreateText(panel.transform, "", 18, TextAnchor.MiddleCenter, new Vector2(0, 35), new Vector2(900, 32));
+            _bgmDnBButton = CreateButton(panel.transform, "DnB", new Vector2(-160, -15), () => SelectBgmGenre(GameSave.BgmGenreDnB));
+            _bgmMetalButton = CreateButton(panel.transform, "Metal", new Vector2(160, -15), () => SelectBgmGenre(GameSave.BgmGenreMetal));
 
             CreateText(panel.transform, "Music Volume", 26, TextAnchor.MiddleCenter, new Vector2(0, -90), new Vector2(400, 36));
             _bgmVolumeLabel = CreateText(panel.transform, "70%", 22, TextAnchor.MiddleCenter, new Vector2(0, -130), new Vector2(120, 32));
@@ -1421,41 +1423,34 @@ namespace ProjectZx.UI
         void RefreshSettingsPanel()
         {
             RefreshMovementControlPicker();
-            RefreshRollZySkinPicker();
+            RefreshBgmGenrePicker();
             RefreshVolumeLabels();
             RefreshLargeDamageNumbersButton();
         }
 
-        void SelectRollZySkin(bool upgraded)
+        void SelectBgmGenre(string genre)
         {
-            if (upgraded && !GameSave.RollZyUpgradedSkinUnlocked) return;
-            GameSave.UseUpgradedRollZySkin = upgraded;
-            RefreshRollZySkinPicker();
-            // Apply immediately on camp so the player sees the change.
-            CampHeroManager.Instance?.RefreshAppearance();
+            GameSave.BgmGenre = genre;
+            RefreshBgmGenrePicker();
+            // Rebuild survival playlist immediately if already in a run (or next map enter).
+            AudioManager.Instance?.ReloadSurvivalBgmFromSettings();
         }
 
-        void RefreshRollZySkinPicker()
+        void RefreshBgmGenrePicker()
         {
-            var unlocked = GameSave.RollZyUpgradedSkinUnlocked;
-            var usingUpgraded = GameSave.UseUpgradedRollZySkin;
-
-            if (_rollZySkinStatusText != null)
+            var metal = string.Equals(GameSave.BgmGenre, GameSave.BgmGenreMetal, System.StringComparison.OrdinalIgnoreCase);
+            if (_bgmGenreStatusText != null)
             {
-                _rollZySkinStatusText.text = unlocked
-                    ? (usingUpgraded ? "Using upgraded RollZy (Dungeon clear)." : "Using classic RollZy.")
-                    : "Upgraded skin unlocks after clearing Ironvault Survival.";
+                _bgmGenreStatusText.text = metal
+                    ? "Survival maps play Metal. Campfire music is unchanged."
+                    : "Survival maps play DnB (default). Campfire music is unchanged.";
             }
 
-            RefreshSkinButton(_rollZyClassicSkinButton, selected: !usingUpgraded, interactable: true, "Classic");
-            RefreshSkinButton(
-                _rollZyUpgradedSkinButton,
-                selected: usingUpgraded,
-                interactable: unlocked,
-                unlocked ? "Upgraded" : "Upgraded (Locked)");
+            RefreshToggleButton(_bgmDnBButton, selected: !metal, interactable: true, "DnB");
+            RefreshToggleButton(_bgmMetalButton, selected: metal, interactable: true, "Metal");
         }
 
-        static void RefreshSkinButton(Button button, bool selected, bool interactable, string label)
+        static void RefreshToggleButton(Button button, bool selected, bool interactable, string label)
         {
             if (button == null) return;
             button.interactable = interactable;
