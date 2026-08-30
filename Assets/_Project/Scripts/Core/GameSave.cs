@@ -74,6 +74,9 @@ namespace ProjectZx.Core
         const string QuestBrenAcceptedKey = "zx_quest_bren_accepted";
         const string QuestBrenMilestoneKey = "zx_quest_bren_milestone";
         const string QuestBrenCompletedKey = "zx_quest_bren_completed";
+        const string QuestCorvinOmenAcceptedKey = "zx_quest_corvin_omen_accepted";
+        const string QuestCorvinOmenMilestoneKey = "zx_quest_corvin_omen_milestone";
+        const string QuestCorvinOmenCompletedKey = "zx_quest_corvin_omen_completed";
         const string QuestKaelAcceptedKey = "zx_quest_kael_accepted";
         const string QuestKaelMilestoneKey = "zx_quest_kael_milestone";
         const string QuestKaelCompletedKey = "zx_quest_kael_completed";
@@ -101,6 +104,9 @@ namespace ProjectZx.Core
         const string SettingsOpenedKey = "zx_settings_opened";
         const string CharacterCreatedKey = "zx_character_created";
         const string CharacterAppearanceKey = "zx_character_appearance";
+        const string CharacterGenderKey = "zx_character_gender";
+        public const string CharacterGenderMale = "Male";
+        public const string CharacterGenderFemale = "Female";
         const string CharacterMigratedKey = "zx_character_migrated_v1";
 
         /// <summary>Gold banked from the most recent survival exit (death, retreat, or portal).</summary>
@@ -150,6 +156,42 @@ namespace ProjectZx.Core
             }
         }
 
+        /// <summary>Creator gender preset for RollZy (Male default). Cosmetics only — same Human body.</summary>
+        public static string CharacterGender
+        {
+            get
+            {
+                var raw = PlayerPrefs.GetString(CharacterGenderKey, CharacterGenderMale);
+                if (string.Equals(raw, CharacterGenderFemale, System.StringComparison.OrdinalIgnoreCase))
+                    return CharacterGenderFemale;
+                return CharacterGenderMale;
+            }
+            set
+            {
+                var next = string.Equals(value, CharacterGenderFemale, System.StringComparison.OrdinalIgnoreCase)
+                    ? CharacterGenderFemale
+                    : CharacterGenderMale;
+                PlayerPrefs.SetString(CharacterGenderKey, next);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool IsFemaleCharacter =>
+            string.Equals(CharacterGender, CharacterGenderFemale, System.StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>Default HeroEditor look for a gender preset (same Human body; face/hair differ).</summary>
+        public static string CreateAppearanceJsonForGender(string gender)
+        {
+            return string.Equals(gender, CharacterGenderFemale, System.StringComparison.OrdinalIgnoreCase)
+                ? CreateFemaleAppearanceJson()
+                : CreateDefaultAppearanceJson();
+        }
+
+        public static string CreateFemaleAppearanceJson()
+        {
+            return "{\"Hair\":\"Common.Basic.Hair.LongHair\",\"Beard\":null,\"Ears\":\"Common.Basic.Ears.HumanEars\",\"Eyebrows\":\"Common.Basic.Eyebrows.Eyebrows1\",\"Eyes\":\"Common.Basic.Eyes.Female\",\"Mouth\":\"Common.Basic.Mouth.Normal\",\"Head\":\"Common.Basic.Head.Human\",\"HairColor\":{\"r\":90,\"g\":55,\"b\":30,\"a\":255},\"BeardColor\":{\"r\":90,\"g\":55,\"b\":30,\"a\":255},\"EyesColor\":{\"r\":0,\"g\":200,\"b\":255,\"a\":255},\"BodyColor\":{\"r\":255,\"g\":210,\"b\":170,\"a\":255}}";
+        }
+
         /// <summary>
         /// Veterans with existing progress skip the creator and get a default appearance.
         /// Brand-new installs keep CharacterCreated false until the maker completes.
@@ -187,7 +229,7 @@ namespace ProjectZx.Core
 
         public static string CreateDefaultAppearanceJson()
         {
-            // Matches HeroEditor CharacterAppearance defaults (BuzzCut + warm body).
+            // Male preset — HeroEditor defaults (BuzzCut + Male eyes + warm body).
             return "{\"Hair\":\"Common.Basic.Hair.BuzzCut\",\"Beard\":null,\"Ears\":\"Common.Basic.Ears.HumanEars\",\"Eyebrows\":\"Common.Basic.Eyebrows.Eyebrows1\",\"Eyes\":\"Common.Basic.Eyes.Male\",\"Mouth\":\"Common.Basic.Mouth.Normal\",\"Head\":\"Common.Basic.Head.Human\",\"HairColor\":{\"r\":150,\"g\":50,\"b\":0,\"a\":255},\"BeardColor\":{\"r\":150,\"g\":50,\"b\":0,\"a\":255},\"EyesColor\":{\"r\":0,\"g\":200,\"b\":255,\"a\":255},\"BodyColor\":{\"r\":255,\"g\":200,\"b\":120,\"a\":255}}";
         }
 
@@ -1161,6 +1203,37 @@ namespace ProjectZx.Core
             set
             {
                 PlayerPrefs.SetInt(QuestBrenCompletedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Corvin's Omen — Endless Front R75 after Bren's Watch.</summary>
+        public static bool QuestCorvinsOmenAccepted
+        {
+            get => PlayerPrefs.GetInt(QuestCorvinOmenAcceptedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestCorvinOmenAcceptedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestCorvinsOmenMilestone
+        {
+            get => PlayerPrefs.GetInt(QuestCorvinOmenMilestoneKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestCorvinOmenMilestoneKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestCorvinsOmenCompleted
+        {
+            get => PlayerPrefs.GetInt(QuestCorvinOmenCompletedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestCorvinOmenCompletedKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
         }

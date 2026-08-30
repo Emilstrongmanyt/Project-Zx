@@ -36,10 +36,13 @@ namespace ProjectZx.UI
             new("aldric", "Hint: Help Sir Aldric leave Ironvault, then recover his greatsword from R40."),
             new("lyra", "Hint: When Silent Ossuary unlocks, Sister Lyra offers Lyra's Vigil — clear the R50 Minotaur."),
             new("bren_watch", "Hint: After The Endless Front unlocks, Captain Bren offers Bren's Watch — survive to round 50."),
+            new("corvin_omen", "Hint: After Bren's Watch, talk to Corvin — Corvin's Omen asks you to hold the Front to round 75."),
             new("kael", "Hint: After Thalor's pendant, Scout Kael appears — push Emberwilds to R15 for gold."),
             new("nessa", "Hint: When Warded Halls unlock, Herbalist Nessa wants you to reach R15 there."),
             new("garrick", "Hint: After Ironvault opens, Smith Garrick asks you to hold R20."),
             new("tove", "Hint: When Silent Ossuary unlocks, Cartographer Tove needs a chart through R25."),
+            new("quest_chip", "Hint: Tap the top-right quest chip to open the right NPC — gold means ready to turn in."),
+            new("multi_quest", "Hint: Several camp NPCs can offer tasks at once — the chip shows +N more when you have extras."),
         };
 
         public static int Count => All.Length;
@@ -66,10 +69,18 @@ namespace ProjectZx.UI
                 "aldric" => GameSave.DungeonMapUnlocked && !GameSave.QuestKnightsBestFriendCompleted,
                 "lyra" => GameSave.CryptMapUnlocked && !GameSave.QuestLyraVigilCompleted,
                 "bren_watch" => GameSave.UnlimitedMapUnlocked && !GameSave.QuestBrensWatchCompleted,
+                "corvin_omen" => GameSave.QuestBrensWatchCompleted
+                    && GameSave.QuestGreyWizardCompleted
+                    && !GameSave.QuestCorvinsOmenCompleted,
                 "kael" => GameSave.QuestGrandWizardsPerilCompleted && !GameSave.QuestKaelsReconCompleted,
                 "nessa" => GameSave.InsideMapUnlocked && !GameSave.QuestNessasSalveCompleted,
                 "garrick" => GameSave.DungeonMapUnlocked && !GameSave.QuestGarricksAnvilCompleted,
                 "tove" => GameSave.CryptMapUnlocked && !GameSave.QuestTovesChartCompleted,
+                "quest_chip" => GameSave.QuestGrandWizardsPerilAccepted
+                    || GameSave.QuestWardensPathAccepted
+                    || GameSave.QuestCorvinsOmenAccepted
+                    || GameSave.InsideMapUnlocked,
+                "multi_quest" => GameSave.QuestGrandWizardsPerilCompleted,
                 _ => true
             };
         }

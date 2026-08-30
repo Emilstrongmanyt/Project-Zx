@@ -123,8 +123,10 @@ namespace ProjectZx.UI
 
                 case Phase.Show:
                     _group.alpha = Mathf.MoveTowards(_group.alpha, 1f, Time.unscaledDeltaTime / FadeSeconds);
-                    if (_phaseElapsed >= DisplaySeconds)
+                    var showFor = _usingForcedDisplay ? _forcedDisplaySeconds : DisplaySeconds;
+                    if (_phaseElapsed >= showFor)
                     {
+                        _usingForcedDisplay = false;
                         _phase = Phase.WaitNext;
                         _phaseElapsed = 0f;
                         _timer = IntervalSeconds;
@@ -152,6 +154,29 @@ namespace ProjectZx.UI
             _phase = Phase.WaitNext;
             _phaseElapsed = 0f;
             _timer = IntervalSeconds * 2f;
+        }
+
+        /// <summary>One-shot camp message (quest ready, etc.) — interrupts the tip rotation briefly.</summary>
+        public void ShowForcedTip(string message, float displaySeconds = 6.5f)
+        {
+            if (_text == null || _group == null || string.IsNullOrEmpty(message)) return;
+            EnsureUi();
+            _text.text = message;
+            _phase = Phase.Show;
+            _phaseElapsed = 0f;
+            // Borrow Show phase length via temporary stretch of elapsed target.
+            _forcedDisplaySeconds = Mathf.Max(3f, displaySeconds);
+            _usingForcedDisplay = true;
+            _group.alpha = 1f;
+        }
+
+        float _forcedDisplaySeconds = DisplaySeconds;
+        bool _usingForcedDisplay;
+
+        void EnsureUi()
+        {
+            if (_group == null || _text == null)
+                BuildUi();
         }
     }
 }

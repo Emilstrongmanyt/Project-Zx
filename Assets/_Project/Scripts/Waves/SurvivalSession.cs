@@ -87,7 +87,13 @@ namespace ProjectZx.Waves
                         _hud?.SetRoundComplete(CurrentRound);
                         GameSave.RecordHighestRound(CurrentRound);
                         TryRecordWeaponProgress(CurrentRound);
+                        // Banner while quest is still Active — NotifySurvivalRound flips milestone to Ready.
+                        var unlimitedQuestBanner = MapKind == SurvivalMapKind.Unlimited
+                            ? QuestCatalog.TryBuildUnlimitedQuestBanner(CurrentRound)
+                            : string.Empty;
                         QuestCatalog.NotifySurvivalRound(MapKind, CurrentRound);
+                        if (!string.IsNullOrEmpty(unlimitedQuestBanner))
+                            _hud?.ShowBanner(unlimitedQuestBanner, 3.8f);
                         TryUnlockBowman(CurrentRound);
                         TryUnlockMagician(CurrentRound);
 

@@ -12,6 +12,7 @@ namespace ProjectZx.UI
 {
     /// <summary>
     /// First-launch (or forced) mobile character maker for RollZy using HeroEditor Human.
+    /// Male / Female toggles apply cosmetic presets on the same body; players can keep customizing after.
     /// </summary>
     public class CharacterCreatorUi : MonoBehaviour
     {
@@ -64,6 +65,9 @@ namespace ProjectZx.UI
         readonly List<ItemSprite> _eyebrows = new();
         int _optionIndex;
         Action _onComplete;
+        string _gender = GameSave.CharacterGenderMale;
+        Button _maleButton;
+        Button _femaleButton;
 
         public static void Show(Action onComplete = null)
         {
@@ -85,9 +89,19 @@ namespace ProjectZx.UI
             if (_root == null)
                 BuildUi();
 
-            _appearance = string.IsNullOrEmpty(GameSave.CharacterAppearanceJson)
-                ? new CharacterAppearance()
-                : CharacterAppearance.FromJson(GameSave.CharacterAppearanceJson);
+            _gender = GameSave.CharacterGender;
+            if (string.IsNullOrEmpty(GameSave.CharacterAppearanceJson))
+            {
+                _appearance = CharacterAppearance.FromJson(GameSave.CreateAppearanceJsonForGender(_gender));
+            }
+            else
+            {
+                _appearance = CharacterAppearance.FromJson(GameSave.CharacterAppearanceJson);
+                // Infer gender from eyes if save predates the gender key.
+                if (!string.IsNullOrEmpty(_appearance.Eyes)
+                    && _appearance.Eyes.IndexOf("Female", StringComparison.OrdinalIgnoreCase) >= 0)
+                    _gender = GameSave.CharacterGenderFemale;
+            }
 
             EnsurePreview();
             CacheOptions();
@@ -95,6 +109,7 @@ namespace ProjectZx.UI
             _optionIndex = 0;
             SnapIndexToCurrent();
             ApplyPreview();
+            RefreshGenderButtons();
             RefreshLabels();
             _root.SetActive(true);
         }
@@ -165,12 +180,15 @@ namespace ProjectZx.UI
             StretchFull(rootRt);
 
             // Landscape chrome pulled toward center so safe-area / notches don't clip controls.
-            CreateChromePanel(_root.transform, new Vector2(0, 340), new Vector2(1600, 130));
+            CreateChromePanel(_root.transform, new Vector2(0, 330), new Vector2(1600, 170));
             CreateChromePanel(_root.transform, new Vector2(0, -300), new Vector2(1600, 250));
 
-            _titleText = CreateLabel(_root.transform, "Create Your Hero", 40, new Vector2(0, 365), new Vector2(900, 56));
-            CreateLabel(_root.transform, "Customize look — weapons & gear apply in-game", 22,
-                new Vector2(0, 318), new Vector2(1000, 36));
+            _titleText = CreateLabel(_root.transform, "Create Your Hero", 40, new Vector2(0, 375), new Vector2(900, 56));
+            CreateLabel(_root.transform, "Pick Male or Female, then customize — weapons & gear apply in-game", 20,
+                new Vector2(0, 328), new Vector2(1100, 36));
+
+            _maleButton = CreateButton(_root.transform, "Male", new Vector2(-160, 275), () => SelectGender(GameSave.CharacterGenderMale));
+            _femaleButton = CreateButton(_root.transform, "Female", new Vector2(160, 275), () => SelectGender(GameSave.CharacterGenderFemale));
 
             _categoryText = CreateLabel(_root.transform, "Hair", 26, new Vector2(0, -210), new Vector2(900, 40));
             _statusText = CreateLabel(_root.transform, "", 18, new Vector2(0, -242), new Vector2(1000, 28));
@@ -186,6 +204,46 @@ namespace ProjectZx.UI
             CreateButton(_root.transform, "Hair Dye", new Vector2(180, -370), () => SetCategory(Category.HairColor), compact: true);
             CreateButton(_root.transform, "Skin", new Vector2(340, -370), () => SetCategory(Category.SkinColor), compact: true);
             CreateButton(_root.transform, "Confirm", new Vector2(520, -290), Confirm, large: true);
+        }
+
+        void SelectGender(string gender)
+        {
+            var next = string.Equals(gender, GameSave.CharacterGenderFemale, StringComparison.OrdinalIgnoreCase)
+                ? GameSave.CharacterGenderFemale
+                : GameSave.CharacterGenderMale;
+            if (string.Equals(_gender, next, StringComparison.OrdinalIgnoreCase))
+            {
+                RefreshGenderButtons();
+                return;
+            }
+
+            _gender = next;
+            // Switching gender resets to that preset so Male/Female always read clearly.
+            _appearance = CharacterAppearance.FromJson(GameSave.CreateAppearanceJsonForGender(_gender));
+            _category = Category.Hair;
+            SnapIndexToCurrent();
+            ApplyPreview();
+            RefreshGenderButtons();
+            RefreshLabels();
+        }
+
+        void RefreshGenderButtons()
+        {
+            var female = string.Equals(_gender, GameSave.CharacterGenderFemale, StringComparison.OrdinalIgnoreCase);
+            StyleGenderButton(_maleButton, selected: !female);
+            StyleGenderButton(_femaleButton, selected: female);
+        }
+
+        static void StyleGenderButton(Button button, bool selected)
+        {
+            if (button == null) return;
+            var image = button.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = selected
+                    ? new Color(0.35f, 0.72f, 0.42f, 1f)
+                    : new Color(0.2f, 0.35f, 0.55f, 0.95f);
+            }
         }
 
         static void CreateChromePanel(Transform parent, Vector2 anchoredPos, Vector2 sizeDelta)
@@ -331,8 +389,11 @@ namespace ProjectZx.UI
             if (_statusText != null)
             {
                 var ready = _previewView != null && _previewView.IsReady;
+                var genderLabel = string.Equals(_gender, GameSave.CharacterGenderFemale, StringComparison.OrdinalIgnoreCase)
+                    ? "Female"
+                    : "Male";
                 _statusText.text = ready
-                    ? $"Options loaded — Hair {_hair.Count} · Eyes {_eyes.Count} · Mouth {_mouth.Count} · Brows {_eyebrows.Count}"
+                    ? $"{genderLabel} preset — Hair {_hair.Count} · Eyes {_eyes.Count} · Mouth {_mouth.Count} · Brows {_eyebrows.Count}"
                     : "Preview failed to load — check HeroEditor Human prefab / SpriteCollection";
             }
         }
@@ -346,6 +407,7 @@ namespace ProjectZx.UI
 
         void Confirm()
         {
+            GameSave.CharacterGender = _gender;
             GameSave.CharacterAppearanceJson = _appearance.ToJson();
             GameSave.CharacterCreated = true;
 
@@ -390,7 +452,7 @@ namespace ProjectZx.UI
             return t;
         }
 
-        static void CreateButton(Transform parent, string label, Vector2 pos, Action onClick, bool large = false, bool compact = false)
+        static Button CreateButton(Transform parent, string label, Vector2 pos, Action onClick, bool large = false, bool compact = false)
         {
             var go = new GameObject(label);
             go.transform.SetParent(parent, false);
@@ -416,6 +478,7 @@ namespace ProjectZx.UI
             t.alignment = TextAnchor.MiddleCenter;
             t.color = Color.white;
             t.text = label;
+            return btn;
         }
     }
 }

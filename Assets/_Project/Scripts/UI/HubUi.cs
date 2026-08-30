@@ -332,25 +332,45 @@ namespace ProjectZx.UI
             if (!QuestCatalog.TryGetReadyToTurnInQuest(out var def)) return;
             _readyTurnInToastShown = true;
             SparkleBurst.Play(transform, new Vector2(520f, 280f), 14);
-            // Chip pulse + gold tint already call attention; sparkle reinforces once per camp visit.
-            _ = def;
+            var giver = QuestCatalog.GetGiverDisplayName(def.Id);
+            ShowCampQuestToast($"Quest ready — talk to {giver} ({def.Title}). Tap the objective chip.");
+        }
+
+        void ShowCampQuestToast(string message)
+        {
+            if (string.IsNullOrEmpty(message)) return;
+            // Reuse the rotating tip strip so ready turn-ins are readable once per camp visit.
+            CampTipController.EnsureExists()?.ShowForcedTip(message);
         }
 
         void OnCampObjectiveClicked()
         {
             if (QuestCatalog.TryGetReadyToTurnInQuest(out var ready))
             {
-                OpenQuestDialogue(ready.Id);
+                OpenQuestForId(ready.Id);
                 return;
             }
 
             if (QuestCatalog.TryGetActiveQuest(out var active))
             {
-                OpenQuestDialogue(active.Id);
+                OpenQuestForId(active.Id);
+                return;
+            }
+
+            if (QuestCatalog.TryFindHudQuestAvailable(out var available))
+            {
+                OpenQuestForId(available.Id);
                 return;
             }
 
             OpenQuestGiver();
+        }
+
+        /// <summary>Open dialogue with the correct NPC pool, focused on this quest (not the pool's primary).</summary>
+        void OpenQuestForId(QuestId questId)
+        {
+            _questPanelPool = QuestCatalog.GetQuestPoolFor(questId);
+            OpenQuestDialogue(questId);
         }
 
         GameObject BuildOnboardingPanel(Transform parent)
@@ -482,7 +502,7 @@ namespace ProjectZx.UI
         {
             if (id == QuestId.KnightsBestFriend)
                 return MedievalNpcLibrary.Cast.Aldric;
-            if (id == QuestId.GreyWizardsCrow)
+            if (id == QuestId.GreyWizardsCrow || id == QuestId.CorvinsOmen)
                 return MedievalNpcLibrary.Cast.Corvin;
             if (id == QuestId.LyraVigil)
                 return MedievalNpcLibrary.Cast.Lyra;
@@ -1156,10 +1176,10 @@ namespace ProjectZx.UI
             OpenQuestGiverWithPool(QuestCatalog.GetThalorQuestIds(), QuestCatalog.GrandWizardsPeril.Id);
         }
 
-        /// <summary>Ashen Seer Corvin — crow turn-in and aftermath.</summary>
+        /// <summary>Ashen Seer Corvin — crow turn-in, then Corvin's Omen.</summary>
         public void OpenCorvinQuestGiver()
         {
-            OpenQuestGiverWithPool(QuestCatalog.CorvinQuestIds, QuestId.GreyWizardsCrow);
+            OpenQuestGiverWithPool(QuestCatalog.CorvinQuestIds, QuestId.CorvinsOmen);
         }
 
         /// <summary>Sir Aldric — Ironvault greatsword quest.</summary>
@@ -1243,8 +1263,13 @@ namespace ProjectZx.UI
             RefreshGold();
             CloseAllHubPanels();
             _questPanelFocusId = questId;
-            if (_questPanelPool == null || _questPanelPool.Length == 0)
-                _questPanelPool = QuestCatalog.GetThalorQuestIds();
+            // Always bind the giver pool to the focused quest (chip / external opens used to fall back to Thalor).
+            if (_questPanelPool == null || _questPanelPool.Length == 0
+                || System.Array.IndexOf(_questPanelPool, questId) < 0)
+            {
+                _questPanelPool = QuestCatalog.GetQuestPoolFor(questId);
+            }
+
             RefreshQuestPanel();
             if (_questPanel != null)
             {
@@ -1321,14 +1346,24 @@ namespace ProjectZx.UI
                 statusRect.sizeDelta = new Vector2(textW, 28f);
             }
 
+            var showPoolLog = _questPanelPool != null && _questPanelPool.Length > 1;
+            var campDigest = QuestCatalog.BuildCampQuestDigest(def.Id);
+            var showCampDigest = !showPoolLog && !string.IsNullOrEmpty(campDigest)
+                                 && campDigest.IndexOf('\n') >= 0;
             if (_questLogText != null)
             {
-                var log = QuestCatalog.BuildQuestLog(_questPanelPool, def.Id);
-                _questLogText.text = log;
-                _questLogText.gameObject.SetActive(!string.IsNullOrEmpty(log) && _questPanelPool.Length > 1);
+                if (showPoolLog)
+                    _questLogText.text = QuestCatalog.BuildQuestLog(_questPanelPool, def.Id);
+                else if (showCampDigest)
+                    _questLogText.text = campDigest;
+                else
+                    _questLogText.text = string.Empty;
+
+                var showLog = !string.IsNullOrEmpty(_questLogText.text);
+                _questLogText.gameObject.SetActive(showLog);
                 var logRect = _questLogText.rectTransform;
                 logRect.anchoredPosition = new Vector2(textX, 118f);
-                logRect.sizeDelta = new Vector2(textW, 52f);
+                logRect.sizeDelta = new Vector2(textW, showCampDigest ? 72f : 52f);
             }
 
             if (_questBodyText != null)
@@ -1342,8 +1377,9 @@ namespace ProjectZx.UI
                     _ => "Come back when you are ready for a new task."
                 };
                 var bodyRect = _questBodyText.rectTransform;
-                var bodyY = _questPanelPool != null && _questPanelPool.Length > 1 ? -40f : -10f;
-                var bodyH = _questPanelPool != null && _questPanelPool.Length > 1 ? 220f : 280f;
+                var showLog = showPoolLog || showCampDigest;
+                var bodyY = showLog ? -40f : -10f;
+                var bodyH = showLog ? 220f : 280f;
                 bodyRect.anchoredPosition = new Vector2(textX, bodyY);
                 bodyRect.sizeDelta = new Vector2(textW, bodyH);
             }
@@ -1351,9 +1387,8 @@ namespace ProjectZx.UI
             var canAccept = progress == QuestProgress.Available;
             var canTurnIn = progress == QuestProgress.ReadyToTurnIn;
             var canCycle = _questPanelPool != null && _questPanelPool.Length > 1;
-            var isBrenPool = _questPanelPool != null
-                && _questPanelPool.Length > 0
-                && _questPanelPool[0] == QuestId.BrensWatch;
+            // Maps shortcut while briefing Endless Front quests (Bren or Corvin).
+            var showFrontMaps = def.Id == QuestId.BrensWatch || def.Id == QuestId.CorvinsOmen;
             if (_questAcceptButton != null)
             {
                 _questAcceptButton.gameObject.SetActive(canAccept);
@@ -1374,8 +1409,8 @@ namespace ProjectZx.UI
 
             if (_questMapsButton != null)
             {
-                _questMapsButton.gameObject.SetActive(isBrenPool);
-                _questMapsButton.interactable = isBrenPool;
+                _questMapsButton.gameObject.SetActive(showFrontMaps);
+                _questMapsButton.interactable = showFrontMaps;
             }
 
             if (_questAcceptLabel != null) _questAcceptLabel.text = "Accept";
@@ -1399,6 +1434,15 @@ namespace ProjectZx.UI
                 SparkleBurst.Play(_questPanel != null ? _questPanel.transform : transform, new Vector2(120f, 0f), 12);
             if (questId == QuestId.KnightsBestFriend && GameSave.FlameEnchantUnlocked)
                 SparkleBurst.Play(_questPanel != null ? _questPanel.transform : transform, new Vector2(-120f, 40f), 10);
+            if (questId == QuestId.BrensWatch
+                && QuestCatalog.GetProgress(QuestId.CorvinsOmen) == QuestProgress.Available)
+            {
+                ShowCampQuestToast("The dead stir — talk to Corvin by the treeline (Corvin's Omen).");
+            }
+            else if (questId == QuestId.CorvinsOmen)
+            {
+                ShowCampQuestToast("Omen confirmed. Corvin will call again when ash falls wrong.");
+            }
         }
 
         void OpenSettings()
