@@ -37,6 +37,7 @@ namespace ProjectZx.UI
             new("lyra", "Hint: When Silent Ossuary unlocks, Sister Lyra offers Lyra's Vigil — clear the R50 Minotaur."),
             new("bren_watch", "Hint: After The Endless Front unlocks, Captain Bren offers Bren's Watch — survive to round 50."),
             new("corvin_omen", "Hint: After Bren's Watch, talk to Corvin — Corvin's Omen asks you to hold the Front to round 75."),
+            new("corvin_shade", "Hint: After Corvin's Omen, accept Corvin's Shade — banish the ash shade on the Front after R40."),
             new("kael", "Hint: After Thalor's pendant, Scout Kael appears — push Emberwilds to R15 for gold."),
             new("nessa", "Hint: When Warded Halls unlock, Herbalist Nessa wants you to reach R15 there."),
             new("garrick", "Hint: After Ironvault opens, Smith Garrick asks you to hold R20."),
@@ -72,6 +73,8 @@ namespace ProjectZx.UI
                 "corvin_omen" => GameSave.QuestBrensWatchCompleted
                     && GameSave.QuestGreyWizardCompleted
                     && !GameSave.QuestCorvinsOmenCompleted,
+                "corvin_shade" => GameSave.QuestCorvinsOmenCompleted
+                    && !GameSave.QuestCorvinsShadeCompleted,
                 "kael" => GameSave.QuestGrandWizardsPerilCompleted && !GameSave.QuestKaelsReconCompleted,
                 "nessa" => GameSave.InsideMapUnlocked && !GameSave.QuestNessasSalveCompleted,
                 "garrick" => GameSave.DungeonMapUnlocked && !GameSave.QuestGarricksAnvilCompleted,

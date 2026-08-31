@@ -77,6 +77,9 @@ namespace ProjectZx.Core
         const string QuestCorvinOmenAcceptedKey = "zx_quest_corvin_omen_accepted";
         const string QuestCorvinOmenMilestoneKey = "zx_quest_corvin_omen_milestone";
         const string QuestCorvinOmenCompletedKey = "zx_quest_corvin_omen_completed";
+        const string QuestCorvinShadeAcceptedKey = "zx_quest_corvin_shade_accepted";
+        const string QuestCorvinShadeBanishedKey = "zx_quest_corvin_shade_banished";
+        const string QuestCorvinShadeCompletedKey = "zx_quest_corvin_shade_completed";
         const string QuestKaelAcceptedKey = "zx_quest_kael_accepted";
         const string QuestKaelMilestoneKey = "zx_quest_kael_milestone";
         const string QuestKaelCompletedKey = "zx_quest_kael_completed";
@@ -1234,6 +1237,37 @@ namespace ProjectZx.Core
             set
             {
                 PlayerPrefs.SetInt(QuestCorvinOmenCompletedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Corvin's Shade — banish the Front shade after Omen.</summary>
+        public static bool QuestCorvinsShadeAccepted
+        {
+            get => PlayerPrefs.GetInt(QuestCorvinShadeAcceptedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestCorvinShadeAcceptedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestCorvinsShadeBanished
+        {
+            get => PlayerPrefs.GetInt(QuestCorvinShadeBanishedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestCorvinShadeBanishedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestCorvinsShadeCompleted
+        {
+            get => PlayerPrefs.GetInt(QuestCorvinShadeCompletedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestCorvinShadeCompletedKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
         }

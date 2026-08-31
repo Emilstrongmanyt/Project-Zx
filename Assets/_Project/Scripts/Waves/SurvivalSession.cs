@@ -239,7 +239,23 @@ namespace ProjectZx.Waves
         void TrySpawnDarkBird(int round)
         {
             if (_darkBirdSpawned) return;
-            if (!QuestCatalog.ShouldSpawnDarkBird(MapKind, round)) return;
+
+            DarkBirdKind kind;
+            string banner;
+            if (QuestCatalog.ShouldSpawnDarkBird(MapKind, round))
+            {
+                kind = DarkBirdKind.CorvinCrow;
+                banner = "A dark crow is watching nearby — find and free it!";
+            }
+            else if (QuestCatalog.ShouldSpawnFrontShade(MapKind, round))
+            {
+                kind = DarkBirdKind.FrontShade;
+                banner = "An ash shade is near — find and banish it!";
+            }
+            else
+            {
+                return;
+            }
 
             _darkBirdSpawned = true;
             var origin = _player != null ? (Vector2)_player.position : Vector2.zero;
@@ -251,9 +267,9 @@ namespace ProjectZx.Waves
                 pos = SurvivalChunkStreamer.Instance.RandomSpawnAroundPlayer(origin, 5f, 9f);
             }
 
-            DarkBirdRescue.Spawn(pos);
+            DarkBirdRescue.Spawn(pos, kind);
             WorldSparkle.Play(pos, 14);
-            _hud?.ShowBanner("A dark crow is watching nearby — find and free it!", 3.2f);
+            _hud?.ShowBanner(banner, 3.2f);
         }
 
         IEnumerator EnsureBiomeForRoundRoutine(int round)

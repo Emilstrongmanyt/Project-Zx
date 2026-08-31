@@ -502,7 +502,9 @@ namespace ProjectZx.UI
         {
             if (id == QuestId.KnightsBestFriend)
                 return MedievalNpcLibrary.Cast.Aldric;
-            if (id == QuestId.GreyWizardsCrow || id == QuestId.CorvinsOmen)
+            if (id == QuestId.GreyWizardsCrow
+                || id == QuestId.CorvinsOmen
+                || id == QuestId.CorvinsShade)
                 return MedievalNpcLibrary.Cast.Corvin;
             if (id == QuestId.LyraVigil)
                 return MedievalNpcLibrary.Cast.Lyra;
@@ -1176,10 +1178,10 @@ namespace ProjectZx.UI
             OpenQuestGiverWithPool(QuestCatalog.GetThalorQuestIds(), QuestCatalog.GrandWizardsPeril.Id);
         }
 
-        /// <summary>Ashen Seer Corvin — crow turn-in, then Corvin's Omen.</summary>
+        /// <summary>Ashen Seer Corvin — crow, omen, then shade.</summary>
         public void OpenCorvinQuestGiver()
         {
-            OpenQuestGiverWithPool(QuestCatalog.CorvinQuestIds, QuestId.CorvinsOmen);
+            OpenQuestGiverWithPool(QuestCatalog.CorvinQuestIds, QuestId.CorvinsShade);
         }
 
         /// <summary>Sir Aldric — Ironvault greatsword quest.</summary>
@@ -1348,14 +1350,19 @@ namespace ProjectZx.UI
 
             var showPoolLog = _questPanelPool != null && _questPanelPool.Length > 1;
             var campDigest = QuestCatalog.BuildCampQuestDigest(def.Id);
-            var showCampDigest = !showPoolLog && !string.IsNullOrEmpty(campDigest)
-                                 && campDigest.IndexOf('\n') >= 0;
+            // Thalor without crow (pendant + path only): prefer camp-wide digest so other NPCs stay visible.
+            var isThalorSlimPool = _questPanelPool != null
+                && _questPanelPool.Length <= 2
+                && System.Array.IndexOf(_questPanelPool, QuestId.GrandWizardsPeril) >= 0;
+            var showCampDigest = !string.IsNullOrEmpty(campDigest)
+                                 && campDigest.IndexOf('\n') >= 0
+                                 && (!showPoolLog || isThalorSlimPool);
             if (_questLogText != null)
             {
-                if (showPoolLog)
-                    _questLogText.text = QuestCatalog.BuildQuestLog(_questPanelPool, def.Id);
-                else if (showCampDigest)
+                if (showCampDigest)
                     _questLogText.text = campDigest;
+                else if (showPoolLog)
+                    _questLogText.text = QuestCatalog.BuildQuestLog(_questPanelPool, def.Id);
                 else
                     _questLogText.text = string.Empty;
 
@@ -1368,14 +1375,7 @@ namespace ProjectZx.UI
 
             if (_questBodyText != null)
             {
-                _questBodyText.text = progress switch
-                {
-                    QuestProgress.Available => def.OfferText,
-                    QuestProgress.Active => def.ActiveText,
-                    QuestProgress.ReadyToTurnIn => def.TurnInText,
-                    QuestProgress.Completed => def.CompletedText,
-                    _ => "Come back when you are ready for a new task."
-                };
+                _questBodyText.text = QuestCatalog.GetQuestBodyText(def.Id, progress);
                 var bodyRect = _questBodyText.rectTransform;
                 var showLog = showPoolLog || showCampDigest;
                 var bodyY = showLog ? -40f : -10f;
@@ -1388,7 +1388,9 @@ namespace ProjectZx.UI
             var canTurnIn = progress == QuestProgress.ReadyToTurnIn;
             var canCycle = _questPanelPool != null && _questPanelPool.Length > 1;
             // Maps shortcut while briefing Endless Front quests (Bren or Corvin).
-            var showFrontMaps = def.Id == QuestId.BrensWatch || def.Id == QuestId.CorvinsOmen;
+            var showFrontMaps = def.Id == QuestId.BrensWatch
+                || def.Id == QuestId.CorvinsOmen
+                || def.Id == QuestId.CorvinsShade;
             if (_questAcceptButton != null)
             {
                 _questAcceptButton.gameObject.SetActive(canAccept);
@@ -1439,9 +1441,14 @@ namespace ProjectZx.UI
             {
                 ShowCampQuestToast("The dead stir — talk to Corvin by the treeline (Corvin's Omen).");
             }
-            else if (questId == QuestId.CorvinsOmen)
+            else if (questId == QuestId.CorvinsOmen
+                     && QuestCatalog.GetProgress(QuestId.CorvinsShade) == QuestProgress.Available)
             {
-                ShowCampQuestToast("Omen confirmed. Corvin will call again when ash falls wrong.");
+                ShowCampQuestToast("A shade tore free — talk to Corvin (Corvin's Shade).");
+            }
+            else if (questId == QuestId.CorvinsShade)
+            {
+                ShowCampQuestToast("The ash shade is gone. The Front breathes easier.");
             }
         }
 

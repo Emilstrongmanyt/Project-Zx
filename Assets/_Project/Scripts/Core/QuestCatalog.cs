@@ -24,7 +24,9 @@ namespace ProjectZx.Core
         /// <summary>Cartographer Tove: push Silent Ossuary to round 25.</summary>
         TovesChart = 10,
         /// <summary>Ashen Seer Corvin: hold The Endless Front through round 75 — the dead stir.</summary>
-        CorvinsOmen = 11
+        CorvinsOmen = 11,
+        /// <summary>Ashen Seer Corvin: banish the ash shade on The Endless Front after R40.</summary>
+        CorvinsShade = 12
     }
 
     public enum QuestProgress
@@ -108,7 +110,7 @@ namespace ProjectZx.Core
             "Ashen Seer Corvin flew as a crow to spy on the foe in the Warded Halls — and never returned. Enter Warded Halls Survival; after round 10 a dark crow appears nearby — free him, then meet him back at this campfire (not Thalor).",
             "Warded Halls after R10: look for the sparkling dark crow near you, tap to free him, then turn in with Corvin at camp.",
             "You broke the glamour. I am Corvin — flesh again, and in your debt. Take this gold. Hold the Front with Bren — when that watch is done, the dead will stir, and I will call.",
-            "I watch the treeline for what the Second War left unfinished. Finish Bren's Watch on the Endless Front — then speak with me. The omen is coming.",
+            "I watch the treeline. Finish Bren's Watch on the Endless Front — then speak with me for the omen.",
             "In progress  ·  Free the crow in Warded Halls (after R10), then talk to Corvin",
             1000,
             () => GameSave.InsideMapUnlocked);
@@ -195,11 +197,22 @@ namespace ProjectZx.Core
             "Corvin's Omen",
             "The Front held at fifty — and still the ash tastes wrong. I am Corvin. Deeper on the Endless Front the dead stir: bones that should stay buried, banners that should not move. Hold the line through round 75 and return. I must read what walks that far.",
             "Endless Front Survival — reach round 75, then report to Corvin at camp (Bren still holds the map board).",
-            "Seventy-five… and the omen is true. Something older than the Second War woke on that line. Take this gold. Rest by the fire — when ash falls wrong again, the Ashen Seer will call.",
-            "Corvin watches the Front's deeper dark. The omen at seventy-five was no dream — something older than the Second War walks. The campfire holds. When ash falls wrong again, seek the Ashen Seer.",
+            "Seventy-five… and the omen is true. Something older than the Second War woke on that line. Take this gold. A shade tore free of that depth — speak with me when you are ready to hunt it.",
+            "Corvin watches the Front's deeper dark. The omen at seventy-five was no dream — a shade still walks. Speak with me to banish it.",
             "In progress  ·  Reach Endless Front round 75, then talk to Corvin",
             2000,
             () => GameSave.QuestBrensWatchCompleted && GameSave.QuestGreyWizardCompleted);
+
+        public static readonly QuestDefinition CorvinsShade = new(
+            QuestId.CorvinsShade,
+            "Corvin's Shade",
+            "The omen left a scar. An ash shade — crow-shaped, wrong-hearted — still paces the Endless Front. Enter Front Survival; after round 40 it will near you. Tap to banish it, then return to me. Gold for closing what we opened.",
+            "Endless Front after R40: find the sparkling ash shade near you, tap to banish it, then turn in with Corvin.",
+            "The shade is dust. The Front breathes a little cleaner. Take this gold. The Second War's unfinished business is quieter — for now. Rest by the fire.",
+            "Corvin keeps the treeline. The ash shade is gone; the campfire holds. When the wind tastes wrong again, the Ashen Seer will know.",
+            "In progress  ·  Banish the ash shade on Endless Front (after R40), then talk to Corvin",
+            2500,
+            () => GameSave.QuestCorvinsOmenCompleted);
 
         static readonly QuestDefinition[] AllQuests =
         {
@@ -210,6 +223,7 @@ namespace ProjectZx.Core
             LyraVigil,
             BrensWatch,
             CorvinsOmen,
+            CorvinsShade,
             KaelsRecon,
             NessasSalve,
             GarricksAnvil,
@@ -289,6 +303,13 @@ namespace ProjectZx.Core
                         ? QuestProgress.ReadyToTurnIn
                         : QuestProgress.Active;
 
+                case QuestId.CorvinsShade:
+                    if (GameSave.QuestCorvinsShadeCompleted) return QuestProgress.Completed;
+                    if (!GameSave.QuestCorvinsShadeAccepted) return QuestProgress.Available;
+                    return GameSave.QuestCorvinsShadeBanished
+                        ? QuestProgress.ReadyToTurnIn
+                        : QuestProgress.Active;
+
                 case QuestId.KaelsRecon:
                     if (GameSave.QuestKaelsReconCompleted) return QuestProgress.Completed;
                     if (!GameSave.QuestKaelsReconAccepted) return QuestProgress.Available;
@@ -346,11 +367,12 @@ namespace ProjectZx.Core
             };
         }
 
-        /// <summary>Ashen Seer Corvin — crow turn-in, then Corvin's Omen after Bren's Watch.</summary>
+        /// <summary>Ashen Seer Corvin — crow, omen, then shade.</summary>
         public static readonly QuestId[] CorvinQuestIds =
         {
             QuestId.GreyWizardsCrow,
-            QuestId.CorvinsOmen
+            QuestId.CorvinsOmen,
+            QuestId.CorvinsShade
         };
 
         public static readonly QuestId[] KnightQuestIds =
@@ -468,6 +490,7 @@ namespace ProjectZx.Core
                 QuestId.LyraVigil => LyraQuestIds,
                 QuestId.BrensWatch => BrenQuestIds,
                 QuestId.CorvinsOmen => CorvinQuestIds,
+                QuestId.CorvinsShade => CorvinQuestIds,
                 QuestId.KaelsRecon => KaelQuestIds,
                 QuestId.NessasSalve => NessaQuestIds,
                 QuestId.GarricksAnvil => GarrickQuestIds,
@@ -493,6 +516,7 @@ namespace ProjectZx.Core
                 QuestId.LyraVigil => "Lyra",
                 QuestId.BrensWatch => "Bren",
                 QuestId.CorvinsOmen => "Corvin",
+                QuestId.CorvinsShade => "Corvin",
                 QuestId.KaelsRecon => "Kael",
                 QuestId.NessasSalve => "Nessa",
                 QuestId.GarricksAnvil => "Garrick",
@@ -605,6 +629,9 @@ namespace ProjectZx.Core
                 case QuestId.CorvinsOmen:
                     GameSave.QuestCorvinsOmenAccepted = true;
                     return true;
+                case QuestId.CorvinsShade:
+                    GameSave.QuestCorvinsShadeAccepted = true;
+                    return true;
                 case QuestId.KaelsRecon:
                     GameSave.QuestKaelsReconAccepted = true;
                     return true;
@@ -680,6 +707,12 @@ namespace ProjectZx.Core
                         return false;
                     GameSave.QuestCorvinsOmenMilestone = true;
                     GameSave.QuestCorvinsOmenCompleted = true;
+                    AwardGold(def.GoldReward, out goldAwarded);
+                    return true;
+
+                case QuestId.CorvinsShade:
+                    if (!GameSave.QuestCorvinsShadeBanished) return false;
+                    GameSave.QuestCorvinsShadeCompleted = true;
                     AwardGold(def.GoldReward, out goldAwarded);
                     return true;
 
@@ -799,6 +832,59 @@ namespace ProjectZx.Core
             if (round < 10) return false;
             if (GetProgress(QuestId.GreyWizardsCrow) != QuestProgress.Active) return false;
             return !GameSave.QuestGreyWizardRescued;
+        }
+
+        public static bool ShouldSpawnFrontShade(SurvivalMapKind mapKind, int round)
+        {
+            if (mapKind != SurvivalMapKind.Unlimited) return false;
+            if (round < 40) return false;
+            if (GetProgress(QuestId.CorvinsShade) != QuestProgress.Active) return false;
+            return !GameSave.QuestCorvinsShadeBanished;
+        }
+
+        /// <summary>Dialogue body with Corvin waiting-lines and chapter handoffs.</summary>
+        public static string GetQuestBodyText(QuestId id, QuestProgress progress)
+        {
+            if (!TryGet(id, out var def)) return "Come back when you are ready for a new task.";
+
+            if (id == QuestId.GreyWizardsCrow && progress == QuestProgress.Completed)
+            {
+                var omen = GetProgress(QuestId.CorvinsOmen);
+                if (omen == QuestProgress.Locked && !GameSave.QuestBrensWatchCompleted)
+                {
+                    return "I taste ash on the wind, but the Front is not yet yours. Finish Bren's Watch at the maps — then return. The omen will open, and I will call.";
+                }
+
+                if (omen == QuestProgress.Available)
+                    return "Bren's watch is done. The dead stir — accept Corvin's Omen when you are ready (Next if you still see this crow tale).";
+
+                if (omen == QuestProgress.Active || omen == QuestProgress.ReadyToTurnIn)
+                    return "The omen is already in motion. Hold the Front — or turn it in when ready.";
+
+                var shade = GetProgress(QuestId.CorvinsShade);
+                if (shade == QuestProgress.Available)
+                    return "The crow debt is paid. A shade still walks the Front — speak with me of Corvin's Shade.";
+            }
+
+            if (id == QuestId.CorvinsOmen && progress == QuestProgress.Completed)
+            {
+                var shade = GetProgress(QuestId.CorvinsShade);
+                if (shade == QuestProgress.Available)
+                    return "The omen was true. A shade tore free of that depth — accept Corvin's Shade when you are ready to hunt it.";
+                if (shade == QuestProgress.Active || shade == QuestProgress.ReadyToTurnIn)
+                    return "The shade still paces the Front after R40. Banish it, then return to me.";
+                if (shade == QuestProgress.Completed)
+                    return def.CompletedText;
+            }
+
+            return progress switch
+            {
+                QuestProgress.Available => def.OfferText,
+                QuestProgress.Active => def.ActiveText,
+                QuestProgress.ReadyToTurnIn => def.TurnInText,
+                QuestProgress.Completed => def.CompletedText,
+                _ => "Come back when you are ready for a new task."
+            };
         }
 
         public static bool ShouldDropKnightsGreatsword(bool isDungeonRoundFortyBoss)

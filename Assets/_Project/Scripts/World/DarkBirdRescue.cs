@@ -6,8 +6,17 @@ using UnityEngine;
 
 namespace ProjectZx.World
 {
+    public enum DarkBirdKind
+    {
+        /// <summary>Warded Halls — free Corvin from crow glamour.</summary>
+        CorvinCrow = 0,
+        /// <summary>Endless Front — banish the ash shade after Corvin's Omen.</summary>
+        FrontShade = 1
+    }
+
     /// <summary>
-    /// Ashen Seer Corvin in crow form (Warded Halls, after R10). Tap while near to free him.
+    /// Quest bird / shade prop. Crow: Warded Halls after R10. Shade: Endless Front after R40.
+    /// Tap while near to complete the rescue / banish step.
     /// </summary>
     public class DarkBirdRescue : MonoBehaviour
     {
@@ -15,12 +24,13 @@ namespace ProjectZx.World
         const float FlyDistance = 18f;
 
         bool _rescued;
+        DarkBirdKind _kind = DarkBirdKind.CorvinCrow;
         SpriteRenderer _renderer;
 
-        public static GameObject Spawn(Vector2 position)
+        public static GameObject Spawn(Vector2 position, DarkBirdKind kind = DarkBirdKind.CorvinCrow)
         {
             var go = GameFactory.CreateSprite(
-                "DarkBirdRescue",
+                kind == DarkBirdKind.FrontShade ? "FrontAshShade" : "DarkBirdRescue",
                 ArtLibrary.DarkBird,
                 new Vector3(position.x, position.y, 0f),
                 // 32×32 at 100 PPU is tiny — 2× base, then ×1.5 for readability on mobile.
@@ -31,6 +41,7 @@ namespace ProjectZx.World
             col.isTrigger = true;
             col.radius = 1.4f;
             var bird = go.AddComponent<DarkBirdRescue>();
+            bird._kind = kind;
             go.AddComponent<NpcInteractable>().Initialize(bird.OnInteract);
             return go;
         }
@@ -38,16 +49,40 @@ namespace ProjectZx.World
         void Awake()
         {
             _renderer = GetComponent<SpriteRenderer>();
+            ApplyKindTint();
+        }
+
+        void Start()
+        {
+            ApplyKindTint();
+        }
+
+        void ApplyKindTint()
+        {
+            if (_renderer == null) return;
+            if (_kind == DarkBirdKind.FrontShade)
+                _renderer.color = new Color(0.62f, 0.48f, 0.82f, 1f);
         }
 
         void OnInteract()
         {
             if (_rescued) return;
-            if (QuestCatalog.GetProgress(QuestId.GreyWizardsCrow) != QuestProgress.Active) return;
 
-            _rescued = true;
-            GameSave.QuestGreyWizardRescued = true;
-            GameHud.Instance?.ShowBanner("The crow is free! Return to Corvin at camp.", 3.5f);
+            if (_kind == DarkBirdKind.FrontShade)
+            {
+                if (QuestCatalog.GetProgress(QuestId.CorvinsShade) != QuestProgress.Active) return;
+                _rescued = true;
+                GameSave.QuestCorvinsShadeBanished = true;
+                GameHud.Instance?.ShowBanner("The ash shade scatters! Return to Corvin at camp.", 3.5f);
+            }
+            else
+            {
+                if (QuestCatalog.GetProgress(QuestId.GreyWizardsCrow) != QuestProgress.Active) return;
+                _rescued = true;
+                GameSave.QuestGreyWizardRescued = true;
+                GameHud.Instance?.ShowBanner("The crow is free! Return to Corvin at camp.", 3.5f);
+            }
+
             WorldSparkle.Play(transform.position, 10);
             StartCoroutine(FlyAway());
         }
