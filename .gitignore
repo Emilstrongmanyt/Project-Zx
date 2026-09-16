@@ -143,3 +143,7 @@ Assets/HeroEditor/SpriteSequenceCapture.unity.meta
 # Local asset download / extract workspace
 _ThirdPartyDownloads/
 
+
+# Duplicate root Music folder (runtime loads Assets/_Project/Resources/Music only)
+/Assets/Music/
+/Assets/Music.meta
