@@ -252,6 +252,11 @@ namespace ProjectZx.Waves
                 kind = DarkBirdKind.FrontShade;
                 banner = "An ash shade is near — find and banish it!";
             }
+            else if (QuestCatalog.ShouldSpawnAshWraith(MapKind, round))
+            {
+                kind = DarkBirdKind.AshWraith;
+                banner = "An Ash Wraith is near — find and banish it!";
+            }
             else
             {
                 return;

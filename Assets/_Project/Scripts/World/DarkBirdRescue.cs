@@ -11,11 +11,14 @@ namespace ProjectZx.World
         /// <summary>Warded Halls — free Corvin from crow glamour.</summary>
         CorvinCrow = 0,
         /// <summary>Endless Front — banish the ash shade after Corvin's Omen.</summary>
-        FrontShade = 1
+        FrontShade = 1,
+        /// <summary>Endless Front — banish the Ash Wraith after Ash Crown Rising.</summary>
+        AshWraith = 2
     }
 
     /// <summary>
-    /// Quest bird / shade prop. Crow: Warded Halls after R10. Shade: Endless Front after R40.
+    /// Quest bird / shade / wraith prop.
+    /// Crow: Warded Halls after R10. Shade: Front after R40. Ash Wraith: Front after R55.
     /// Tap while near to complete the rescue / banish step.
     /// </summary>
     public class DarkBirdRescue : MonoBehaviour
@@ -29,8 +32,14 @@ namespace ProjectZx.World
 
         public static GameObject Spawn(Vector2 position, DarkBirdKind kind = DarkBirdKind.CorvinCrow)
         {
+            var goName = kind switch
+            {
+                DarkBirdKind.FrontShade => "FrontAshShade",
+                DarkBirdKind.AshWraith => "FrontAshWraith",
+                _ => "DarkBirdRescue"
+            };
             var go = GameFactory.CreateSprite(
-                kind == DarkBirdKind.FrontShade ? "FrontAshShade" : "DarkBirdRescue",
+                goName,
                 ArtLibrary.DarkBird,
                 new Vector3(position.x, position.y, 0f),
                 // 32×32 at 100 PPU is tiny — 2× base, then ×1.5 for readability on mobile.
@@ -60,15 +69,26 @@ namespace ProjectZx.World
         void ApplyKindTint()
         {
             if (_renderer == null) return;
-            if (_kind == DarkBirdKind.FrontShade)
-                _renderer.color = new Color(0.62f, 0.48f, 0.82f, 1f);
+            _renderer.color = _kind switch
+            {
+                DarkBirdKind.FrontShade => new Color(0.62f, 0.48f, 0.82f, 1f),
+                DarkBirdKind.AshWraith => new Color(0.78f, 0.55f, 0.28f, 1f),
+                _ => Color.white
+            };
         }
 
         void OnInteract()
         {
             if (_rescued) return;
 
-            if (_kind == DarkBirdKind.FrontShade)
+            if (_kind == DarkBirdKind.AshWraith)
+            {
+                if (QuestCatalog.GetProgress(QuestId.AshCrownRising) != QuestProgress.Active) return;
+                _rescued = true;
+                GameSave.QuestAshCrownBanished = true;
+                GameHud.Instance?.ShowBanner("The Ash Wraith scatters! Return to Corvin at camp.", 3.5f);
+            }
+            else if (_kind == DarkBirdKind.FrontShade)
             {
                 if (QuestCatalog.GetProgress(QuestId.CorvinsShade) != QuestProgress.Active) return;
                 _rescued = true;

@@ -38,6 +38,7 @@ namespace ProjectZx.UI
             new("bren_watch", "Hint: After The Endless Front unlocks, Captain Bren offers Bren's Watch — survive to round 50."),
             new("corvin_omen", "Hint: After Bren's Watch, talk to Corvin — Corvin's Omen asks you to hold the Front to round 75."),
             new("corvin_shade", "Hint: After Corvin's Omen, accept Corvin's Shade — banish the ash shade on the Front after R40."),
+            new("ash_crown", "Hint: After Corvin's Shade, accept Ash Crown Rising — banish the Ash Wraith on the Front after R55 for Altair."),
             new("kael", "Hint: After Thalor's pendant, Scout Kael appears — push Emberwilds to R15 for gold."),
             new("nessa", "Hint: When Warded Halls unlock, Herbalist Nessa wants you to reach R15 there."),
             new("garrick", "Hint: After Ironvault opens, Smith Garrick asks you to hold R20."),
@@ -75,6 +76,8 @@ namespace ProjectZx.UI
                     && !GameSave.QuestCorvinsOmenCompleted,
                 "corvin_shade" => GameSave.QuestCorvinsOmenCompleted
                     && !GameSave.QuestCorvinsShadeCompleted,
+                "ash_crown" => GameSave.QuestCorvinsShadeCompleted
+                    && !GameSave.QuestAshCrownCompleted,
                 "kael" => GameSave.QuestGrandWizardsPerilCompleted && !GameSave.QuestKaelsReconCompleted,
                 "nessa" => GameSave.InsideMapUnlocked && !GameSave.QuestNessasSalveCompleted,
                 "garrick" => GameSave.DungeonMapUnlocked && !GameSave.QuestGarricksAnvilCompleted,

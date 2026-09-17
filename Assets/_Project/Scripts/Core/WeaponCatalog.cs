@@ -91,8 +91,10 @@ namespace ProjectZx.Core
 
         public static bool IsTierUnlocked(PlayerClass playerClass, WeaponMaterialTier tier)
         {
-            if (tier is WeaponMaterialTier.Altair or WeaponMaterialTier.Angelic)
+            if (tier == WeaponMaterialTier.Angelic)
                 return false;
+            if (tier == WeaponMaterialTier.Altair)
+                return GameSave.AltairUnlocked;
 
             EnsureProgress(playerClass);
             return tier switch
@@ -126,7 +128,11 @@ namespace ProjectZx.Core
                     list.Add(t);
             }
 
-            list.Sort((a, b) => TierIndex(a).CompareTo(TierIndex(b)));
+            list.Sort((a, b) =>
+            {
+                var byPower = TierIndex(a).CompareTo(TierIndex(b));
+                return byPower != 0 ? byPower : ((int)a).CompareTo((int)b);
+            });
             return list;
         }
 
@@ -175,9 +181,17 @@ namespace ProjectZx.Core
         public static string GetPerkSummary(WeaponMaterialTier tier)
         {
             if (tier == WeaponMaterialTier.Wooden) return "Base weapons";
+            if (tier == WeaponMaterialTier.Altair)
+            {
+                var dmgA = RoundPct(DamageMultiplier(tier) - 1f);
+                var aspdA = RoundPct(AttackSpeedMultiplier(tier) - 1f);
+                return $"Ash Crown relic — Fateful power (+{dmgA}% dmg, +{aspdA}% AS), Altair look";
+            }
+
             var dmg = RoundPct(DamageMultiplier(tier) - 1f);
             var aspd = RoundPct(AttackSpeedMultiplier(tier) - 1f);
-            var aoe = tier >= WeaponMaterialTier.Fateful ? ", AOE splash" : "";
+            // Combat AOE is HasAoeSplash only when equipped == Fateful (not Altair/Angelic).
+            var aoe = tier == WeaponMaterialTier.Fateful ? ", AOE splash" : "";
             return $"+{dmg}% damage, +{aspd}% attack speed{aoe}";
         }
 

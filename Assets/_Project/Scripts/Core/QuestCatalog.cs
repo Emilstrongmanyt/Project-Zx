@@ -26,7 +26,9 @@ namespace ProjectZx.Core
         /// <summary>Ashen Seer Corvin: hold The Endless Front through round 75 — the dead stir.</summary>
         CorvinsOmen = 11,
         /// <summary>Ashen Seer Corvin: banish the ash shade on The Endless Front after R40.</summary>
-        CorvinsShade = 12
+        CorvinsShade = 12,
+        /// <summary>Ashen Seer Corvin: banish the Ash Wraith on The Endless Front after R55 — Altair reward.</summary>
+        AshCrownRising = 13
     }
 
     public enum QuestProgress
@@ -208,11 +210,22 @@ namespace ProjectZx.Core
             "Corvin's Shade",
             "The omen left a scar. An ash shade — crow-shaped, wrong-hearted — still paces the Endless Front. Enter Front Survival; after round 40 it will near you. Tap to banish it, then return to me. Gold for closing what we opened.",
             "Endless Front after R40: find the sparkling ash shade near you, tap to banish it, then turn in with Corvin.",
-            "The shade is dust. The Front breathes a little cleaner. Take this gold. The Second War's unfinished business is quieter — for now. Rest by the fire.",
-            "Corvin keeps the treeline. The ash shade is gone; the campfire holds. When the wind tastes wrong again, the Ashen Seer will know.",
+            "The shade is dust. The Front breathes a little cleaner. Take this gold. But the Ash Crown — a Pre-War scar — still answers from deeper ash. Speak with me when you are ready.",
+            "Corvin keeps the treeline. The ash shade is gone — the Ash Crown still waits. Speak with me for Ash Crown Rising.",
             "In progress  ·  Banish the ash shade on Endless Front (after R40), then talk to Corvin",
             2500,
             () => GameSave.QuestCorvinsOmenCompleted);
+
+        public static readonly QuestDefinition AshCrownRising = new(
+            QuestId.AshCrownRising,
+            "Ash Crown Rising",
+            "The shade was only a herald. The Ash Crown — a Pre-War wound older than the Second War — still crowns the deeper Front. Enter Endless Front Survival; after round 55 an Ash Wraith will near you. Tap to banish it, then return. Gold, and Altair weapons for every class.",
+            "Endless Front after R55: find the sparkling Ash Wraith near you, tap to banish it, then turn in with Corvin.",
+            "The Ash Wraith is dust — and the Crown's first answer is yours. Take this gold. Altair weapons unlock for every class (Fateful power, Altair look — no AOE splash). The Pre-War scar sleeps… for now.",
+            "Corvin watches the ash. The Crown answered once; Altair is yours. When Pre-War wind rises again, the Ashen Seer will know.",
+            "In progress  ·  Banish the Ash Wraith on Endless Front (after R55), then talk to Corvin",
+            3000,
+            () => GameSave.QuestCorvinsShadeCompleted);
 
         static readonly QuestDefinition[] AllQuests =
         {
@@ -224,6 +237,7 @@ namespace ProjectZx.Core
             BrensWatch,
             CorvinsOmen,
             CorvinsShade,
+            AshCrownRising,
             KaelsRecon,
             NessasSalve,
             GarricksAnvil,
@@ -310,6 +324,13 @@ namespace ProjectZx.Core
                         ? QuestProgress.ReadyToTurnIn
                         : QuestProgress.Active;
 
+                case QuestId.AshCrownRising:
+                    if (GameSave.QuestAshCrownCompleted) return QuestProgress.Completed;
+                    if (!GameSave.QuestAshCrownAccepted) return QuestProgress.Available;
+                    return GameSave.QuestAshCrownBanished
+                        ? QuestProgress.ReadyToTurnIn
+                        : QuestProgress.Active;
+
                 case QuestId.KaelsRecon:
                     if (GameSave.QuestKaelsReconCompleted) return QuestProgress.Completed;
                     if (!GameSave.QuestKaelsReconAccepted) return QuestProgress.Available;
@@ -367,12 +388,13 @@ namespace ProjectZx.Core
             };
         }
 
-        /// <summary>Ashen Seer Corvin — crow, omen, then shade.</summary>
+        /// <summary>Ashen Seer Corvin — crow, omen, shade, Ash Crown.</summary>
         public static readonly QuestId[] CorvinQuestIds =
         {
             QuestId.GreyWizardsCrow,
             QuestId.CorvinsOmen,
-            QuestId.CorvinsShade
+            QuestId.CorvinsShade,
+            QuestId.AshCrownRising
         };
 
         public static readonly QuestId[] KnightQuestIds =
@@ -491,6 +513,7 @@ namespace ProjectZx.Core
                 QuestId.BrensWatch => BrenQuestIds,
                 QuestId.CorvinsOmen => CorvinQuestIds,
                 QuestId.CorvinsShade => CorvinQuestIds,
+                QuestId.AshCrownRising => CorvinQuestIds,
                 QuestId.KaelsRecon => KaelQuestIds,
                 QuestId.NessasSalve => NessaQuestIds,
                 QuestId.GarricksAnvil => GarrickQuestIds,
@@ -517,6 +540,7 @@ namespace ProjectZx.Core
                 QuestId.BrensWatch => "Bren",
                 QuestId.CorvinsOmen => "Corvin",
                 QuestId.CorvinsShade => "Corvin",
+                QuestId.AshCrownRising => "Corvin",
                 QuestId.KaelsRecon => "Kael",
                 QuestId.NessasSalve => "Nessa",
                 QuestId.GarricksAnvil => "Garrick",
@@ -600,6 +624,8 @@ namespace ProjectZx.Core
         {
             if (def.Id == QuestId.KnightsBestFriend)
                 return $"{def.GoldReward} Gold + Flame Enchant";
+            if (def.Id == QuestId.AshCrownRising)
+                return $"{def.GoldReward} Gold + Altair weapons";
             return $"{def.GoldReward} Gold";
         }
 
@@ -631,6 +657,9 @@ namespace ProjectZx.Core
                     return true;
                 case QuestId.CorvinsShade:
                     GameSave.QuestCorvinsShadeAccepted = true;
+                    return true;
+                case QuestId.AshCrownRising:
+                    GameSave.QuestAshCrownAccepted = true;
                     return true;
                 case QuestId.KaelsRecon:
                     GameSave.QuestKaelsReconAccepted = true;
@@ -713,6 +742,13 @@ namespace ProjectZx.Core
                 case QuestId.CorvinsShade:
                     if (!GameSave.QuestCorvinsShadeBanished) return false;
                     GameSave.QuestCorvinsShadeCompleted = true;
+                    AwardGold(def.GoldReward, out goldAwarded);
+                    return true;
+
+                case QuestId.AshCrownRising:
+                    if (!GameSave.QuestAshCrownBanished) return false;
+                    GameSave.QuestAshCrownCompleted = true;
+                    GameSave.AltairUnlocked = true;
                     AwardGold(def.GoldReward, out goldAwarded);
                     return true;
 
@@ -842,6 +878,14 @@ namespace ProjectZx.Core
             return !GameSave.QuestCorvinsShadeBanished;
         }
 
+        public static bool ShouldSpawnAshWraith(SurvivalMapKind mapKind, int round)
+        {
+            if (mapKind != SurvivalMapKind.Unlimited) return false;
+            if (round < 55) return false;
+            if (GetProgress(QuestId.AshCrownRising) != QuestProgress.Active) return false;
+            return !GameSave.QuestAshCrownBanished;
+        }
+
         /// <summary>Dialogue body with Corvin waiting-lines and chapter handoffs.</summary>
         public static string GetQuestBodyText(QuestId id, QuestProgress progress)
         {
@@ -874,7 +918,23 @@ namespace ProjectZx.Core
                 if (shade == QuestProgress.Active || shade == QuestProgress.ReadyToTurnIn)
                     return "The shade still paces the Front after R40. Banish it, then return to me.";
                 if (shade == QuestProgress.Completed)
+                {
+                    var crown = GetProgress(QuestId.AshCrownRising);
+                    if (crown == QuestProgress.Available)
+                        return "The shade is gone. The Ash Crown still answers — accept Ash Crown Rising when you are ready.";
                     return def.CompletedText;
+                }
+            }
+
+            if (id == QuestId.CorvinsShade && progress == QuestProgress.Completed)
+            {
+                var crown = GetProgress(QuestId.AshCrownRising);
+                if (crown == QuestProgress.Available)
+                    return "The shade is dust. The Ash Crown — a Pre-War scar — still waits. Accept Ash Crown Rising when you are ready.";
+                if (crown == QuestProgress.Active || crown == QuestProgress.ReadyToTurnIn)
+                    return "The Ash Wraith still paces the Front after R55. Banish it, then return to me.";
+                if (crown == QuestProgress.Completed)
+                    return "The Crown answered. Altair is yours — rest by the fire.";
             }
 
             return progress switch

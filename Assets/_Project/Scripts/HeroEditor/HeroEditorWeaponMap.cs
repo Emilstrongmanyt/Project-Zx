@@ -97,6 +97,9 @@ namespace ProjectZx.HeroEditor
             WeaponMaterialTier.Adamantine => new Color(0.55f, 0.85f, 0.95f),
             WeaponMaterialTier.Crimson => new Color(0.85f, 0.15f, 0.2f),
             WeaponMaterialTier.Fateful => new Color(0.7f, 0.35f, 1f),
+            // Ash Crown Altair — ash/violet distinct from Fateful purple.
+            WeaponMaterialTier.Altair => new Color(0.55f, 0.42f, 0.78f),
+            WeaponMaterialTier.Angelic => new Color(1f, 0.95f, 0.75f),
             _ => (Color?)null
         };
     }

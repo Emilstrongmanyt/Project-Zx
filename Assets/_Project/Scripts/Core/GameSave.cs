@@ -80,6 +80,10 @@ namespace ProjectZx.Core
         const string QuestCorvinShadeAcceptedKey = "zx_quest_corvin_shade_accepted";
         const string QuestCorvinShadeBanishedKey = "zx_quest_corvin_shade_banished";
         const string QuestCorvinShadeCompletedKey = "zx_quest_corvin_shade_completed";
+        const string QuestAshCrownAcceptedKey = "zx_quest_ash_crown_accepted";
+        const string QuestAshCrownBanishedKey = "zx_quest_ash_crown_banished";
+        const string QuestAshCrownCompletedKey = "zx_quest_ash_crown_completed";
+        const string AltairUnlockedKey = "zx_weapon_altair_unlocked";
         const string QuestKaelAcceptedKey = "zx_quest_kael_accepted";
         const string QuestKaelMilestoneKey = "zx_quest_kael_milestone";
         const string QuestKaelCompletedKey = "zx_quest_kael_completed";
@@ -1268,6 +1272,48 @@ namespace ProjectZx.Core
             set
             {
                 PlayerPrefs.SetInt(QuestCorvinShadeCompletedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Ash Crown Rising — Front R55 Ash Wraith after Corvin's Shade.</summary>
+        public static bool QuestAshCrownAccepted
+        {
+            get => PlayerPrefs.GetInt(QuestAshCrownAcceptedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestAshCrownAcceptedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestAshCrownBanished
+        {
+            get => PlayerPrefs.GetInt(QuestAshCrownBanishedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestAshCrownBanishedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestAshCrownCompleted
+        {
+            get => PlayerPrefs.GetInt(QuestAshCrownCompletedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestAshCrownCompletedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Account-wide Altair weapon tier (Ash Crown Rising reward).</summary>
+        public static bool AltairUnlocked
+        {
+            get => PlayerPrefs.GetInt(AltairUnlockedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(AltairUnlockedKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
         }
