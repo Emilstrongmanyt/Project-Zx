@@ -70,7 +70,7 @@ namespace ProjectZx.UI
         UpgradeRowRefs _thickHideRow;
         UpgradeRowRefs _secondWindRow;
         UpgradeRowRefs _campfireBlessingRow;
-        GameObject _shopInfoOverlay;
+        GameObject _shopInfoPanel;
         Text _shopInfoTitle;
         Text _shopInfoBody;
 
