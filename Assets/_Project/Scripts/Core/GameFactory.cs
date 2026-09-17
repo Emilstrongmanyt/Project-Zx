@@ -611,49 +611,26 @@ namespace ProjectZx.Core
             bool isRanged = false,
             bool isRoundFiftyBoss = false,
             bool isElite = false,
-            EnemyMovementMode? forcedMovementMode = null)
+            EnemyMovementMode? forcedMovementMode = null,
+            Transform player = null)
         {
-            Sprite sprite;
-            if (isRoundFiftyBoss)
-                sprite = ArtLibrary.GetMinotaurBossAnimSet().Idle ?? ArtLibrary.BossB;
-            else if (isRoundFortyBoss)
-                sprite = ArtLibrary.GetLordBossAnimSet(highPhase: true).Idle ?? ArtLibrary.BossB;
-            else if (isBoss
-                     && BossArtCatalog.TryGetDecadeBossSet(
-                         GameSessionContext.SurvivalMap,
-                         round,
-                         isRoundTwentyBoss,
-                         isRoundThirtyBoss,
-                         isRoundFortyBoss,
-                         isRoundFiftyBoss,
-                         out var roguePreview)
-                     && roguePreview.Idle != null)
-                sprite = roguePreview.Idle;
-            else if (isBoss)
-                sprite = ArtLibrary.GetGolemBossAnimSet().Idle ?? ArtLibrary.Boss;
-            else if (forcedMovementMode == EnemyMovementMode.Fly)
-            {
-                var set = ArtLibrary.GetFlyingEnemyAnimSet();
-                sprite = set.Idle;
-                if (sprite == null)
-                    ArtLibrary.GetZombieSprites(zombieKind, out sprite, out _);
-            }
-            else if (isRanged || forcedMovementMode == EnemyMovementMode.Kite)
-            {
-                var set = ArtLibrary.GetRangedEnemyAnimSet();
-                sprite = set.Idle;
-                if (sprite == null)
-                    ArtLibrary.GetZombieSprites(zombieKind, out sprite, out _);
-            }
-            else
-            {
-                var forbidFlying = forcedMovementMode is EnemyMovementMode.Chase or EnemyMovementMode.Sprint
-                    or EnemyMovementMode.Charge or EnemyMovementMode.Orbit or EnemyMovementMode.Strafe;
-                var set = ArtLibrary.GetEnemyAnimSet(zombieKind, forbidFlying: forbidFlying);
-                sprite = set.Idle;
-                if (sprite == null)
-                    ArtLibrary.GetZombieSprites(zombieKind, out sprite, out _);
-            }
+            // Resolve anim pack once — GetEnemyAnimSet rolls randomly; loading again in
+            // EnemyActor.ApplySprites caused a second pack pick + hitch on every spawn.
+            var animSet = ResolveEnemyAnimSet(
+                round,
+                isBoss,
+                isRoundTwentyBoss,
+                zombieKind,
+                isRoundThirtyBoss,
+                isRoundFortyBoss,
+                isRanged,
+                isRoundFiftyBoss,
+                forcedMovementMode);
+            var sprite = animSet.Idle;
+            if (sprite == null)
+                ArtLibrary.GetZombieSprites(zombieKind, out sprite, out _);
+            if (sprite == null)
+                sprite = isBoss ? ArtLibrary.Boss : ArtLibrary.Zombie;
 
             var isStageBoss = isRoundTwentyBoss || isRoundThirtyBoss || isRoundFortyBoss || isRoundFiftyBoss;
             // Sanctum 96–128px sprites: previous footprint ×4 so demons read at combat scale.
@@ -715,8 +692,50 @@ namespace ProjectZx.Core
                 isRanged,
                 isRoundFiftyBoss,
                 isElite,
-                forcedMovementMode);
+                forcedMovementMode,
+                animSet,
+                player);
             return go;
+        }
+
+        /// <summary>
+        /// Single anim-pack resolve for preview sprite + EnemyActor (avoids double random load).
+        /// </summary>
+        static MonsterAnimSet ResolveEnemyAnimSet(
+            int round,
+            bool isBoss,
+            bool isRoundTwentyBoss,
+            EnemyZombieKind zombieKind,
+            bool isRoundThirtyBoss,
+            bool isRoundFortyBoss,
+            bool isRanged,
+            bool isRoundFiftyBoss,
+            EnemyMovementMode? forcedMovementMode)
+        {
+            if (isRoundFiftyBoss)
+                return ArtLibrary.GetMinotaurBossAnimSet();
+            if (isRoundFortyBoss)
+                return ArtLibrary.GetLordBossAnimSet(highPhase: true, seed: round * 17 + 40);
+            if (isBoss
+                && BossArtCatalog.TryGetDecadeBossSet(
+                    GameSessionContext.SurvivalMap,
+                    round,
+                    isRoundTwentyBoss,
+                    isRoundThirtyBoss,
+                    isRoundFortyBoss,
+                    isRoundFiftyBoss,
+                    out var rogueSet))
+                return rogueSet;
+            if (isBoss)
+                return ArtLibrary.GetGolemBossAnimSet(seed: round * 31 + 7);
+            if (forcedMovementMode == EnemyMovementMode.Fly)
+                return ArtLibrary.GetFlyingEnemyAnimSet();
+            if (isRanged || forcedMovementMode == EnemyMovementMode.Kite)
+                return ArtLibrary.GetRangedEnemyAnimSet();
+
+            var forbidFlying = forcedMovementMode is EnemyMovementMode.Chase or EnemyMovementMode.Sprint
+                or EnemyMovementMode.Charge or EnemyMovementMode.Orbit or EnemyMovementMode.Strafe;
+            return ArtLibrary.GetEnemyAnimSet(zombieKind, forbidFlying: forbidFlying);
         }
 
         public static GameObject CreateNpc(string name, Sprite sprite, Vector3 position, System.Action onInteract, float scale = 0.38f)

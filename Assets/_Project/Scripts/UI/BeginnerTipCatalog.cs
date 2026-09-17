@@ -40,6 +40,8 @@ namespace ProjectZx.UI
             new("corvin_shade", "Hint: After Corvin's Omen, accept Corvin's Shade — banish the ash shade on the Front after R40."),
             new("ash_crown", "Hint: After Corvin's Shade, accept Ash Crown Rising — banish the Ash Wraith on the Front after R55 for Altair."),
             new("kael", "Hint: After Thalor's pendant, Scout Kael appears — push Emberwilds to R15 for gold."),
+            new("mira_stock", "Hint: After Thalor's pendant, Mira offers Mira's Stock — Emberwilds to R25 (Shop still available from her quest)."),
+            new("kael_flank", "Hint: After Kael's Recon, talk to Kael again for Kael's Flank — Emberwilds to R30."),
             new("nessa", "Hint: When Warded Halls unlock, Herbalist Nessa wants you to reach R15 there."),
             new("garrick", "Hint: After Ironvault opens, Smith Garrick asks you to hold R20."),
             new("tove", "Hint: When Silent Ossuary unlocks, Cartographer Tove needs a chart through R25."),
@@ -79,6 +81,8 @@ namespace ProjectZx.UI
                 "ash_crown" => GameSave.QuestCorvinsShadeCompleted
                     && !GameSave.QuestAshCrownCompleted,
                 "kael" => GameSave.QuestGrandWizardsPerilCompleted && !GameSave.QuestKaelsReconCompleted,
+                "mira_stock" => GameSave.QuestGrandWizardsPerilCompleted && !GameSave.QuestMirasStockCompleted,
+                "kael_flank" => GameSave.QuestKaelsReconCompleted && !GameSave.QuestKaelsFlankCompleted,
                 "nessa" => GameSave.InsideMapUnlocked && !GameSave.QuestNessasSalveCompleted,
                 "garrick" => GameSave.DungeonMapUnlocked && !GameSave.QuestGarricksAnvilCompleted,
                 "tove" => GameSave.CryptMapUnlocked && !GameSave.QuestTovesChartCompleted,

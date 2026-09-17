@@ -37,7 +37,19 @@ namespace ProjectZx.Core
         /// <summary>HeroEditor Guard Helm — block chance (cape-tier defense).</summary>
         GuardHelm = 11,
         /// <summary>HeroEditor Falcon Iron Helm — stronger damage reduction (cape-tier defense).</summary>
-        IronHelm = 12
+        IronHelm = 12,
+        /// <summary>Admurin guardian cape — balanced defense.</summary>
+        GuardianCape = 13,
+        /// <summary>Ember-forged ring — damage.</summary>
+        EmberRing = 14,
+        /// <summary>Tide-carved necklace — max HP.</summary>
+        TideNecklace = 15,
+        /// <summary>Ash-charm amulet — attack speed.</summary>
+        AshAmulet = 16,
+        /// <summary>Scout outrider helm — light damage reduction.</summary>
+        OutriderHelm = 17,
+        /// <summary>Camp bastion helm — block chance.</summary>
+        BastionHelm = 18
     }
 
     public readonly struct EquipmentDef
@@ -110,7 +122,19 @@ namespace ProjectZx.Core
             new(EquipmentId.GuardHelm, EquipmentSlot.Helm, "Guard Helm",
                 "+12% block chance", blockChance: 0.12f),
             new(EquipmentId.IronHelm, EquipmentSlot.Helm, "Falcon Iron Helm",
-                "−12% damage taken", damageReduction: 0.12f)
+                "−12% damage taken", damageReduction: 0.12f),
+            new(EquipmentId.GuardianCape, EquipmentSlot.Cape, "Guardian Cape",
+                "−10% damage taken", damageReduction: 0.10f),
+            new(EquipmentId.EmberRing, EquipmentSlot.Ring, "Ember Ring",
+                "+12% damage", damageMultiplier: 1.12f),
+            new(EquipmentId.TideNecklace, EquipmentSlot.Necklace, "Tide Necklace",
+                "+30 Max HP", bonusMaxHp: 30),
+            new(EquipmentId.AshAmulet, EquipmentSlot.Necklace, "Ash Amulet",
+                "+12% attack speed", attackSpeedMultiplier: 1.12f),
+            new(EquipmentId.OutriderHelm, EquipmentSlot.Helm, "Outrider Helm",
+                "−10% damage taken", damageReduction: 0.10f),
+            new(EquipmentId.BastionHelm, EquipmentSlot.Helm, "Bastion Helm",
+                "+10% block chance", blockChance: 0.10f)
         };
 
         public static EquipmentDef Get(EquipmentId id)
@@ -141,6 +165,12 @@ namespace ProjectZx.Core
                 EquipmentId.LeatherHelm => ArtLibrary.LeatherHelm,
                 EquipmentId.GuardHelm => ArtLibrary.GuardHelm,
                 EquipmentId.IronHelm => ArtLibrary.IronHelm,
+                EquipmentId.GuardianCape => ArtLibrary.GuardianCape,
+                EquipmentId.EmberRing => ArtLibrary.EmberRing,
+                EquipmentId.TideNecklace => ArtLibrary.TideNecklace,
+                EquipmentId.AshAmulet => ArtLibrary.AshAmulet,
+                EquipmentId.OutriderHelm => ArtLibrary.OutriderHelm,
+                EquipmentId.BastionHelm => ArtLibrary.BastionHelm,
                 _ => null
             };
         }

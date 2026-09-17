@@ -170,7 +170,9 @@ namespace ProjectZx.Enemies
             bool isRanged = false,
             bool isRoundFiftyBoss = false,
             bool isElite = false,
-            EnemyMovementMode? forcedMovementMode = null)
+            EnemyMovementMode? forcedMovementMode = null,
+            MonsterAnimSet preloadedAnimSet = default,
+            Transform player = null)
         {
             _round = round;
             IsBoss = isBoss;
@@ -314,14 +316,21 @@ namespace ProjectZx.Enemies
 
             _rb = GetComponent<Rigidbody2D>();
             _renderer = GetComponent<SpriteRenderer>();
-            _player = GameObject.FindGameObjectWithTag("Player")?.transform;
+            _player = player != null
+                ? player
+                : GameObject.FindGameObjectWithTag("Player")?.transform;
             _maxHp = Mathf.Max(1, _hp);
-            ApplySprites(
-                isBoss,
-                isRoundTwentyBoss || isRoundThirtyBoss || isRoundFortyBoss || isRoundFiftyBoss,
-                zombieKind,
-                IsRanged,
-                forcedMovementMode);
+            if (preloadedAnimSet.IsValid)
+                ApplyAnimSet(preloadedAnimSet);
+            else
+            {
+                ApplySprites(
+                    isBoss,
+                    isRoundTwentyBoss || isRoundThirtyBoss || isRoundFortyBoss || isRoundFiftyBoss,
+                    zombieKind,
+                    IsRanged,
+                    forcedMovementMode);
+            }
 
             ResolveMovementMode(forcedMovementMode, round);
 

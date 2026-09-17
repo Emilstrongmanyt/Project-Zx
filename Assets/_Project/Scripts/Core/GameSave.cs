@@ -87,6 +87,12 @@ namespace ProjectZx.Core
         const string QuestKaelAcceptedKey = "zx_quest_kael_accepted";
         const string QuestKaelMilestoneKey = "zx_quest_kael_milestone";
         const string QuestKaelCompletedKey = "zx_quest_kael_completed";
+        const string QuestKaelFlankAcceptedKey = "zx_quest_kael_flank_accepted";
+        const string QuestKaelFlankMilestoneKey = "zx_quest_kael_flank_milestone";
+        const string QuestKaelFlankCompletedKey = "zx_quest_kael_flank_completed";
+        const string QuestMiraStockAcceptedKey = "zx_quest_mira_stock_accepted";
+        const string QuestMiraStockMilestoneKey = "zx_quest_mira_stock_milestone";
+        const string QuestMiraStockCompletedKey = "zx_quest_mira_stock_completed";
         const string QuestNessaAcceptedKey = "zx_quest_nessa_accepted";
         const string QuestNessaMilestoneKey = "zx_quest_nessa_milestone";
         const string QuestNessaCompletedKey = "zx_quest_nessa_completed";
@@ -1345,6 +1351,68 @@ namespace ProjectZx.Core
             set
             {
                 PlayerPrefs.SetInt(QuestKaelCompletedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Kael's Flank — Emberwilds R30 side quest.</summary>
+        public static bool QuestKaelsFlankAccepted
+        {
+            get => PlayerPrefs.GetInt(QuestKaelFlankAcceptedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestKaelFlankAcceptedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestKaelsFlankMilestone
+        {
+            get => PlayerPrefs.GetInt(QuestKaelFlankMilestoneKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestKaelFlankMilestoneKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestKaelsFlankCompleted
+        {
+            get => PlayerPrefs.GetInt(QuestKaelFlankCompletedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestKaelFlankCompletedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>Mira's Stock — Emberwilds R25 side quest.</summary>
+        public static bool QuestMirasStockAccepted
+        {
+            get => PlayerPrefs.GetInt(QuestMiraStockAcceptedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestMiraStockAcceptedKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestMirasStockMilestone
+        {
+            get => PlayerPrefs.GetInt(QuestMiraStockMilestoneKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestMiraStockMilestoneKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool QuestMirasStockCompleted
+        {
+            get => PlayerPrefs.GetInt(QuestMiraStockCompletedKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(QuestMiraStockCompletedKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
         }

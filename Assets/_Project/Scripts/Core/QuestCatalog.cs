@@ -28,7 +28,11 @@ namespace ProjectZx.Core
         /// <summary>Ashen Seer Corvin: banish the ash shade on The Endless Front after R40.</summary>
         CorvinsShade = 12,
         /// <summary>Ashen Seer Corvin: banish the Ash Wraith on The Endless Front after R55 — Altair reward.</summary>
-        AshCrownRising = 13
+        AshCrownRising = 13,
+        /// <summary>Outfitter Mira: push Emberwilds to round 25.</summary>
+        MirasStock = 14,
+        /// <summary>Scout Kael: push Emberwilds to round 30 (after Recon).</summary>
+        KaelsFlank = 15
     }
 
     public enum QuestProgress
@@ -227,6 +231,28 @@ namespace ProjectZx.Core
             3000,
             () => GameSave.QuestCorvinsShadeCompleted);
 
+        public static readonly QuestDefinition MirasStock = new(
+            QuestId.MirasStock,
+            "Mira's Stock",
+            "I am Mira — outfitter to whoever still draws breath. Push Emberwilds Survival to round 25 and tell me what the packs are carrying. Coin for a true inventory — my shelves stay better stocked when you do.",
+            "Emberwilds Survival — reach round 25, then talk to Mira (shop is still open from her quest panel).",
+            "Twenty-five rounds of scrap and steel… good. Take this gold. Come back when you need upgrades — the fire stays lit.",
+            "Mira keeps the outfitter stall. Emberwilds still pays for eyes that count the packs.",
+            "In progress  ·  Reach Emberwilds round 25, then talk to Mira",
+            550,
+            () => GameSave.QuestGrandWizardsPerilCompleted);
+
+        public static readonly QuestDefinition KaelsFlank = new(
+            QuestId.KaelsFlank,
+            "Kael's Flank",
+            "Recon was the tree line. Now I need the flank — Emberwilds through round 30. Mark choke points and anything that hunts in packs. Gold when you report.",
+            "Emberwilds Survival — reach round 30, then return to Kael south-west of the fire.",
+            "Thirty rounds and the flank still answers. Take the gold — Bren's Front will need that map someday.",
+            "Kael watches the Emberwilds flank. Report clean; the Front waits beyond.",
+            "In progress  ·  Reach Emberwilds round 30, then talk to Kael",
+            650,
+            () => GameSave.QuestKaelsReconCompleted);
+
         static readonly QuestDefinition[] AllQuests =
         {
             GrandWizardsPeril,
@@ -239,6 +265,8 @@ namespace ProjectZx.Core
             CorvinsShade,
             AshCrownRising,
             KaelsRecon,
+            KaelsFlank,
+            MirasStock,
             NessasSalve,
             GarricksAnvil,
             TovesChart
@@ -338,6 +366,20 @@ namespace ProjectZx.Core
                         ? QuestProgress.ReadyToTurnIn
                         : QuestProgress.Active;
 
+                case QuestId.KaelsFlank:
+                    if (GameSave.QuestKaelsFlankCompleted) return QuestProgress.Completed;
+                    if (!GameSave.QuestKaelsFlankAccepted) return QuestProgress.Available;
+                    return GameSave.QuestKaelsFlankMilestone
+                        ? QuestProgress.ReadyToTurnIn
+                        : QuestProgress.Active;
+
+                case QuestId.MirasStock:
+                    if (GameSave.QuestMirasStockCompleted) return QuestProgress.Completed;
+                    if (!GameSave.QuestMirasStockAccepted) return QuestProgress.Available;
+                    return GameSave.QuestMirasStockMilestone
+                        ? QuestProgress.ReadyToTurnIn
+                        : QuestProgress.Active;
+
                 case QuestId.NessasSalve:
                     if (GameSave.QuestNessasSalveCompleted) return QuestProgress.Completed;
                     if (!GameSave.QuestNessasSalveAccepted) return QuestProgress.Available;
@@ -414,7 +456,13 @@ namespace ProjectZx.Core
 
         public static readonly QuestId[] KaelQuestIds =
         {
-            QuestId.KaelsRecon
+            QuestId.KaelsRecon,
+            QuestId.KaelsFlank
+        };
+
+        public static readonly QuestId[] MiraQuestIds =
+        {
+            QuestId.MirasStock
         };
 
         public static readonly QuestId[] NessaQuestIds =
@@ -515,6 +563,8 @@ namespace ProjectZx.Core
                 QuestId.CorvinsShade => CorvinQuestIds,
                 QuestId.AshCrownRising => CorvinQuestIds,
                 QuestId.KaelsRecon => KaelQuestIds,
+                QuestId.KaelsFlank => KaelQuestIds,
+                QuestId.MirasStock => MiraQuestIds,
                 QuestId.NessasSalve => NessaQuestIds,
                 QuestId.GarricksAnvil => GarrickQuestIds,
                 QuestId.TovesChart => ToveQuestIds,
@@ -542,6 +592,8 @@ namespace ProjectZx.Core
                 QuestId.CorvinsShade => "Corvin",
                 QuestId.AshCrownRising => "Corvin",
                 QuestId.KaelsRecon => "Kael",
+                QuestId.KaelsFlank => "Kael",
+                QuestId.MirasStock => "Mira",
                 QuestId.NessasSalve => "Nessa",
                 QuestId.GarricksAnvil => "Garrick",
                 QuestId.TovesChart => "Tove",
@@ -664,6 +716,12 @@ namespace ProjectZx.Core
                 case QuestId.KaelsRecon:
                     GameSave.QuestKaelsReconAccepted = true;
                     return true;
+                case QuestId.KaelsFlank:
+                    GameSave.QuestKaelsFlankAccepted = true;
+                    return true;
+                case QuestId.MirasStock:
+                    GameSave.QuestMirasStockAccepted = true;
+                    return true;
                 case QuestId.NessasSalve:
                     GameSave.QuestNessasSalveAccepted = true;
                     return true;
@@ -758,6 +816,18 @@ namespace ProjectZx.Core
                     AwardGold(def.GoldReward, out goldAwarded);
                     return true;
 
+                case QuestId.KaelsFlank:
+                    if (!GameSave.QuestKaelsFlankMilestone) return false;
+                    GameSave.QuestKaelsFlankCompleted = true;
+                    AwardGold(def.GoldReward, out goldAwarded);
+                    return true;
+
+                case QuestId.MirasStock:
+                    if (!GameSave.QuestMirasStockMilestone) return false;
+                    GameSave.QuestMirasStockCompleted = true;
+                    AwardGold(def.GoldReward, out goldAwarded);
+                    return true;
+
                 case QuestId.NessasSalve:
                     if (!GameSave.QuestNessasSalveMilestone) return false;
                     GameSave.QuestNessasSalveCompleted = true;
@@ -835,6 +905,20 @@ namespace ProjectZx.Core
                 && GetProgress(QuestId.KaelsRecon) == QuestProgress.Active)
             {
                 GameSave.QuestKaelsReconMilestone = true;
+            }
+
+            if (mapKind == SurvivalMapKind.Outside
+                && round >= 25
+                && GetProgress(QuestId.MirasStock) == QuestProgress.Active)
+            {
+                GameSave.QuestMirasStockMilestone = true;
+            }
+
+            if (mapKind == SurvivalMapKind.Outside
+                && round >= 30
+                && GetProgress(QuestId.KaelsFlank) == QuestProgress.Active)
+            {
+                GameSave.QuestKaelsFlankMilestone = true;
             }
 
             if (mapKind == SurvivalMapKind.Inside
@@ -935,6 +1019,15 @@ namespace ProjectZx.Core
                     return "The Ash Wraith still paces the Front after R55. Banish it, then return to me.";
                 if (crown == QuestProgress.Completed)
                     return "The Crown answered. Altair is yours — rest by the fire.";
+            }
+
+            if (id == QuestId.KaelsRecon && progress == QuestProgress.Completed)
+            {
+                var flank = GetProgress(QuestId.KaelsFlank);
+                if (flank == QuestProgress.Available)
+                    return "Recon is filed. When you are ready, take Kael's Flank — Emberwilds through round 30.";
+                if (flank == QuestProgress.Active || flank == QuestProgress.ReadyToTurnIn)
+                    return "The flank is still open — Emberwilds R30, then report back.";
             }
 
             return progress switch

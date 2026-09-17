@@ -109,7 +109,7 @@ namespace ProjectZx.Core
                 "MiraOutfitter",
                 MedievalNpcLibrary.Cast.Mira,
                 new Vector3(-2.1f, 1.1f),
-                () => hub.OpenShop(),
+                () => hub.OpenMira(),
                 MedievalNpcLibrary.CampScale);
             MedievalNpcLibrary.Create(
                 "CaptainBren",

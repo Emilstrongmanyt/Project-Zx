@@ -118,6 +118,11 @@ namespace ProjectZx.Core
             _sentinelCape = null;
             _ironweaveCape = null;
             _guardianCape = null;
+            _emberRing = null;
+            _tideNecklace = null;
+            _ashAmulet = null;
+            _outriderHelm = null;
+            _bastionHelm = null;
             _leatherHelm = null;
             _guardHelm = null;
             _ironHelm = null;
@@ -201,6 +206,11 @@ namespace ProjectZx.Core
         static Sprite _sentinelCape;
         static Sprite _ironweaveCape;
         static Sprite _guardianCape;
+        static Sprite _emberRing;
+        static Sprite _tideNecklace;
+        static Sprite _ashAmulet;
+        static Sprite _outriderHelm;
+        static Sprite _bastionHelm;
         static Sprite _leatherHelm;
         static Sprite _guardHelm;
         static Sprite _ironHelm;
@@ -475,6 +485,25 @@ namespace ProjectZx.Core
             ?? Sparkles;
         public static Sprite GuardianCape => _guardianCape ??=
             TryLoadSprite(Admurin + "guardian_cape", TilePixelsPerUnit) ?? Sparkles;
+        /// <summary>Ember Ring UI icon — pink crystal fallback when dedicated art is missing.</summary>
+        public static Sprite EmberRing => _emberRing ??=
+            TryLoadSprite(Admurin + "ember_ring", TilePixelsPerUnit) ?? PinkCrystal ?? Sparkles;
+        /// <summary>Tide Necklace UI icon.</summary>
+        public static Sprite TideNecklace => _tideNecklace ??=
+            TryLoadSprite(Admurin + "tide_necklace", TilePixelsPerUnit) ?? Necklace ?? Sparkles;
+        /// <summary>Ash Amulet UI icon.</summary>
+        public static Sprite AshAmulet => _ashAmulet ??=
+            TryLoadSprite(Admurin + "ash_amulet", TilePixelsPerUnit) ?? EpicCrystal ?? Sparkles2;
+        /// <summary>Outrider Helm UI icon (generated tint when sheet missing).</summary>
+        public static Sprite OutriderHelm => _outriderHelm ??=
+            TryLoadSprite(HeroEditorItems + "outrider_helm", TilePixelsPerUnit)
+            ?? TryLoadSprite(Admurin + "outrider_helm", TilePixelsPerUnit)
+            ?? CreateHelmIconSprite(new Color(0.42f, 0.55f, 0.38f));
+        /// <summary>Bastion Helm UI icon (generated tint when sheet missing).</summary>
+        public static Sprite BastionHelm => _bastionHelm ??=
+            TryLoadSprite(HeroEditorItems + "bastion_helm", TilePixelsPerUnit)
+            ?? TryLoadSprite(Admurin + "bastion_helm", TilePixelsPerUnit)
+            ?? CreateHelmIconSprite(new Color(0.38f, 0.48f, 0.72f));
         /// <summary>Leather Helm UI icon (HeroEditor LeatherHelm).</summary>
         public static Sprite LeatherHelm => _leatherHelm ??=
             TryLoadSprite(HeroEditorItems + "leather_helm", TilePixelsPerUnit)

@@ -15,6 +15,7 @@ namespace ProjectZx.HeroEditor
             EquipmentId.WoolCape => "FantasyHeroes.Basic.Cape.CotttonCape [Paint]",
             EquipmentId.SentinelCape => "FantasyHeroes.Basic.Cape.HeroicCape [Paint]",
             EquipmentId.IronweaveCape => "FantasyHeroes.Basic.Cape.RoyalCape [Paint]",
+            EquipmentId.GuardianCape => "FantasyHeroes.Basic.Cape.HeroicCape [Paint]",
             _ => null
         };
 
@@ -24,6 +25,8 @@ namespace ProjectZx.HeroEditor
             EquipmentId.LeatherHelm => "FantasyHeroes.Basic.Helmet.LeatherHelm",
             EquipmentId.GuardHelm => "FantasyHeroes.Knights.Helmet.GuardHelm [Paint]",
             EquipmentId.IronHelm => "FantasyHeroes.Knights.Helmet.FalconIronHelm",
+            EquipmentId.OutriderHelm => "FantasyHeroes.Basic.Helmet.LeatherHelm",
+            EquipmentId.BastionHelm => "FantasyHeroes.Knights.Helmet.GuardHelm [Paint]",
             _ => null
         };
     }

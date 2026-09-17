@@ -400,7 +400,8 @@ namespace ProjectZx.Waves
                         forcedRanged: spec.Ranged || spec.Mode == EnemyMovementMode.Kite,
                         forcedElite: spec.Elite,
                         forcedMode: spec.Mode);
-                    if (i % 3 == 0) yield return null;
+                    // Cap at 1 CreateEnemy per frame — late waves hitch when 2–3 land same frame.
+                    yield return null;
                 }
 
                 if (s < challenge.Specs.Length - 1)
@@ -430,7 +431,8 @@ namespace ProjectZx.Waves
                 for (var i = 0; i < count; i++)
                 {
                     SpawnEnemy(round, false, false, false, false, false);
-                    if (i % 3 == 0) yield return null;
+                    // Cap at 1 CreateEnemy per frame — late waves hitch when 2–3 land same frame.
+                    yield return null;
                 }
 
                 if (wave < waveCount - 1)
@@ -492,7 +494,8 @@ namespace ProjectZx.Waves
                 isRanged: ranged,
                 isRoundFiftyBoss: roundFiftyBoss,
                 isElite: elite,
-                forcedMovementMode: forcedMode);
+                forcedMovementMode: forcedMode,
+                player: _player);
             EnemiesRemaining++;
         }
 
