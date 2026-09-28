@@ -612,41 +612,41 @@ namespace ProjectZx.UI
             CreateText(panel.transform, "One ring, necklace, cape, and helm. Find drops in survival to unlock them here.", 18, TextAnchor.MiddleCenter, new Vector2(0, 375), new Vector2(960, 36));
             _equipmentStatusText = CreateText(panel.transform, "", 18, TextAnchor.MiddleCenter, new Vector2(0, 335), new Vector2(960, 40));
 
-            CreateText(panel.transform, "Rings", 22, TextAnchor.MiddleCenter, new Vector2(0, 290), new Vector2(400, 28));
-            CreateText(panel.transform, "Necklaces", 22, TextAnchor.MiddleCenter, new Vector2(0, 145), new Vector2(400, 28));
-            CreateText(panel.transform, "Capes", 22, TextAnchor.MiddleCenter, new Vector2(0, 0), new Vector2(400, 28));
-            CreateText(panel.transform, "Helms", 22, TextAnchor.MiddleCenter, new Vector2(0, -145), new Vector2(400, 28));
+            // 4-col wrap grid per slot (unequip + items). Extra items go to a second row.
+            // Section gaps leave ~24px between a 2nd row and the next label.
+            CreateText(panel.transform, "Rings", 22, TextAnchor.MiddleCenter, new Vector2(0, 310), new Vector2(400, 28));
+            CreateText(panel.transform, "Necklaces", 22, TextAnchor.MiddleCenter, new Vector2(0, 130), new Vector2(400, 28));
+            CreateText(panel.transform, "Capes", 22, TextAnchor.MiddleCenter, new Vector2(0, -50), new Vector2(400, 28));
+            CreateText(panel.transform, "Helms", 22, TextAnchor.MiddleCenter, new Vector2(0, -230), new Vector2(400, 28));
 
             _equipmentButtons.Clear();
-            // Unequip + 3 items per type (4 columns).
-            var slotX = new[] { -360f, -120f, 120f, 360f };
+            const float ringY = 265f;
+            const float neckY = 85f;
+            const float capeY = -95f;
+            const float helmY = -275f;
             var ringIndex = 0;
             var neckIndex = 0;
             var capeIndex = 0;
             var helmIndex = 0;
-            const float ringY = 240f;
-            const float neckY = 95f;
-            const float capeY = -50f;
-            const float helmY = -195f;
 
             // Unequip slots first (refresh order depends on this).
-            _equipmentButtons.Add(CreateButton(panel.transform, "No Ring", new Vector2(slotX[ringIndex++], ringY), () =>
+            _equipmentButtons.Add(CreateButton(panel.transform, "No Ring", EquipSlotCell(ringIndex++, ringY), () =>
             {
                 GameSave.UnequipSlot(EquipmentSlot.Ring);
                 RefreshEquipmentPanel();
             }));
-            _equipmentButtons.Add(CreateButton(panel.transform, "No Necklace", new Vector2(slotX[neckIndex++], neckY), () =>
+            _equipmentButtons.Add(CreateButton(panel.transform, "No Necklace", EquipSlotCell(neckIndex++, neckY), () =>
             {
                 GameSave.UnequipSlot(EquipmentSlot.Necklace);
                 RefreshEquipmentPanel();
             }));
-            _equipmentButtons.Add(CreateButton(panel.transform, "No Cape", new Vector2(slotX[capeIndex++], capeY), () =>
+            _equipmentButtons.Add(CreateButton(panel.transform, "No Cape", EquipSlotCell(capeIndex++, capeY), () =>
             {
                 GameSave.UnequipSlot(EquipmentSlot.Cape);
                 RefreshEquipmentPanel();
                 HeroEditorCombatBridge.RefreshLoadoutOnPlayer();
             }));
-            _equipmentButtons.Add(CreateButton(panel.transform, "No Helm", new Vector2(slotX[helmIndex++], helmY), () =>
+            _equipmentButtons.Add(CreateButton(panel.transform, "No Helm", EquipSlotCell(helmIndex++, helmY), () =>
             {
                 GameSave.UnequipSlot(EquipmentSlot.Helm);
                 RefreshEquipmentPanel();
@@ -659,35 +659,35 @@ namespace ProjectZx.UI
                 switch (def.Slot)
                 {
                     case EquipmentSlot.Ring:
-                    {
-                        var x = ringIndex < slotX.Length ? slotX[ringIndex++] : 0f;
-                        _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, new Vector2(x, ringY), () => SelectEquipment(id)));
+                        _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, EquipSlotCell(ringIndex++, ringY), () => SelectEquipment(id)));
                         break;
-                    }
                     case EquipmentSlot.Necklace:
-                    {
-                        var x = neckIndex < slotX.Length ? slotX[neckIndex++] : 0f;
-                        _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, new Vector2(x, neckY), () => SelectEquipment(id)));
+                        _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, EquipSlotCell(neckIndex++, neckY), () => SelectEquipment(id)));
                         break;
-                    }
                     case EquipmentSlot.Cape:
-                    {
-                        var x = capeIndex < slotX.Length ? slotX[capeIndex++] : 0f;
-                        _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, new Vector2(x, capeY), () => SelectEquipment(id)));
+                        _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, EquipSlotCell(capeIndex++, capeY), () => SelectEquipment(id)));
                         break;
-                    }
                     case EquipmentSlot.Helm:
-                    {
-                        var x = helmIndex < slotX.Length ? slotX[helmIndex++] : 0f;
-                        _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, new Vector2(x, helmY), () => SelectEquipment(id)));
+                        _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, EquipSlotCell(helmIndex++, helmY), () => SelectEquipment(id)));
                         break;
-                    }
                 }
             }
 
-            CreateButton(panel.transform, "Close", new Vector2(0, -380), () => panel.SetActive(false), large: true);
+            CreateButton(panel.transform, "Close", new Vector2(0, -420), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
+        }
+
+        /// <summary>4-column wrap: index 0..3 on firstRowY, 4..7 on firstRowY - 68, etc.</summary>
+        static Vector2 EquipSlotCell(int index, float firstRowY)
+        {
+            const int cols = 4;
+            const float rowStep = 68f;
+            // 240px buttons with ~20px gap; stays inside HubMenuPanelSize width.
+            var xs = new[] { -390f, -130f, 130f, 390f };
+            var col = index % cols;
+            var row = index / cols;
+            return new Vector2(xs[col], firstRowY - row * rowStep);
         }
 
         void SelectEquipment(EquipmentId id)
@@ -766,7 +766,7 @@ namespace ProjectZx.UI
             if (!owned)
                 label.text = "??? (Find in survival)";
             else
-                label.text = equipped ? $"{def.DisplayName} ✓" : $"{def.DisplayName}\n{def.Description}";
+                label.text = equipped ? $"{def.DisplayName} ✓" : def.DisplayName;
             label.fontSize = owned ? 18 : 16;
         }
 
@@ -808,8 +808,8 @@ namespace ProjectZx.UI
 
         GameObject BuildQuestPanel(Transform parent)
         {
-            // Dialogue layout: Stone border, portrait left, quest copy right.
-            var panel = CreateDialogPanel(parent, "QuestPanel", Vector2.zero, new Vector2(980f, 560f), ArtLibrary.ShopUi);
+            // Taller dialogue so title/status/log/body/actions/close stay inside the frame.
+            var panel = CreateDialogPanel(parent, "QuestPanel", Vector2.zero, new Vector2(1040f, 720f), ArtLibrary.ShopUi);
 
             // Square stone frame so the 64×64 talk portrait fills without curved gaps.
             var frameGo = new GameObject("PortraitFrame");
@@ -818,7 +818,7 @@ namespace ProjectZx.UI
             frameRect.anchorMin = new Vector2(0.5f, 0.5f);
             frameRect.anchorMax = new Vector2(0.5f, 0.5f);
             frameRect.pivot = new Vector2(0.5f, 0.5f);
-            frameRect.anchoredPosition = new Vector2(-300f, 20f);
+            frameRect.anchoredPosition = new Vector2(-310f, 70f);
             frameRect.sizeDelta = new Vector2(280f, 280f);
             var frameImage = frameGo.AddComponent<Image>();
             if (StoneUi.ButtonSquare != null)
@@ -858,8 +858,8 @@ namespace ProjectZx.UI
                 "Quest",
                 34,
                 TextAnchor.MiddleCenter,
-                new Vector2(140f, 200f),
-                new Vector2(520f, 48f));
+                new Vector2(150f, 280f),
+                new Vector2(540f, 44f));
             _questTitleText.alignment = TextAnchor.MiddleLeft;
 
             _questStatusText = CreateText(
@@ -867,8 +867,8 @@ namespace ProjectZx.UI
                 "",
                 18,
                 TextAnchor.MiddleCenter,
-                new Vector2(140f, 155f),
-                new Vector2(520f, 28f));
+                new Vector2(150f, 232f),
+                new Vector2(540f, 28f));
             _questStatusText.alignment = TextAnchor.MiddleLeft;
             _questStatusText.color = new Color(1f, 0.9f, 0.55f);
 
@@ -877,11 +877,11 @@ namespace ProjectZx.UI
                 "",
                 16,
                 TextAnchor.MiddleCenter,
-                new Vector2(140f, 118f),
-                new Vector2(520f, 52f));
+                new Vector2(150f, 175f),
+                new Vector2(540f, 70f));
             _questLogText.alignment = TextAnchor.UpperLeft;
             _questLogText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            _questLogText.verticalOverflow = VerticalWrapMode.Overflow;
+            _questLogText.verticalOverflow = VerticalWrapMode.Truncate;
             _questLogText.color = new Color(0.75f, 0.82f, 0.9f);
 
             _questBodyText = CreateText(
@@ -889,20 +889,21 @@ namespace ProjectZx.UI
                 "",
                 22,
                 TextAnchor.MiddleCenter,
-                new Vector2(140f, -30f),
-                new Vector2(520f, 240f));
+                new Vector2(150f, 10f),
+                new Vector2(540f, 200f));
             _questBodyText.alignment = TextAnchor.UpperLeft;
             _questBodyText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            _questBodyText.verticalOverflow = VerticalWrapMode.Overflow;
+            _questBodyText.verticalOverflow = VerticalWrapMode.Truncate;
             _questBodyText.color = new Color(0.94f, 0.96f, 0.98f);
 
-            _questAcceptButton = CreateButton(panel.transform, "Accept", new Vector2(-120f, -210f), AcceptFocusedQuest);
-            _questTurnInButton = CreateButton(panel.transform, "Turn In", new Vector2(80f, -210f), TurnInFocusedQuest);
-            _questNextButton = CreateButton(panel.transform, "Next Task", new Vector2(280f, -210f), CycleQuestFocus);
-            _questMapsButton = CreateButton(panel.transform, "Maps", new Vector2(420f, -210f), OpenMapSelectFromQuest);
+            // Primary actions on one row; Maps/Shop + Close on the next (keeps Close inside the frame).
+            _questAcceptButton = CreateButton(panel.transform, "Accept", new Vector2(-130f, -175f), AcceptFocusedQuest);
+            _questTurnInButton = CreateButton(panel.transform, "Turn In", new Vector2(130f, -175f), TurnInFocusedQuest);
+            _questNextButton = CreateButton(panel.transform, "Next Task", new Vector2(390f, -175f), CycleQuestFocus);
+            _questMapsButton = CreateButton(panel.transform, "Maps", new Vector2(-130f, -250f), OpenMapSelectFromQuest);
             _questAcceptLabel = _questAcceptButton.GetComponentInChildren<Text>();
             _questTurnInLabel = _questTurnInButton.GetComponentInChildren<Text>();
-            CreateButton(panel.transform, "Close", new Vector2(170f, -280f), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Close", new Vector2(130f, -250f), () => panel.SetActive(false), large: true);
 
             panel.SetActive(false);
             return panel;
@@ -1085,14 +1086,14 @@ namespace ProjectZx.UI
                 _questPortraitImage.enabled = false;
             }
 
-            var textX = showPortrait ? 140f : -20f;
-            var textW = showPortrait ? 520f : 860f;
+            var textX = showPortrait ? 150f : 0f;
+            var textW = showPortrait ? 540f : 920f;
             if (_questTitleText != null)
             {
                 _questTitleText.text = def.Title;
                 var titleRect = _questTitleText.rectTransform;
-                titleRect.anchoredPosition = new Vector2(textX, 200f);
-                titleRect.sizeDelta = new Vector2(textW, 48f);
+                titleRect.anchoredPosition = new Vector2(textX, 280f);
+                titleRect.sizeDelta = new Vector2(textW, 44f);
             }
 
             if (_questStatusText != null)
@@ -1109,7 +1110,7 @@ namespace ProjectZx.UI
                     _ => "Locked"
                 };
                 var statusRect = _questStatusText.rectTransform;
-                statusRect.anchoredPosition = new Vector2(textX, 155f);
+                statusRect.anchoredPosition = new Vector2(textX, 232f);
                 statusRect.sizeDelta = new Vector2(textW, 28f);
             }
 
@@ -1134,8 +1135,8 @@ namespace ProjectZx.UI
                 var showLog = !string.IsNullOrEmpty(_questLogText.text);
                 _questLogText.gameObject.SetActive(showLog);
                 var logRect = _questLogText.rectTransform;
-                logRect.anchoredPosition = new Vector2(textX, 118f);
-                logRect.sizeDelta = new Vector2(textW, showCampDigest ? 72f : 52f);
+                logRect.anchoredPosition = new Vector2(textX, 175f);
+                logRect.sizeDelta = new Vector2(textW, showCampDigest ? 78f : 56f);
             }
 
             if (_questBodyText != null)
@@ -1143,8 +1144,9 @@ namespace ProjectZx.UI
                 _questBodyText.text = QuestCatalog.GetQuestBodyText(def.Id, progress);
                 var bodyRect = _questBodyText.rectTransform;
                 var showLog = showPoolLog || showCampDigest;
-                var bodyY = showLog ? -40f : -10f;
-                var bodyH = showLog ? 220f : 280f;
+                // Keep body above the action row (y=-175); truncate instead of overflowing into buttons.
+                var bodyY = showLog ? 5f : 40f;
+                var bodyH = showLog ? 200f : 260f;
                 bodyRect.anchoredPosition = new Vector2(textX, bodyY);
                 bodyRect.sizeDelta = new Vector2(textW, bodyH);
             }
