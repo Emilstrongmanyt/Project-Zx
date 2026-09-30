@@ -193,8 +193,10 @@ namespace ProjectZx.Combat
         static List<EnemyActor> FindAllEnemies()
         {
             var hits = new List<EnemyActor>();
-            foreach (var enemy in Object.FindObjectsByType<EnemyActor>())
+            var enemies = EnemyRegistry.All;
+            for (var i = 0; i < enemies.Count; i++)
             {
+                var enemy = enemies[i];
                 if (enemy != null && enemy.IsAlive)
                     hits.Add(enemy);
             }

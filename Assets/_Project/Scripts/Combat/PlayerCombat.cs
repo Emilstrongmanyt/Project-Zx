@@ -186,9 +186,10 @@ namespace ProjectZx.Combat
 
         bool HasEnemyInRange(float range)
         {
-            var enemies = UnityEngine.Object.FindObjectsByType<EnemyActor>();
-            foreach (var enemy in enemies)
+            var enemies = EnemyRegistry.All;
+            for (var i = 0; i < enemies.Count; i++)
             {
+                var enemy = enemies[i];
                 if (enemy == null || !enemy.IsAlive) continue;
                 if (Vector2.Distance(transform.position, enemy.transform.position) <= range)
                     return true;
@@ -200,9 +201,10 @@ namespace ProjectZx.Combat
         List<EnemyActor> FindEnemiesInRange(float range)
         {
             var hits = new List<EnemyActor>();
-            var enemies = UnityEngine.Object.FindObjectsByType<EnemyActor>();
-            foreach (var enemy in enemies)
+            var enemies = EnemyRegistry.All;
+            for (var i = 0; i < enemies.Count; i++)
             {
+                var enemy = enemies[i];
                 if (enemy == null || !enemy.IsAlive) continue;
                 if (Vector2.Distance(transform.position, enemy.transform.position) <= range)
                     hits.Add(enemy);
@@ -215,9 +217,10 @@ namespace ProjectZx.Combat
         {
             EnemyActor best = null;
             var bestDist = float.MaxValue;
-            var enemies = UnityEngine.Object.FindObjectsByType<EnemyActor>();
-            foreach (var enemy in enemies)
+            var enemies = EnemyRegistry.All;
+            for (var i = 0; i < enemies.Count; i++)
             {
+                var enemy = enemies[i];
                 if (enemy == null || !enemy.IsAlive) continue;
                 var d = Vector2.Distance(transform.position, enemy.transform.position);
                 if (d < bestDist)

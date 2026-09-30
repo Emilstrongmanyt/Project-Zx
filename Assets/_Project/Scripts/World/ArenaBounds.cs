@@ -45,6 +45,21 @@ namespace ProjectZx.World
         /// <summary>Props / obstacles root — co-moved with the floor on wrap.</summary>
         static Transform _propsRoot;
 
+        // Camera.main is a tag lookup — cache it for Y-sort / streaming pad (hundreds of callers/frame).
+        static Camera _cachedMainCamera;
+
+        public static Camera CachedMainCamera
+        {
+            get
+            {
+                if (_cachedMainCamera == null)
+                    _cachedMainCamera = Camera.main;
+                return _cachedMainCamera;
+            }
+        }
+
+        public static void InvalidateCachedCamera() => _cachedMainCamera = null;
+
         public static void SetWorldWrap(bool enabled)
         {
             WorldWrapEnabled = enabled;
@@ -78,7 +93,7 @@ namespace ProjectZx.World
         {
             get
             {
-                var cam = Camera.main;
+                var cam = CachedMainCamera;
                 if (cam == null || !cam.orthographic)
                     return 14f;
                 var halfH = cam.orthographicSize;
@@ -142,7 +157,7 @@ namespace ProjectZx.World
             float refY;
             if (StreamingEnabled)
             {
-                var cam = Camera.main;
+                var cam = CachedMainCamera;
                 refY = cam != null ? cam.transform.position.y : worldY;
             }
             else

@@ -34,10 +34,13 @@ namespace ProjectZx.Waves
         void OnDestroy()
         {
             if (Instance == this) Instance = null;
+            EnemyRegistry.Clear();
         }
 
         public void Begin(Transform player, GameHud hud, SurvivalMapKind mapKind)
         {
+            EnemyRegistry.Clear();
+            LootPickup.InvalidatePlayerCache();
             _player = player;
             _hud = hud;
             MapKind = mapKind;

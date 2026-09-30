@@ -173,8 +173,10 @@ namespace ProjectZx.Combat
             EnemyActor best = null;
             var bestProjection = float.MaxValue;
 
-            foreach (var enemy in Object.FindObjectsByType<EnemyActor>())
+            var enemies = EnemyRegistry.All;
+            for (var i = 0; i < enemies.Count; i++)
             {
+                var enemy = enemies[i];
                 if (enemy == null || !enemy.IsAlive) continue;
                 if (enemy == exclude || _alreadyHit.Contains(enemy)) continue;
 

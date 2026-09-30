@@ -272,9 +272,10 @@ namespace ProjectZx.Core
 
             EnemyActor closestBoss = null;
             var bestDist = float.MaxValue;
-            var bosses = Object.FindObjectsByType<EnemyActor>();
-            foreach (var enemy in bosses)
+            var bosses = EnemyRegistry.All;
+            for (var i = 0; i < bosses.Count; i++)
             {
+                var enemy = bosses[i];
                 if (enemy == null || !enemy.IsAlive || !enemy.IsBoss) continue;
                 var dist = player != null
                     ? ProjectZx.World.ArenaBounds.ToroidalDistance(player.position, enemy.transform.position)

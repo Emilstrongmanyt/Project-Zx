@@ -123,8 +123,10 @@ namespace ProjectZx.Combat
         List<EnemyActor> FindEnemiesInSplash(Vector3 center)
         {
             var hits = new List<EnemyActor>();
-            foreach (var enemy in Object.FindObjectsByType<EnemyActor>())
+            var enemies = EnemyRegistry.All;
+            for (var i = 0; i < enemies.Count; i++)
             {
+                var enemy = enemies[i];
                 if (enemy == null || !enemy.IsAlive) continue;
                 if (Vector2.Distance(center, enemy.transform.position) <= SplashRadius)
                     hits.Add(enemy);
@@ -137,8 +139,10 @@ namespace ProjectZx.Combat
         {
             EnemyActor best = null;
             var bestDist = float.MaxValue;
-            foreach (var enemy in Object.FindObjectsByType<EnemyActor>())
+            var enemies = EnemyRegistry.All;
+            for (var i = 0; i < enemies.Count; i++)
             {
+                var enemy = enemies[i];
                 if (enemy == null || !enemy.IsAlive) continue;
                 var d = Vector2.Distance(transform.position, enemy.transform.position);
                 if (d >= bestDist) continue;

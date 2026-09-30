@@ -30,6 +30,11 @@ namespace ProjectZx.World
         readonly List<long> _scratchKeys = new();
         readonly List<Vector2Int> _wanted = new();
         readonly HashSet<long> _wantedKeys = new();
+        readonly Queue<Vector2Int> _pendingLoads = new();
+        readonly List<Vector2Int> _pendingScratch = new();
+
+        /// <summary>Each chunk builds 256 floor tiles — never load a full ring edge in one frame.</summary>
+        const int MaxChunkLoadsPerFrame = 2;
 
         Transform _root;
         Transform _player;
@@ -37,6 +42,9 @@ namespace ProjectZx.World
         SurvivalMapKind _propBiome;
         int _worldSeed;
         Vector2Int _playerChunk;
+        Vector2Int _plannedChunk;
+        int _plannedRing = int.MinValue;
+        bool _boundsDirty;
         /// <summary>unityPos = trueWorld + _originOffset. Accumulates on each floating-origin rebase.</summary>
         Vector2 _originOffset;
         int _ringRadius = MinRingRadius;
@@ -97,8 +105,18 @@ namespace ProjectZx.World
             var chunk = TrueWorldToChunk(ToTrue(_player.position));
             if (chunk != _playerChunk)
                 _playerChunk = chunk;
-            // Always sync — keeps land ahead of the camera even mid-chunk.
-            SyncRing();
+
+            // Rebuild wanted set only when the player crosses a chunk or the view pad changes.
+            if (_playerChunk != _plannedChunk || _ringRadius != _plannedRing)
+                PlanRing();
+
+            ProcessPendingLoads(MaxChunkLoadsPerFrame);
+
+            if (_boundsDirty)
+            {
+                UpdateLoadedBounds();
+                _boundsDirty = false;
+            }
         }
 
         public void Configure(
@@ -129,7 +147,11 @@ namespace ProjectZx.World
             if (_player == null) return;
             RefreshRingRadius();
             _playerChunk = TrueWorldToChunk(ToTrue(_player.position));
-            SyncRing();
+            PlanRing();
+            // Initial land must appear immediately — no budget.
+            ProcessPendingLoads(int.MaxValue);
+            UpdateLoadedBounds();
+            _boundsDirty = false;
         }
 
         public bool IsInsideLoaded(Vector2 unityPos)
@@ -180,8 +202,11 @@ namespace ProjectZx.World
             _ringRadius = Mathf.Max(MinRingRadius, needed);
         }
 
-        void SyncRing()
+        void PlanRing()
         {
+            _plannedChunk = _playerChunk;
+            _plannedRing = _ringRadius;
+
             _wanted.Clear();
             _wantedKeys.Clear();
             for (var dy = -_ringRadius; dy <= _ringRadius; dy++)
@@ -204,18 +229,44 @@ namespace ProjectZx.World
                 {
                     UnloadChunk(chunk);
                     _active.Remove(key);
+                    _boundsDirty = true;
                 }
             }
 
+            // Queue missing chunks nearest-first so the leading edge fills before far corners.
+            _pendingScratch.Clear();
+            _pendingLoads.Clear();
             for (var i = 0; i < _wanted.Count; i++)
             {
                 var coord = _wanted[i];
-                var key = ChunkToKey(coord);
-                if (_active.ContainsKey(key)) continue;
-                _active[key] = LoadChunk(coord);
+                if (_active.ContainsKey(ChunkToKey(coord))) continue;
+                _pendingScratch.Add(coord);
             }
 
-            UpdateLoadedBounds();
+            var cx = _playerChunk.x;
+            var cy = _playerChunk.y;
+            _pendingScratch.Sort((a, b) =>
+            {
+                var da = Mathf.Max(Mathf.Abs(a.x - cx), Mathf.Abs(a.y - cy));
+                var db = Mathf.Max(Mathf.Abs(b.x - cx), Mathf.Abs(b.y - cy));
+                return da.CompareTo(db);
+            });
+
+            for (var i = 0; i < _pendingScratch.Count; i++)
+                _pendingLoads.Enqueue(_pendingScratch[i]);
+        }
+
+        void ProcessPendingLoads(int budget)
+        {
+            while (budget-- > 0 && _pendingLoads.Count > 0)
+            {
+                var coord = _pendingLoads.Dequeue();
+                var key = ChunkToKey(coord);
+                if (_active.ContainsKey(key)) continue;
+                if (!_wantedKeys.Contains(key)) continue;
+                _active[key] = LoadChunk(coord);
+                _boundsDirty = true;
+            }
         }
 
         void UpdateLoadedBounds()
@@ -459,6 +510,11 @@ namespace ProjectZx.World
             }
 
             _active.Clear();
+            _pendingLoads.Clear();
+            _pendingScratch.Clear();
+            _wanted.Clear();
+            _wantedKeys.Clear();
+            _plannedRing = int.MinValue;
         }
 
         void MaybeRebase()
@@ -487,7 +543,7 @@ namespace ProjectZx.World
 
             // Keep the camera with the world — otherwise one LateUpdate shows the void (black flash)
             // and spawn/soft-clamp logic desyncs until the next frame.
-            var cam = Camera.main;
+            var cam = ArenaBounds.CachedMainCamera;
             if (cam != null)
                 cam.transform.position += (Vector3)delta;
 
@@ -498,7 +554,14 @@ namespace ProjectZx.World
                     companions[i].TeleportWithLeader(delta);
             }
 
-            ShiftAll<EnemyActor>(delta);
+            var enemies = EnemyRegistry.All;
+            for (var i = 0; i < enemies.Count; i++)
+            {
+                var enemy = enemies[i];
+                if (enemy == null) continue;
+                ShiftTransform(enemy.transform, delta);
+            }
+
             ShiftAll<LootPickup>(delta);
             ShiftAll<ArenaDoor>(delta);
             ShiftAll<ArenaGateway>(delta);

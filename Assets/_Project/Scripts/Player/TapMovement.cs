@@ -53,6 +53,12 @@ namespace ProjectZx.Player
         bool _chaseMouse;
         float _blockedTimer;
         readonly List<RaycastHit2D> _castHits = new();
+        HeroEditorCharacterView _heroView;
+        PlayerCombat _batter;
+        SpearmanCombat _spearman;
+        SamuraiCombat _samurai;
+        BowmanCombat _bowman;
+        MagicianCombat _magician;
 
         public void Configure(bool npcInteraction, PlayableHero hero = PlayableHero.RollZy)
         {
@@ -91,7 +97,7 @@ namespace ProjectZx.Player
         {
             _rb = GetComponent<Rigidbody2D>();
             _renderer = GetComponent<SpriteRenderer>();
-            _camera = Camera.main;
+            _camera = ArenaBounds.CachedMainCamera;
 
             _rb.bodyType = RigidbodyType2D.Kinematic;
             _rb.gravityScale = 0f;
@@ -99,6 +105,18 @@ namespace ProjectZx.Player
             _rb.interpolation = RigidbodyInterpolation2D.Interpolate;
             _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             _rb.useFullKinematicContacts = true;
+
+            CacheCombatViews();
+        }
+
+        void CacheCombatViews()
+        {
+            _heroView = GetComponent<HeroEditorCharacterView>();
+            _batter = GetComponent<PlayerCombat>();
+            _spearman = GetComponent<SpearmanCombat>();
+            _samurai = GetComponent<SamuraiCombat>();
+            _bowman = GetComponent<BowmanCombat>();
+            _magician = GetComponent<MagicianCombat>();
         }
 
         void Update()
@@ -310,7 +328,7 @@ namespace ProjectZx.Player
 
         void ReadMouse()
         {
-            if (_camera == null) _camera = Camera.main;
+            if (_camera == null) _camera = ArenaBounds.CachedMainCamera;
             if (_camera == null) return;
 
             var mouse = Mouse.current;
@@ -363,7 +381,7 @@ namespace ProjectZx.Player
 
         void TrySetMoveTarget(Vector2 screenPos, bool isChase, bool movementAllowed)
         {
-            if (_camera == null) _camera = Camera.main;
+            if (_camera == null) _camera = ArenaBounds.CachedMainCamera;
             if (_camera == null) return;
 
             var world = ScreenToWorld(screenPos);
@@ -697,19 +715,18 @@ namespace ProjectZx.Player
 
         void UpdateSprite()
         {
-            var heroView = GetComponent<HeroEditorCharacterView>();
+            if (_heroView == null && _batter == null && _spearman == null
+                && _samurai == null && _bowman == null && _magician == null)
+                CacheCombatViews();
+
+            var heroView = _heroView;
             var useHeroEditor = heroView != null && heroView.IsReady;
 
-            var batter = GetComponent<PlayerCombat>();
-            if (batter != null && batter.IsSwinging) return;
-            var spearman = GetComponent<SpearmanCombat>();
-            if (spearman != null && spearman.IsThrusting) return;
-            var samurai = GetComponent<SamuraiCombat>();
-            if (samurai != null && samurai.IsSwiping) return;
-            var bowman = GetComponent<BowmanCombat>();
-            if (bowman != null && bowman.IsDrawing) return;
-            var magician = GetComponent<MagicianCombat>();
-            if (magician != null && magician.IsCasting) return;
+            if (_batter != null && _batter.IsSwinging) return;
+            if (_spearman != null && _spearman.IsThrusting) return;
+            if (_samurai != null && _samurai.IsSwiping) return;
+            if (_bowman != null && _bowman.IsDrawing) return;
+            if (_magician != null && _magician.IsCasting) return;
 
             var joyDir = GameSave.UsesJoystickMovement && MovementJoystick.Instance != null
                 ? MovementJoystick.Instance.Direction

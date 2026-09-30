@@ -54,8 +54,8 @@ namespace ProjectZx.Combat
             var radius = WeaponCatalog.AoeSplashRadius;
             var radiusSq = radius * radius;
 
-            var enemies = Object.FindObjectsByType<EnemyActor>(FindObjectsSortMode.None);
-            for (var i = 0; i < enemies.Length; i++)
+            var enemies = EnemyRegistry.All;
+            for (var i = 0; i < enemies.Count; i++)
             {
                 var enemy = enemies[i];
                 if (enemy == null || enemy == primary || !enemy.IsAlive) continue;

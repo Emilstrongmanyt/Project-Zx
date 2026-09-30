@@ -105,6 +105,7 @@ namespace ProjectZx.Enemies
         Color _baseColor = Color.white;
         int _round;
         Transform _player;
+        PlayerStats _playerStats;
         Rigidbody2D _rb;
         SpriteRenderer _renderer;
         float _contactCooldown;
@@ -319,6 +320,7 @@ namespace ProjectZx.Enemies
             _player = player != null
                 ? player
                 : GameObject.FindGameObjectWithTag("Player")?.transform;
+            _playerStats = _player != null ? _player.GetComponent<PlayerStats>() : null;
             _maxHp = Mathf.Max(1, _hp);
             if (preloadedAnimSet.IsValid)
                 ApplyAnimSet(preloadedAnimSet);
@@ -395,6 +397,13 @@ namespace ProjectZx.Enemies
 
             if (IsFlying)
                 CapFlyingMoveSpeed();
+
+            EnemyRegistry.Register(this);
+        }
+
+        void OnDestroy()
+        {
+            EnemyRegistry.Unregister(this);
         }
 
         void ResolveMovementMode(EnemyMovementMode? forced, int round)
@@ -1031,7 +1040,7 @@ namespace ProjectZx.Enemies
             if (_contactCooldown > 0f) return;
             if (ArenaBounds.ToroidalDistance(transform.position, _player.position) > _contactRange) return;
 
-            var stats = _player.GetComponent<PlayerStats>();
+            var stats = ResolvePlayerStats();
             if (stats == null || stats.IsDead) return;
 
             // Melee touch: play attack anim and apply contact damage.
@@ -1068,15 +1077,21 @@ namespace ProjectZx.Enemies
 
         float ResolvePlayerMoveSpeedCap()
         {
-            if (_player == null)
-                _player = GameObject.FindGameObjectWithTag("Player")?.transform;
-            if (_player == null) return 0f;
-
-            var stats = _player.GetComponent<PlayerStats>();
+            var stats = ResolvePlayerStats();
             if (stats != null && !stats.IsDead)
                 return Mathf.Max(0.5f, stats.EffectiveMoveSpeed);
 
             return TapMovement.DefaultBaseSpeed * GameSave.SpeedMultiplier;
+        }
+
+        PlayerStats ResolvePlayerStats()
+        {
+            if (_playerStats != null) return _playerStats;
+            if (_player == null)
+                _player = GameObject.FindGameObjectWithTag("Player")?.transform;
+            if (_player == null) return null;
+            _playerStats = _player.GetComponent<PlayerStats>();
+            return _playerStats;
         }
 
         void UpdateChill()
@@ -1244,7 +1259,7 @@ namespace ProjectZx.Enemies
                 if (_fireBreathDamageTimer <= 0f)
                 {
                     _fireBreathDamageTimer = FireBreathTick;
-                    var stats = _player.GetComponent<PlayerStats>();
+                    var stats = ResolvePlayerStats();
                     if (stats != null && !stats.IsDead
                         && IsPlayerInFireBreathCone(FireBreathDamageRange))
                     {
@@ -1488,6 +1503,7 @@ namespace ProjectZx.Enemies
         {
             if (!IsAlive) return;
             IsAlive = false;
+            EnemyRegistry.Unregister(this);
             _rb.linearVelocity = Vector2.zero;
             if (_fireBreathFx != null) _fireBreathFx.SetActive(false);
 

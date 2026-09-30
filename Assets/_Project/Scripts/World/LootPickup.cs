@@ -36,7 +36,26 @@ namespace ProjectZx.World
         SpriteRenderer _renderer;
         bool _collected;
 
+        // Avoid FindGameObjectWithTag every Update while gems sit on the ground.
+        static Transform _cachedPlayer;
+        static PlayerStats _cachedPlayerStats;
+
         public PickupType Type => _type;
+
+        public static void InvalidatePlayerCache()
+        {
+            _cachedPlayer = null;
+            _cachedPlayerStats = null;
+        }
+
+        static void EnsurePlayerCache()
+        {
+            if (_cachedPlayer != null) return;
+            var player = GameObject.FindGameObjectWithTag("Player");
+            if (player == null) return;
+            _cachedPlayer = player.transform;
+            _cachedPlayerStats = player.GetComponent<PlayerStats>();
+        }
 
         public void Initialize(PickupType type, int amount)
         {
@@ -125,10 +144,10 @@ namespace ProjectZx.World
             }
             else
             {
-                var player = GameObject.FindGameObjectWithTag("Player");
-                if (player == null) return;
-                playerTransform = player.transform;
-                stats = player.GetComponent<PlayerStats>();
+                EnsurePlayerCache();
+                if (_cachedPlayer == null) return;
+                playerTransform = _cachedPlayer;
+                stats = _cachedPlayerStats;
                 var lootRange = stats != null
                     ? BaseCollectRange * stats.EffectiveLootRangeMultiplier
                     : BaseCollectRange;

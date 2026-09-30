@@ -213,8 +213,10 @@ namespace ProjectZx.Combat
             var rangeSq = range * range;
             var facing = _slashDir.sqrMagnitude > 0.0001f ? _slashDir.normalized : Vector2.right;
 
-            foreach (var enemy in Object.FindObjectsByType<EnemyActor>())
+            var enemies = EnemyRegistry.All;
+            for (var i = 0; i < enemies.Count; i++)
             {
+                var enemy = enemies[i];
                 if (enemy == null || !enemy.IsAlive) continue;
                 var offset = (Vector2)enemy.transform.position - (Vector2)transform.position;
                 if (offset.sqrMagnitude > rangeSq) continue;
@@ -235,8 +237,10 @@ namespace ProjectZx.Combat
         {
             EnemyActor best = null;
             var bestDist = float.MaxValue;
-            foreach (var enemy in Object.FindObjectsByType<EnemyActor>())
+            var enemies = EnemyRegistry.All;
+            for (var i = 0; i < enemies.Count; i++)
             {
+                var enemy = enemies[i];
                 if (enemy == null || !enemy.IsAlive) continue;
                 var d = Vector2.Distance(transform.position, enemy.transform.position);
                 if (d < bestDist)
