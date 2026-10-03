@@ -130,7 +130,10 @@ namespace ProjectZx.UI
             BuildHudDpsChip(canvasGo.transform, new Vector2(SafeLeft, -SafeTop - 208f));
             BuildObjectiveTracker(canvasGo.transform);
 
-            _bannerText = CreateText(canvasGo.transform, "", 44, Vector2.zero, TextAnchor.MiddleCenter);
+            _bannerText = CreateText(canvasGo.transform, "", 36, Vector2.zero, TextAnchor.MiddleCenter);
+            _bannerText.rectTransform.sizeDelta = new Vector2(1500f, 110f);
+            _bannerText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _bannerText.verticalOverflow = VerticalWrapMode.Overflow;
             _bannerText.color = new Color(1f, 0.85f, 0.3f);
 
             _levelUpPanel = BuildLevelUpPanel(canvasGo.transform);

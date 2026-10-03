@@ -762,7 +762,9 @@ namespace ProjectZx.Core
             return name.IndexOf("Gate", System.StringComparison.OrdinalIgnoreCase) >= 0
                    || name.IndexOf("Door", System.StringComparison.OrdinalIgnoreCase) >= 0
                    || name.IndexOf("Opened", System.StringComparison.OrdinalIgnoreCase) >= 0
-                   || name.IndexOf("Open", System.StringComparison.OrdinalIgnoreCase) >= 0;
+                   || name.IndexOf("Open", System.StringComparison.OrdinalIgnoreCase) >= 0
+                   || name.IndexOf("Stone_Cube", System.StringComparison.OrdinalIgnoreCase) >= 0
+                   || name.IndexOf("Cube", System.StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         static Sprite[] BuildTileSet(params string[] paths)
@@ -951,8 +953,8 @@ namespace ProjectZx.Core
         }
 
         /// <summary>
-        /// Fire breath art tip points left (-X). Pivot is on the right/base (mouth) so
-        /// rotation swings the stream out from the boss toward the player.
+        /// Fire breath art emits from the left edge and travels right. Pivot is that mouth
+        /// so a 0° rotation points the stream along +X at the player.
         /// </summary>
         static void EnsureFireBreathFrames()
         {
@@ -961,14 +963,13 @@ namespace ProjectZx.Core
             _fireBreathFrames = new Sprite[4];
             for (var i = 0; i < 4; i++)
             {
-                var src = TryLoadSprite($"FireBreath{i + 1}", TilePixelsPerUnit);
+                var src = LoadFireBreathSource(i);
                 if (src != null && src.texture != null && !IsSolidFallbackSprite(src))
                 {
-                    // Pivot on the base (right edge) for left-pointing flame art.
                     _fireBreathFrames[i] = Sprite.Create(
                         src.texture,
                         src.rect,
-                        new Vector2(1f, 0.5f),
+                        new Vector2(0f, 0.5f),
                         src.pixelsPerUnit > 0f ? src.pixelsPerUnit : TilePixelsPerUnit,
                         0,
                         SpriteMeshType.FullRect);
@@ -979,6 +980,28 @@ namespace ProjectZx.Core
                     _fireBreathFrames[i] = CreateFireBreathFrameSprite(i);
                 }
             }
+        }
+
+        /// <summary>Largest sliced frame (skips the tiny leftover slice on the sheet).</summary>
+        static Sprite LoadFireBreathSource(int index)
+        {
+            var sliced = Resources.LoadAll<Sprite>($"FireBreath{index + 1}");
+            Sprite best = null;
+            var bestArea = 0f;
+            if (sliced != null)
+            {
+                for (var i = 0; i < sliced.Length; i++)
+                {
+                    var sprite = sliced[i];
+                    if (sprite == null) continue;
+                    var area = sprite.rect.width * sprite.rect.height;
+                    if (area <= bestArea) continue;
+                    bestArea = area;
+                    best = sprite;
+                }
+            }
+
+            return best ?? TryLoadSprite($"FireBreath{index + 1}", TilePixelsPerUnit);
         }
 
         /// <summary>True for the solid-color squares CreateFallback builds (never real art).</summary>

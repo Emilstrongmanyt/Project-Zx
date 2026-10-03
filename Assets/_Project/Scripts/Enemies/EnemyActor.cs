@@ -19,12 +19,6 @@ namespace ProjectZx.Enemies
         const float FireBreathDuration = 3f;
         const float FireBreathCooldown = 12f;
         const float FireBreathTick = 0.45f;
-        /// <summary>World-space breath size (independent of huge boss transform scale). +20% vs prior 2.55.</summary>
-        const float FireBreathWorldScale = 3.06f;
-        /// <summary>Mouth sits on the front of the sprite toward aim (fraction of max extents).</summary>
-        const float FireBreathMouthForwardFrac = 0.42f;
-        /// <summary>Mouth sits slightly above sprite center so the stream leaves the face, not the torso.</summary>
-        const float FireBreathMouthUpFrac = 0.28f;
         const int FireBreathSortOffset = 40;
         /// <summary>Cosine of half-angle for breath damage cone (~35° half-angle — tighter to VFX).</summary>
         const float FireBreathConeDot = 0.82f;
@@ -657,8 +651,9 @@ namespace ProjectZx.Enemies
         }
 
         /// <summary>
-        /// Aim breath along the vector to the player (left/right/up/down and diagonals).
-        /// Fire art tip is on the -X side of the texture; rotate so the stream leaves the mouth.
+        /// Aim breath along the vector to the player. Authored art emits from the left
+        /// edge and travels +X, so the pivot sits on that edge and rotation matches aim.
+        /// World length is forced to <see cref="FireBreathDamageRange"/>.
         /// </summary>
         void ApplyFireBreathToward(Vector3 target)
         {
@@ -666,15 +661,17 @@ namespace ProjectZx.Enemies
 
             _fireBreathAim = GetFireBreathAim(target);
 
-            // Boss transform is huge; keep breath size in world space via inverse parent scale.
             var parentScale = Mathf.Max(0.001f, Mathf.Abs(transform.lossyScale.x));
             var inv = 1f / parentScale;
+            var nativeWidth = _fireBreathRenderer != null && _fireBreathRenderer.sprite != null
+                ? Mathf.Max(0.2f, _fireBreathRenderer.sprite.bounds.size.x)
+                : 2f;
+            // lossy width = nativeWidth * localScale * parentScale. Match the damage reach.
+            var local = (FireBreathDamageRange / nativeWidth) * inv;
             _fireBreathFx.transform.position = GetFireBreathMouthWorld();
-            _fireBreathFx.transform.localScale = Vector3.one * (FireBreathWorldScale * inv);
+            _fireBreathFx.transform.localScale = new Vector3(local, local, 1f);
 
-            // Unity 2D: 0° = +X. Authored tip points left (-X), so add 180° to aim at the player.
-            // World rotation so parent flip/scale does not skew the stream angle.
-            var angle = Mathf.Atan2(_fireBreathAim.y, _fireBreathAim.x) * Mathf.Rad2Deg + 180f;
+            var angle = Mathf.Atan2(_fireBreathAim.y, _fireBreathAim.x) * Mathf.Rad2Deg;
             _fireBreathFx.transform.rotation = Quaternion.Euler(0f, 0f, angle);
 
             if (_fireBreathRenderer != null)
@@ -682,22 +679,17 @@ namespace ProjectZx.Enemies
         }
 
         /// <summary>
-        /// Place the flame tip on the boss mouth: front of the sprite toward aim,
-        /// slightly above center so it sits on the face rather than the torso.
+        /// Mouth sits on the body collider toward the player, not the padded sprite bounds
+        /// (those put the stream inside the Warded Halls golem).
         /// </summary>
         Vector3 GetFireBreathMouthWorld()
         {
-            if (_renderer == null)
-            {
-                var fallbackAim = _fireBreathAim.sqrMagnitude > 0.0001f ? _fireBreathAim.normalized : Vector2.left;
-                return transform.position + (Vector3)(fallbackAim * 1.2f);
-            }
-
-            var b = _renderer.bounds;
             var dir = _fireBreathAim.sqrMagnitude > 0.0001f ? _fireBreathAim.normalized : Vector2.left;
-            var forward = Mathf.Max(b.extents.x, b.extents.y) * FireBreathMouthForwardFrac;
-            var up = b.extents.y * FireBreathMouthUpFrac;
-            return b.center + (Vector3)(dir * forward) + Vector3.up * up;
+            var col = GetComponent<CircleCollider2D>();
+            var radius = 1.15f;
+            if (col != null)
+                radius = col.radius * Mathf.Abs(transform.lossyScale.x);
+            return transform.position + (Vector3)(dir * radius * 0.85f) + Vector3.up * (radius * 0.28f);
         }
 
         bool IsPlayerInFireBreathCone(float maxRange)

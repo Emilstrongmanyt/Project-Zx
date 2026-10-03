@@ -27,7 +27,7 @@ namespace ProjectZx.Core
 
     /// <summary>
     /// Per-class weapon upgrades. Progress with a bat only upgrades Batter weapons, etc.
-    /// Iron = Dungeon R30 with that class; Unlimited R20–R100 for most materials;
+    /// Iron = Ironvault R30 with that class; Unlimited R20–R100 for most materials;
     /// Gold = 50,000 kills with that weapon type.
     /// </summary>
     public static class WeaponCatalog
@@ -320,7 +320,7 @@ namespace ProjectZx.Core
             GameSave.EnsureWeaponProgressMigrated();
             var iron = IsIronUnlocked(playerClass)
                 ? "Iron ✓"
-                : $"Iron @ Dungeon R{IronUnlockDungeonRound}";
+                : $"Iron @ Ironvault R{IronUnlockDungeonRound}";
             var gold = IsGoldUnlocked(playerClass)
                 ? "Gold ✓"
                 : $"Gold @ {GameSave.GetWeaponKillCount(playerClass):N0}/{GoldUnlockKills:N0} kills";

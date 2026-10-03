@@ -72,7 +72,7 @@ namespace ProjectZx.Core
         public float RunBlockChance;
         /// <summary>Bowman Multishot dual-arrow chance (0–0.99).</summary>
         public float RunMultishotChance;
-        /// <summary>Bowman Pierce talent extra hits (0–3).</summary>
+        /// <summary>Bowman Pierce talent extra hits (0–6, +2 per pick).</summary>
         public int RunPierceBonus;
         /// <summary>How many Second Wind charges have been consumed this run.</summary>
         public int SecondWindChargesUsed;

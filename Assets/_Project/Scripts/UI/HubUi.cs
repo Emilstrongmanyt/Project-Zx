@@ -610,48 +610,47 @@ namespace ProjectZx.UI
             var panel = CreateDialogPanel(parent, "EquipmentPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
             CreateText(panel.transform, "Treasure Chest", 36, TextAnchor.MiddleCenter, new Vector2(0, 420), new Vector2(700, 48));
             CreateText(panel.transform, "One ring, necklace, cape, and helm. Find drops in survival to unlock them here.", 18, TextAnchor.MiddleCenter, new Vector2(0, 375), new Vector2(960, 36));
-            _equipmentStatusText = CreateText(panel.transform, "", 18, TextAnchor.MiddleCenter, new Vector2(0, 335), new Vector2(960, 40));
+            _equipmentStatusText = CreateText(panel.transform, "", 16, TextAnchor.MiddleCenter, new Vector2(0, 348), new Vector2(980, 52));
 
-            // 4-col wrap grid per slot (unequip + items). Extra items go to a second row.
-            // Section gaps leave ~24px between a 2nd row and the next label.
-            CreateText(panel.transform, "Rings", 22, TextAnchor.MiddleCenter, new Vector2(0, 310), new Vector2(400, 28));
-            CreateText(panel.transform, "Necklaces", 22, TextAnchor.MiddleCenter, new Vector2(0, 130), new Vector2(400, 28));
-            CreateText(panel.transform, "Capes", 22, TextAnchor.MiddleCenter, new Vector2(0, -50), new Vector2(400, 28));
-            CreateText(panel.transform, "Helms", 22, TextAnchor.MiddleCenter, new Vector2(0, -230), new Vector2(400, 28));
+            // Name + bonus on each button. Five columns so most slots stay one row.
+            CreateText(panel.transform, "Rings", 22, TextAnchor.MiddleCenter, new Vector2(0, 312), new Vector2(400, 28));
+            CreateText(panel.transform, "Necklaces", 22, TextAnchor.MiddleCenter, new Vector2(0, 190), new Vector2(400, 28));
+            CreateText(panel.transform, "Capes", 22, TextAnchor.MiddleCenter, new Vector2(0, -30), new Vector2(400, 28));
+            CreateText(panel.transform, "Helms", 22, TextAnchor.MiddleCenter, new Vector2(0, -160), new Vector2(400, 28));
 
             _equipmentButtons.Clear();
-            const float ringY = 265f;
-            const float neckY = 85f;
-            const float capeY = -95f;
-            const float helmY = -275f;
+            const float ringY = 262f;
+            const float neckY = 140f;
+            const float capeY = -80f;
+            const float helmY = -210f;
             var ringIndex = 0;
             var neckIndex = 0;
             var capeIndex = 0;
             var helmIndex = 0;
 
             // Unequip slots first (refresh order depends on this).
-            _equipmentButtons.Add(CreateButton(panel.transform, "No Ring", EquipSlotCell(ringIndex++, ringY), () =>
+            _equipmentButtons.Add(FitEquipButton(CreateButton(panel.transform, "No Ring", EquipSlotCell(ringIndex++, ringY), () =>
             {
                 GameSave.UnequipSlot(EquipmentSlot.Ring);
                 RefreshEquipmentPanel();
-            }));
-            _equipmentButtons.Add(CreateButton(panel.transform, "No Necklace", EquipSlotCell(neckIndex++, neckY), () =>
+            })));
+            _equipmentButtons.Add(FitEquipButton(CreateButton(panel.transform, "No Necklace", EquipSlotCell(neckIndex++, neckY), () =>
             {
                 GameSave.UnequipSlot(EquipmentSlot.Necklace);
                 RefreshEquipmentPanel();
-            }));
-            _equipmentButtons.Add(CreateButton(panel.transform, "No Cape", EquipSlotCell(capeIndex++, capeY), () =>
+            })));
+            _equipmentButtons.Add(FitEquipButton(CreateButton(panel.transform, "No Cape", EquipSlotCell(capeIndex++, capeY), () =>
             {
                 GameSave.UnequipSlot(EquipmentSlot.Cape);
                 RefreshEquipmentPanel();
                 HeroEditorCombatBridge.RefreshLoadoutOnPlayer();
-            }));
-            _equipmentButtons.Add(CreateButton(panel.transform, "No Helm", EquipSlotCell(helmIndex++, helmY), () =>
+            })));
+            _equipmentButtons.Add(FitEquipButton(CreateButton(panel.transform, "No Helm", EquipSlotCell(helmIndex++, helmY), () =>
             {
                 GameSave.UnequipSlot(EquipmentSlot.Helm);
                 RefreshEquipmentPanel();
                 HeroEditorCombatBridge.RefreshLoadoutOnPlayer();
-            }));
+            })));
 
             foreach (var def in EquipmentCatalog.All)
             {
@@ -659,32 +658,49 @@ namespace ProjectZx.UI
                 switch (def.Slot)
                 {
                     case EquipmentSlot.Ring:
-                        _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, EquipSlotCell(ringIndex++, ringY), () => SelectEquipment(id)));
+                        _equipmentButtons.Add(FitEquipButton(CreateButton(panel.transform, def.DisplayName, EquipSlotCell(ringIndex++, ringY), () => SelectEquipment(id))));
                         break;
                     case EquipmentSlot.Necklace:
-                        _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, EquipSlotCell(neckIndex++, neckY), () => SelectEquipment(id)));
+                        _equipmentButtons.Add(FitEquipButton(CreateButton(panel.transform, def.DisplayName, EquipSlotCell(neckIndex++, neckY), () => SelectEquipment(id))));
                         break;
                     case EquipmentSlot.Cape:
-                        _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, EquipSlotCell(capeIndex++, capeY), () => SelectEquipment(id)));
+                        _equipmentButtons.Add(FitEquipButton(CreateButton(panel.transform, def.DisplayName, EquipSlotCell(capeIndex++, capeY), () => SelectEquipment(id))));
                         break;
                     case EquipmentSlot.Helm:
-                        _equipmentButtons.Add(CreateButton(panel.transform, def.DisplayName, EquipSlotCell(helmIndex++, helmY), () => SelectEquipment(id)));
+                        _equipmentButtons.Add(FitEquipButton(CreateButton(panel.transform, def.DisplayName, EquipSlotCell(helmIndex++, helmY), () => SelectEquipment(id))));
                         break;
                 }
             }
 
-            CreateButton(panel.transform, "Close", new Vector2(0, -420), () => panel.SetActive(false), large: true);
+            CreateButton(panel.transform, "Close", new Vector2(0, -430), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
         }
 
-        /// <summary>4-column wrap: index 0..3 on firstRowY, 4..7 on firstRowY - 68, etc.</summary>
+        /// <summary>Name + bonus line. Taller than the default hub button.</summary>
+        static Button FitEquipButton(Button button)
+        {
+            if (button == null) return null;
+            var rect = button.GetComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(186f, 82f);
+            var label = button.GetComponentInChildren<Text>();
+            if (label != null)
+            {
+                label.rectTransform.sizeDelta = new Vector2(170f, 72f);
+                label.fontSize = 15;
+                label.horizontalOverflow = HorizontalWrapMode.Wrap;
+                label.verticalOverflow = VerticalWrapMode.Truncate;
+            }
+
+            return button;
+        }
+
+        /// <summary>5-column wrap so a sixth item drops to the next row instead of stacking.</summary>
         static Vector2 EquipSlotCell(int index, float firstRowY)
         {
-            const int cols = 4;
-            const float rowStep = 68f;
-            // 240px buttons with ~20px gap; stays inside HubMenuPanelSize width.
-            var xs = new[] { -390f, -130f, 130f, 390f };
+            const int cols = 5;
+            const float rowStep = 92f;
+            var xs = new[] { -400f, -200f, 0f, 200f, 400f };
             var col = index % cols;
             var row = index / cols;
             return new Vector2(xs[col], firstRowY - row * rowStep);
@@ -707,12 +723,11 @@ namespace ProjectZx.UI
                 var neck = EquipmentCatalog.Get(GameSave.EquippedNecklace);
                 var cape = EquipmentCatalog.Get(GameSave.EquippedCape);
                 var helm = EquipmentCatalog.Get(GameSave.EquippedHelm);
-                var ringName = ring.Id != EquipmentId.None ? ring.DisplayName : "None";
-                var neckName = neck.Id != EquipmentId.None ? neck.DisplayName : "None";
-                var capeName = cape.Id != EquipmentId.None ? cape.DisplayName : "None";
-                var helmName = helm.Id != EquipmentId.None ? helm.DisplayName : "None";
+                string Line(EquipmentDef def, string empty)
+                    => def.Id == EquipmentId.None ? empty : $"{def.DisplayName} ({def.Description})";
                 _equipmentStatusText.text =
-                    $"Equipped: {ringName}  ·  {neckName}  ·  {capeName}  ·  {helmName}";
+                    $"Equipped  ·  {Line(ring, "No ring")}  ·  {Line(neck, "No necklace")}\n"
+                    + $"{Line(cape, "No cape")}  ·  {Line(helm, "No helm")}";
             }
 
             // Button order: No Ring/Necklace/Cape/Helm, then catalog All in order.
@@ -764,10 +779,12 @@ namespace ProjectZx.UI
 
             var def = EquipmentCatalog.Get(id);
             if (!owned)
-                label.text = "??? (Find in survival)";
+                label.text = "???\nFind in survival";
             else
-                label.text = equipped ? $"{def.DisplayName} ✓" : def.DisplayName;
-            label.fontSize = owned ? 18 : 16;
+                label.text = equipped
+                    ? $"{def.DisplayName} ✓\n{def.Description}"
+                    : $"{def.DisplayName}\n{def.Description}";
+            label.fontSize = 15;
         }
 
         static EquipmentId GetEquippedInSlot(EquipmentSlot slot) => slot switch

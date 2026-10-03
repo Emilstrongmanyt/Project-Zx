@@ -303,7 +303,7 @@ namespace ProjectZx.UI
             if (_weaponTierStatusText != null)
             {
                 _weaponTierStatusText.text = tiers.Count <= 1
-                    ? $"Wooden only — unlock Iron (Dungeon R30) and higher materials for this weapon."
+                    ? $"Wooden only — unlock Iron (Ironvault R30) and higher materials for this weapon."
                     : $"Equipped: {WeaponCatalog.GetTierName(equipped)}  ·  {WeaponCatalog.GetPerkSummary(equipped)}\n"
                       + $"Highest unlocked: {WeaponCatalog.GetTierName(max)}";
             }

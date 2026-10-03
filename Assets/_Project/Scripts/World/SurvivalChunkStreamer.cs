@@ -419,35 +419,34 @@ namespace ProjectZx.World
             Sprite sprite;
             float scale;
             var roll = Mathf.Abs(seed % 100) / 100f;
-            // Uniform Cainos pixel props on every survival biome.
-            // Scales bumped ~30% so trees/props read as real cover vs the player.
+            // Uniform Cainos pixel props. Scales are large enough to see and walk around.
             switch (_propBiome)
             {
                 case SurvivalMapKind.Inside:
-                    // Warded Halls props need ~2× the prior indoor scale to read as furniture/cover.
+                    // Warded Halls furniture/cover — large enough to see and step around.
                     sprite = roll < 0.55f
                         ? ArtLibrary.GetCainosPropSprite(seed) ?? ArtLibrary.GetRockSprite(seed)
                         : ArtLibrary.GetRockSprite(seed ^ 17);
-                    scale = 1.7f;
+                    scale = 2.6f;
                     break;
                 case SurvivalMapKind.Dungeon:
                 case SurvivalMapKind.Crypt:
                     sprite = roll < 0.5f
                         ? ArtLibrary.GetRockSprite(seed) ?? ArtLibrary.GetCainosPropSprite(seed)
                         : ArtLibrary.GetCainosPropSprite(seed ^ 23) ?? ArtLibrary.GetRockSprite(seed);
-                    scale = 0.9f;
+                    scale = 2.4f;
                     break;
                 case SurvivalMapKind.Unlimited:
                     // Same Cainos language as Outside — sparse desert props (rocks / dry bush).
                     if (roll < 0.35f)
                     {
                         sprite = ArtLibrary.GetBushSprite(seed) ?? ArtLibrary.GetRockSprite(seed);
-                        scale = 0.65f;
+                        scale = 1.7f;
                     }
                     else
                     {
                         sprite = ArtLibrary.GetRockSprite(seed ^ 91);
-                        scale = 0.8f;
+                        scale = 2.0f;
                     }
 
                     break;
@@ -455,20 +454,26 @@ namespace ProjectZx.World
                     if (roll < 0.42f)
                     {
                         sprite = ArtLibrary.GetTreeSprite(seed);
-                        scale = 1.2f;
+                        scale = 2.2f;
                     }
                     else if (roll < 0.62f)
                     {
                         sprite = ArtLibrary.GetBushSprite(seed ^ 44) ?? ArtLibrary.GetRockSprite(seed ^ 44);
-                        scale = 0.72f;
+                        scale = 1.6f;
                     }
                     else
                     {
                         sprite = ArtLibrary.GetRockSprite(seed ^ 91);
-                        scale = 0.85f;
+                        scale = 1.9f;
                     }
 
                     break;
+            }
+
+            if (sprite == null || (sprite.name != null && sprite.name.IndexOf("Cube", System.StringComparison.OrdinalIgnoreCase) >= 0))
+            {
+                prop.SetActive(false);
+                return;
             }
 
             sr.sprite = sprite;
@@ -476,8 +481,8 @@ namespace ProjectZx.World
             prop.transform.localScale = Vector3.one * scale;
             if (col != null)
             {
-                // Keep world blocker size proportional to the larger visuals.
-                col.radius = Mathf.Clamp(0.28f * scale, 0.32f, 0.55f);
+                // Visible cover with a body-sized blocker, not a huge invisible wall.
+                col.radius = Mathf.Clamp(0.18f * scale, 0.34f, 0.62f);
                 col.isTrigger = false;
             }
 

@@ -32,7 +32,7 @@ namespace ProjectZx.Player
         Block,
         /// <summary>Bowman only: chance to fire a second arrow.</summary>
         Multishot,
-        /// <summary>Bowman only: +1 pierce hit per stack on arrows.</summary>
+        /// <summary>Bowman only: +2 pierce hits per pick on arrows.</summary>
         Pierce
     }
 
@@ -574,10 +574,10 @@ namespace ProjectZx.Player
         public bool CanOfferMultishotTalent =>
             GameSessionContext.SelectedClass == PlayerClass.Bowman
             && RunMultishotChance + 0.33f <= 0.99f + 0.001f;
-        /// <summary>Bowman Pierce: +1 pierce hit per pick, max +3.</summary>
+        /// <summary>Bowman Pierce: +2 pierce hits per pick, max +6 (three picks).</summary>
         public bool CanOfferPierceTalent =>
             GameSessionContext.SelectedClass == PlayerClass.Bowman
-            && RunPierceBonus + 1 <= 3;
+            && RunPierceBonus + 2 <= 6;
 
         public static List<RunLevelChoice> RollLevelUpChoices(PlayerStats stats, int count = 4)
         {
@@ -662,7 +662,7 @@ namespace ProjectZx.Player
                 RunLevelChoice.Defense => "−8% Damage Taken",
                 RunLevelChoice.Block => "+5% Block Chance",
                 RunLevelChoice.Multishot => "+33% Multishot Chance",
-                RunLevelChoice.Pierce => "+1 Pierce",
+                RunLevelChoice.Pierce => "+2 Pierce",
                 _ => choice.ToString()
             };
         }
@@ -754,7 +754,7 @@ namespace ProjectZx.Player
                     break;
                 case RunLevelChoice.Pierce:
                     if (!CanOfferPierceTalent) break;
-                    RunPierceBonus = Mathf.Min(3, RunPierceBonus + 1);
+                    RunPierceBonus = Mathf.Min(6, RunPierceBonus + 2);
                     break;
             }
 
@@ -1152,7 +1152,7 @@ namespace ProjectZx.Player
             RunDamageTakenReduction = Mathf.Clamp01(snapshot.RunDamageTakenReduction);
             RunBlockChance = Mathf.Clamp01(snapshot.RunBlockChance);
             RunMultishotChance = Mathf.Clamp(snapshot.RunMultishotChance, 0f, 0.99f);
-            RunPierceBonus = Mathf.Clamp(snapshot.RunPierceBonus, 0, 3);
+            RunPierceBonus = Mathf.Clamp(snapshot.RunPierceBonus, 0, 6);
             _secondWindChargesUsed = snapshot.SecondWindChargesUsed > 0
                 ? snapshot.SecondWindChargesUsed
                 : snapshot.SecondWindUsed ? 1 : 0;
