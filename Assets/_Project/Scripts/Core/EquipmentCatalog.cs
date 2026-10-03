@@ -30,15 +30,15 @@ namespace ProjectZx.Core
         WoolCape = 7,
         /// <summary>HeroEditor Heroic Cape — block chance. Save id kept as SentinelCape.</summary>
         SentinelCape = 8,
-        /// <summary>HeroEditor Royal Cape — stronger damage reduction. Save id kept as IronweaveCape.</summary>
+        /// <summary>HeroEditor Royal Cape — damage. Save id kept as IronweaveCape.</summary>
         IronweaveCape = 9,
-        /// <summary>HeroEditor Leather Helm — damage reduction (cape-tier defense).</summary>
+        /// <summary>HeroEditor Leather Helm — damage.</summary>
         LeatherHelm = 10,
         /// <summary>HeroEditor Guard Helm — block chance (cape-tier defense).</summary>
         GuardHelm = 11,
-        /// <summary>HeroEditor Falcon Iron Helm — stronger damage reduction (cape-tier defense).</summary>
+        /// <summary>HeroEditor Falcon Iron Helm — attack speed.</summary>
         IronHelm = 12,
-        /// <summary>Admurin guardian cape — balanced defense.</summary>
+        /// <summary>Admurin guardian cape — attack speed.</summary>
         GuardianCape = 13,
         /// <summary>Ember-forged ring — damage.</summary>
         EmberRing = 14,
@@ -116,15 +116,15 @@ namespace ProjectZx.Core
             new(EquipmentId.SentinelCape, EquipmentSlot.Cape, "Heroic Cape",
                 "+12% block chance", blockChance: 0.12f),
             new(EquipmentId.IronweaveCape, EquipmentSlot.Cape, "Royal Cape",
-                "−12% damage taken", damageReduction: 0.12f),
+                "+10% damage", damageMultiplier: 1.10f),
             new(EquipmentId.LeatherHelm, EquipmentSlot.Helm, "Leather Helm",
-                "−8% damage taken", damageReduction: 0.08f),
+                "+8% damage", damageMultiplier: 1.08f),
             new(EquipmentId.GuardHelm, EquipmentSlot.Helm, "Guard Helm",
                 "+12% block chance", blockChance: 0.12f),
             new(EquipmentId.IronHelm, EquipmentSlot.Helm, "Falcon Iron Helm",
-                "−12% damage taken", damageReduction: 0.12f),
+                "+12% attack speed", attackSpeedMultiplier: 1.12f),
             new(EquipmentId.GuardianCape, EquipmentSlot.Cape, "Guardian Cape",
-                "−10% damage taken", damageReduction: 0.10f),
+                "+10% attack speed", attackSpeedMultiplier: 1.10f),
             new(EquipmentId.EmberRing, EquipmentSlot.Ring, "Ember Ring",
                 "+12% damage", damageMultiplier: 1.12f),
             new(EquipmentId.TideNecklace, EquipmentSlot.Necklace, "Tide Necklace",

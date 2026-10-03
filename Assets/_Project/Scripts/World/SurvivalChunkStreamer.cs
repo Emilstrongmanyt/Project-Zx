@@ -530,6 +530,11 @@ namespace ProjectZx.World
             var shift = -pos;
             _originOffset += shift;
             ShiftWorld(shift);
+            // Keep the soft-clamp box on the shifted land. Stale bounds snap a
+            // straight run (the axis that first hits the rebase) into a prop.
+            LoadedMin += shift;
+            LoadedMax += shift;
+            ArenaBounds.SetStreamingBounds(LoadedMin, LoadedMax);
             // Logical chunk identity is unchanged — only Unity transforms moved.
             _playerChunk = TrueWorldToChunk(ToTrue(_player.position));
         }
@@ -600,8 +605,13 @@ namespace ProjectZx.World
             if (rb != null)
             {
                 var next = rb.position + delta;
+                // Interpolation would lerp across the rebase and leave the body
+                // overlapping a collider for a frame — then movement casts stick.
+                var mode = rb.interpolation;
+                rb.interpolation = RigidbodyInterpolation2D.None;
                 rb.position = next;
                 t.position = new Vector3(next.x, next.y, t.position.z);
+                rb.interpolation = mode;
                 return;
             }
 

@@ -198,9 +198,14 @@ namespace ProjectZx.World
                 // Degenerate if ring smaller than frustum — never invent a wall at the origin.
                 if (minX < maxX && minY < maxY)
                 {
-                    constrained = new Vector2(
+                    var clamped = new Vector2(
                         Mathf.Clamp(position.x, minX, maxX),
                         Mathf.Clamp(position.y, minY, maxY));
+                    // A real step only needs a small trim. A multi-unit correction
+                    // is a stale streaming box and would teleport the player into cover.
+                    constrained = (clamped - position).sqrMagnitude <= 2.25f
+                        ? clamped
+                        : position;
                 }
                 else
                     constrained = position;

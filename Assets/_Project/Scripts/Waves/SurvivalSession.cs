@@ -22,6 +22,8 @@ namespace ProjectZx.Waves
         SurvivalMapKind _activeBiome;
         bool _darkBirdSpawned;
         bool _stageHoldActive;
+        /// <summary>Snapshotted at run start so the first door clear still stops at R20.</summary>
+        bool _emberwildsExtendsTo30;
         bool _stageClearExitStarted;
 
         public static SurvivalSession Instance { get; private set; }
@@ -46,6 +48,9 @@ namespace ProjectZx.Waves
             MapKind = mapKind;
             RunKills = 0;
             _stageHoldActive = false;
+            if (mapKind == SurvivalMapKind.Outside)
+                GameSave.MigrateEmberwildsDoorEntered();
+            _emberwildsExtendsTo30 = mapKind == SurvivalMapKind.Outside && GameSave.EmberwildsDoorEntered;
             CurrentRound = GameSessionContext.FreshSurvivalRun
                 ? Mathf.Max(0, GameSessionContext.StartingRound)
                 : GameSessionContext.CarryRound;
@@ -125,6 +130,13 @@ namespace ProjectZx.Waves
 
                 if (IsStageHoldRound(CurrentRound))
                     break;
+
+                if (_emberwildsExtendsTo30 && CurrentRound >= 30)
+                {
+                    _hud?.ShowBanner("Emberwilds flank secured. Returning to camp…", 4f);
+                    yield return new WaitForSeconds(3f);
+                    break;
+                }
 
                 if (MapKind == SurvivalMapKind.Crypt && CurrentRound >= StatCaps.CryptMaxRound
                     && !IsStageHoldRound(CurrentRound))
@@ -322,7 +334,7 @@ namespace ProjectZx.Waves
 
         bool IsStageHoldRound(int round)
         {
-            if (round == 20 && MapKind == SurvivalMapKind.Outside) return true;
+            if (round == 20 && MapKind == SurvivalMapKind.Outside && !_emberwildsExtendsTo30) return true;
             if (round == 30 && MapKind == SurvivalMapKind.Inside) return true;
             if (round == 40 && MapKind == SurvivalMapKind.Dungeon) return true;
             if (round == StatCaps.CryptMaxRound && MapKind == SurvivalMapKind.Crypt) return true;
@@ -349,7 +361,7 @@ namespace ProjectZx.Waves
             _hud?.SetRound(round, MapKind);
 
             var bossRound = round % 10 == 0;
-            var roundTwentyBoss = round == 20 && MapKind == SurvivalMapKind.Outside;
+            var roundTwentyBoss = round == 20 && MapKind == SurvivalMapKind.Outside && !_emberwildsExtendsTo30;
             var roundThirtyBoss = round == 30 && MapKind == SurvivalMapKind.Inside;
             var roundFortyBoss = round == 40 && MapKind == SurvivalMapKind.Dungeon;
             var roundFiftyBoss = round == StatCaps.CryptMaxRound && MapKind == SurvivalMapKind.Crypt;

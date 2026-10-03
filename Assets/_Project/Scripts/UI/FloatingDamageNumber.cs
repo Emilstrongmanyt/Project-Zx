@@ -92,7 +92,7 @@ namespace ProjectZx.UI
             var fontSize = ScaledFont(CritFontSize);
             number.SetupText(
                 worldPosition,
-                $"CRIT {amount}",
+                amount.ToString(),
                 CritColor,
                 fontSize,
                 CritLifetime,

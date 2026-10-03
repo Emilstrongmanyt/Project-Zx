@@ -37,6 +37,8 @@ namespace ProjectZx.World
             _used = true;
             Achievements.UnlockDungeonDelver();
             GameSave.InsideMapUnlocked = true;
+            // Next Emberwilds start continues through R30 (Mira / Kael side quests).
+            GameSave.EmberwildsDoorEntered = true;
 
             var stats = player.GetComponent<PlayerStats>();
             stats?.BankRunGoldToSave();

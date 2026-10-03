@@ -679,8 +679,9 @@ namespace ProjectZx.Enemies
         }
 
         /// <summary>
-        /// Mouth sits on the body collider toward the player, not the padded sprite bounds
-        /// (those put the stream inside the Warded Halls golem).
+        /// Mouth sits on the visible body, then steps toward the player.
+        /// Emberwilds golem art is left of the cell pivot, so a collider-center
+        /// mouth shoots out of the empty side and reads as backwards.
         /// </summary>
         Vector3 GetFireBreathMouthWorld()
         {
@@ -689,7 +690,68 @@ namespace ProjectZx.Enemies
             var radius = 1.15f;
             if (col != null)
                 radius = col.radius * Mathf.Abs(transform.lossyScale.x);
-            return transform.position + (Vector3)(dir * radius * 0.85f) + Vector3.up * (radius * 0.28f);
+
+            var body = _renderer != null
+                ? SpriteOpaqueCenterWorld(_renderer, IsRoundTwentyBoss)
+                : transform.position;
+            return body + (Vector3)(dir * radius * 0.42f) + Vector3.up * (radius * 0.22f);
+        }
+
+        static readonly System.Collections.Generic.Dictionary<int, Vector2> SpriteCenterCache = new();
+
+        static Vector3 SpriteOpaqueCenterWorld(SpriteRenderer renderer, bool useGolemFallback)
+        {
+            if (renderer == null) return Vector3.zero;
+            var sprite = renderer.sprite;
+            if (sprite == null) return renderer.transform.position;
+
+            var id = sprite.GetInstanceID();
+            if (!SpriteCenterCache.TryGetValue(id, out var local))
+            {
+                local = OpaqueCenterLocal(sprite);
+                SpriteCenterCache[id] = local;
+            }
+
+            // Device textures can strip read/write. Emberwilds R20 golem cells
+            // still sit left of the pivot, so keep the mouth on the body.
+            if (local.sqrMagnitude < 0.0004f && useGolemFallback)
+                local = new Vector2(-0.16f * sprite.bounds.size.x, 0.04f * sprite.bounds.size.y);
+
+            if (renderer.flipX) local.x = -local.x;
+            return renderer.transform.position + renderer.transform.TransformVector(local);
+        }
+
+        static Vector2 OpaqueCenterLocal(Sprite sprite)
+        {
+            var tex = sprite.texture;
+            if (tex == null || !tex.isReadable) return Vector2.zero;
+
+            var rect = sprite.textureRect;
+            var x0 = Mathf.Clamp(Mathf.FloorToInt(rect.x), 0, tex.width - 1);
+            var y0 = Mathf.Clamp(Mathf.FloorToInt(rect.y), 0, tex.height - 1);
+            var x1 = Mathf.Clamp(Mathf.CeilToInt(rect.xMax), x0 + 1, tex.width);
+            var y1 = Mathf.Clamp(Mathf.CeilToInt(rect.yMax), y0 + 1, tex.height);
+            var step = Mathf.Max(1, Mathf.RoundToInt(rect.width / 24f));
+
+            double sx = 0;
+            double sy = 0;
+            var n = 0;
+            for (var y = y0; y < y1; y += step)
+            for (var x = x0; x < x1; x += step)
+            {
+                if (tex.GetPixel(x, y).a < 0.12f) continue;
+                sx += x;
+                sy += y;
+                n++;
+            }
+
+            if (n == 0) return Vector2.zero;
+
+            var nx = ((float)(sx / n) - rect.x) / Mathf.Max(1f, rect.width);
+            var ny = ((float)(sy / n) - rect.y) / Mathf.Max(1f, rect.height);
+            var px = sprite.pivot.x / Mathf.Max(1f, rect.width);
+            var py = sprite.pivot.y / Mathf.Max(1f, rect.height);
+            return new Vector2((nx - px) * sprite.bounds.size.x, (ny - py) * sprite.bounds.size.y);
         }
 
         bool IsPlayerInFireBreathCone(float maxRange)

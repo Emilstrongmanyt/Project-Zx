@@ -764,7 +764,9 @@ namespace ProjectZx.Core
                    || name.IndexOf("Opened", System.StringComparison.OrdinalIgnoreCase) >= 0
                    || name.IndexOf("Open", System.StringComparison.OrdinalIgnoreCase) >= 0
                    || name.IndexOf("Stone_Cube", System.StringComparison.OrdinalIgnoreCase) >= 0
-                   || name.IndexOf("Cube", System.StringComparison.OrdinalIgnoreCase) >= 0;
+                   || name.IndexOf("Cube", System.StringComparison.OrdinalIgnoreCase) >= 0
+                   || name.IndexOf("Altar_Rune", System.StringComparison.OrdinalIgnoreCase) >= 0
+                   || name.IndexOf("_Glow", System.StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         static Sprite[] BuildTileSet(params string[] paths)

@@ -14,6 +14,7 @@ namespace ProjectZx.Core
         const string SpdLevelKey = "zx_up_spd";
         const string RangeLevelKey = "zx_up_range";
         const string InsideUnlockedKey = "zx_inside_unlocked";
+        const string EmberwildsDoorEnteredKey = "zx_emberwilds_door_entered";
         const string DungeonUnlockedKey = "zx_dungeon_unlocked";
         const string CryptUnlockedKey = "zx_crypt_unlocked";
         const string WhirlwindKey = "zx_whirlwind";
@@ -405,6 +406,31 @@ namespace ProjectZx.Core
                 PlayerPrefs.SetInt(InsideUnlockedKey, value ? 1 : 0);
                 PlayerPrefs.Save();
             }
+        }
+
+        /// <summary>
+        /// Player talked to RowZi and entered the Emberwilds R20 door.
+        /// Later Emberwilds runs continue through round 30 for side quests.
+        /// </summary>
+        public static bool EmberwildsDoorEntered
+        {
+            get => PlayerPrefs.GetInt(EmberwildsDoorEnteredKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(EmberwildsDoorEnteredKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>
+        /// Older builds unlocked the halls on the R20 kill, before the door was entered.
+        /// Only skip the R20 hold for saves that already reached a later map.
+        /// </summary>
+        public static void MigrateEmberwildsDoorEntered()
+        {
+            if (PlayerPrefs.HasKey(EmberwildsDoorEnteredKey)) return;
+            if (DungeonMapUnlocked || InsideSurvivalCleared || CryptMapUnlocked)
+                EmberwildsDoorEntered = true;
         }
 
         public static bool DungeonMapUnlocked
