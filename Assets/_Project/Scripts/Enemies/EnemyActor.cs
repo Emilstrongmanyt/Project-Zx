@@ -697,7 +697,7 @@ namespace ProjectZx.Enemies
             return body + (Vector3)(dir * radius * 0.42f) + Vector3.up * (radius * 0.22f);
         }
 
-        static readonly System.Collections.Generic.Dictionary<int, Vector2> SpriteCenterCache = new();
+        static readonly System.Collections.Generic.Dictionary<string, Vector2> SpriteCenterCache = new();
 
         static Vector3 SpriteOpaqueCenterWorld(SpriteRenderer renderer, bool useGolemFallback)
         {
@@ -705,7 +705,7 @@ namespace ProjectZx.Enemies
             var sprite = renderer.sprite;
             if (sprite == null) return renderer.transform.position;
 
-            var id = sprite.GetInstanceID();
+            var id = SpriteCacheKey(sprite);
             if (!SpriteCenterCache.TryGetValue(id, out var local))
             {
                 local = OpaqueCenterLocal(sprite);
@@ -719,6 +719,15 @@ namespace ProjectZx.Enemies
 
             if (renderer.flipX) local.x = -local.x;
             return renderer.transform.position + renderer.transform.TransformVector(local);
+        }
+
+        static string SpriteCacheKey(Sprite sprite)
+        {
+            var rect = sprite.textureRect;
+            var tex = sprite.texture != null ? sprite.texture.name : string.Empty;
+            return tex + "|" + sprite.name + "|"
+                   + rect.x.ToString("0") + "," + rect.y.ToString("0") + ","
+                   + rect.width.ToString("0") + "," + rect.height.ToString("0");
         }
 
         static Vector2 OpaqueCenterLocal(Sprite sprite)
