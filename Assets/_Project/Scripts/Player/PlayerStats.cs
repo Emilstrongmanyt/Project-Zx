@@ -38,7 +38,40 @@ namespace ProjectZx.Player
 
     public class PlayerStats : MonoBehaviour
     {
-        const float ShieldCooldownSeconds = 12f;
+        const float ShieldCooldownSeconds = 10f;
+        const float TalentSpeedMul = 1.10f;
+        const float TalentAttackMul = 1.12f;
+        const float TalentAttackSpeedMul = 1.12f;
+        const float TalentRangeMul = 1.10f;
+        const float TalentLootMul = 1.15f;
+        const int TalentHpBase = 20;
+        const int TalentHpPerLevel = 2;
+        const float TalentCritChanceStep = 0.10f;
+        const float TalentCritChanceCap = 0.90f;
+        const float TalentCritDamageStep = 0.30f;
+        const float TalentCritDamageCap = 4f;
+        const float TalentLifestealStep = 0.04f;
+        const float TalentLifestealCap = 0.20f;
+        const float TalentBossStep = 0.25f;
+        const float TalentBossCap = 0.80f;
+        const float TalentExecuteStep = 0.50f;
+        const float TalentExecuteCap = 1.5f;
+        const float TalentGoldMul = 1.15f;
+        const float TalentGoldCap = 2f;
+        const float TalentRegenStep = 3f;
+        const float TalentRegenCap = 8f;
+        const float TalentBerserkStep = 0.25f;
+        const float TalentBerserkCap = 0.50f;
+        const float TalentXpMul = 1.15f;
+        const float TalentXpCap = 2f;
+        const float TalentDefenseStep = 0.10f;
+        const float TalentDefenseCap = 0.60f;
+        const float TalentBlockStep = 0.08f;
+        const float TalentBlockCap = 0.50f;
+        const float TalentMultishotStep = 0.33f;
+        const float TalentMultishotCap = 0.99f;
+        const int TalentPierceStep = 2;
+        const int TalentPierceCap = 6;
         const float RegenOutOfCombatDelay = 2f;
 
         public int MaxHp { get; private set; }
@@ -74,9 +107,9 @@ namespace ProjectZx.Player
         public float RunRegenPerSecond { get; private set; }
         public bool RunShieldUnlocked { get; private set; }
         public float RunBerserkBonus { get; private set; }
-        /// <summary>Run talent additive damage reduction (0.08 per pick, max 0.40 from talents).</summary>
+        /// <summary>Run talent additive damage reduction (0.10 per pick, max 0.60 from talents).</summary>
         public float RunDamageTakenReduction { get; private set; }
-        /// <summary>Run talent block chance (0.05 per pick, max 0.50 from talents).</summary>
+        /// <summary>Run talent block chance (0.08 per pick, max 0.50 from talents).</summary>
         public float RunBlockChance { get; private set; }
         /// <summary>Bowman Multishot: dual-arrow chance (0.33 per pick, max 0.99).</summary>
         public float RunMultishotChance { get; private set; }
@@ -380,8 +413,8 @@ namespace ProjectZx.Player
             if (GameSave.ThickHideLevel > 0)
                 amount = Mathf.Max(1, Mathf.RoundToInt(amount * GameSave.ThickHideDamageTakenMultiplier));
 
-            // Additive DR from level-up Defense talent + equipment (cap 50% total reduction).
-            var reduction = Mathf.Min(0.50f, RunDamageTakenReduction + EquipmentCatalog.CombinedDamageReduction());
+            // Additive DR from level-up Defense talent + equipment (cap 60% total reduction).
+            var reduction = Mathf.Min(TalentDefenseCap, RunDamageTakenReduction + EquipmentCatalog.CombinedDamageReduction());
             if (reduction > 0f)
                 amount = Mathf.Max(1, Mathf.RoundToInt(amount * (1f - reduction)));
 
@@ -550,34 +583,50 @@ namespace ProjectZx.Player
                 LevelUpChoiceRequired?.Invoke(PendingLevelUpChoices);
         }
 
-        public bool CanOfferSpeedTalent => RunSpeedMultiplier * 1.1f <= StatCaps.RunMaxSpeedMultiplier + 0.001f;
-        public bool CanOfferAttackTalent => RunDamageMultiplier * 1.12f <= StatCaps.RunMaxDamageMultiplier + 0.001f;
+        static bool RoomBelow(float current, float cap) => current < cap - 0.001f;
+
+        public static int HpGrantForLevel(int level) =>
+            TalentHpBase + TalentHpPerLevel * Mathf.Max(1, level);
+
+        static int HpButtonAmount(PlayerStats stats)
+        {
+            var grant = HpGrantForLevel(stats != null ? stats.Level : 1);
+            if (stats == null) return grant;
+            return Mathf.Max(1, Mathf.Min(grant, StatCaps.RunMaxHp - stats.MaxHp));
+        }
+
+        public bool CanOfferSpeedTalent => RoomBelow(RunSpeedMultiplier, StatCaps.RunMaxSpeedMultiplier);
+        public bool CanOfferAttackTalent => RoomBelow(RunDamageMultiplier, StatCaps.RunMaxDamageMultiplier);
         public bool CanOfferAttackRangeTalent =>
-            AttackRangeMultiplier * 1.06f <= StatCaps.RunMaxAttackRangeMultiplier + 0.001f;
-        public bool CanOfferHpTalent => MaxHp + 30 <= StatCaps.RunMaxHp;
+            RoomBelow(AttackRangeMultiplier, StatCaps.RunMaxAttackRangeMultiplier);
+        public bool CanOfferHpTalent => MaxHp < StatCaps.RunMaxHp;
         // Higher caps so Bowman (starts 40% / 2.1×) still gains from crit talent picks.
-        public bool CanOfferCritChance => RunCritChance + 0.08f <= 0.90f;
-        public bool CanOfferCritDamage => RunCritMultiplier + 0.25f <= 3.6f;
-        public bool CanOfferLifesteal => RunLifesteal + 0.03f <= 0.2f;
-        public bool CanOfferBossHunter => RunBossDamageBonus + 0.2f <= 0.8f;
-        public bool CanOfferExecute => RunExecuteBonus + 0.5f <= 1.5f;
-        public bool CanOfferGoldFind => RunGoldFindMultiplier * 1.15f <= 2f;
-        public bool CanOfferRegen => RunRegenPerSecond + 2f <= 8f;
+        public bool CanOfferCritChance => RoomBelow(RunCritChance, TalentCritChanceCap);
+        public bool CanOfferCritDamage => RoomBelow(RunCritMultiplier, TalentCritDamageCap);
+        public bool CanOfferLifesteal => RoomBelow(RunLifesteal, TalentLifestealCap);
+        public bool CanOfferBossHunter => RoomBelow(RunBossDamageBonus, TalentBossCap);
+        public bool CanOfferExecute => RoomBelow(RunExecuteBonus, TalentExecuteCap);
+        public bool CanOfferGoldFind => RoomBelow(RunGoldFindMultiplier, TalentGoldCap);
+        public bool CanOfferRegen => RoomBelow(RunRegenPerSecond, TalentRegenCap);
         public bool CanOfferShield => !RunShieldUnlocked;
-        public bool CanOfferBerserk => RunBerserkBonus + 0.25f <= 0.5f;
-        public bool CanOfferXpBoost => RunXpMultiplier * 1.15f <= 2f;
-        /// <summary>Defense talent: −8% damage taken per pick, max −40% from this talent.</summary>
-        public bool CanOfferDefenseTalent => RunDamageTakenReduction + 0.08f <= 0.40f + 0.001f;
-        /// <summary>Block talent: +5% block per pick, max 50% from this talent.</summary>
-        public bool CanOfferBlockTalent => RunBlockChance + 0.05f <= 0.50f + 0.001f;
+        public bool CanOfferBerserk => RoomBelow(RunBerserkBonus, TalentBerserkCap);
+        public bool CanOfferXpBoost => RoomBelow(RunXpMultiplier, TalentXpCap);
+        /// <summary>Defense talent: −10% damage taken per pick, max −60% from this talent and armor combined.</summary>
+        public bool CanOfferDefenseTalent =>
+            RoomBelow(RunDamageTakenReduction, TalentDefenseCap)
+            && RoomBelow(RunDamageTakenReduction + EquipmentCatalog.CombinedDamageReduction(), TalentDefenseCap);
+        /// <summary>Block talent: +8% block per pick, max 50% from this talent and armor combined.</summary>
+        public bool CanOfferBlockTalent =>
+            RoomBelow(RunBlockChance, TalentBlockCap)
+            && RoomBelow(RunBlockChance + EquipmentCatalog.CombinedBlockChance(), TalentBlockCap);
         /// <summary>Bowman Multishot: +33% dual-shot chance per pick, max 99% (3 stacks).</summary>
         public bool CanOfferMultishotTalent =>
             GameSessionContext.SelectedClass == PlayerClass.Bowman
-            && RunMultishotChance + 0.33f <= 0.99f + 0.001f;
+            && RoomBelow(RunMultishotChance, TalentMultishotCap);
         /// <summary>Bowman Pierce: +2 pierce hits per pick, max +6 (three picks).</summary>
         public bool CanOfferPierceTalent =>
             GameSessionContext.SelectedClass == PlayerClass.Bowman
-            && RunPierceBonus + 2 <= 6;
+            && RunPierceBonus < TalentPierceCap;
 
         public static List<RunLevelChoice> RollLevelUpChoices(PlayerStats stats, int count = 4)
         {
@@ -639,28 +688,28 @@ namespace ProjectZx.Player
             return pool.GetRange(0, Mathf.Min(count, pool.Count));
         }
 
-        public static string GetChoiceLabel(RunLevelChoice choice)
+        public static string GetChoiceLabel(RunLevelChoice choice, PlayerStats stats = null)
         {
             return choice switch
             {
                 RunLevelChoice.Speed => "+10% Move Speed",
-                RunLevelChoice.Hp => "+30 Max HP",
+                RunLevelChoice.Hp => $"+{HpButtonAmount(stats)} Max HP",
                 RunLevelChoice.Attack => "+12% Attack Damage",
                 RunLevelChoice.AttackSpeed => "+12% Attack Speed",
-                RunLevelChoice.AttackRange => "+6% Attack Range",
+                RunLevelChoice.AttackRange => "+10% Attack Range",
                 RunLevelChoice.LootRange => "+15% Loot Range",
-                RunLevelChoice.CritChance => "+8% Crit Chance",
-                RunLevelChoice.CritDamage => "+25% Crit Damage",
-                RunLevelChoice.Lifesteal => "+3% Lifesteal",
-                RunLevelChoice.BossHunter => "+20% Damage vs Bosses",
+                RunLevelChoice.CritChance => "+10% Crit Chance",
+                RunLevelChoice.CritDamage => "+30% Crit Damage",
+                RunLevelChoice.Lifesteal => "+4% Lifesteal",
+                RunLevelChoice.BossHunter => "+25% Damage vs Bosses",
                 RunLevelChoice.Execute => "+50% Damage under 25% HP (yours)",
                 RunLevelChoice.GoldFind => "+15% Gold Find",
-                RunLevelChoice.Regen => "+2 HP/sec out of combat",
-                RunLevelChoice.Shield => "Block 1 hit every 12s",
+                RunLevelChoice.Regen => "+3 HP/sec out of combat",
+                RunLevelChoice.Shield => $"Block 1 hit every {ShieldCooldownSeconds:0}s",
                 RunLevelChoice.Berserk => "+25% Damage over 90% HP",
                 RunLevelChoice.XpBoost => "+15% XP Gain",
-                RunLevelChoice.Defense => "−8% Damage Taken",
-                RunLevelChoice.Block => "+5% Block Chance",
+                RunLevelChoice.Defense => "−10% Damage Taken",
+                RunLevelChoice.Block => "+8% Block Chance",
                 RunLevelChoice.Multishot => "+33% Multishot Chance",
                 RunLevelChoice.Pierce => "+2 Pierce",
                 _ => choice.ToString()
@@ -675,56 +724,57 @@ namespace ProjectZx.Player
             {
                 case RunLevelChoice.Speed:
                     if (!CanOfferSpeedTalent) break;
-                    RunSpeedMultiplier = Mathf.Min(StatCaps.RunMaxSpeedMultiplier, RunSpeedMultiplier * 1.1f);
+                    RunSpeedMultiplier = Mathf.Min(StatCaps.RunMaxSpeedMultiplier, RunSpeedMultiplier * TalentSpeedMul);
                     break;
                 case RunLevelChoice.Hp:
                     if (!CanOfferHpTalent) break;
-                    MaxHp = Mathf.Min(StatCaps.RunMaxHp, MaxHp + 30);
-                    CurrentHp = Mathf.Min(MaxHp, CurrentHp + 30);
+                    var hpGrant = Mathf.Min(HpGrantForLevel(Level), StatCaps.RunMaxHp - MaxHp);
+                    MaxHp += hpGrant;
+                    CurrentHp = Mathf.Min(MaxHp, CurrentHp + hpGrant);
                     break;
                 case RunLevelChoice.Attack:
                     if (!CanOfferAttackTalent) break;
-                    RunDamageMultiplier = Mathf.Min(StatCaps.RunMaxDamageMultiplier, RunDamageMultiplier * 1.12f);
+                    RunDamageMultiplier = Mathf.Min(StatCaps.RunMaxDamageMultiplier, RunDamageMultiplier * TalentAttackMul);
                     break;
                 case RunLevelChoice.AttackSpeed:
-                    RunAttackSpeedMultiplier *= 1.12f;
+                    RunAttackSpeedMultiplier *= TalentAttackSpeedMul;
                     break;
                 case RunLevelChoice.AttackRange:
                     if (!CanOfferAttackRangeTalent) break;
                     RunAttackRangeMultiplier = Mathf.Min(
                         StatCaps.RunMaxAttackRangeMultiplier / Mathf.Max(0.01f, GameSave.AttackRangeMultiplier),
-                        RunAttackRangeMultiplier * 1.06f);
+                        RunAttackRangeMultiplier * TalentRangeMul);
                     break;
                 case RunLevelChoice.LootRange:
-                    RunLootRangeMultiplier *= 1.15f;
+                    RunLootRangeMultiplier *= TalentLootMul;
                     break;
                 case RunLevelChoice.CritChance:
                     if (!CanOfferCritChance) break;
-                    RunCritChance = Mathf.Min(0.90f, RunCritChance + 0.08f);
+                    RunCritChance = Mathf.Min(TalentCritChanceCap, RunCritChance + TalentCritChanceStep);
                     break;
                 case RunLevelChoice.CritDamage:
                     if (!CanOfferCritDamage) break;
-                    RunCritMultiplier = Mathf.Min(3.6f, RunCritMultiplier + 0.25f);
+                    RunCritMultiplier = Mathf.Min(TalentCritDamageCap, RunCritMultiplier + TalentCritDamageStep);
                     break;
                 case RunLevelChoice.Lifesteal:
                     if (!CanOfferLifesteal) break;
-                    RunLifesteal = Mathf.Min(0.2f, RunLifesteal + 0.03f);
+                    RunLifesteal = Mathf.Min(TalentLifestealCap, RunLifesteal + TalentLifestealStep);
                     break;
                 case RunLevelChoice.BossHunter:
                     if (!CanOfferBossHunter) break;
-                    RunBossDamageBonus = Mathf.Min(0.8f, RunBossDamageBonus + 0.2f);
+                    RunBossDamageBonus = Mathf.Min(TalentBossCap, RunBossDamageBonus + TalentBossStep);
                     break;
                 case RunLevelChoice.Execute:
                     if (!CanOfferExecute) break;
-                    RunExecuteBonus = Mathf.Min(1.5f, RunExecuteBonus + 0.5f);
+                    RunExecuteBonus = Mathf.Min(TalentExecuteCap, RunExecuteBonus + TalentExecuteStep);
                     break;
                 case RunLevelChoice.GoldFind:
                     if (!CanOfferGoldFind) break;
-                    RunGoldFindMultiplier = Mathf.Min(2f, RunGoldFindMultiplier * 1.15f);
+                    RunGoldFindMultiplier = Mathf.Min(TalentGoldCap, RunGoldFindMultiplier * TalentGoldMul);
                     break;
                 case RunLevelChoice.Regen:
                     if (!CanOfferRegen) break;
-                    RunRegenPerSecond = Mathf.Min(8f, RunRegenPerSecond + 2f);
+                    RunRegenPerSecond = Mathf.Min(TalentRegenCap, RunRegenPerSecond + TalentRegenStep);
                     break;
                 case RunLevelChoice.Shield:
                     if (!CanOfferShield) break;
@@ -734,27 +784,27 @@ namespace ProjectZx.Player
                     break;
                 case RunLevelChoice.Berserk:
                     if (!CanOfferBerserk) break;
-                    RunBerserkBonus = Mathf.Min(0.5f, RunBerserkBonus + 0.25f);
+                    RunBerserkBonus = Mathf.Min(TalentBerserkCap, RunBerserkBonus + TalentBerserkStep);
                     break;
                 case RunLevelChoice.XpBoost:
                     if (!CanOfferXpBoost) break;
-                    RunXpMultiplier = Mathf.Min(2f, RunXpMultiplier * 1.15f);
+                    RunXpMultiplier = Mathf.Min(TalentXpCap, RunXpMultiplier * TalentXpMul);
                     break;
                 case RunLevelChoice.Defense:
                     if (!CanOfferDefenseTalent) break;
-                    RunDamageTakenReduction = Mathf.Min(0.40f, RunDamageTakenReduction + 0.08f);
+                    RunDamageTakenReduction = Mathf.Min(TalentDefenseCap, RunDamageTakenReduction + TalentDefenseStep);
                     break;
                 case RunLevelChoice.Block:
                     if (!CanOfferBlockTalent) break;
-                    RunBlockChance = Mathf.Min(0.50f, RunBlockChance + 0.05f);
+                    RunBlockChance = Mathf.Min(TalentBlockCap, RunBlockChance + TalentBlockStep);
                     break;
                 case RunLevelChoice.Multishot:
                     if (!CanOfferMultishotTalent) break;
-                    RunMultishotChance = Mathf.Min(0.99f, RunMultishotChance + 0.33f);
+                    RunMultishotChance = Mathf.Min(TalentMultishotCap, RunMultishotChance + TalentMultishotStep);
                     break;
                 case RunLevelChoice.Pierce:
                     if (!CanOfferPierceTalent) break;
-                    RunPierceBonus = Mathf.Min(6, RunPierceBonus + 2);
+                    RunPierceBonus = Mathf.Min(TalentPierceCap, RunPierceBonus + TalentPierceStep);
                     break;
             }
 
@@ -871,7 +921,7 @@ namespace ProjectZx.Player
             if (RunRegenPerSecond > 0f)
                 sb.AppendLine($"Regen {RunRegenPerSecond:0.#}/s OOC");
             if (RunShieldUnlocked)
-                sb.AppendLine("Shield: armed every 12s");
+                sb.AppendLine($"Shield: armed every {ShieldCooldownSeconds:0}s");
             if (RunMultishotChance > 0f)
                 sb.AppendLine($"Multishot {RunMultishotChance * 100f:0}%");
             if (RunPierceBonus > 0)

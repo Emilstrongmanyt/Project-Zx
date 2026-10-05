@@ -781,7 +781,7 @@ namespace ProjectZx.UI
             for (var i = 0; i < choices.Count; i++)
             {
                 var choice = choices[i];
-                var label = PlayerStats.GetChoiceLabel(choice);
+                var label = PlayerStats.GetChoiceLabel(choice, _stats);
                 var y = yStart + yStep * i;
                 CreateChoiceButton(_choiceButtonRoot, label, new Vector2(0f, y), () => ChooseUpgrade(choice), _choiceButtons);
             }
