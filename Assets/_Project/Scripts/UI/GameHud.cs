@@ -212,7 +212,7 @@ namespace ProjectZx.UI
             }
 
             ShowAchievementToast(def);
-            if (def.Id == AchievementId.ZombieStomper100000)
+            if (def.Id == AchievementId.ZombieStomper50000)
                 ShowBanner("Paladin unlocked! Equip mace and shield in Build Loadout.", 3.5f);
         }
 

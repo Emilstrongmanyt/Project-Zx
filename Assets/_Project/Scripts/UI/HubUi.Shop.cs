@@ -408,7 +408,7 @@ namespace ProjectZx.UI
             RefreshClassButton(picker.BowmanButton, PlayerClass.Bowman, GameSave.BowmanUnlocked, "Bowman — Warded Halls R30 clear");
             RefreshClassButton(picker.SamuraiButton, PlayerClass.Samurai, GameSave.SamuraiUnlocked, "Samurai — Ironvault R40 boss");
             RefreshClassButton(picker.MagicianButton, PlayerClass.Magician, GameSave.MagicianUnlocked, "Magician — Endless Front R80");
-            RefreshClassButton(picker.PaladinButton, PlayerClass.Paladin, GameSave.PaladinUnlocked, "Paladin — 100,000 enemies");
+            RefreshClassButton(picker.PaladinButton, PlayerClass.Paladin, GameSave.PaladinUnlocked, $"Paladin — {GameSave.PaladinUnlockKills:N0} enemies");
         }
 
         static void RefreshClassButton(Button button, PlayerClass playerClass, bool unlocked, string lockedLabel)

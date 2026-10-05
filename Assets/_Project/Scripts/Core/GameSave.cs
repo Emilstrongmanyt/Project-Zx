@@ -1009,7 +1009,7 @@ namespace ProjectZx.Core
         }
 
         /// <summary>Zombies and bosses combined. Paladin unlocks at <see cref="PaladinUnlockKills"/>.</summary>
-        public const int PaladinUnlockKills = 100000;
+        public const int PaladinUnlockKills = 50000;
 
         public static int LifetimeEnemiesDefeated => Mathf.Max(0, LifetimeZombieKills) + Mathf.Max(0, LifetimeBossKills);
 

@@ -1389,7 +1389,7 @@ namespace ProjectZx.UI
                 $"Bowman: {(GameSave.BowmanUnlocked ? "Unlocked" : "Locked")}\n" +
                 $"Samurai: {(GameSave.SamuraiUnlocked ? "Unlocked" : "Locked")}\n" +
                 $"Magician: {(GameSave.MagicianUnlocked ? "Unlocked" : "Clear Endless Front R80")}\n" +
-                $"Paladin: {(GameSave.PaladinUnlocked ? "Unlocked" : $"{GameSave.LifetimeEnemiesDefeated:N0}/100,000 enemies")}\n" +
+                $"Paladin: {(GameSave.PaladinUnlocked ? "Unlocked" : $"{GameSave.LifetimeEnemiesDefeated:N0}/{GameSave.PaladinUnlockKills:N0} enemies")}\n" +
                 $"RowZi: {(GameSave.RowZiUnlocked ? "Unlocked" : "Meet at Emberwilds R20 door")}\n\n" +
                 "LIFETIME RECORDS\n" +
                 $"Zombie Kills: {GameSave.LifetimeZombieKills}\n" +
