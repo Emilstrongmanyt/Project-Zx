@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ProjectZx.Combat;
 using ProjectZx.Core;
 using ProjectZx.Enemies;
 using ProjectZx.UI;
@@ -33,7 +34,9 @@ namespace ProjectZx.Player
         /// <summary>Bowman only: chance to fire a second arrow.</summary>
         Multishot,
         /// <summary>Bowman only: +2 pierce hits per pick on arrows.</summary>
-        Pierce
+        Pierce,
+        /// <summary>Paladin only: +10% damage and −5% damage taken while standing still.</summary>
+        StandYourGround
     }
 
     public class PlayerStats : MonoBehaviour
@@ -72,6 +75,10 @@ namespace ProjectZx.Player
         const float TalentMultishotCap = 0.99f;
         const int TalentPierceStep = 2;
         const int TalentPierceCap = 6;
+        const float StandYourGroundDamageMultiplier = 1.10f;
+        const float StandYourGroundDamageTakenMultiplier = 0.95f;
+        const float PaladinBlockReflectFraction = 0.40f;
+        const float ShatteringDamageMultiplier = 1.40f;
         const float RegenOutOfCombatDelay = 2f;
 
         public int MaxHp { get; private set; }
@@ -115,6 +122,8 @@ namespace ProjectZx.Player
         public float RunMultishotChance { get; private set; }
         /// <summary>Bowman Pierce talent: extra enemies one arrow can pass through.</summary>
         public int RunPierceBonus { get; private set; }
+        /// <summary>Paladin Stand Your Ground: bonuses while the player is not moving.</summary>
+        public bool RunStandYourGround { get; private set; }
 
         // --- Boss epic crystal talents (run-scoped) ---
         public int EpicOwnedMask { get; private set; }
@@ -202,6 +211,7 @@ namespace ProjectZx.Player
             RunBlockChance = 0f;
             RunMultishotChance = 0f;
             RunPierceBonus = 0;
+            RunStandYourGround = false;
             EpicOwnedMask = 0;
             PendingEpicChoices = 0;
             EpicPicksTaken = 0;
@@ -262,6 +272,7 @@ namespace ProjectZx.Player
             RunBlockChance = leader.RunBlockChance;
             RunMultishotChance = leader.RunMultishotChance;
             RunPierceBonus = leader.RunPierceBonus;
+            RunStandYourGround = leader.RunStandYourGround;
             RunDamageTakenMultiplier = leader.RunDamageTakenMultiplier;
             RunEpicBossDamageBonus = leader.RunEpicBossDamageBonus;
             RunEpicNormalDamageBonus = leader.RunEpicNormalDamageBonus;
@@ -388,7 +399,50 @@ namespace ProjectZx.Player
             _selfBleedTickTimer = 1f;
         }
 
-        public void TakeDamage(int amount)
+        bool IsPaladin => GetComponent<PlayerCombat>() is { BoundClass: PlayerClass.Paladin };
+
+        /// <summary>Stand Your Ground is active only while the player (not a follower) is standing still.</summary>
+        public bool IsStandYourGroundActive
+        {
+            get
+            {
+                if (!RunStandYourGround) return false;
+                var body = IsCompanion && CompanionLeader != null ? CompanionLeader : this;
+                var mover = body.GetComponent<TapMovement>();
+                return mover != null && !mover.IsMoving;
+            }
+        }
+
+        /// <summary>Paladin: send 40% of a blocked hit back to its source, or the nearest living enemy.</summary>
+        void ReflectPaladinBlock(int incoming, EnemyActor source)
+        {
+            if (!IsPaladin || incoming <= 0) return;
+            var reflected = Mathf.Max(1, Mathf.RoundToInt(incoming * PaladinBlockReflectFraction));
+            var target = source != null && source.IsAlive ? source : FindNearestLivingEnemy();
+            target?.TakeDamage(reflected);
+        }
+
+        static EnemyActor FindNearestLivingEnemy()
+        {
+            EnemyActor best = null;
+            var bestDist = float.MaxValue;
+            var player = GameObject.FindGameObjectWithTag("Player");
+            var origin = player != null ? (Vector2)player.transform.position : Vector2.zero;
+            var enemies = EnemyRegistry.All;
+            for (var i = 0; i < enemies.Count; i++)
+            {
+                var enemy = enemies[i];
+                if (enemy == null || !enemy.IsAlive) continue;
+                var dist = Vector2.Distance(origin, enemy.transform.position);
+                if (dist >= bestDist) continue;
+                bestDist = dist;
+                best = enemy;
+            }
+
+            return best;
+        }
+
+        public void TakeDamage(int amount, EnemyActor source = null)
         {
             if (IsDead || amount <= 0 || IsCompanion) return;
             if (_invulnTimer > 0f) return;
@@ -398,6 +452,7 @@ namespace ProjectZx.Player
                 _shieldReady = false;
                 _shieldCooldown = ShieldCooldownSeconds;
                 FloatingDamageNumber.SpawnBlock(transform.position);
+                ReflectPaladinBlock(amount, source);
                 return;
             }
 
@@ -407,6 +462,7 @@ namespace ProjectZx.Player
             {
                 _timeSinceDamaged = 0f;
                 FloatingDamageNumber.SpawnBlock(transform.position);
+                ReflectPaladinBlock(amount, source);
                 return;
             }
 
@@ -420,6 +476,9 @@ namespace ProjectZx.Player
 
             if (RunDamageTakenMultiplier > 1.001f || RunDamageTakenMultiplier < 0.999f)
                 amount = Mathf.Max(1, Mathf.RoundToInt(amount * RunDamageTakenMultiplier));
+
+            if (IsStandYourGroundActive)
+                amount = Mathf.Max(1, Mathf.RoundToInt(amount * StandYourGroundDamageTakenMultiplier));
 
             if (RunIronVeil && _ironVeilAbsorb > 0f)
             {
@@ -627,6 +686,10 @@ namespace ProjectZx.Player
         public bool CanOfferPierceTalent =>
             GameSessionContext.SelectedClass == PlayerClass.Bowman
             && RunPierceBonus < TalentPierceCap;
+        /// <summary>Paladin Stand Your Ground: one pick per run.</summary>
+        public bool CanOfferStandYourGround =>
+            GameSessionContext.SelectedClass == PlayerClass.Paladin
+            && !RunStandYourGround;
 
         public static List<RunLevelChoice> RollLevelUpChoices(PlayerStats stats, int count = 4)
         {
@@ -677,6 +740,7 @@ namespace ProjectZx.Player
                 if (stats.CanOfferXpBoost) pool.Add(RunLevelChoice.XpBoost);
                 if (stats.CanOfferDefenseTalent) pool.Add(RunLevelChoice.Defense);
                 if (stats.CanOfferBlockTalent) pool.Add(RunLevelChoice.Block);
+                if (stats.CanOfferStandYourGround) pool.Add(RunLevelChoice.StandYourGround);
             }
 
             for (var i = pool.Count - 1; i > 0; i--)
@@ -712,6 +776,7 @@ namespace ProjectZx.Player
                 RunLevelChoice.Block => "+8% Block Chance",
                 RunLevelChoice.Multishot => "+33% Multishot Chance",
                 RunLevelChoice.Pierce => "+2 Pierce",
+                RunLevelChoice.StandYourGround => "Stand Your Ground\n+10% damage, −5% taken while still",
                 _ => choice.ToString()
             };
         }
@@ -805,6 +870,10 @@ namespace ProjectZx.Player
                 case RunLevelChoice.Pierce:
                     if (!CanOfferPierceTalent) break;
                     RunPierceBonus = Mathf.Min(TalentPierceCap, RunPierceBonus + TalentPierceStep);
+                    break;
+                case RunLevelChoice.StandYourGround:
+                    if (!CanOfferStandYourGround) break;
+                    RunStandYourGround = true;
                     break;
             }
 
@@ -922,6 +991,8 @@ namespace ProjectZx.Player
                 sb.AppendLine($"Regen {RunRegenPerSecond:0.#}/s OOC");
             if (RunShieldUnlocked)
                 sb.AppendLine($"Shield: armed every {ShieldCooldownSeconds:0}s");
+            if (RunStandYourGround)
+                sb.AppendLine("Stand Your Ground: +10% dmg, −5% taken while still");
             if (RunMultishotChance > 0f)
                 sb.AppendLine($"Multishot {RunMultishotChance * 100f:0}%");
             if (RunPierceBonus > 0)
@@ -1071,6 +1142,12 @@ namespace ProjectZx.Player
             if (IsExecuteActive)
                 dmg *= 1f + RunExecuteBonus;
 
+            if (IsStandYourGroundActive)
+                dmg *= StandYourGroundDamageMultiplier;
+
+            if (GameSave.ShatteringUnlocked && target != null && target.IsChilled)
+                dmg *= ShatteringDamageMultiplier;
+
             if (target != null)
             {
                 if (target.IsBoss)
@@ -1145,6 +1222,7 @@ namespace ProjectZx.Player
                 RunBlockChance = RunBlockChance,
                 RunMultishotChance = RunMultishotChance,
                 RunPierceBonus = RunPierceBonus,
+                RunStandYourGround = RunStandYourGround,
                 SecondWindChargesUsed = _secondWindChargesUsed,
                 SecondWindUsed = _secondWindChargesUsed > 0,
                 EpicOwnedMask = EpicOwnedMask,
@@ -1203,6 +1281,7 @@ namespace ProjectZx.Player
             RunBlockChance = Mathf.Clamp01(snapshot.RunBlockChance);
             RunMultishotChance = Mathf.Clamp(snapshot.RunMultishotChance, 0f, 0.99f);
             RunPierceBonus = Mathf.Clamp(snapshot.RunPierceBonus, 0, 6);
+            RunStandYourGround = snapshot.RunStandYourGround;
             _secondWindChargesUsed = snapshot.SecondWindChargesUsed > 0
                 ? snapshot.SecondWindChargesUsed
                 : snapshot.SecondWindUsed ? 1 : 0;

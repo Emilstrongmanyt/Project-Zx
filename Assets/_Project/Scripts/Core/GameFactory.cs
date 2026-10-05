@@ -594,6 +594,10 @@ namespace ProjectZx.Core
                 case PlayerClass.Samurai:
                     go.AddComponent<SamuraiCombat>();
                     break;
+                case PlayerClass.Paladin:
+                    var paladin = go.AddComponent<PlayerCombat>();
+                    paladin.Configure(PlayerClass.Paladin);
+                    break;
                 default:
                     go.AddComponent<PlayerCombat>();
                     break;

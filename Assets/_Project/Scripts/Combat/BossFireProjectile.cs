@@ -1,4 +1,5 @@
 using ProjectZx.Core;
+using ProjectZx.Enemies;
 using ProjectZx.Player;
 using ProjectZx.World;
 using UnityEngine;
@@ -22,9 +23,10 @@ namespace ProjectZx.Combat
         int _damage;
         SpriteRenderer _renderer;
         Transform _player;
+        EnemyActor _source;
         bool _hit;
 
-        public static void Spawn(Vector3 origin, Vector2 direction, int damage, float speed = DefaultSpeed, float lifetime = DefaultLifetime)
+        public static void Spawn(Vector3 origin, Vector2 direction, int damage, float speed = DefaultSpeed, float lifetime = DefaultLifetime, EnemyActor source = null)
         {
             var dir = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.left;
             var go = new GameObject("BossFireProjectile");
@@ -42,6 +44,7 @@ namespace ProjectZx.Combat
             proj._velocity = dir * speed;
             proj._life = lifetime;
             proj._damage = Mathf.Max(1, damage);
+            proj._source = source;
             proj._renderer = sr;
             proj._player = GameObject.FindGameObjectWithTag("Player")?.transform;
         }
@@ -65,7 +68,7 @@ namespace ProjectZx.Combat
             if (stats == null || stats.IsDead) return;
 
             _hit = true;
-            stats.TakeDamage(_damage);
+            stats.TakeDamage(_damage, _source);
             Destroy(gameObject);
         }
     }

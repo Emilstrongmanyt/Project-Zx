@@ -1108,7 +1108,7 @@ namespace ProjectZx.Enemies
 
             // Melee touch: play attack anim and apply contact damage.
             BeginMeleeAttackAnim();
-            stats.TakeDamage(_attack);
+            stats.TakeDamage(_attack, this);
             HitFlash.FlashSprite(gameObject);
             HitFlash.FlashSprite(_player.gameObject);
             _contactCooldown = 0.8f;
@@ -1326,7 +1326,7 @@ namespace ProjectZx.Enemies
                     if (stats != null && !stats.IsDead
                         && IsPlayerInFireBreathCone(FireBreathDamageRange))
                     {
-                        stats.TakeDamage(Mathf.RoundToInt(_attack * 0.55f));
+                        stats.TakeDamage(Mathf.RoundToInt(_attack * 0.55f), this);
                         HitFlash.FlashSprite(_player.gameObject);
                     }
                 }
@@ -1474,7 +1474,7 @@ namespace ProjectZx.Enemies
             var leading = _renderer != null && _renderer.flipX ? -1f : 1f;
             var hand = (Vector2)transform.position + new Vector2(leading * 0.85f, 0.45f);
             var damage = Mathf.Max(1, Mathf.RoundToInt(_attack * 0.5f));
-            BossFireProjectile.Spawn(hand, aim, damage, BossProjectileSpeed, BossProjectileLifetime);
+            BossFireProjectile.Spawn(hand, aim, damage, BossProjectileSpeed, BossProjectileLifetime, this);
         }
 
         void UpdateRangedAttack()
@@ -1502,7 +1502,7 @@ namespace ProjectZx.Enemies
             var handScale = Mathf.Max(1f, Mathf.Abs(transform.lossyScale.x) * 0.22f);
             var hand = (Vector2)transform.position + new Vector2(leading * 0.55f * handScale, 0.35f * handScale);
             var damage = Mathf.Max(1, Mathf.RoundToInt(_attack * 0.65f));
-            EnemyRangedProjectile.Spawn(hand, aim, damage, RangedProjectileSpeed, RangedProjectileLifetime);
+            EnemyRangedProjectile.Spawn(hand, aim, damage, RangedProjectileSpeed, RangedProjectileLifetime, this);
         }
 
         void ShowHitSprite()

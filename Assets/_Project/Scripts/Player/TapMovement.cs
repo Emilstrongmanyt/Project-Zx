@@ -32,6 +32,20 @@ namespace ProjectZx.Player
         /// <summary>Current world move speed (shop + run multipliers applied).</summary>
         public float CurrentMoveSpeed => GetSpeed();
 
+        /// <summary>True while the joystick, a walk target, or body velocity is moving this hero.</summary>
+        public bool IsMoving
+        {
+            get
+            {
+                var joyDir = GameSave.UsesJoystickMovement && MovementJoystick.Instance != null
+                    ? MovementJoystick.Instance.Direction
+                    : Vector2.zero;
+                return joyDir.sqrMagnitude > 0.01f
+                       || _moveTarget.HasValue
+                       || (_rb != null && _rb.linearVelocity.sqrMagnitude > 0.01f);
+            }
+        }
+
         Vector2? _moveTarget;
         NpcInteractable _pendingNpc;
         ArenaDoor _pendingDoor;

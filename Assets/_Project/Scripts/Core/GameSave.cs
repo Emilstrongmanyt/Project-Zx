@@ -20,6 +20,7 @@ namespace ProjectZx.Core
         const string WhirlwindKey = "zx_whirlwind";
         const string PiercingShotKey = "zx_piercing_shot";
         const string FrostTipKey = "zx_frost_tip";
+        const string ShatteringKey = "zx_shattering";
         const string GoldMagnetKey = "zx_gold_magnet";
         const string ThickHideKey = "zx_thick_hide";
         const string SecondWindKey = "zx_second_wind";
@@ -51,6 +52,7 @@ namespace ProjectZx.Core
         const string AttackModeBowmanKey = "zx_attack_bowman";
         const string AttackModeMagicianKey = "zx_attack_magician";
         const string AttackModeSamuraiKey = "zx_attack_samurai";
+        const string AttackModePaladinKey = "zx_attack_paladin";
         const string ZombieKillsKey = "zx_lifetime_zombie_kills";
         const string BossKillsKey = "zx_lifetime_boss_kills";
         const string DeathsKey = "zx_lifetime_deaths";
@@ -523,6 +525,17 @@ namespace ProjectZx.Core
             }
         }
 
+        /// <summary>One-time shop upgrade: +40% damage to chilled (slowed) enemies. Requires an Ironvault clear.</summary>
+        public static bool ShatteringUnlocked
+        {
+            get => PlayerPrefs.GetInt(ShatteringKey, 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt(ShatteringKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
         public static bool GoldMagnetUnlocked
         {
             get => PlayerPrefs.GetInt(GoldMagnetKey, 0) == 1;
@@ -937,6 +950,7 @@ namespace ProjectZx.Core
             if (playerClass == PlayerClass.Bowman && !BowmanUnlocked) return PlayerClass.Batter;
             if (playerClass == PlayerClass.Magician && !MagicianUnlocked) return PlayerClass.Batter;
             if (playerClass == PlayerClass.Samurai && !SamuraiUnlocked) return PlayerClass.Batter;
+            if (playerClass == PlayerClass.Paladin && !PaladinUnlocked) return PlayerClass.Batter;
             return playerClass;
         }
 
@@ -966,6 +980,7 @@ namespace ProjectZx.Core
                 PlayerClass.Bowman => AttackModeBowmanKey,
                 PlayerClass.Magician => AttackModeMagicianKey,
                 PlayerClass.Samurai => AttackModeSamuraiKey,
+                PlayerClass.Paladin => AttackModePaladinKey,
                 _ => AttackModeBatterKey
             };
         }
@@ -992,6 +1007,13 @@ namespace ProjectZx.Core
             get => PlayerPrefs.GetInt(BossKillsKey, 0);
             set { PlayerPrefs.SetInt(BossKillsKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
         }
+
+        /// <summary>Zombies and bosses combined. Paladin unlocks at <see cref="PaladinUnlockKills"/>.</summary>
+        public const int PaladinUnlockKills = 100000;
+
+        public static int LifetimeEnemiesDefeated => Mathf.Max(0, LifetimeZombieKills) + Mathf.Max(0, LifetimeBossKills);
+
+        public static bool PaladinUnlocked => LifetimeEnemiesDefeated >= PaladinUnlockKills;
 
         public static int LifetimeDeaths
         {

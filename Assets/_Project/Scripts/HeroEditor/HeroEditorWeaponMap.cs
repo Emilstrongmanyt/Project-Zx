@@ -18,13 +18,16 @@ namespace ProjectZx.HeroEditor
             public readonly bool IsTwoHanded;
             /// <summary>Optional paint tint for [Paint] weapons.</summary>
             public readonly Color? Paint;
+            /// <summary>Optional off-hand shield id. Empty for classes that do not carry one.</summary>
+            public readonly string ShieldId;
 
-            public WeaponVisual(string spriteId, bool isBow, bool isTwoHanded, Color? paint = null)
+            public WeaponVisual(string spriteId, bool isBow, bool isTwoHanded, Color? paint = null, string shieldId = null)
             {
                 SpriteId = spriteId;
                 IsBow = isBow;
                 IsTwoHanded = isTwoHanded;
                 Paint = paint;
+                ShieldId = shieldId;
             }
         }
 
@@ -37,6 +40,7 @@ namespace ProjectZx.HeroEditor
                 PlayerClass.Bowman => new WeaponVisual(BowId(tier), true, false, null),
                 PlayerClass.Magician => new WeaponVisual(WandId(tier), false, false, paint),
                 PlayerClass.Samurai => new WeaponVisual(KatanaId(tier), false, false, paint),
+                PlayerClass.Paladin => new WeaponVisual(MaceId(tier), false, false, paint, ShieldIdForTier(tier)),
                 _ => new WeaponVisual(BatSwordId(tier), false, false, paint)
             };
         }
@@ -73,6 +77,22 @@ namespace ProjectZx.HeroEditor
             <= WeaponMaterialTier.Gold => "FantasyHeroes.Basic.Bow.RangerBow",
             <= WeaponMaterialTier.Platinum => "FantasyHeroes.Basic.Bow.ScoutBow",
             _ => "FantasyHeroes.Basic.Bow.BattleBow"
+        };
+
+        static string MaceId(WeaponMaterialTier tier) => tier switch
+        {
+            <= WeaponMaterialTier.Wooden => "FantasyHeroes.Basic.MeleeWeapon1H.WoodenMace",
+            <= WeaponMaterialTier.Steel => "FantasyHeroes.Basic.MeleeWeapon1H.IronHammer",
+            <= WeaponMaterialTier.Gold => "FantasyHeroes.Basic.MeleeWeapon1H.WarHammer",
+            _ => "FantasyHeroes.Basic.MeleeWeapon1H.DarkStoneHammer"
+        };
+
+        static string ShieldIdForTier(WeaponMaterialTier tier) => tier switch
+        {
+            <= WeaponMaterialTier.Wooden => "FantasyHeroes.Basic.Shield.MilitiamanShield",
+            <= WeaponMaterialTier.Steel => "FantasyHeroes.Basic.Shield.BasicIronShield",
+            <= WeaponMaterialTier.Gold => "FantasyHeroes.Basic.Shield.KnightShield",
+            _ => "FantasyHeroes.Basic.Shield.ChampionShield"
         };
 
         static string WandId(WeaponMaterialTier tier) => tier switch

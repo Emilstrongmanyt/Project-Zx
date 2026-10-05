@@ -5,6 +5,7 @@ using ProjectZx.HeroEditor;
 using ProjectZx.Player;
 using ProjectZx.World;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace ProjectZx.UI
@@ -101,6 +102,7 @@ namespace ProjectZx.UI
 
         void Start()
         {
+            Achievements.EvaluateKillAchievements();
             TryShowLastRunToast();
             // Character creator runs before camp world spawn (GameBootstrap); only onboarding remains here.
             TryShowOnboarding();
@@ -461,7 +463,9 @@ namespace ProjectZx.UI
         {
             var panel = CreateDialogPanel(parent, "AchievementsPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ChallengeBoardUi);
             CreateText(panel.transform, "Achievements", 44, TextAnchor.MiddleCenter, new Vector2(0, 380), new Vector2(700, 58));
-            _achievementCountText = CreateText(panel.transform, "", 28, TextAnchor.MiddleCenter, new Vector2(0, 330), new Vector2(700, 40));
+            _achievementCountText = CreateText(panel.transform, "", 28, TextAnchor.MiddleCenter, new Vector2(0, 338), new Vector2(700, 40));
+            var holdHint = CreateText(panel.transform, "Hold an unfinished achievement to see progress.", 18, TextAnchor.MiddleCenter, new Vector2(0, 302), new Vector2(780, 28));
+            holdHint.color = new Color(0.75f, 0.78f, 0.84f);
 
             var scrollGo = new GameObject("AchievementScroll");
             scrollGo.transform.SetParent(panel.transform, false);
@@ -469,8 +473,8 @@ namespace ProjectZx.UI
             scrollRectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             scrollRectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             scrollRectTransform.pivot = new Vector2(0.5f, 0.5f);
-            scrollRectTransform.anchoredPosition = new Vector2(0f, -14f);
-            scrollRectTransform.sizeDelta = new Vector2(1000f, 600f);
+            scrollRectTransform.anchoredPosition = new Vector2(0f, -28f);
+            scrollRectTransform.sizeDelta = new Vector2(1000f, 560f);
 
             var scroll = scrollGo.AddComponent<ScrollRect>();
             scroll.horizontal = false;
@@ -534,6 +538,7 @@ namespace ProjectZx.UI
             var desc = CreateText(go.transform, def.Description, 24, TextAnchor.UpperLeft, new Vector2(20f, -50f), new Vector2(900f, 36f));
             desc.alignment = TextAnchor.UpperLeft;
             desc.color = new Color(0.88f, 0.9f, 0.95f);
+            go.AddComponent<AchievementHoldProgress>().Bind(def.Id, desc);
 
             return new AchievementRowRefs
             {
@@ -1284,6 +1289,7 @@ namespace ProjectZx.UI
         public void OpenAchievements()
         {
             // Retroactively grant arsenal achievements if progress already unlocked the tiers.
+            Achievements.EvaluateKillAchievements();
             Achievements.EvaluateWeaponTierAchievements();
             RefreshAchievements();
             CloseAllHubPanels();
@@ -1365,6 +1371,7 @@ namespace ProjectZx.UI
                 $"Whirlwind: {(GameSave.WhirlwindUnlocked ? "Owned" : "Locked")}\n" +
                 $"Piercing Shot: {(GameSave.PiercingShotUnlocked ? "Owned" : "Locked")}\n" +
                 $"Frost Tip: {(GameSave.FrostTipUnlocked ? "Owned" : "Locked")}\n" +
+                $"Shattering: {(GameSave.ShatteringUnlocked ? "Owned (+40% vs slowed)" : GameSave.DungeonSurvivalCleared ? "Available" : "Clear Ironvault")}\n" +
                 $"Flame Enchant: {(GameSave.FlameEnchantUnlocked ? "Owned" : "Sir Aldric quest reward")}\n" +
                 $"Gold Magnet: {(GameSave.GoldMagnetUnlocked ? "Owned" : "Locked")}\n" +
                 $"Thick Hide: T{GameSave.ThickHideLevel} ({(1f - GameSave.ThickHideDamageTakenMultiplier) * 100f:0}% DR)\n" +
@@ -1382,6 +1389,7 @@ namespace ProjectZx.UI
                 $"Bowman: {(GameSave.BowmanUnlocked ? "Unlocked" : "Locked")}\n" +
                 $"Samurai: {(GameSave.SamuraiUnlocked ? "Unlocked" : "Locked")}\n" +
                 $"Magician: {(GameSave.MagicianUnlocked ? "Unlocked" : "Clear Endless Front R80")}\n" +
+                $"Paladin: {(GameSave.PaladinUnlocked ? "Unlocked" : $"{GameSave.LifetimeEnemiesDefeated:N0}/100,000 enemies")}\n" +
                 $"RowZi: {(GameSave.RowZiUnlocked ? "Unlocked" : "Meet at Emberwilds R20 door")}\n\n" +
                 "LIFETIME RECORDS\n" +
                 $"Zombie Kills: {GameSave.LifetimeZombieKills}\n" +
@@ -1691,6 +1699,62 @@ namespace ProjectZx.UI
             labelText.horizontalOverflow = HorizontalWrapMode.Wrap;
             labelText.verticalOverflow = VerticalWrapMode.Truncate;
             return button;
+        }
+
+        /// <summary>Hold an unfinished achievement row to replace its description with live progress.</summary>
+        sealed class AchievementHoldProgress : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
+        {
+            const float HoldSeconds = 0.4f;
+
+            AchievementId _id;
+            Text _desc;
+            float _held;
+            bool _pressing;
+            bool _showing;
+
+            public void Bind(AchievementId id, Text desc)
+            {
+                _id = id;
+                _desc = desc;
+            }
+
+            void Update()
+            {
+                if (!_pressing || _showing || _desc == null) return;
+                if (Achievements.IsUnlocked(_id)) return;
+
+                _held += Time.unscaledDeltaTime;
+                if (_held < HoldSeconds) return;
+
+                _desc.text = Achievements.GetHoldProgressText(_id);
+                _desc.color = new Color(1f, 0.92f, 0.55f);
+                _showing = true;
+            }
+
+            public void OnPointerDown(PointerEventData eventData)
+            {
+                if (Achievements.IsUnlocked(_id)) return;
+                _pressing = true;
+                _held = 0f;
+            }
+
+            public void OnPointerUp(PointerEventData eventData) => Release();
+
+            public void OnPointerExit(PointerEventData eventData) => Release();
+
+            void Release()
+            {
+                _pressing = false;
+                _held = 0f;
+                if (!_showing || _desc == null) return;
+
+                var unlocked = Achievements.IsUnlocked(_id);
+                _desc.text = Achievements.GetDef(_id).Description;
+                _desc.color = unlocked
+                    ? new Color(0.92f, 0.96f, 0.98f)
+                    : new Color(0.62f, 0.66f, 0.7f);
+                _showing = false;
+            }
         }
     }
 }

@@ -15,6 +15,7 @@ namespace ProjectZx.Core
         public const int Whirlwind = 250;
         public const int PiercingShot = 4000;
         public const int FrostTip = 3000;
+        public const int Shattering = 3500;
         public const int GoldMagnet = 400;
         public const int ThickHide = 360;
         public const int SecondWind = 800;

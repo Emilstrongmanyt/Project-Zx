@@ -266,6 +266,7 @@ namespace ProjectZx.Core
             PlayerClass.Bowman => "Bowman",
             PlayerClass.Magician => "Magician",
             PlayerClass.Samurai => "Samurai",
+            PlayerClass.Paladin => "Paladin",
             _ => "Batter"
         };
 

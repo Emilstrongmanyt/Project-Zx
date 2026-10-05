@@ -26,7 +26,8 @@ namespace ProjectZx.Core
             if (mode == AttackMode.Whirlwind)
                 return playerClass == PlayerClass.Batter
                        || playerClass == PlayerClass.Spearman
-                       || playerClass == PlayerClass.Samurai;
+                       || playerClass == PlayerClass.Samurai
+                       || playerClass == PlayerClass.Paladin;
             if (mode == AttackMode.PiercingShot)
                 return playerClass == PlayerClass.Bowman;
             return false;
@@ -37,7 +38,7 @@ namespace ProjectZx.Core
             return playerClass switch
             {
                 PlayerClass.Bowman => AttackMode.PiercingShot,
-                PlayerClass.Batter or PlayerClass.Spearman or PlayerClass.Samurai => AttackMode.Whirlwind,
+                PlayerClass.Batter or PlayerClass.Spearman or PlayerClass.Samurai or PlayerClass.Paladin => AttackMode.Whirlwind,
                 _ => AttackMode.Standard
             };
         }
@@ -74,6 +75,8 @@ namespace ProjectZx.Core
                     "Double katana swipe — two 180° arc hits per attack (+40% damage).",
                 AttackMode.Standard when playerClass == PlayerClass.Magician =>
                     "Primary splash spell (+40% damage on main target).",
+                AttackMode.Standard when playerClass == PlayerClass.Paladin =>
+                    "Single-target mace swing (+40% damage). Blocks reflect 40% of the hit.",
                 _ => "Single-target bat swing (+40% damage)."
             };
         }

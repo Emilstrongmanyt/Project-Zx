@@ -45,8 +45,13 @@ namespace ProjectZx.Combat
 
         float WhirlwindAttackRange => BaseAttackRange * WhirlwindRangeMultiplier;
 
+        /// <summary>Batter by default. Paladin shares this attack and keeps its own technique key.</summary>
+        public PlayerClass BoundClass { get; private set; } = PlayerClass.Batter;
+
+        public void Configure(PlayerClass playerClass) => BoundClass = playerClass;
+
         bool UseWhirlwind =>
-            GameSave.GetSelectedAttackMode(PlayerClass.Batter) == AttackMode.Whirlwind
+            GameSave.GetSelectedAttackMode(BoundClass) == AttackMode.Whirlwind
             && GameSave.WhirlwindUnlocked;
 
         void Awake()

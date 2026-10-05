@@ -212,6 +212,8 @@ namespace ProjectZx.UI
             }
 
             ShowAchievementToast(def);
+            if (def.Id == AchievementId.ZombieStomper100000)
+                ShowBanner("Paladin unlocked! Equip mace and shield in Build Loadout.", 3.5f);
         }
 
         void ShowAchievementToast(AchievementDef def)
@@ -783,7 +785,15 @@ namespace ProjectZx.UI
                 var choice = choices[i];
                 var label = PlayerStats.GetChoiceLabel(choice, _stats);
                 var y = yStart + yStep * i;
-                CreateChoiceButton(_choiceButtonRoot, label, new Vector2(0f, y), () => ChooseUpgrade(choice), _choiceButtons);
+                var standStill = choice == RunLevelChoice.StandYourGround;
+                CreateChoiceButton(
+                    _choiceButtonRoot,
+                    label,
+                    new Vector2(0f, y),
+                    () => ChooseUpgrade(choice),
+                    _choiceButtons,
+                    standStill ? new Vector2(540f, 76f) : null,
+                    standStill ? 22 : 28);
             }
         }
 

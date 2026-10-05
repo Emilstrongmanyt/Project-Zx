@@ -25,6 +25,7 @@ namespace ProjectZx.UI
             public Button BowmanButton;
             public Button SamuraiButton;
             public Button MagicianButton;
+            public Button PaladinButton;
         }
 
         ClassPickerRefs _loadoutClassPicker;
@@ -47,7 +48,8 @@ namespace ProjectZx.UI
             CampfireBlessing,
             Whirlwind,
             PiercingShot,
-            FrostTip
+            FrostTip,
+            Shattering
         }
 
         struct UpgradeRowRefs
@@ -66,6 +68,7 @@ namespace ProjectZx.UI
         UpgradeRowRefs _whirlwindRow;
         UpgradeRowRefs _piercingShotRow;
         UpgradeRowRefs _frostTipRow;
+        UpgradeRowRefs _shatteringRow;
         UpgradeRowRefs _goldMagnetRow;
         UpgradeRowRefs _thickHideRow;
         UpgradeRowRefs _secondWindRow;
@@ -138,6 +141,8 @@ namespace ProjectZx.UI
             _piercingShotRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.PiercingShot, y, BuyPiercingShot);
             y += step;
             _frostTipRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.FrostTip, y, BuyFrostTip);
+            y += step;
+            _shatteringRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.Shattering, y, BuyShattering);
 
             contentRect.sizeDelta = new Vector2(0f, Mathf.Abs(y) + 80f);
 
@@ -196,7 +201,7 @@ namespace ProjectZx.UI
             CreateText(panel.transform, "Build Loadout", 38, TextAnchor.MiddleCenter, new Vector2(0, 360), new Vector2(620, 52));
             CreateText(panel.transform, "Your class & technique apply to you and RowZi (she copies this loadout).\nMovement & audio live in Settings.", 18, TextAnchor.MiddleCenter, new Vector2(0, 312), new Vector2(820, 48));
 
-            // Class section (3 rows: Batter/Spearman, Bowman/Samurai, Magician)
+            // Class section (3 rows: Batter/Spearman, Bowman/Samurai, Magician/Paladin)
             _loadoutClassPicker = BuildClassPicker(panel.transform, 255f, 210f, 135f);
 
             // Technique section under Magician row
@@ -241,7 +246,8 @@ namespace ProjectZx.UI
                 SpearmanButton = CreateButton(parent, "Spearman", new Vector2(160, buttonY), () => SelectClass(PlayerClass.Spearman)),
                 BowmanButton = CreateButton(parent, "Bowman", new Vector2(-160, buttonY - 76f), () => SelectClass(PlayerClass.Bowman)),
                 SamuraiButton = CreateButton(parent, "Samurai", new Vector2(160, buttonY - 76f), () => SelectClass(PlayerClass.Samurai)),
-                MagicianButton = CreateButton(parent, "Magician", new Vector2(0, buttonY - 152f), () => SelectClass(PlayerClass.Magician))
+                MagicianButton = CreateButton(parent, "Magician", new Vector2(-160, buttonY - 152f), () => SelectClass(PlayerClass.Magician)),
+                PaladinButton = CreateButton(parent, "Paladin", new Vector2(160, buttonY - 152f), () => SelectClass(PlayerClass.Paladin))
             };
         }
 
@@ -251,6 +257,7 @@ namespace ProjectZx.UI
             if (playerClass == PlayerClass.Bowman && !GameSave.BowmanUnlocked) return;
             if (playerClass == PlayerClass.Samurai && !GameSave.SamuraiUnlocked) return;
             if (playerClass == PlayerClass.Magician && !GameSave.MagicianUnlocked) return;
+            if (playerClass == PlayerClass.Paladin && !GameSave.PaladinUnlocked) return;
             GameSave.SelectedClass = playerClass;
             RefreshLoadoutPanel();
             CampHeroManager.Instance?.RefreshAppearance();
@@ -368,10 +375,11 @@ namespace ProjectZx.UI
         {
             return selected switch
             {
-                PlayerClass.Spearman => "Spearman — 180° arc thrust, 360° whirlwind",
+                PlayerClass.Spearman => "Spearman — 180° arc thrust, 180° whirlwind",
                 PlayerClass.Bowman => "Bowman — strong ranged arrows, piercing upgrade",
                 PlayerClass.Samurai => "Samurai — double 180° katana swipe, triple with Whirlwind",
                 PlayerClass.Magician => "Magician — splash spells",
+                PlayerClass.Paladin => "Paladin — mace and shield, 360° whirlwind, blocks reflect 40%",
                 _ => "Batter — melee bat, 360° whirlwind"
             };
         }
@@ -384,6 +392,7 @@ namespace ProjectZx.UI
                 PlayerClass.Bowman => "Bowman",
                 PlayerClass.Samurai => "Samurai",
                 PlayerClass.Magician => "Magician",
+                PlayerClass.Paladin => "Paladin",
                 _ => "Batter"
             };
         }
@@ -399,6 +408,7 @@ namespace ProjectZx.UI
             RefreshClassButton(picker.BowmanButton, PlayerClass.Bowman, GameSave.BowmanUnlocked, "Bowman — Warded Halls R30 clear");
             RefreshClassButton(picker.SamuraiButton, PlayerClass.Samurai, GameSave.SamuraiUnlocked, "Samurai — Ironvault R40 boss");
             RefreshClassButton(picker.MagicianButton, PlayerClass.Magician, GameSave.MagicianUnlocked, "Magician — Endless Front R80");
+            RefreshClassButton(picker.PaladinButton, PlayerClass.Paladin, GameSave.PaladinUnlocked, "Paladin — 100,000 enemies");
         }
 
         static void RefreshClassButton(Button button, PlayerClass playerClass, bool unlocked, string lockedLabel)
@@ -541,6 +551,7 @@ namespace ProjectZx.UI
             ShopUpgradeKind.Whirlwind => "Whirlwind",
             ShopUpgradeKind.PiercingShot => "Piercing Shot",
             ShopUpgradeKind.FrostTip => "Frost Tip",
+            ShopUpgradeKind.Shattering => "Shattering",
             _ => kind.ToString()
         };
 
@@ -557,6 +568,7 @@ namespace ProjectZx.UI
             ShopUpgradeKind.Whirlwind => "Whirlwind",
             ShopUpgradeKind.PiercingShot => "Piercing Shot",
             ShopUpgradeKind.FrostTip => "Frost Tip",
+            ShopUpgradeKind.Shattering => "Shattering",
             _ => kind.ToString()
         };
 
@@ -657,7 +669,7 @@ namespace ProjectZx.UI
 
                 case ShopUpgradeKind.Whirlwind:
                     return
-                        "One-time upgrade for Batter / Spearman / Samurai.\n\n" +
+                        "One-time upgrade for Batter / Spearman / Samurai / Paladin.\n\n" +
                         "Unlocks a powerful alternate attack technique.\n" +
                         "Enable it in Build Loadout after purchase.\n\n" +
                         (GameSave.WhirlwindUnlocked
@@ -677,11 +689,21 @@ namespace ProjectZx.UI
 
                 case ShopUpgradeKind.FrostTip:
                     return
-                        "One-time upgrade for Batter / Spearman / Bowman / Samurai.\n\n" +
+                        "One-time upgrade for Batter / Spearman / Bowman / Samurai / Paladin.\n\n" +
                         "Hits chill enemies for 1s (−60% move speed).\n\n" +
                         (GameSave.FrostTipUnlocked
                             ? "Status: Owned"
                             : $"Cost: {ShopCosts.FrostTip}g");
+
+                case ShopUpgradeKind.Shattering:
+                    return
+                        "One-time upgrade. Requires an Ironvault clear.\n\n" +
+                        "Your hits deal +40% damage to slowed enemies.\n\n" +
+                        (GameSave.ShatteringUnlocked
+                            ? "Status: Owned"
+                            : !GameSave.DungeonSurvivalCleared
+                                ? "Status: Locked — clear Ironvault Survival"
+                                : $"Cost: {ShopCosts.Shattering}g");
 
                 default:
                     return string.Empty;
@@ -787,6 +809,14 @@ namespace ProjectZx.UI
             if (_loadoutPanel != null && _loadoutPanel.activeSelf) RefreshLoadoutPanel();
         }
 
+        void BuyShattering()
+        {
+            if (GameSave.ShatteringUnlocked || !GameSave.DungeonSurvivalCleared) return;
+            if (!GameSave.TrySpendGold(ShopCosts.Shattering)) return;
+            GameSave.ShatteringUnlocked = true;
+            OnShopUpgradePurchased();
+        }
+
         void OnShopUpgradePurchased()
         {
             RefreshGold();
@@ -830,6 +860,13 @@ namespace ProjectZx.UI
                 SetOwnedRow(_frostTipRow, "Frost Tip");
             else
                 SetUpgradeRow(_frostTipRow, "Frost Tip", ShopCosts.FrostTip, false);
+
+            if (GameSave.ShatteringUnlocked)
+                SetOwnedRow(_shatteringRow, "Shattering");
+            else if (!GameSave.DungeonSurvivalCleared)
+                SetLockedRow(_shatteringRow, "Shattering");
+            else
+                SetUpgradeRow(_shatteringRow, "Shattering", ShopCosts.Shattering, false);
         }
 
         void RefreshThickHideRow()

@@ -13,6 +13,8 @@ namespace ProjectZx.Core
         ZombieStomper1000,
         ZombieStomper5000,
         ZombieStomper10000,
+        ZombieStomper50000,
+        ZombieStomper100000,
         BossSlayer1,
         BossSlayer5,
         BossSlayer10,
@@ -73,6 +75,8 @@ namespace ProjectZx.Core
             new(AchievementId.ZombieStomper1000, "Zombie Stomper IV", "Defeat 1,000 zombies."),
             new(AchievementId.ZombieStomper5000, "Zombie Stomper V", "Defeat 5,000 zombies."),
             new(AchievementId.ZombieStomper10000, "Zombie Stomper VI", "Defeat 10,000 zombies."),
+            new(AchievementId.ZombieStomper50000, "Zombie Stomper VII", "Defeat 50,000 enemies."),
+            new(AchievementId.ZombieStomper100000, "Zombie Stomper VIII", "Defeat 100,000 enemies. Unlocks the Paladin class."),
             new(AchievementId.BossSlayer1, "Boss Slayer I", "Defeat 1 boss."),
             new(AchievementId.BossSlayer5, "Boss Slayer II", "Defeat 5 bosses."),
             new(AchievementId.BossSlayer10, "Boss Slayer III", "Defeat 10 bosses."),
@@ -201,6 +205,103 @@ namespace ProjectZx.Core
                 if (GameSave.LifetimeBossKills >= BossThresholds[i])
                     TryUnlock(BossTiers[i]);
             }
+
+            var defeated = GameSave.LifetimeEnemiesDefeated;
+            if (defeated >= 50000)
+                TryUnlock(AchievementId.ZombieStomper50000);
+            if (defeated >= 100000)
+                TryUnlock(AchievementId.ZombieStomper100000);
+        }
+
+        /// <summary>
+        /// Progress line shown while the player holds an unfinished achievement.
+        /// Counts match the stat that actually unlocks that tier.
+        /// </summary>
+        public static string GetHoldProgressText(AchievementId id)
+        {
+            switch (id)
+            {
+                case AchievementId.ZombieStomper25: return Count(GameSave.LifetimeZombieKills, 25, "zombies");
+                case AchievementId.ZombieStomper100: return Count(GameSave.LifetimeZombieKills, 100, "zombies");
+                case AchievementId.ZombieStomper500: return Count(GameSave.LifetimeZombieKills, 500, "zombies");
+                case AchievementId.ZombieStomper1000: return Count(GameSave.LifetimeZombieKills, 1000, "zombies");
+                case AchievementId.ZombieStomper5000: return Count(GameSave.LifetimeZombieKills, 5000, "zombies");
+                case AchievementId.ZombieStomper10000: return Count(GameSave.LifetimeZombieKills, 10000, "zombies");
+                case AchievementId.ZombieStomper50000: return Count(GameSave.LifetimeEnemiesDefeated, 50000, "enemies");
+                case AchievementId.ZombieStomper100000: return Count(GameSave.LifetimeEnemiesDefeated, 100000, "enemies");
+                case AchievementId.BossSlayer1: return Count(GameSave.LifetimeBossKills, 1, "bosses");
+                case AchievementId.BossSlayer5: return Count(GameSave.LifetimeBossKills, 5, "bosses");
+                case AchievementId.BossSlayer10: return Count(GameSave.LifetimeBossKills, 10, "bosses");
+                case AchievementId.BossSlayer25: return Count(GameSave.LifetimeBossKills, 25, "bosses");
+                case AchievementId.BossSlayer50: return Count(GameSave.LifetimeBossKills, 50, "bosses");
+                case AchievementId.BossSlayer100: return Count(GameSave.LifetimeBossKills, 100, "bosses");
+                case AchievementId.RoundPioneer10: return Count(GameSave.HighestRoundReached, 10, "best round");
+                case AchievementId.RoundPioneer20: return Count(GameSave.HighestRoundReached, 20, "best round");
+                case AchievementId.RoundPioneer30: return Count(GameSave.HighestRoundReached, 30, "best round");
+                case AchievementId.RoundPioneer40: return Count(GameSave.HighestRoundReached, 40, "best round");
+                case AchievementId.RoundPioneer50: return Count(GameSave.HighestRoundReached, 50, "best round");
+                case AchievementId.RoundPioneer60: return Count(GameSave.HighestRoundReached, 60, "best round");
+                case AchievementId.RoundPioneer70: return Count(GameSave.HighestRoundReached, 70, "best round");
+                case AchievementId.RoundPioneer80: return Count(GameSave.HighestRoundReached, 80, "best round");
+                case AchievementId.DungeonDelver:
+                    return GameSave.HighestRoundReached < 20
+                        ? Count(GameSave.HighestRoundReached, 20, "Emberwilds rounds")
+                        : "Progress: enter the Warded Halls door";
+                case AchievementId.InsideArcher:
+                    return GameSave.InsideMapUnlocked
+                        ? "Progress: clear Warded Halls round 30"
+                        : "Progress: Warded Halls is locked";
+                case AchievementId.TogetherAgain:
+                    return "Progress: meet RowZi at the Emberwilds door";
+                case AchievementId.DungeonClearer:
+                    return GameSave.DungeonHighestRoundReached < 40
+                        ? Count(GameSave.DungeonHighestRoundReached, 40, "Ironvault rounds")
+                        : "Progress: enter the Ossuary portal";
+                case AchievementId.CryptClearer:
+                    return GameSave.CryptHighestRoundReached < 50
+                        ? Count(GameSave.CryptHighestRoundReached, 50, "Ossuary rounds")
+                        : "Progress: enter the victory portal";
+                case AchievementId.EndlessHorizon:
+                    return GameSave.CryptHighestRoundReached < 50
+                        ? Count(GameSave.CryptHighestRoundReached, 50, "Ossuary rounds")
+                        : "Progress: clear Silent Ossuary round 50";
+                case AchievementId.IronArsenal:
+                    return Count(BestWeaponStat(GameSave.GetWeaponDungeonBest), 30, "Ironvault rounds");
+                case AchievementId.SteelArsenal:
+                    return Count(BestWeaponStat(GameSave.GetWeaponUnlimitedBest), 20, "Endless Front rounds");
+                case AchievementId.CopperArsenal:
+                    return Count(BestWeaponStat(GameSave.GetWeaponUnlimitedBest), 30, "Endless Front rounds");
+                case AchievementId.SilverArsenal:
+                    return Count(BestWeaponStat(GameSave.GetWeaponUnlimitedBest), 40, "Endless Front rounds");
+                case AchievementId.GoldArsenal:
+                    return Count(BestWeaponStat(GameSave.GetWeaponKillCount), WeaponCatalog.GoldUnlockKills, "weapon kills");
+                case AchievementId.CobaltArsenal:
+                    return Count(BestWeaponStat(GameSave.GetWeaponUnlimitedBest), 60, "Endless Front rounds");
+                case AchievementId.PlatinumArsenal:
+                    return Count(BestWeaponStat(GameSave.GetWeaponUnlimitedBest), 70, "Endless Front rounds");
+                case AchievementId.AdamantineArsenal:
+                    return Count(BestWeaponStat(GameSave.GetWeaponUnlimitedBest), 80, "Endless Front rounds");
+                case AchievementId.CrimsonArsenal:
+                    return Count(BestWeaponStat(GameSave.GetWeaponUnlimitedBest), 90, "Endless Front rounds");
+                case AchievementId.FatefulArsenal:
+                    return Count(BestWeaponStat(GameSave.GetWeaponUnlimitedBest), 100, "Endless Front rounds");
+                default:
+                    return GetDef(id).Description;
+            }
+        }
+
+        static string Count(int current, int target, string noun)
+        {
+            var shown = Mathf.Clamp(current, 0, Mathf.Max(1, target));
+            return $"Progress: {shown:N0} / {target:N0} {noun}";
+        }
+
+        static int BestWeaponStat(Func<PlayerClass, int> read)
+        {
+            var best = 0;
+            foreach (PlayerClass playerClass in Enum.GetValues(typeof(PlayerClass)))
+                best = Mathf.Max(best, read(playerClass));
+            return best;
         }
 
         public static void EvaluateRoundAchievements(int round)

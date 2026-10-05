@@ -6,6 +6,7 @@ namespace ProjectZx.Core
         Spearman = 1,
         Bowman = 2,
         Magician = 3,
-        Samurai = 4
+        Samurai = 4,
+        Paladin = 5
     }
 }

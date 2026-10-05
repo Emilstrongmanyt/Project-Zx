@@ -180,6 +180,9 @@ namespace ProjectZx.HeroEditor
             else
                 EquipById(visual.SpriteId, EquipmentPart.MeleeWeapon1H, visual.Paint);
 
+            if (!string.IsNullOrEmpty(visual.ShieldId))
+                EquipById(visual.ShieldId, EquipmentPart.Shield);
+
             _character.GetReady();
             HideLegacyWeaponSprites();
         }
@@ -230,6 +233,7 @@ namespace ProjectZx.HeroEditor
                 EquipmentPart.MeleeWeapon1H => FindIn(collection.MeleeWeapon1H, id),
                 EquipmentPart.MeleeWeapon2H => FindIn(collection.MeleeWeapon2H, id),
                 EquipmentPart.Bow => FindIn(collection.Bow, id),
+                EquipmentPart.Shield => FindIn(collection.Shield, id),
                 _ => null
             };
         }
@@ -238,6 +242,7 @@ namespace ProjectZx.HeroEditor
         public void HideLegacyWeaponSprites()
         {
             HideNamed("BatPivot");
+            HideNamed("MacePivot");
             HideNamed("SpearPivot");
             HideNamed("KatanaPivot");
             HideNamed("BowPivot");
