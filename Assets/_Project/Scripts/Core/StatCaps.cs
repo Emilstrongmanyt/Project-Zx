@@ -2,7 +2,20 @@ namespace ProjectZx.Core
 {
     public static class StatCaps
     {
-        public const int PermanentMaxHp = 600;
+        public const int BasePermanentMaxHp = 600;
+        /// <summary>Extra shop HP ranks unlocked by clearing Ironvault (12 × +15 HP).</summary>
+        public const int IronvaultBonusMaxHp = 180;
+        /// <summary>Extra permanent damage ranks after Ironvault (+1.00, about 12 shop ranks).</summary>
+        public const float IronvaultBonusDamageMultiplier = 1f;
+        /// <summary>Extra permanent attack-range ranks after Ironvault (+0.50, 10 shop ranks).</summary>
+        public const float IronvaultBonusAttackRangeMultiplier = 0.5f;
+
+        public static int PermanentMaxHp =>
+            IronvaultShopBand ? BasePermanentMaxHp + IronvaultBonusMaxHp : BasePermanentMaxHp;
+
+        /// <summary>True once Ironvault is cleared, including players who have already moved on.</summary>
+        public static bool IronvaultShopBand =>
+            GameSave.DungeonSurvivalCleared || GameSave.CryptSurvivalCleared;
 
         /// <summary>Base permanent caps (before Inside / Dungeon clear progression).</summary>
         public const float BasePermanentMaxSpeedMultiplier = 1.6f;
@@ -49,21 +62,39 @@ namespace ProjectZx.Core
             _ => BasePermanentMaxSpeedMultiplier
         };
 
-        public static float PermanentMaxDamageMultiplier => ProgressionTier switch
+        public static float PermanentMaxDamageMultiplier
         {
-            3 => CryptPermanentMaxDamageMultiplier,
-            2 => DungeonPermanentMaxDamageMultiplier,
-            1 => InsidePermanentMaxDamageMultiplier,
-            _ => BasePermanentMaxDamageMultiplier
-        };
+            get
+            {
+                var cap = ProgressionTier switch
+                {
+                    3 => CryptPermanentMaxDamageMultiplier,
+                    2 => DungeonPermanentMaxDamageMultiplier,
+                    1 => InsidePermanentMaxDamageMultiplier,
+                    _ => BasePermanentMaxDamageMultiplier
+                };
+                if (IronvaultShopBand)
+                    cap += IronvaultBonusDamageMultiplier;
+                return cap;
+            }
+        }
 
-        public static float PermanentMaxAttackRangeMultiplier => ProgressionTier switch
+        public static float PermanentMaxAttackRangeMultiplier
         {
-            3 => CryptPermanentMaxAttackRangeMultiplier,
-            2 => DungeonPermanentMaxAttackRangeMultiplier,
-            1 => InsidePermanentMaxAttackRangeMultiplier,
-            _ => BasePermanentMaxAttackRangeMultiplier
-        };
+            get
+            {
+                var cap = ProgressionTier switch
+                {
+                    3 => CryptPermanentMaxAttackRangeMultiplier,
+                    2 => DungeonPermanentMaxAttackRangeMultiplier,
+                    1 => InsidePermanentMaxAttackRangeMultiplier,
+                    _ => BasePermanentMaxAttackRangeMultiplier
+                };
+                if (IronvaultShopBand)
+                    cap += IronvaultBonusAttackRangeMultiplier;
+                return cap;
+            }
+        }
 
         public static int RunMaxHp => PermanentMaxHp * 2;
         public static float RunMaxSpeedMultiplier => PermanentMaxSpeedMultiplier * 2f;

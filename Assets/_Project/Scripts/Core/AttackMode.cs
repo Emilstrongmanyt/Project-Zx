@@ -48,7 +48,7 @@ namespace ProjectZx.Core
             return mode switch
             {
                 AttackMode.Whirlwind when playerClass == PlayerClass.Samurai => "Triple Slash",
-                AttackMode.Whirlwind when playerClass == PlayerClass.Spearman => "Whirlwind (180°)",
+                AttackMode.Whirlwind when playerClass == PlayerClass.Spearman => "Whirlwind (240°)",
                 AttackMode.Whirlwind => "Whirlwind (360°)",
                 AttackMode.PiercingShot => "Piercing Shot",
                 _ => "Standard"
@@ -62,7 +62,7 @@ namespace ProjectZx.Core
                 AttackMode.Whirlwind when playerClass == PlayerClass.Samurai =>
                     "Three 180° katana swipes per attack — buy Whirlwind in shop, then equip here.",
                 AttackMode.Whirlwind when playerClass == PlayerClass.Spearman =>
-                    "180° front-arc spear sweep — buy in shop, then equip here.",
+                    "240° front-arc spear sweep — buy in shop, then equip here.",
                 AttackMode.Whirlwind =>
                     "Full 360° spin cleave — buy in shop, then equip here.",
                 AttackMode.PiercingShot =>

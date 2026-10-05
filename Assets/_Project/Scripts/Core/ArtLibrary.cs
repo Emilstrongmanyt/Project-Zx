@@ -485,15 +485,21 @@ namespace ProjectZx.Core
             ?? Sparkles;
         public static Sprite GuardianCape => _guardianCape ??=
             TryLoadSprite(Admurin + "guardian_cape", TilePixelsPerUnit) ?? Sparkles;
-        /// <summary>Ember Ring UI icon — pink crystal fallback when dedicated art is missing.</summary>
+        /// <summary>Ember Ring UI icon. Missing art uses a warm tint of the prism ring, never the loot crystal.</summary>
         public static Sprite EmberRing => _emberRing ??=
-            TryLoadSprite(Admurin + "ember_ring", TilePixelsPerUnit) ?? PinkCrystal ?? Sparkles;
+            TryLoadSprite(Admurin + "ember_ring", TilePixelsPerUnit)
+            ?? TintSprite(PrismRing, new Color(1f, 0.42f, 0.18f))
+            ?? Sparkles;
         /// <summary>Tide Necklace UI icon.</summary>
         public static Sprite TideNecklace => _tideNecklace ??=
-            TryLoadSprite(Admurin + "tide_necklace", TilePixelsPerUnit) ?? Necklace ?? Sparkles;
+            TryLoadSprite(Admurin + "tide_necklace", TilePixelsPerUnit)
+            ?? TintSprite(Necklace, new Color(0.45f, 0.82f, 1f))
+            ?? Sparkles;
         /// <summary>Ash Amulet UI icon.</summary>
         public static Sprite AshAmulet => _ashAmulet ??=
-            TryLoadSprite(Admurin + "ash_amulet", TilePixelsPerUnit) ?? EpicCrystal ?? Sparkles2;
+            TryLoadSprite(Admurin + "ash_amulet", TilePixelsPerUnit)
+            ?? TintSprite(SkullNecklace, new Color(0.62f, 0.58f, 0.54f))
+            ?? Sparkles;
         /// <summary>Outrider Helm UI icon (generated tint when sheet missing).</summary>
         public static Sprite OutriderHelm => _outriderHelm ??=
             TryLoadSprite(HeroEditorItems + "outrider_helm", TilePixelsPerUnit)
@@ -2769,6 +2775,47 @@ namespace ProjectZx.Core
 
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.12f, 0.5f), 4f);
+        }
+
+        static Sprite TintSprite(Sprite source, Color tint)
+        {
+            if (source == null || source.texture == null) return null;
+            var rect = source.textureRect;
+            var width = Mathf.RoundToInt(rect.width);
+            var height = Mathf.RoundToInt(rect.height);
+            if (width <= 0 || height <= 0) return source;
+
+            Color[] pixels;
+            try
+            {
+                pixels = source.texture.GetPixels(
+                    Mathf.RoundToInt(rect.x),
+                    Mathf.RoundToInt(rect.y),
+                    width,
+                    height);
+            }
+            catch (UnityException)
+            {
+                return source;
+            }
+
+            for (var i = 0; i < pixels.Length; i++)
+            {
+                var pixel = pixels[i];
+                pixels[i] = new Color(pixel.r * tint.r, pixel.g * tint.g, pixel.b * tint.b, pixel.a);
+            }
+
+            var tex = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            tex.SetPixels(pixels);
+            tex.Apply();
+            var ppu = source.pixelsPerUnit > 1f ? source.pixelsPerUnit : TilePixelsPerUnit;
+            var sprite = Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), ppu);
+            sprite.name = source.name + "Tint";
+            return sprite;
         }
 
         static Sprite CreateHelmIconSprite(Color baseColor)

@@ -26,6 +26,8 @@ namespace ProjectZx.World
         const float MapLootScale = 1.55f / 2.5f;
         // Rings / necklaces / capes / quest pendant — large enough to spot on mobile.
         const float EquipmentPickupScale = 1.7f * 2f;
+        /// <summary>Ground equipment is fit to this world height so sheet icons and crystals stay the same size.</summary>
+        const float EquipmentDropWorldHeight = 1.1f;
         // Silver_Weapon5 is a small sheet sprite — 3× so it reads as a greatsword drop.
         const float KnightsGreatswordScale = EquipmentPickupScale * 3f;
         const float EpicCrystalScale = 0.72f;
@@ -82,12 +84,9 @@ namespace ProjectZx.World
                     _equipmentId = EquipmentCatalog.IsValid((EquipmentId)amount)
                         ? (EquipmentId)amount
                         : EquipmentCatalog.RollRandomDrop();
-                    _renderer.sprite = EquipmentCatalog.GetIcon(_equipmentId) ?? ArtLibrary.GoldCoin;
-                    // HeroEditor helm canvases are huge vs Admurin rings — shrink ground drops only.
-                    var equipScale = EquipmentCatalog.Get(_equipmentId).Slot == EquipmentSlot.Helm
-                        ? EquipmentPickupScale / 3f
-                        : EquipmentPickupScale;
-                    transform.localScale = Vector3.one * equipScale;
+                    var icon = EquipmentCatalog.GetIcon(_equipmentId) ?? ArtLibrary.GoldCoin;
+                    _renderer.sprite = icon;
+                    FitSpriteHeight(icon, EquipmentDropWorldHeight);
                     break;
                 case PickupType.EpicCrystal:
                     _renderer.sprite = ArtLibrary.EpicCrystal;
@@ -112,6 +111,15 @@ namespace ProjectZx.World
                 or PickupType.KnightsGreatsword
                 ? 10
                 : 8;
+        }
+
+        /// <summary>Scale a pickup so its sprite height matches <paramref name="worldHeight"/>.</summary>
+        void FitSpriteHeight(Sprite sprite, float worldHeight)
+        {
+            var height = sprite != null ? sprite.bounds.size.y : 0f;
+            if (height < 0.01f)
+                height = 0.5f;
+            transform.localScale = Vector3.one * (worldHeight / height);
         }
 
         public void InitializeEquipment(EquipmentId equipmentId)

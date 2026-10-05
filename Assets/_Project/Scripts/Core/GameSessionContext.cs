@@ -72,10 +72,12 @@ namespace ProjectZx.Core
         public float RunBlockChance;
         /// <summary>Bowman Multishot dual-arrow chance (0–0.99).</summary>
         public float RunMultishotChance;
-        /// <summary>Bowman Pierce talent extra hits (0–6, +2 per pick).</summary>
+        /// <summary>Bowman Pierce talent extra hits (0–10, +2 per pick).</summary>
         public int RunPierceBonus;
-        /// <summary>Paladin Stand Your Ground was picked this run.</summary>
-        public bool RunStandYourGround;
+        /// <summary>Paladin Stand Firm stacks this run (0–3).</summary>
+        public int RunStandFirmStacks;
+        /// <summary>Bowman Standing Firm stacks this run (0–3).</summary>
+        public int RunStandingFirmStacks;
         /// <summary>How many Second Wind charges have been consumed this run.</summary>
         public int SecondWindChargesUsed;
         /// <summary>Legacy bool for old snapshots; prefer SecondWindChargesUsed.</summary>

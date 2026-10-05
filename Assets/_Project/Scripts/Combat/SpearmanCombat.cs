@@ -19,8 +19,8 @@ namespace ProjectZx.Combat
         const float ThrustAngle = -4f;
         const float ThrustExtend = 0.55f;
         const float WhirlwindRangeMultiplier = 1.15f;
-        /// <summary>Whirlwind: half-width of the 180° arc (90° each side of facing).</summary>
-        const float WhirlwindArcHalfDegrees = 90f;
+        /// <summary>Whirlwind: half-width of the 240° arc (120° each side of facing).</summary>
+        const float WhirlwindArcHalfDegrees = 120f;
 
         [SerializeField] float attackRange = 3.4f;
         [SerializeField] float attackInterval = 0.55f;
@@ -142,7 +142,7 @@ namespace ProjectZx.Combat
             _whirlwindDamageApplied = false;
             _attackTimer = whirlwindDuration;
 
-            // Face the nearest enemy so the 180° arc sweeps the front.
+            // Face the nearest enemy so the 240° arc sweeps the front.
             var nearest = FindClosestEnemy();
             if (nearest != null)
             {
@@ -170,12 +170,12 @@ namespace ProjectZx.Combat
 
             if (_whirlwindSwing)
             {
-                // 180° sweep in front of the hero (not a full 360 spin).
+                // 240° sweep in front of the hero (not a full 360 spin).
                 var progress = 1f - Mathf.Clamp01(_attackTimer / whirlwindDuration);
                 if (!useHeroEditor && _spearPivot != null)
                 {
                     var faceAngle = Mathf.Atan2(_thrustDir.y, _thrustDir.x) * Mathf.Rad2Deg;
-                    var angle = faceAngle + Mathf.Lerp(-90f, 90f, progress);
+                    var angle = faceAngle + Mathf.Lerp(-WhirlwindArcHalfDegrees, WhirlwindArcHalfDegrees, progress);
                     _spearPivot.localScale = Vector3.one;
                     _spearPivot.localRotation = Quaternion.Euler(0f, 0f, angle);
                 }
@@ -239,7 +239,7 @@ namespace ProjectZx.Combat
                 canApplyFrost: true);
         }
 
-        /// <summary>Whirlwind: 180° front arc cleave.</summary>
+        /// <summary>Whirlwind: 240° front arc cleave.</summary>
         void DamageEnemiesInWhirlwindArc(float range)
         {
             var stats = GetComponent<PlayerStats>();

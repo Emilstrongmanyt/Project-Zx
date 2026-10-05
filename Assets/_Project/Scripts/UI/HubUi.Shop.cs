@@ -375,7 +375,7 @@ namespace ProjectZx.UI
         {
             return selected switch
             {
-                PlayerClass.Spearman => "Spearman — 180° arc thrust, 180° whirlwind",
+                PlayerClass.Spearman => "Spearman — spear jab, 240° whirlwind",
                 PlayerClass.Bowman => "Bowman — strong ranged arrows, piercing upgrade",
                 PlayerClass.Samurai => "Samurai — double 180° katana swipe, triple with Whirlwind",
                 PlayerClass.Magician => "Magician — splash spells",
@@ -581,6 +581,7 @@ namespace ProjectZx.UI
                         "Each rank: +15 Max HP (permanent).\n\n" +
                         $"Current Max HP: {GameSave.MaxHp}\n" +
                         $"Cap: {StatCaps.PermanentMaxHp}\n" +
+                        (StatCaps.IronvaultShopBand ? "Ironvault clear unlocked extra ranks.\n" : "") +
                         $"Ranks owned: {GameSave.HpUpgradeLevel}\n" +
                         (GameSave.IsHpUpgradeMaxed
                             ? "Status: MAXED"
@@ -591,6 +592,7 @@ namespace ProjectZx.UI
                         "Each rank: +8% permanent damage.\n\n" +
                         $"Current multiplier: x{GameSave.DamageMultiplier:0.##}\n" +
                         $"Cap: x{StatCaps.PermanentMaxDamageMultiplier:0.#}\n" +
+                        (StatCaps.IronvaultShopBand ? "Ironvault clear unlocked extra ranks.\n" : "") +
                         $"Ranks owned: {GameSave.DamageUpgradeLevel}\n" +
                         (GameSave.IsDamageUpgradeMaxed
                             ? "Status: MAXED"
@@ -611,6 +613,7 @@ namespace ProjectZx.UI
                         "Each rank: +5% permanent attack range.\n\n" +
                         $"Current multiplier: x{GameSave.AttackRangeMultiplier:0.##}\n" +
                         $"Cap: x{StatCaps.PermanentMaxAttackRangeMultiplier:0.#}\n" +
+                        (StatCaps.IronvaultShopBand ? "Ironvault clear unlocked extra ranks.\n" : "") +
                         $"Ranks owned: {GameSave.RangeUpgradeLevel}\n" +
                         (GameSave.IsRangeUpgradeMaxed
                             ? "Status: MAXED"

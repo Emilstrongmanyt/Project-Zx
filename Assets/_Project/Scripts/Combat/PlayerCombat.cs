@@ -39,7 +39,8 @@ namespace ProjectZx.Combat
             {
                 var stats = GetComponent<PlayerStats>();
                 var rangeMul = stats != null ? stats.AttackRangeMultiplier : GameSave.AttackRangeMultiplier;
-                return attackRange * rangeMul;
+                var classMul = BoundClass == PlayerClass.Paladin ? 0.8f : 1f;
+                return attackRange * rangeMul * classMul;
             }
         }
 
