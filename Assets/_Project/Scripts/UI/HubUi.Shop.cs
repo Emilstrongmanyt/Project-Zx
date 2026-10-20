@@ -211,19 +211,21 @@ namespace ProjectZx.UI
             _techniqueStandardButton = CreateButton(panel.transform, "Standard", new Vector2(-160, -155), () => SelectAttackMode(AttackMode.Standard));
             _techniqueSpecialButton = CreateButton(panel.transform, "Special", new Vector2(160, -155), SelectSpecialAttackMode);
 
-            // Weapon material quality (any unlocked tier)
-            CreateText(panel.transform, "Weapon Quality", 26, TextAnchor.MiddleCenter, new Vector2(0, -215), new Vector2(620, 36));
-            _weaponTierStatusText = CreateText(panel.transform, "", 18, TextAnchor.MiddleCenter, new Vector2(0, -255), new Vector2(820, 40));
+            // Weapon material quality (any unlocked tier). The status block is the next-step guide.
+            CreateText(panel.transform, "Weapon Quality", 26, TextAnchor.MiddleCenter, new Vector2(0, -200), new Vector2(620, 36));
+            _weaponTierStatusText = CreateText(panel.transform, "", 17, TextAnchor.MiddleCenter, new Vector2(0, -276), new Vector2(860, 80));
             _weaponTierStatusText.alignment = TextAnchor.UpperCenter;
-            _weaponTierPrevButton = CreateButton(panel.transform, "◀ Lower", new Vector2(-160, -305), () => CycleWeaponTier(-1));
-            _weaponTierNextButton = CreateButton(panel.transform, "Higher ▶", new Vector2(160, -305), () => CycleWeaponTier(1));
+            _weaponTierStatusText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _weaponTierStatusText.verticalOverflow = VerticalWrapMode.Truncate;
+            _weaponTierPrevButton = CreateButton(panel.transform, "◀ Lower", new Vector2(-160, -358), () => CycleWeaponTier(-1));
+            _weaponTierNextButton = CreateButton(panel.transform, "Higher ▶", new Vector2(160, -358), () => CycleWeaponTier(1));
 
-            CreateButton(panel.transform, "Back to Shop", new Vector2(-160, -375), () =>
+            CreateButton(panel.transform, "Back to Shop", new Vector2(-160, -428), () =>
             {
                 panel.SetActive(false);
                 OpenShop();
             });
-            CreateButton(panel.transform, "Close", new Vector2(160, -375), () => panel.SetActive(false));
+            CreateButton(panel.transform, "Close", new Vector2(160, -428), () => panel.SetActive(false));
             panel.SetActive(false);
             return panel;
         }
@@ -303,17 +305,10 @@ namespace ProjectZx.UI
         void RefreshWeaponTierPicker()
         {
             var playerClass = GameSave.SelectedClass;
-            var equipped = GameSave.GetEquippedWeaponTier(playerClass);
-            var max = WeaponCatalog.GetUnlockedTier(playerClass);
             var tiers = WeaponCatalog.GetSelectableTiers(playerClass);
 
             if (_weaponTierStatusText != null)
-            {
-                _weaponTierStatusText.text = tiers.Count <= 1
-                    ? $"Wooden only — unlock Iron (Ironvault R30) and higher materials for this weapon."
-                    : $"Equipped: {WeaponCatalog.GetTierName(equipped)}  ·  {WeaponCatalog.GetPerkSummary(equipped)}\n"
-                      + $"Highest unlocked: {WeaponCatalog.GetTierName(max)}";
-            }
+                _weaponTierStatusText.text = WeaponCatalog.GetLoadoutProgressText(playerClass);
 
             var canCycle = tiers.Count > 1;
             if (_weaponTierPrevButton != null) _weaponTierPrevButton.interactable = canCycle;
@@ -375,12 +370,12 @@ namespace ProjectZx.UI
         {
             return selected switch
             {
-                PlayerClass.Spearman => "Spearman — spear jab, 240° whirlwind",
-                PlayerClass.Bowman => "Bowman — strong ranged arrows, piercing upgrade",
-                PlayerClass.Samurai => "Samurai — double 180° katana swipe, triple with Whirlwind",
-                PlayerClass.Magician => "Magician — splash spells",
-                PlayerClass.Paladin => "Paladin — mace and shield, 360° whirlwind, blocks reflect 40%",
-                _ => "Batter — melee bat, 360° whirlwind"
+                PlayerClass.Spearman => "Spearman — long reach and a hard jab. Sweep is 240°, not a full spin.",
+                PlayerClass.Bowman => "Bowman — longest range and high crit. Weak once a pack reaches you.",
+                PlayerClass.Samurai => "Samurai — close multi-hit crits. Each swing hits softer until a crit lands.",
+                PlayerClass.Magician => "Magician — splash around the main target. Slow casts, soft on one enemy.",
+                PlayerClass.Paladin => "Paladin — more health and defense, short mace (~30% less damage). Blocks reflect 25%.",
+                _ => "Batter — close bat and a full 360° whirlwind. No extra defense or range."
             };
         }
 

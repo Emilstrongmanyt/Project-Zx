@@ -36,6 +36,22 @@ namespace ProjectZx.Core
         public const int SteelUnlockUnlimitedRound = 20;
         public const int GoldUnlockKills = 50000;
 
+        /// <summary>Order players should chase. Gold sits between Silver and Cobalt; Altair is a quest relic, not a step.</summary>
+        static readonly WeaponMaterialTier[] ProgressionLadder =
+        {
+            WeaponMaterialTier.Wooden,
+            WeaponMaterialTier.Iron,
+            WeaponMaterialTier.Steel,
+            WeaponMaterialTier.Copper,
+            WeaponMaterialTier.Silver,
+            WeaponMaterialTier.Gold,
+            WeaponMaterialTier.Cobalt,
+            WeaponMaterialTier.Platinum,
+            WeaponMaterialTier.Adamantine,
+            WeaponMaterialTier.Crimson,
+            WeaponMaterialTier.Fateful
+        };
+
         public const float AoeSplashRadius = 1.85f;
         public const float AoeSplashDamageFraction = 0.45f;
 
@@ -55,23 +71,19 @@ namespace ProjectZx.Core
         {
             GameSave.EnsureWeaponProgressMigrated();
 
-            var tier = WeaponMaterialTier.Wooden;
+            var best = WeaponMaterialTier.Wooden;
+            var bestIndex = TierIndex(best);
+            for (var i = 0; i < ProgressionLadder.Length; i++)
+            {
+                var tier = ProgressionLadder[i];
+                if (!IsTierUnlocked(playerClass, tier)) continue;
+                var index = TierIndex(tier);
+                if (index < bestIndex) continue;
+                bestIndex = index;
+                best = tier;
+            }
 
-            if (IsIronUnlocked(playerClass))
-                tier = WeaponMaterialTier.Iron;
-
-            var u = GameSave.GetWeaponUnlimitedBest(playerClass);
-            if (u >= 20) tier = WeaponMaterialTier.Steel;
-            if (u >= 30) tier = WeaponMaterialTier.Copper;
-            if (u >= 40) tier = WeaponMaterialTier.Silver;
-            if (IsGoldUnlocked(playerClass)) tier = WeaponMaterialTier.Gold;
-            if (u >= 60) tier = WeaponMaterialTier.Cobalt;
-            if (u >= 70) tier = WeaponMaterialTier.Platinum;
-            if (u >= 80) tier = WeaponMaterialTier.Adamantine;
-            if (u >= 90) tier = WeaponMaterialTier.Crimson;
-            if (u >= 100) tier = WeaponMaterialTier.Fateful;
-
-            return tier;
+            return best;
         }
 
         public static bool IsIronUnlocked() => IsIronUnlocked(ActiveClass);
@@ -101,16 +113,8 @@ namespace ProjectZx.Core
             {
                 WeaponMaterialTier.Wooden => true,
                 WeaponMaterialTier.Iron => IsIronUnlocked(playerClass),
-                WeaponMaterialTier.Steel => GameSave.GetWeaponUnlimitedBest(playerClass) >= 20,
-                WeaponMaterialTier.Copper => GameSave.GetWeaponUnlimitedBest(playerClass) >= 30,
-                WeaponMaterialTier.Silver => GameSave.GetWeaponUnlimitedBest(playerClass) >= 40,
                 WeaponMaterialTier.Gold => IsGoldUnlocked(playerClass),
-                WeaponMaterialTier.Cobalt => GameSave.GetWeaponUnlimitedBest(playerClass) >= 60,
-                WeaponMaterialTier.Platinum => GameSave.GetWeaponUnlimitedBest(playerClass) >= 70,
-                WeaponMaterialTier.Adamantine => GameSave.GetWeaponUnlimitedBest(playerClass) >= 80,
-                WeaponMaterialTier.Crimson => GameSave.GetWeaponUnlimitedBest(playerClass) >= 90,
-                WeaponMaterialTier.Fateful => GameSave.GetWeaponUnlimitedBest(playerClass) >= 100,
-                _ => false
+                _ => MeetsUnlimitedRound(playerClass, tier)
             };
         }
 
@@ -316,17 +320,131 @@ namespace ProjectZx.Core
             return null;
         }
 
-        public static string GetUnlockProgressSummary(PlayerClass playerClass)
+        /// <summary>Endless Front round that unlocks this material, or 0 when the tier uses another rule.</summary>
+        public static int UnlimitedUnlockRound(WeaponMaterialTier tier) => tier switch
+        {
+            WeaponMaterialTier.Steel => SteelUnlockUnlimitedRound,
+            WeaponMaterialTier.Copper => 30,
+            WeaponMaterialTier.Silver => 40,
+            WeaponMaterialTier.Cobalt => 60,
+            WeaponMaterialTier.Platinum => 70,
+            WeaponMaterialTier.Adamantine => 80,
+            WeaponMaterialTier.Crimson => 90,
+            WeaponMaterialTier.Fateful => 100,
+            _ => 0
+        };
+
+        static bool MeetsUnlimitedRound(PlayerClass playerClass, WeaponMaterialTier tier)
+        {
+            var round = UnlimitedUnlockRound(tier);
+            return round > 0 && GameSave.GetWeaponUnlimitedBest(playerClass) >= round;
+        }
+
+        /// <summary>
+        /// Next material that is stronger than the highest one already unlocked.
+        /// A skipped Gold tier is reported separately so it is not presented as the upgrade.
+        /// </summary>
+        public static bool TryGetNextTier(PlayerClass playerClass, out WeaponMaterialTier tier)
         {
             GameSave.EnsureWeaponProgressMigrated();
-            var iron = IsIronUnlocked(playerClass)
-                ? "Iron ✓"
-                : $"Iron @ Ironvault R{IronUnlockDungeonRound}";
-            var gold = IsGoldUnlocked(playerClass)
-                ? "Gold ✓"
-                : $"Gold @ {GameSave.GetWeaponKillCount(playerClass):N0}/{GoldUnlockKills:N0} kills";
-            var u = GameSave.GetWeaponUnlimitedBest(playerClass);
-            return $"{iron} · {gold} · Unlimited best R{u} (Steel R20 … Fateful R100, per weapon)";
+            var highestIndex = TierIndex(GetUnlockedTier(playerClass));
+            for (var i = 0; i < ProgressionLadder.Length; i++)
+            {
+                var step = ProgressionLadder[i];
+                if (TierIndex(step) <= highestIndex) continue;
+                if (IsTierUnlocked(playerClass, step)) continue;
+                tier = step;
+                return true;
+            }
+
+            tier = WeaponMaterialTier.Fateful;
+            return false;
+        }
+
+        /// <summary>One sentence: the next stronger material and exactly how this class earns it.</summary>
+        public static string GetNextStepLine(PlayerClass playerClass)
+        {
+            if (!TryGetNextTier(playerClass, out var next))
+                return "Weapon path complete — Fateful is the last material for this class.";
+
+            return $"Next: {GetTierName(next)} — {GetUnlockInstruction(playerClass, next)}";
+        }
+
+        /// <summary>Loadout block: equipped perk, the next step, and the step after that.</summary>
+        public static string GetLoadoutProgressText(PlayerClass playerClass)
+        {
+            var equipped = GetEquippedTier(playerClass);
+            var text = $"Equipped: {GetTierName(equipped)} · {GetPerkSummary(equipped)}\n{GetNextStepLine(playerClass)}";
+            if (TryGetNextTier(playerClass, out var next))
+            {
+                var after = GetStepAfter(next);
+                if (after.HasValue)
+                    text += $"\nAfter that: {GetTierName(after.Value)} — {ShortRequirement(after.Value)}.";
+            }
+
+            var goldNote = GetSkippedGoldNote(playerClass);
+            if (!string.IsNullOrEmpty(goldNote))
+                text += $"\n{goldNote}";
+            return text;
+        }
+
+        public static string GetUnlockProgressSummary(PlayerClass playerClass) =>
+            GetLoadoutProgressText(playerClass);
+
+        static WeaponMaterialTier? GetStepAfter(WeaponMaterialTier tier)
+        {
+            var index = System.Array.IndexOf(ProgressionLadder, tier);
+            if (index < 0 || index + 1 >= ProgressionLadder.Length) return null;
+            return ProgressionLadder[index + 1];
+        }
+
+        static string GetSkippedGoldNote(PlayerClass playerClass)
+        {
+            if (IsGoldUnlocked(playerClass)) return null;
+            if (TierIndex(GetUnlockedTier(playerClass)) <= TierIndex(WeaponMaterialTier.Gold)) return null;
+            var kills = GameSave.GetWeaponKillCount(playerClass);
+            return $"Gold is still open ({kills:N0} / {GoldUnlockKills:N0} kills with this class). Stronger materials are already unlocked.";
+        }
+
+        static string ShortRequirement(WeaponMaterialTier tier)
+        {
+            if (tier == WeaponMaterialTier.Iron)
+                return $"Ironvault round {IronUnlockDungeonRound} with this class";
+            if (tier == WeaponMaterialTier.Gold)
+                return $"{GoldUnlockKills:N0} kills with this class";
+            var round = UnlimitedUnlockRound(tier);
+            if (round > 0)
+                return $"Endless Front round {round} with this class";
+            return GetTierName(tier);
+        }
+
+        static string GetUnlockInstruction(PlayerClass playerClass, WeaponMaterialTier tier)
+        {
+            var who = GetClassDisplayName(playerClass);
+            if (tier == WeaponMaterialTier.Iron)
+            {
+                if (!GameSave.DungeonMapUnlocked)
+                    return $"Ironvault is locked. Clear the Warded Halls gateway, then reach round {IronUnlockDungeonRound} there as {who}.";
+
+                var best = GameSave.GetWeaponDungeonBest(playerClass);
+                return $"Reach Ironvault round {IronUnlockDungeonRound} as {who} (best R{best}). Other classes do not count.";
+            }
+
+            if (tier == WeaponMaterialTier.Gold)
+            {
+                var kills = GameSave.GetWeaponKillCount(playerClass);
+                return $"Defeat {GoldUnlockKills:N0} enemies as {who} ({kills:N0} / {GoldUnlockKills:N0}).";
+            }
+
+            var round = UnlimitedUnlockRound(tier);
+            if (round <= 0)
+                return $"Unlock {GetTierName(tier)} as {who}.";
+
+            if (!GameSave.UnlimitedMapUnlocked)
+                return $"The Endless Front is locked. Clear Silent Ossuary round 50, then reach round {round} there as {who}.";
+
+            var frontBest = GameSave.GetWeaponUnlimitedBest(playerClass);
+            return $"Reach Endless Front round {round} as {who} (best R{frontBest}). Other classes do not count.";
         }
 
         public static string GetUnlockProgressSummary() =>

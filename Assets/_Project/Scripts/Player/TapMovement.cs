@@ -23,8 +23,10 @@ namespace ProjectZx.Player
         const float CastSkin = 0.08f;
         const float StuckClearDelay = 0.35f;
 
-        /// <summary>Default walk speed (−15% vs original 4.5).</summary>
-        public const float DefaultBaseSpeed = 4.5f * 0.85f;
+        /// <summary>Shared with enemy move speed so chases keep the same gap, just slower.</summary>
+        public const float MovePaceScale = 0.70f;
+        /// <summary>Default walk speed: −15% from the original 4.5, then the shared pace scale.</summary>
+        public const float DefaultBaseSpeed = 4.5f * 0.85f * MovePaceScale;
 
         [SerializeField] float baseSpeed = DefaultBaseSpeed;
         [SerializeField] bool allowNpcInteraction = true;

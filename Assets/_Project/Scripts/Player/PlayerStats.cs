@@ -35,7 +35,7 @@ namespace ProjectZx.Player
         Multishot,
         /// <summary>Bowman only: +2 pierce hits per pick on arrows.</summary>
         Pierce,
-        /// <summary>Paladin only: +10% damage and −5% damage taken while standing still. Up to 3 stacks.</summary>
+        /// <summary>Paladin only: +10% damage while standing still. Up to 3 stacks.</summary>
         StandYourGround,
         /// <summary>Bowman only: +10% damage and attack speed while standing still. Up to 3 stacks.</summary>
         StandingFirm
@@ -81,13 +81,13 @@ namespace ProjectZx.Player
         const int StandFirmMaxStacks = 3;
         const int StandingFirmMaxStacks = 3;
         const float StandFirmDamageMultiplier = 1.10f;
-        const float StandFirmDamageTakenPerStack = 0.05f;
         const float StandingFirmMultiplier = 1.10f;
         const float PaladinBonusHpCap = 1.20f;
-        const float PaladinDefenseCap = 0.80f;
+        /// <summary>A step above the shared 60% cap. High enough to feel like a tank, low enough that a pack still hurts.</summary>
+        const float PaladinDefenseCap = 0.65f;
         const float SamuraiBonusCritDamageCap = 1f;
         const float SamuraiBaseCritMultiplier = 2.25f;
-        const float PaladinBlockReflectFraction = 0.40f;
+        const float PaladinBlockReflectFraction = 0.25f;
         const float ShatteringDamageMultiplier = 1.40f;
         const float RegenOutOfCombatDelay = 2f;
 
@@ -448,7 +448,7 @@ namespace ProjectZx.Player
                 ? TalentCritDamageCap + SamuraiBonusCritDamageCap
                 : TalentCritDamageCap;
 
-        /// <summary>Paladin: send 40% of a blocked hit back to its source, or the nearest living enemy.</summary>
+        /// <summary>Paladin: send 25% of a blocked hit back to its source, or the nearest living enemy.</summary>
         void ReflectPaladinBlock(int incoming, EnemyActor source)
         {
             if (!IsPaladin || incoming <= 0) return;
@@ -511,12 +511,6 @@ namespace ProjectZx.Player
 
             if (RunDamageTakenMultiplier > 1.001f || RunDamageTakenMultiplier < 0.999f)
                 amount = Mathf.Max(1, Mathf.RoundToInt(amount * RunDamageTakenMultiplier));
-
-            if (IsStandFirmActive)
-            {
-                var taken = 1f - StandFirmDamageTakenPerStack * RunStandFirmStacks;
-                amount = Mathf.Max(1, Mathf.RoundToInt(amount * taken));
-            }
 
             if (RunIronVeil && _ironVeilAbsorb > 0f)
             {
@@ -819,7 +813,7 @@ namespace ProjectZx.Player
                 RunLevelChoice.Block => "+8% Block Chance",
                 RunLevelChoice.Multishot => "+33% Multishot Chance",
                 RunLevelChoice.Pierce => "+2 Pierce",
-                RunLevelChoice.StandYourGround => "Stand Firm +10% dmg, −5% taken",
+                RunLevelChoice.StandYourGround => "Stand Firm +10% dmg while still",
                 RunLevelChoice.StandingFirm => "Standing Firm +10% dmg/spd",
                 _ => choice.ToString()
             };
@@ -1040,7 +1034,7 @@ namespace ProjectZx.Player
             if (RunShieldUnlocked)
                 sb.AppendLine($"Shield: armed every {ShieldCooldownSeconds:0}s");
             if (RunStandFirmStacks > 0)
-                sb.AppendLine($"Stand Firm x{RunStandFirmStacks}: +10% dmg, −5% taken while still");
+                sb.AppendLine($"Stand Firm x{RunStandFirmStacks}: +10% dmg while still");
             if (RunStandingFirmStacks > 0)
                 sb.AppendLine($"Standing Firm x{RunStandingFirmStacks}: +10% dmg/spd while still");
             if (RunMultishotChance > 0f)

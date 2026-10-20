@@ -31,6 +31,7 @@ namespace ProjectZx.UI
             new("bank_gold", "Hint: Run gold banks when you die, retreat, or take a stage portal home."),
             new("retreat", "Hint: Retreat anytime to bank gold and return to camp safely."),
             new("equipment", "Hint: Find gear in runs, then equip rings / necklaces / capes at the treasure chest."),
+            new("weapon_path", "Hint: Each class upgrades its own weapon. Build Loadout shows the next material."),
             new("pendant_r10", "Hint: Thalor's pendant drops from the Emberwilds R10 boss — turn it in, then clear R20."),
             new("corvin", "Hint: After Warded Halls R10, free the dark crow — then turn in with Corvin at camp."),
             new("aldric", "Hint: Help Sir Aldric leave Ironvault, then recover his greatsword from R40."),
@@ -53,6 +54,14 @@ namespace ProjectZx.UI
 
         public static Tip Get(int index) => All[index % All.Length];
 
+        /// <summary>Camp ticker text. The weapon tip names the selected class's actual next material.</summary>
+        public static string GetDisplayText(Tip tip)
+        {
+            if (tip.Id == "weapon_path")
+                return "Hint: " + WeaponCatalog.GetNextStepLine(GameSave.SelectedClass);
+            return tip.Text;
+        }
+
         public static bool IsEligible(string id)
         {
             return id switch
@@ -68,6 +77,7 @@ namespace ProjectZx.UI
                 "bank_gold" => GameSave.LifetimeDeaths + GameSave.HighestRoundReached < 5,
                 "retreat" => GameSave.HighestRoundReached < 8,
                 "equipment" => GameSave.HighestRoundReached >= 5,
+                "weapon_path" => WeaponCatalog.TryGetNextTier(GameSave.SelectedClass, out _),
                 "joystick" => !GameSave.HasOpenedSettings,
                 "corvin" => GameSave.InsideMapUnlocked && !GameSave.QuestGreyWizardCompleted,
                 "aldric" => GameSave.DungeonMapUnlocked && !GameSave.QuestKnightsBestFriendCompleted,

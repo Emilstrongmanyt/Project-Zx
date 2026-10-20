@@ -1342,6 +1342,7 @@ namespace ProjectZx.UI
             if (selected == PlayerClass.Bowman) baseDamage *= 1.4f;
             else if (selected == PlayerClass.Spearman) baseDamage *= 1.15f;
             else if (selected == PlayerClass.Samurai) baseDamage *= 0.7f;
+            else if (selected == PlayerClass.Paladin) baseDamage *= 0.7f;
             var moveSpeed = TapMovement.DefaultBaseSpeed * GameSave.SpeedMultiplier
                             * EquipmentCatalog.CombinedMoveSpeedMultiplier();
             var maxHp = GameSave.MaxHp + EquipmentCatalog.CombinedBonusMaxHp();
@@ -1363,6 +1364,7 @@ namespace ProjectZx.UI
                 companionLine +
                 $"Movement: {movementLabel}\n" +
                 $"Weapon: {WeaponCatalog.GetTierName(weaponTier)} ({WeaponCatalog.GetPerkSummary(weaponTier)})\n" +
+                $"{WeaponCatalog.GetNextStepLine(selected)}\n" +
                 $"Max HP: {maxHp}\n" +
                 $"Base Damage: {baseDamage:0.#}\n" +
                 $"Move Speed: {moveSpeed:0.##}\n" +
@@ -1385,10 +1387,10 @@ namespace ProjectZx.UI
                 $"Cape: {EquipName(GameSave.EquippedCape)}\n" +
                 $"Helm: {EquipName(GameSave.EquippedHelm)}\n" +
                 $"Equip DR: {EquipmentCatalog.CombinedDamageReduction() * 100f:0}%   Equip Block: {EquipmentCatalog.CombinedBlockChance() * 100f:0}%\n" +
-                $"Spearman: {(GameSave.SpearmanUnlocked ? "Unlocked" : "Locked")}\n" +
-                $"Bowman: {(GameSave.BowmanUnlocked ? "Unlocked" : "Locked")}\n" +
-                $"Samurai: {(GameSave.SamuraiUnlocked ? "Unlocked" : "Locked")}\n" +
-                $"Magician: {(GameSave.MagicianUnlocked ? "Unlocked" : "Clear Endless Front R80")}\n" +
+                $"Spearman: {(GameSave.SpearmanUnlocked ? "Unlocked" : "Defeat the Emberwilds round 20 boss")}\n" +
+                $"Bowman: {(GameSave.BowmanUnlocked ? "Unlocked" : "Clear Warded Halls round 30")}\n" +
+                $"Samurai: {(GameSave.SamuraiUnlocked ? "Unlocked" : "Defeat the Ironvault round 40 boss")}\n" +
+                $"Magician: {(GameSave.MagicianUnlocked ? "Unlocked" : "Reach Endless Front round 80")}\n" +
                 $"Paladin: {(GameSave.PaladinUnlocked ? "Unlocked" : $"{GameSave.LifetimeEnemiesDefeated:N0}/{GameSave.PaladinUnlockKills:N0} enemies")}\n" +
                 $"RowZi: {(GameSave.RowZiUnlocked ? "Unlocked" : "Meet at Emberwilds R20 door")}\n\n" +
                 "LIFETIME RECORDS\n" +
@@ -1399,8 +1401,7 @@ namespace ProjectZx.UI
                 $"Highest Round: {GameSave.HighestRoundReached}\n" +
                 $"Ironvault Best: {GameSave.DungeonHighestRoundReached}\n" +
                 $"Ossuary Best: {GameSave.CryptHighestRoundReached}\n" +
-                $"Endless Front Best: {GameSave.UnlimitedHighestRoundReached}\n" +
-                $"Weapons ({className}): {WeaponCatalog.GetUnlockProgressSummary(selected)}";
+                $"Endless Front Best: {GameSave.UnlimitedHighestRoundReached}";
         }
 
         static string EquipName(EquipmentId id)

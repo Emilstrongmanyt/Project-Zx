@@ -45,8 +45,12 @@ namespace ProjectZx.Enemies
         const float RoundFortyBossStatScale = 4.5f;
         /// <summary>Crypt R50 Minotaur: slightly above Dungeon R40 footprint before map mult.</summary>
         const float RoundFiftyBossStatScale = 5f;
-        /// <summary>Crypt trash packs vs Dungeon elite baseline.</summary>
+        /// <summary>Crypt trash packs vs Dungeon elite baseline. Health and damage only; speed stays with the round cap.</summary>
         const float CryptTrashStatScale = 1.15f;
+        /// <summary>Trash move speed uses rounds up to this, then further rounds add health instead.</summary>
+        const int TrashSpeedRoundCap = 15;
+        /// <summary>Scaling bosses stop gaining move speed after this round. Stage bosses set their own speed.</summary>
+        const int BossSpeedRoundCap = 20;
         const float BossProjectileInterval = 1.5f;
         const float BossProjectileLifetime = 5f;
         const float BossProjectileSpeed = 2.2f;
@@ -179,7 +183,8 @@ namespace ProjectZx.Enemies
             IsRoundFiftyBoss = isRoundFiftyBoss;
             _hp = isBoss ? 220 + round * 30 : 18 + round * 6;
             _attack = isBoss ? 18 + round : 6 + Mathf.FloorToInt(round * 0.6f);
-            _speed = isBoss ? 1.5f + round * 0.03f : 1.2f + round * 0.07f;
+            var speedRound = Mathf.Min(round, isBoss ? BossSpeedRoundCap : TrashSpeedRoundCap);
+            _speed = isBoss ? 1.5f + speedRound * 0.03f : 1.2f + speedRound * 0.07f;
 
             // Inside R30 stage boss: same footprint as Outside R20 boss, 3× that boss's stats.
             if (isRoundThirtyBoss)
@@ -225,12 +230,27 @@ namespace ProjectZx.Enemies
 
                 _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * kindScale));
                 _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * kindScale));
-                _speed *= kindScale;
+                // Higher enemy types stay a step quicker, not twice as fast. The old speed budget is health.
+                var kindSpeed = zombieKind switch
+                {
+                    EnemyZombieKind.InsideElite => 1.08f,
+                    EnemyZombieKind.Inside => 1.04f,
+                    _ => 1f
+                };
+                var kindTank = zombieKind switch
+                {
+                    EnemyZombieKind.InsideElite => 1.45f,
+                    EnemyZombieKind.Inside => 1.25f,
+                    _ => 1f
+                };
+                _speed *= kindSpeed;
+                _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * kindTank));
 
                 var roundScale = Mathf.Pow(1.02f, Mathf.Max(0, round - 1));
+                var speedRoundScale = Mathf.Pow(1.02f, Mathf.Max(0, Mathf.Min(round, TrashSpeedRoundCap) - 1));
                 _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * roundScale));
                 _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * roundScale));
-                _speed *= roundScale;
+                _speed *= speedRoundScale;
 
                 // Outside map zombies only (base kind, not Inside/Dungeon scaled packs).
                 if (zombieKind == EnemyZombieKind.Outside)
@@ -239,33 +259,32 @@ namespace ProjectZx.Enemies
                     _speed *= OutsideZombieStatScale;
                 }
 
-                // Crypt trash: ~15% tougher than Dungeon elite packs.
+                // Crypt trash: tougher than Dungeon elite packs, without a speed bump.
                 if (GameSessionContext.SurvivalMap == SurvivalMapKind.Crypt)
                 {
                     _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * CryptTrashStatScale));
                     _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * CryptTrashStatScale));
-                    _speed *= CryptTrashStatScale;
                 }
 
-                // Dungeon R20–40: pure InsideElite + per-round speed was outpacing player power.
-                // Soften speed hardest; trim HP/ATK slightly so mid–late dungeon stays fair.
+                // Dungeon elites no longer outrun the round cap; a light slow keeps packs readable.
                 if (GameSessionContext.SurvivalMap == SurvivalMapKind.Dungeon && round >= 15)
                 {
                     var late = Mathf.InverseLerp(15f, 40f, round);
-                    var speedSoft = Mathf.Lerp(0.94f, 0.76f, late);
-                    var statSoft = Mathf.Lerp(0.97f, 0.88f, late);
-                    _speed *= speedSoft;
-                    _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * statSoft));
-                    _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * statSoft));
+                    _speed *= Mathf.Lerp(0.96f, 0.88f, late);
                 }
 
-                // Post-R20: fewer trash packs overall, but each enemy hits harder and tanks more.
-                // Early rounds (≤20) keep the original curve.
+                // Past the speed cap, each round adds health instead of pace.
+                // R40 ≈ 2.75×, R100 ≈ 6.95× the pre-cap health curve. Attack stays on a gentler slope.
+                if (round > TrashSpeedRoundCap)
+                {
+                    var tank = 1f + (round - TrashSpeedRoundCap) * 0.07f;
+                    _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * tank));
+                }
+
                 if (round > 20)
                 {
-                    var latePower = 1f + (round - 20) * 0.045f;
-                    _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * latePower));
-                    _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * latePower));
+                    var lateAttack = 1f + (round - 20) * 0.035f;
+                    _attack = Mathf.Max(1, Mathf.RoundToInt(_attack * lateAttack));
                 }
 
                 // Named elites: denser threats with better loot (visual scale applied in factory).
@@ -280,6 +299,9 @@ namespace ProjectZx.Enemies
             // Inside Survival map: every enemy (including bosses) moves 15% slower.
             if (GameSessionContext.SurvivalMap == SurvivalMapKind.Inside)
                 _speed *= InsideMapSpeedScale;
+
+            // Same pace scale as the hero, applied after map and kind modifiers.
+            _speed *= TapMovement.MovePaceScale;
 
             // Inside Survival bosses: 1.5× HP and damage (including R30 stage boss).
             if (isBoss && GameSessionContext.SurvivalMap == SurvivalMapKind.Inside)
@@ -307,6 +329,15 @@ namespace ProjectZx.Enemies
             {
                 _hp = Mathf.Max(1, _hp * 5);
                 _attack = Mathf.Max(1, _attack * 5);
+            }
+
+            // Scaling bosses stop getting faster after round 20. Later rounds add health instead.
+            // Stage bosses already use a fixed speed and a fixed health budget.
+            if (isBoss && round > BossSpeedRoundCap
+                && !isRoundTwentyBoss && !isRoundThirtyBoss && !isRoundFortyBoss && !isRoundFiftyBoss)
+            {
+                var bossTank = 1f + (round - BossSpeedRoundCap) * 0.045f;
+                _hp = Mathf.Max(1, Mathf.RoundToInt(_hp * bossTank));
             }
 
             _rb = GetComponent<Rigidbody2D>();

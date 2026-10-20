@@ -16,6 +16,8 @@ namespace ProjectZx.Combat
         const float WhirlwindRangeMultiplier = 1.2f;
         /// <summary>Standard single-target technique: +40% base damage.</summary>
         const float StandardDamageMultiplier = 1.4f;
+        /// <summary>Paladin mace is about 30% weaker than the Batter swing, on both techniques.</summary>
+        const float PaladinDamageMultiplier = 0.7f;
 
         [SerializeField] float attackRange = 2.15f;
         [SerializeField] float attackInterval = 0.5f;
@@ -45,6 +47,9 @@ namespace ProjectZx.Combat
         }
 
         float WhirlwindAttackRange => BaseAttackRange * WhirlwindRangeMultiplier;
+
+        float ClassDamageMultiplier =>
+            BoundClass == PlayerClass.Paladin ? PaladinDamageMultiplier : 1f;
 
         /// <summary>Batter by default. Paladin shares this attack and keeps its own technique key.</summary>
         public PlayerClass BoundClass { get; private set; } = PlayerClass.Batter;
@@ -121,7 +126,11 @@ namespace ProjectZx.Combat
             _swingFacingRight = enemy.transform.position.x >= transform.position.x;
             HeroEditorCombatBridge.Slash(this, _swingFacingRight, _bodyRenderer);
 
-            CombatDamage.Apply(GetComponent<PlayerStats>(), enemy, StandardDamageMultiplier, canApplyFrost: true);
+            CombatDamage.Apply(
+                GetComponent<PlayerStats>(),
+                enemy,
+                StandardDamageMultiplier * ClassDamageMultiplier,
+                canApplyFrost: true);
         }
 
         void PerformWhirlwind()
@@ -187,7 +196,7 @@ namespace ProjectZx.Combat
         {
             var stats = GetComponent<PlayerStats>();
             foreach (var enemy in FindEnemiesInRange(range))
-                CombatDamage.Apply(stats, enemy, canApplyFrost: true);
+                CombatDamage.Apply(stats, enemy, ClassDamageMultiplier, canApplyFrost: true);
         }
 
         bool HasEnemyInRange(float range)

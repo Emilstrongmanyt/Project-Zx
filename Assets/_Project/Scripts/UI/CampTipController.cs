@@ -144,7 +144,7 @@ namespace ProjectZx.UI
                 var tip = BeginnerTipCatalog.Get(_nextIndex++);
                 if (!BeginnerTipCatalog.IsEligible(tip.Id)) continue;
 
-                _text.text = tip.Text;
+                _text.text = BeginnerTipCatalog.GetDisplayText(tip);
                 _phase = Phase.Show;
                 _phaseElapsed = 0f;
                 return;

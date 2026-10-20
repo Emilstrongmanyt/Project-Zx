@@ -76,7 +76,7 @@ namespace ProjectZx.Core
                 AttackMode.Standard when playerClass == PlayerClass.Magician =>
                     "Primary splash spell (+40% damage on main target).",
                 AttackMode.Standard when playerClass == PlayerClass.Paladin =>
-                    "Single-target mace swing (+40% damage). Blocks reflect 40% of the hit.",
+                    "Short mace swing, about 30% less damage than the bat. Blocked hits reflect 25%.",
                 _ => "Single-target bat swing (+40% damage)."
             };
         }
