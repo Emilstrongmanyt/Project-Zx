@@ -76,44 +76,54 @@ namespace ProjectZx.UI
         GameObject _shopInfoPanel;
         Text _shopInfoTitle;
         Text _shopInfoBody;
+        Text _shopBanner;
+        Text _loadoutBanner;
+        Text _altairRelicLine;
+        ScrollRect _shopScroll;
+
+        const float ShopInfoWidth = 140f;
+        const float ShopBuyWidth = 220f;
+        const float ShopRowHeight = 76f;
+        const float BuyLabelWidth = 178f;
+        const string GoalPlaceholder = "Next step appears here.";
 
         GameObject BuildShopPanel(Transform parent)
         {
             var panel = CreateDialogPanel(parent, "ShopPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
             CreateText(panel.transform, "Upgrade Shop", HubLayout.TitleFont, TextAnchor.MiddleCenter, new Vector2(0, 316), new Vector2(700, 48));
-            CreateText(panel.transform, "Tap Info for full effects & current totals.", 18, TextAnchor.MiddleCenter, new Vector2(0, 268), new Vector2(760, 28));
+            _shopBanner = CreateGoalBanner(panel.transform, new Vector2(0f, 248f));
 
-            // 768×480 at y=0 spans 240 to -240: under the hint, above the footer.
-            var scroll = HubLayout.CreateVerticalScroll(panel.transform, Vector2.zero, new Vector2(768f, 480f), 80f);
-            var contentRect = scroll.content;
+            // Viewport 768×400 at (-20, -20) spans y = -220 to 180. Scrollbar sits in the right 20 px of the 808 band.
+            _shopScroll = HubLayout.CreateVerticalScroll(panel.transform, new Vector2(-20f, -20f), new Vector2(768f, 400f), 400f);
+            var scrollbar = CreateSideScrollbar(panel.transform, new Vector2(394f, -20f), 400f);
+            _shopScroll.verticalScrollbar = scrollbar;
+            _shopScroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
 
-            var y = -10f;
-            const float step = -64f;
-            _hpRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.MaxHp, y, BuyHp);
-            y += step;
-            _damageRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.Damage, y, BuyDamage);
-            y += step;
-            _speedRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.Speed, y, BuySpeed);
-            y += step;
-            _rangeRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.Range, y, BuyRange);
-            y += step;
-            _goldMagnetRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.GoldMagnet, y, BuyGoldMagnet);
-            y += step;
-            _thickHideRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.ThickHide, y, BuyThickHide);
-            y += step;
-            _secondWindRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.SecondWind, y, BuySecondWind);
-            y += step;
-            _campfireBlessingRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.CampfireBlessing, y, BuyCampfireBlessing);
-            y += step;
-            _whirlwindRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.Whirlwind, y, BuyWhirlwind);
-            y += step;
-            _piercingShotRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.PiercingShot, y, BuyPiercingShot);
-            y += step;
-            _frostTipRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.FrostTip, y, BuyFrostTip);
-            y += step;
-            _shatteringRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.Shattering, y, BuyShattering);
+            var content = _shopScroll.content;
+            var rows = content.gameObject.AddComponent<VerticalLayoutGroup>();
+            rows.spacing = 8f;
+            rows.padding = new RectOffset(0, 0, 4, 8);
+            rows.childAlignment = TextAnchor.UpperCenter;
+            rows.childControlWidth = true;
+            rows.childControlHeight = true;
+            rows.childForceExpandWidth = true;
+            rows.childForceExpandHeight = false;
+            var fitter = content.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            contentRect.sizeDelta = new Vector2(0f, Mathf.Abs(y) + 80f);
+            _hpRow = CreateShopUpgradeRow(content, ShopUpgradeKind.MaxHp, BuyHp);
+            _damageRow = CreateShopUpgradeRow(content, ShopUpgradeKind.Damage, BuyDamage);
+            _speedRow = CreateShopUpgradeRow(content, ShopUpgradeKind.Speed, BuySpeed);
+            _rangeRow = CreateShopUpgradeRow(content, ShopUpgradeKind.Range, BuyRange);
+            _goldMagnetRow = CreateShopUpgradeRow(content, ShopUpgradeKind.GoldMagnet, BuyGoldMagnet);
+            _thickHideRow = CreateShopUpgradeRow(content, ShopUpgradeKind.ThickHide, BuyThickHide);
+            _secondWindRow = CreateShopUpgradeRow(content, ShopUpgradeKind.SecondWind, BuySecondWind);
+            _campfireBlessingRow = CreateShopUpgradeRow(content, ShopUpgradeKind.CampfireBlessing, BuyCampfireBlessing);
+            _whirlwindRow = CreateShopUpgradeRow(content, ShopUpgradeKind.Whirlwind, BuyWhirlwind);
+            _piercingShotRow = CreateShopUpgradeRow(content, ShopUpgradeKind.PiercingShot, BuyPiercingShot);
+            _frostTipRow = CreateShopUpgradeRow(content, ShopUpgradeKind.FrostTip, BuyFrostTip);
+            _shatteringRow = CreateShopUpgradeRow(content, ShopUpgradeKind.Shattering, BuyShattering);
 
             var footerY = HubLayout.FooterCenterY;
             var footerSize = new Vector2(248f, 72f);
@@ -156,7 +166,9 @@ namespace ProjectZx.UI
             var cardImage = card.AddComponent<Image>();
             UiSprites.ApplyPanelSprite(cardImage, ArtLibrary.LevelUpUi, largeMenu: false);
 
-            _shopInfoTitle = CreateText(card.transform, "Upgrade Info", 34, TextAnchor.MiddleCenter, new Vector2(0, 230), new Vector2(700, 48));
+            _shopInfoTitle = CreateText(card.transform, "Upgrade Info", 34, TextAnchor.MiddleCenter, new Vector2(0, 240), new Vector2(700, 44));
+            var tapHint = CreateText(card.transform, "Tap Info for full effects & current totals.", 18, TextAnchor.MiddleCenter, new Vector2(0, 198), new Vector2(680, 28));
+            tapHint.color = new Color(0.8f, 0.82f, 0.86f);
             // UpperCenter + padded size so body stays inside the panel frame (not top-left overflow).
             _shopInfoBody = CreateText(card.transform, "", 22, TextAnchor.UpperCenter, new Vector2(0, -72), new Vector2(680, 360));
             _shopInfoBody.alignment = TextAnchor.UpperLeft;
@@ -171,39 +183,61 @@ namespace ProjectZx.UI
             var panel = CreateDialogPanel(parent, "LoadoutPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
             CreateText(panel.transform, "Build Loadout", HubLayout.TitleFont, TextAnchor.MiddleCenter, new Vector2(0, 316), new Vector2(700, 48));
 
-            // Viewport 768×520 at y=20 spans 280 to -240. Body keeps its old spacing,
-            // shifted so the subtitle top sits on the content top. Cycle buttons scroll with it.
-            const float contentHeight = 740f;
             var scroll = HubLayout.CreateVerticalScroll(
                 panel.transform,
                 new Vector2(0f, 20f),
                 new Vector2(768f, 520f),
-                contentHeight);
+                520f);
             var body = scroll.content;
-            float Y(float oldCenter) => oldCenter + (contentHeight * 0.5f - 336f);
+            var column = body.gameObject.AddComponent<VerticalLayoutGroup>();
+            column.spacing = 16f;
+            column.padding = new RectOffset(2, 2, 8, 16);
+            column.childAlignment = TextAnchor.UpperCenter;
+            column.childControlWidth = true;
+            column.childControlHeight = true;
+            column.childForceExpandWidth = false;
+            column.childForceExpandHeight = false;
+            var fitter = body.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            var subtitle = CreateText(body, "Your class & technique apply to you and RowZi (she copies this loadout).\nMovement & audio live in Settings.", 18, TextAnchor.MiddleCenter, new Vector2(0, Y(312f)), new Vector2(760, 48));
-            subtitle.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _loadoutBanner = CreateGoalBanner(body, Vector2.zero);
+            CreateLayoutText(body, "Your class & technique apply to you and RowZi (she copies this loadout).\nMovement & audio live in Settings.", 18, 760f, 48f, TextAnchor.MiddleCenter);
 
-            // Class section (3 rows: Batter/Spearman, Bowman/Samurai, Magician/Paladin)
-            _loadoutClassPicker = BuildClassPicker(body, Y(255f), Y(210f), Y(135f));
+            var classBlock = CreateStack(body, 8f, 760f);
+            CreateLayoutText(classBlock, "Choose Class", 26, 760f, 36f, TextAnchor.MiddleCenter);
+            var classStatus = CreateLayoutText(classBlock, "", 20, 760f, 72f, TextAnchor.MiddleCenter);
 
-            // Technique section under Magician row
-            CreateText(body, "Attack Technique", 26, TextAnchor.MiddleCenter, new Vector2(0, Y(-55f)), new Vector2(620, 36));
-            _techniqueStatusText = CreateText(body, "", 18, TextAnchor.MiddleCenter, new Vector2(0, Y(-95f)), new Vector2(760, 44));
-            _techniqueStatusText.alignment = TextAnchor.UpperCenter;
-            _techniqueStatusText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            _techniqueStandardButton = CreateButton(body, "Standard", new Vector2(-160, Y(-155f)), () => SelectAttackMode(AttackMode.Standard));
-            _techniqueSpecialButton = CreateButton(body, "Special", new Vector2(160, Y(-155f)), SelectSpecialAttackMode);
+            var classGrid = CreateStack(body, 12f, 764f);
+            var batterRow = CreatePairRow(classGrid, 764f, 88f);
+            var spearmanRow = CreatePairRow(classGrid, 764f, 88f);
+            var bowmanRow = CreatePairRow(classGrid, 764f, 88f);
+            _loadoutClassPicker = new ClassPickerRefs
+            {
+                StatusText = classStatus,
+                BatterButton = CreateClassButton(batterRow, "Batter", () => SelectClass(PlayerClass.Batter)),
+                SpearmanButton = CreateClassButton(batterRow, "Spearman", () => SelectClass(PlayerClass.Spearman)),
+                BowmanButton = CreateClassButton(spearmanRow, "Bowman", () => SelectClass(PlayerClass.Bowman)),
+                SamuraiButton = CreateClassButton(spearmanRow, "Samurai", () => SelectClass(PlayerClass.Samurai)),
+                MagicianButton = CreateClassButton(bowmanRow, "Magician", () => SelectClass(PlayerClass.Magician)),
+                PaladinButton = CreateClassButton(bowmanRow, "Paladin", () => SelectClass(PlayerClass.Paladin))
+            };
 
-            // Weapon material quality (any unlocked tier). The status block is the next-step guide.
-            CreateText(body, "Weapon Quality", 26, TextAnchor.MiddleCenter, new Vector2(0, Y(-200f)), new Vector2(620, 36));
-            _weaponTierStatusText = CreateText(body, "", 17, TextAnchor.MiddleCenter, new Vector2(0, Y(-276f)), new Vector2(760, 80));
-            _weaponTierStatusText.alignment = TextAnchor.UpperCenter;
-            _weaponTierStatusText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            _weaponTierStatusText.verticalOverflow = VerticalWrapMode.Truncate;
-            _weaponTierPrevButton = CreateButton(body, "◀ Lower", new Vector2(-160, Y(-358f)), () => CycleWeaponTier(-1));
-            _weaponTierNextButton = CreateButton(body, "Higher ▶", new Vector2(160, Y(-358f)), () => CycleWeaponTier(1));
+            var technique = CreateStack(body, 12f, 760f);
+            CreateLayoutText(technique, "Attack Technique", 26, 760f, 36f, TextAnchor.MiddleCenter);
+            _techniqueStatusText = CreateLayoutText(technique, "", 20, 760f, 64f, TextAnchor.UpperCenter);
+            var techniqueRow = CreatePairRow(technique, 492f, 76f);
+            _techniqueStandardButton = CreatePairButton(techniqueRow, "Standard", 240f, 76f, () => SelectAttackMode(AttackMode.Standard));
+            _techniqueSpecialButton = CreatePairButton(techniqueRow, "Special", 240f, 76f, SelectSpecialAttackMode);
+
+            var weapon = CreateStack(body, 12f, 760f);
+            CreateLayoutText(weapon, "Weapon Quality", 26, 760f, 36f, TextAnchor.MiddleCenter);
+            _weaponTierStatusText = CreateLayoutText(weapon, "", 22, 760f, 160f, TextAnchor.UpperCenter);
+            var cycleRow = CreatePairRow(weapon, 492f, 76f);
+            _weaponTierPrevButton = CreatePairButton(cycleRow, "◀ Lower", 240f, 76f, () => CycleWeaponTier(-1));
+            _weaponTierNextButton = CreatePairButton(cycleRow, "Higher ▶", 240f, 76f, () => CycleWeaponTier(1));
+            _altairRelicLine = CreateLayoutText(weapon, "Altair relic unlocked — cycle to equip (Fateful power).", 20, 760f, 40f, TextAnchor.MiddleCenter);
+            _altairRelicLine.gameObject.SetActive(false);
 
             var footerY = HubLayout.FooterCenterY;
             var footerSize = new Vector2(280f, 72f);
@@ -223,21 +257,6 @@ namespace ProjectZx.UI
                 ? _shopPanel.transform
                 : transform;
             SparkleBurst.Play(parent, Vector2.zero, 16);
-        }
-
-        ClassPickerRefs BuildClassPicker(Transform parent, float titleY, float statusY, float buttonY)
-        {
-            CreateText(parent, "Choose Class", 28, TextAnchor.MiddleCenter, new Vector2(0, titleY), new Vector2(560, 40));
-            return new ClassPickerRefs
-            {
-                StatusText = CreateText(parent, "", 22, TextAnchor.MiddleCenter, new Vector2(0, statusY), new Vector2(720, 44)),
-                BatterButton = CreateButton(parent, "Batter", new Vector2(-160, buttonY), () => SelectClass(PlayerClass.Batter)),
-                SpearmanButton = CreateButton(parent, "Spearman", new Vector2(160, buttonY), () => SelectClass(PlayerClass.Spearman)),
-                BowmanButton = CreateButton(parent, "Bowman", new Vector2(-160, buttonY - 76f), () => SelectClass(PlayerClass.Bowman)),
-                SamuraiButton = CreateButton(parent, "Samurai", new Vector2(160, buttonY - 76f), () => SelectClass(PlayerClass.Samurai)),
-                MagicianButton = CreateButton(parent, "Magician", new Vector2(-160, buttonY - 152f), () => SelectClass(PlayerClass.Magician)),
-                PaladinButton = CreateButton(parent, "Paladin", new Vector2(160, buttonY - 152f), () => SelectClass(PlayerClass.Paladin))
-            };
         }
 
         void SelectClass(PlayerClass playerClass)
@@ -296,6 +315,13 @@ namespace ProjectZx.UI
 
             if (_weaponTierStatusText != null)
                 _weaponTierStatusText.text = WeaponCatalog.GetLoadoutProgressText(playerClass);
+
+            if (_altairRelicLine != null)
+            {
+                var showAltair = GameSave.AltairUnlocked
+                    && WeaponCatalog.GetEquippedTier(playerClass) != WeaponMaterialTier.Altair;
+                _altairRelicLine.gameObject.SetActive(showAltair);
+            }
 
             var canCycle = tiers.Count > 1;
             if (_weaponTierPrevButton != null) _weaponTierPrevButton.interactable = canCycle;
@@ -386,11 +412,11 @@ namespace ProjectZx.UI
                 picker.StatusText.text = GetClassStatusText(selected);
 
             RefreshClassButton(picker.BatterButton, PlayerClass.Batter, true, "Batter");
-            RefreshClassButton(picker.SpearmanButton, PlayerClass.Spearman, GameSave.SpearmanUnlocked, "Spearman — Emberwilds R20 boss");
-            RefreshClassButton(picker.BowmanButton, PlayerClass.Bowman, GameSave.BowmanUnlocked, "Bowman — Warded Halls R30 clear");
-            RefreshClassButton(picker.SamuraiButton, PlayerClass.Samurai, GameSave.SamuraiUnlocked, "Samurai — Ironvault R40 boss");
-            RefreshClassButton(picker.MagicianButton, PlayerClass.Magician, GameSave.MagicianUnlocked, "Magician — Endless Front R80");
-            RefreshClassButton(picker.PaladinButton, PlayerClass.Paladin, GameSave.PaladinUnlocked, $"Paladin — {GameSave.PaladinUnlockKills:N0} enemies");
+            RefreshClassButton(picker.SpearmanButton, PlayerClass.Spearman, GameSave.SpearmanUnlocked, "Spearman\nEmberwilds R20 boss");
+            RefreshClassButton(picker.BowmanButton, PlayerClass.Bowman, GameSave.BowmanUnlocked, "Bowman\nWarded Halls R30 clear");
+            RefreshClassButton(picker.SamuraiButton, PlayerClass.Samurai, GameSave.SamuraiUnlocked, "Samurai\nIronvault R40 boss");
+            RefreshClassButton(picker.MagicianButton, PlayerClass.Magician, GameSave.MagicianUnlocked, "Magician\nEndless Front R80");
+            RefreshClassButton(picker.PaladinButton, PlayerClass.Paladin, GameSave.PaladinUnlocked, $"Paladin\n{GameSave.PaladinUnlockKills:N0} enemies");
         }
 
         static void RefreshClassButton(Button button, PlayerClass playerClass, bool unlocked, string lockedLabel)
@@ -411,7 +437,12 @@ namespace ProjectZx.UI
 
             var label = button.GetComponentInChildren<Text>();
             if (label != null)
+            {
                 label.text = unlocked ? GetClassDisplayName(playerClass) : lockedLabel;
+                label.fontSize = unlocked ? 24 : 18;
+                label.horizontalOverflow = HorizontalWrapMode.Wrap;
+                label.verticalOverflow = VerticalWrapMode.Truncate;
+            }
         }
 
         UpgradeRowRefs CreateUpgradeRow(Transform parent, string label, int cost, float y, Action onBuy)
@@ -423,52 +454,46 @@ namespace ProjectZx.UI
             };
         }
 
-        UpgradeRowRefs CreateShopUpgradeRow(Transform parent, ShopUpgradeKind kind, float y, Action onBuy)
+        UpgradeRowRefs CreateShopUpgradeRow(Transform parent, ShopUpgradeKind kind, Action onBuy)
         {
-            // Fit the 768 viewport: label left -376, Buy right 376. Buy stays 240 so the coin still clears the price.
-            var labelText = CreateText(parent, GetShopRowTitle(kind), 28, TextAnchor.MiddleLeft, new Vector2(-40f, y - 28f), new Vector2(386f, 52f));
-            var labelRect = labelText.GetComponent<RectTransform>();
-            labelRect.anchorMin = new Vector2(0.5f, 1f);
-            labelRect.anchorMax = new Vector2(0.5f, 1f);
-            labelRect.pivot = new Vector2(0.5f, 1f);
-            labelRect.anchoredPosition = new Vector2(-183f, y);
-            labelText.alignment = TextAnchor.MiddleLeft;
-            labelText.horizontalOverflow = HorizontalWrapMode.Overflow;
-            labelText.verticalOverflow = VerticalWrapMode.Truncate;
+            var row = new GameObject(kind + "Row");
+            row.transform.SetParent(parent, false);
+            row.AddComponent<RectTransform>();
+            var layout = row.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 8f;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = true;
+            var rowElement = row.AddComponent<LayoutElement>();
+            rowElement.preferredHeight = ShopRowHeight;
+            rowElement.minHeight = ShopRowHeight;
+            rowElement.flexibleWidth = 1f;
 
-            var infoButton = CreateButton(parent, "Info", new Vector2(73f, y - 28f), () => OpenShopInfo(kind));
-            var infoRect = infoButton.GetComponent<RectTransform>();
-            infoRect.anchorMin = new Vector2(0.5f, 1f);
-            infoRect.anchorMax = new Vector2(0.5f, 1f);
-            infoRect.pivot = new Vector2(0.5f, 1f);
-            infoRect.anchoredPosition = new Vector2(73f, y);
-            infoRect.sizeDelta = new Vector2(110f, 52f);
-            var infoImage = infoButton.GetComponent<Image>();
-            if (infoImage != null)
-                UiSprites.ApplyButtonSprite(infoImage, infoRect.sizeDelta, StoneButtonStyle.Primary);
+            var labelText = CreateText(row.transform, GetShopRowTitle(kind), HubLayout.BodyFont, TextAnchor.MiddleLeft, Vector2.zero, new Vector2(360f, ShopRowHeight));
+            labelText.alignment = TextAnchor.MiddleLeft;
+            labelText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            labelText.verticalOverflow = VerticalWrapMode.Truncate;
+            var labelElement = labelText.gameObject.AddComponent<LayoutElement>();
+            labelElement.flexibleWidth = 1f;
+            labelElement.minWidth = 120f;
+            labelElement.preferredHeight = ShopRowHeight;
+
+            var infoButton = CreateButton(row.transform, "Info", Vector2.zero, () => OpenShopInfo(kind), size: new Vector2(ShopInfoWidth, ShopRowHeight));
+            PinShopButton(infoButton, ShopInfoWidth, StoneButtonStyle.Primary);
             var infoLabel = infoButton.GetComponentInChildren<Text>();
             if (infoLabel != null)
-                infoLabel.fontSize = 22;
+                infoLabel.fontSize = HubLayout.BodyFont;
 
-            var buyButton = CreateButton(parent, "Buy", new Vector2(256f, y - 28f), onBuy, large: true);
-            var buyRect = buyButton.GetComponent<RectTransform>();
-            buyRect.anchorMin = new Vector2(0.5f, 1f);
-            buyRect.anchorMax = new Vector2(0.5f, 1f);
-            buyRect.pivot = new Vector2(0.5f, 1f);
-            buyRect.anchoredPosition = new Vector2(256f, y);
-            buyRect.sizeDelta = new Vector2(240f, 56f);
-            var buyImage = buyButton.GetComponent<Image>();
-            if (buyImage != null)
-                UiSprites.ApplyButtonSprite(buyImage, buyRect.sizeDelta, StoneButtonStyle.Green);
-
-            // Price text sits slightly left so a gold coin icon can sit on the right.
+            var buyButton = CreateButton(row.transform, "Buy", Vector2.zero, onBuy, size: new Vector2(ShopBuyWidth, ShopRowHeight));
+            PinShopButton(buyButton, ShopBuyWidth, StoneButtonStyle.Green);
             var buyLabel = buyButton.GetComponentInChildren<Text>();
             if (buyLabel != null)
             {
-                var buyLabelRect = buyLabel.GetComponent<RectTransform>();
-                buyLabelRect.anchoredPosition = new Vector2(-10f, 0f);
-                buyLabelRect.sizeDelta = new Vector2(180f, 46f);
-                buyLabel.fontSize = 22;
+                buyLabel.fontSize = HubLayout.BodyFont;
+                buyLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
+                buyLabel.verticalOverflow = VerticalWrapMode.Truncate;
             }
 
             var coinIcon = CreateBuyCoinIcon(buyButton.transform);
@@ -497,15 +522,9 @@ namespace ProjectZx.UI
         static string ToRoman(int value)
         {
             if (value <= 0) return "I";
-            value = Mathf.Clamp(value, 1, 40);
-            // Enough for permanent upgrade ranks.
-            string[] romans =
-            {
-                "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X",
-                "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX",
-                "XXI", "XXII", "XXIII", "XXIV", "XXV", "XXVI", "XXVII", "XXVIII", "XXIX", "XXX",
-                "XXXI", "XXXII", "XXXIII", "XXXIV", "XXXV", "XXXVI", "XXXVII", "XXXVIII", "XXXIX", "XL"
-            };
+            // Thick Hide and Second Wind only. A rank past III must not read as XL.
+            string[] romans = { "I", "II", "III" };
+            if (value > romans.Length) return value.ToString();
             return romans[value - 1];
         }
 
@@ -513,8 +532,7 @@ namespace ProjectZx.UI
         {
             if (maxed)
                 return $"{baseName} MAX";
-            // Next purchase is rank ownedLevel+1 (I when none owned).
-            return $"{baseName} {ToRoman(ownedLevel + 1)}";
+            return $"{baseName} {ownedLevel + 1}";
         }
 
         static string GetShopRowTitle(ShopUpgradeKind kind) => kind switch
@@ -568,7 +586,7 @@ namespace ProjectZx.UI
                         $"Ranks owned: {GameSave.HpUpgradeLevel}\n" +
                         (GameSave.IsHpUpgradeMaxed
                             ? "Status: MAXED"
-                            : $"Next rank: {ToRoman(GameSave.HpUpgradeLevel + 1)}  ·  Cost: {ShopCosts.NextHpCost}g");
+                            : $"Next rank: {GameSave.HpUpgradeLevel + 1}  ·  Cost: {ShopCosts.NextHpCost}g");
 
                 case ShopUpgradeKind.Damage:
                     return
@@ -579,17 +597,18 @@ namespace ProjectZx.UI
                         $"Ranks owned: {GameSave.DamageUpgradeLevel}\n" +
                         (GameSave.IsDamageUpgradeMaxed
                             ? "Status: MAXED"
-                            : $"Next rank: {ToRoman(GameSave.DamageUpgradeLevel + 1)}  ·  Cost: {ShopCosts.NextDamageCost}g");
+                            : $"Next rank: {GameSave.DamageUpgradeLevel + 1}  ·  Cost: {ShopCosts.NextDamageCost}g");
 
                 case ShopUpgradeKind.Speed:
                     return
                         "Each rank: +6% permanent move speed.\n\n" +
+                        "Speed ranks stop at the Crypt cap on purpose; later rounds add enemy health, not speed.\n\n" +
                         $"Current multiplier: x{GameSave.SpeedMultiplier:0.##}\n" +
                         $"Cap: x{StatCaps.PermanentMaxSpeedMultiplier:0.#}\n" +
                         $"Ranks owned: {GameSave.SpeedUpgradeLevel}\n" +
                         (GameSave.IsSpeedUpgradeMaxed
                             ? "Status: MAXED"
-                            : $"Next rank: {ToRoman(GameSave.SpeedUpgradeLevel + 1)}  ·  Cost: {ShopCosts.NextSpeedCost}g");
+                            : $"Next rank: {GameSave.SpeedUpgradeLevel + 1}  ·  Cost: {ShopCosts.NextSpeedCost}g");
 
                 case ShopUpgradeKind.Range:
                     return
@@ -600,7 +619,7 @@ namespace ProjectZx.UI
                         $"Ranks owned: {GameSave.RangeUpgradeLevel}\n" +
                         (GameSave.IsRangeUpgradeMaxed
                             ? "Status: MAXED"
-                            : $"Next rank: {ToRoman(GameSave.RangeUpgradeLevel + 1)}  ·  Cost: {ShopCosts.NextRangeCost}g");
+                            : $"Next rank: {GameSave.RangeUpgradeLevel + 1}  ·  Cost: {ShopCosts.NextRangeCost}g");
 
                 case ShopUpgradeKind.GoldMagnet:
                     return
@@ -910,20 +929,15 @@ namespace ProjectZx.UI
                 var image = row.BuyButton.GetComponent<Image>();
                 if (image != null)
                 {
-                    UiSprites.ApplyButtonSprite(image, new Vector2(240f, 56f));
+                    UiSprites.ApplyButtonSprite(image, new Vector2(ShopBuyWidth, ShopRowHeight));
                     image.color = new Color(0.32f, 0.34f, 0.38f, 0.75f);
                 }
 
                 var buyLabel = row.BuyButton.GetComponentInChildren<Text>();
                 if (buyLabel != null)
-                {
-                    buyLabel.text = "Locked";
                     buyLabel.color = new Color(0.72f, 0.74f, 0.78f);
-                }
+                PlaceBuyLabel(buyLabel, row.CoinIcon, "Locked", showCoin: false);
             }
-
-            if (row.CoinIcon != null)
-                row.CoinIcon.enabled = false;
         }
 
         static void SetUpgradeRow(UpgradeRowRefs row, string label, int cost, bool maxed)
@@ -937,21 +951,16 @@ namespace ProjectZx.UI
                 var image = row.BuyButton.GetComponent<Image>();
                 if (image != null)
                 {
-                    UiSprites.ApplyButtonSprite(image, new Vector2(240f, 56f),
+                    UiSprites.ApplyButtonSprite(image, new Vector2(ShopBuyWidth, ShopRowHeight),
                         maxed ? StoneButtonStyle.Primary : StoneButtonStyle.Green);
                     image.color = Color.white;
                 }
 
                 var buyLabel = row.BuyButton.GetComponentInChildren<Text>();
                 if (buyLabel != null)
-                {
-                    buyLabel.text = maxed ? "MAX" : $"Buy {GoldFormat.Abbreviate(cost)}";
                     buyLabel.color = Color.white;
-                }
+                PlaceBuyLabel(buyLabel, row.CoinIcon, maxed ? "MAX" : $"Buy {GoldFormat.Abbreviate(cost)}", showCoin: !maxed);
             }
-
-            if (row.CoinIcon != null)
-                row.CoinIcon.enabled = !maxed;
         }
 
         static void SetOwnedRow(UpgradeRowRefs row, string label)
@@ -965,20 +974,15 @@ namespace ProjectZx.UI
                 var image = row.BuyButton.GetComponent<Image>();
                 if (image != null)
                 {
-                    UiSprites.ApplyButtonSprite(image, new Vector2(240f, 56f));
+                    UiSprites.ApplyButtonSprite(image, new Vector2(ShopBuyWidth, ShopRowHeight));
                     image.color = new Color(0.42f, 0.44f, 0.48f, 0.88f);
                 }
 
                 var buyLabel = row.BuyButton.GetComponentInChildren<Text>();
                 if (buyLabel != null)
-                {
-                    buyLabel.text = "Owned";
                     buyLabel.color = new Color(0.82f, 0.84f, 0.88f);
-                }
+                PlaceBuyLabel(buyLabel, row.CoinIcon, "Owned", showCoin: false);
             }
-
-            if (row.CoinIcon != null)
-                row.CoinIcon.enabled = false;
         }
 
         void BuyWhirlwind()
@@ -1002,10 +1006,10 @@ namespace ProjectZx.UI
             var hint = CreateText(
                 _shopPanel.transform,
                 message,
-                26,
+                22,
                 TextAnchor.MiddleCenter,
-                new Vector2(0f, 360f),
-                new Vector2(900f, 48f));
+                new Vector2(0f, 196f),
+                new Vector2(760f, 32f));
             hint.gameObject.name = "PurchaseHint";
             hint.color = new Color(1f, 0.92f, 0.45f, 1f);
             Destroy(hint.gameObject, 6f);
@@ -1027,6 +1031,194 @@ namespace ProjectZx.UI
             CloseAllHubPanels();
             if (_shopInfoPanel != null) _shopInfoPanel.SetActive(false);
             _shopPanel.SetActive(true);
+            if (_shopScroll != null)
+                _shopScroll.verticalNormalizedPosition = 1f;
+        }
+
+        Text CreateGoalBanner(Transform parent, Vector2 anchoredPosition)
+        {
+            var go = new GameObject("GoalBanner");
+            go.transform.SetParent(parent, false);
+            var rect = go.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = new Vector2(760f, 72f);
+            var image = go.AddComponent<Image>();
+            image.color = new Color(0.08f, 0.07f, 0.05f, 0.55f);
+            image.raycastTarget = false;
+            var element = go.AddComponent<LayoutElement>();
+            element.preferredWidth = 760f;
+            element.preferredHeight = 72f;
+            element.minHeight = 72f;
+            var label = CreateText(go.transform, GoalPlaceholder, HubLayout.BodyFont, TextAnchor.MiddleCenter, Vector2.zero, new Vector2(728f, 64f));
+            label.horizontalOverflow = HorizontalWrapMode.Wrap;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+            return label;
+        }
+
+        static Text CreateLayoutText(Transform parent, string text, int font, float width, float height, TextAnchor anchor)
+        {
+            var label = CreateText(parent, text, font, anchor, Vector2.zero, new Vector2(width, height));
+            label.horizontalOverflow = HorizontalWrapMode.Wrap;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+            var element = label.gameObject.AddComponent<LayoutElement>();
+            element.preferredWidth = width;
+            element.preferredHeight = height;
+            element.minHeight = height;
+            return label;
+        }
+
+        static Transform CreateStack(Transform parent, float spacing, float width)
+        {
+            var go = new GameObject("Section");
+            go.transform.SetParent(parent, false);
+            var rect = go.AddComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(width, 0f);
+            var layout = go.AddComponent<VerticalLayoutGroup>();
+            layout.spacing = spacing;
+            layout.childAlignment = TextAnchor.UpperCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+            var element = go.AddComponent<LayoutElement>();
+            element.preferredWidth = width;
+            return go.transform;
+        }
+
+        static Transform CreatePairRow(Transform parent, float width, float height)
+        {
+            var go = new GameObject("ButtonRow");
+            go.transform.SetParent(parent, false);
+            go.AddComponent<RectTransform>();
+            var layout = go.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 12f;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+            var element = go.AddComponent<LayoutElement>();
+            element.preferredWidth = width;
+            element.preferredHeight = height;
+            element.minHeight = height;
+            return go.transform;
+        }
+
+        static Button CreateClassButton(Transform row, string label, Action onClick) =>
+            CreatePairButton(row, label, 376f, 88f, onClick);
+
+        static Button CreatePairButton(Transform row, string label, float width, float height, Action onClick)
+        {
+            var button = CreateButton(row, label, Vector2.zero, onClick, size: new Vector2(width, height));
+            var element = button.gameObject.AddComponent<LayoutElement>();
+            element.preferredWidth = width;
+            element.minWidth = width;
+            element.preferredHeight = height;
+            element.minHeight = height;
+            var text = button.GetComponentInChildren<Text>();
+            if (text != null)
+            {
+                text.horizontalOverflow = HorizontalWrapMode.Wrap;
+                text.verticalOverflow = VerticalWrapMode.Truncate;
+            }
+
+            return button;
+        }
+
+        static void PinShopButton(Button button, float width, StoneButtonStyle style)
+        {
+            if (button == null) return;
+            var element = button.gameObject.AddComponent<LayoutElement>();
+            element.preferredWidth = width;
+            element.minWidth = width;
+            element.preferredHeight = ShopRowHeight;
+            element.minHeight = ShopRowHeight;
+            element.flexibleWidth = 0f;
+            var image = button.GetComponent<Image>();
+            if (image != null)
+                UiSprites.ApplyButtonSprite(image, new Vector2(width, ShopRowHeight), style);
+        }
+
+        static void PlaceBuyLabel(Text buyLabel, Image coin, string text, bool showCoin)
+        {
+            if (buyLabel == null)
+            {
+                if (coin != null) coin.enabled = showCoin;
+                return;
+            }
+
+            buyLabel.text = text;
+            buyLabel.fontSize = HubLayout.BodyFont;
+            buyLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
+            buyLabel.verticalOverflow = VerticalWrapMode.Truncate;
+            var rect = buyLabel.rectTransform;
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+
+            var useCoin = showCoin && buyLabel.preferredWidth <= BuyLabelWidth;
+            if (coin != null) coin.enabled = useCoin;
+            if (useCoin)
+            {
+                rect.anchoredPosition = new Vector2(-21f, 0f);
+                rect.sizeDelta = new Vector2(BuyLabelWidth, 46f);
+            }
+            else
+            {
+                rect.anchoredPosition = Vector2.zero;
+                rect.sizeDelta = new Vector2(ShopBuyWidth - 14f, 46f);
+            }
+        }
+
+        static Scrollbar CreateSideScrollbar(Transform parent, Vector2 center, float height)
+        {
+            var barGo = new GameObject("Scrollbar");
+            barGo.transform.SetParent(parent, false);
+            var rect = barGo.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = center;
+            rect.sizeDelta = new Vector2(20f, height);
+
+            var background = barGo.AddComponent<Image>();
+            if (StoneUi.Available && StoneUi.ListFrame != null)
+            {
+                background.sprite = StoneUi.ListFrame;
+                background.type = Image.Type.Sliced;
+                background.color = Color.white;
+            }
+            else
+            {
+                background.color = new Color(0.12f, 0.1f, 0.08f, 0.85f);
+            }
+
+            var sliding = new GameObject("Sliding Area");
+            sliding.transform.SetParent(barGo.transform, false);
+            var slidingRect = sliding.AddComponent<RectTransform>();
+            slidingRect.anchorMin = Vector2.zero;
+            slidingRect.anchorMax = Vector2.one;
+            slidingRect.offsetMin = new Vector2(2f, 4f);
+            slidingRect.offsetMax = new Vector2(-2f, -4f);
+
+            var handleGo = new GameObject("Handle");
+            handleGo.transform.SetParent(sliding.transform, false);
+            var handleRect = handleGo.AddComponent<RectTransform>();
+            handleRect.anchorMin = Vector2.zero;
+            handleRect.anchorMax = Vector2.one;
+            handleRect.offsetMin = Vector2.zero;
+            handleRect.offsetMax = Vector2.zero;
+            var handleImage = handleGo.AddComponent<Image>();
+            handleImage.color = new Color(0.78f, 0.7f, 0.5f, 0.95f);
+
+            var scrollbar = barGo.AddComponent<Scrollbar>();
+            scrollbar.handleRect = handleRect;
+            scrollbar.targetGraphic = handleImage;
+            scrollbar.direction = Scrollbar.Direction.BottomToTop;
+            return scrollbar;
         }
 
         public void OpenLoadout()
