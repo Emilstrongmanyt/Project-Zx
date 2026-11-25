@@ -25,37 +25,50 @@ namespace ProjectZx.UI
         GameObject BuildSettingsPanel(Transform parent)
         {
             var panel = CreateDialogPanel(parent, "SettingsPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
-            CreateText(panel.transform, "Settings", 40, TextAnchor.MiddleCenter, new Vector2(0, 360), new Vector2(560, 52));
+            CreateText(panel.transform, "Settings", HubLayout.TitleFont, TextAnchor.MiddleCenter, new Vector2(0, 316), new Vector2(700, 48));
 
-            CreateText(panel.transform, "Movement Control", 28, TextAnchor.MiddleCenter, new Vector2(0, 290), new Vector2(620, 40));
-            CreateText(panel.transform, "Only one control style is active at a time.", 20, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(700, 32));
-            _movementJoystickButton = CreateButton(panel.transform, "Joystick", new Vector2(-160, 185), () => SelectMovementControl(MovementControlType.Joystick));
-            _movementTapHoldButton = CreateButton(panel.transform, "Tap / Hold", new Vector2(160, 185), () => SelectMovementControl(MovementControlType.TapHold));
-            CreateText(panel.transform, "Drag the on-screen joystick to place it. Position locks when you close Settings.", 18, TextAnchor.MiddleCenter, new Vector2(0, 125), new Vector2(900, 40));
+            // 768×480 at y=20 spans 260 to -220, between the title and Close.
+            const float contentHeight = 720f;
+            var scroll = HubLayout.CreateVerticalScroll(
+                panel.transform,
+                new Vector2(0f, 20f),
+                new Vector2(768f, 480f),
+                contentHeight);
+            var body = scroll.content;
+            // Old stack top was y=310. That edge becomes the content top.
+            float Y(float oldCenter) => oldCenter + (contentHeight * 0.5f - 310f);
+
+            CreateText(body, "Movement Control", 28, TextAnchor.MiddleCenter, new Vector2(0, Y(290)), new Vector2(620, 40));
+            CreateText(body, "Only one control style is active at a time.", 20, TextAnchor.MiddleCenter, new Vector2(0, Y(250)), new Vector2(700, 32));
+            _movementJoystickButton = CreateButton(body, "Joystick", new Vector2(-160, Y(185)), () => SelectMovementControl(MovementControlType.Joystick));
+            _movementTapHoldButton = CreateButton(body, "Tap / Hold", new Vector2(160, Y(185)), () => SelectMovementControl(MovementControlType.TapHold));
+            var joystickHint = CreateText(body, "Drag the on-screen joystick to place it. Position locks when you close Settings.", 18, TextAnchor.MiddleCenter, new Vector2(0, Y(125)), new Vector2(748, 40));
+            joystickHint.horizontalOverflow = HorizontalWrapMode.Wrap;
 
             // Survival map playlist genre (campfire BGM stays separate).
-            CreateText(panel.transform, "Survival Music", 26, TextAnchor.MiddleCenter, new Vector2(0, 70), new Vector2(400, 36));
-            _bgmGenreStatusText = CreateText(panel.transform, "", 18, TextAnchor.MiddleCenter, new Vector2(0, 35), new Vector2(900, 32));
-            _bgmDnBButton = CreateButton(panel.transform, "DnB", new Vector2(-160, -15), () => SelectBgmGenre(GameSave.BgmGenreDnB));
-            _bgmMetalButton = CreateButton(panel.transform, "Metal", new Vector2(160, -15), () => SelectBgmGenre(GameSave.BgmGenreMetal));
+            CreateText(body, "Survival Music", 26, TextAnchor.MiddleCenter, new Vector2(0, Y(70)), new Vector2(400, 36));
+            _bgmGenreStatusText = CreateText(body, "", 18, TextAnchor.MiddleCenter, new Vector2(0, Y(35)), new Vector2(748, 32));
+            _bgmGenreStatusText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _bgmDnBButton = CreateButton(body, "DnB", new Vector2(-160, Y(-15)), () => SelectBgmGenre(GameSave.BgmGenreDnB));
+            _bgmMetalButton = CreateButton(body, "Metal", new Vector2(160, Y(-15)), () => SelectBgmGenre(GameSave.BgmGenreMetal));
 
-            CreateText(panel.transform, "Music Volume", 26, TextAnchor.MiddleCenter, new Vector2(0, -90), new Vector2(400, 36));
-            _bgmVolumeLabel = CreateText(panel.transform, "70%", 22, TextAnchor.MiddleCenter, new Vector2(0, -130), new Vector2(120, 32));
-            CreateButton(panel.transform, "−", new Vector2(-200, -130), () => AdjustBgmVolume(-0.1f));
-            CreateButton(panel.transform, "+", new Vector2(200, -130), () => AdjustBgmVolume(0.1f));
+            CreateText(body, "Music Volume", 26, TextAnchor.MiddleCenter, new Vector2(0, Y(-90)), new Vector2(400, 36));
+            _bgmVolumeLabel = CreateText(body, "70%", 22, TextAnchor.MiddleCenter, new Vector2(0, Y(-130)), new Vector2(120, 32));
+            CreateButton(body, "−", new Vector2(-200, Y(-130)), () => AdjustBgmVolume(-0.1f));
+            CreateButton(body, "+", new Vector2(200, Y(-130)), () => AdjustBgmVolume(0.1f));
 
-            CreateText(panel.transform, "SFX Volume", 26, TextAnchor.MiddleCenter, new Vector2(0, -200), new Vector2(400, 36));
-            _sfxVolumeLabel = CreateText(panel.transform, "85%", 22, TextAnchor.MiddleCenter, new Vector2(0, -240), new Vector2(120, 32));
-            CreateButton(panel.transform, "−", new Vector2(-200, -240), () => AdjustSfxVolume(-0.1f));
-            CreateButton(panel.transform, "+", new Vector2(200, -240), () => AdjustSfxVolume(0.1f));
+            CreateText(body, "SFX Volume", 26, TextAnchor.MiddleCenter, new Vector2(0, Y(-200)), new Vector2(400, 36));
+            _sfxVolumeLabel = CreateText(body, "85%", 22, TextAnchor.MiddleCenter, new Vector2(0, Y(-240)), new Vector2(120, 32));
+            CreateButton(body, "−", new Vector2(-200, Y(-240)), () => AdjustSfxVolume(-0.1f));
+            CreateButton(body, "+", new Vector2(200, Y(-240)), () => AdjustSfxVolume(0.1f));
 
-            CreateText(panel.transform, "Accessibility", 26, TextAnchor.MiddleCenter, new Vector2(0, -290), new Vector2(400, 36));
-            _largeDamageNumbersButton = CreateButton(panel.transform, "Large Damage Numbers", new Vector2(0, -335), ToggleLargeDamageNumbers);
+            CreateText(body, "Accessibility", 26, TextAnchor.MiddleCenter, new Vector2(0, Y(-290)), new Vector2(400, 36));
+            _largeDamageNumbersButton = CreateButton(body, "Large Damage Numbers", new Vector2(0, Y(-335)), ToggleLargeDamageNumbers);
             _largeDamageNumbersLabel = _largeDamageNumbersButton != null
                 ? _largeDamageNumbersButton.GetComponentInChildren<Text>()
                 : null;
 
-            CreateButton(panel.transform, "Close", new Vector2(0, -400), () => CloseSettings(), large: true);
+            CreateButton(panel.transform, "Close", new Vector2(0, HubLayout.FooterCenterY), () => CloseSettings(), large: true);
             panel.SetActive(false);
             return panel;
         }

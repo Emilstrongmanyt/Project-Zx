@@ -98,8 +98,7 @@ namespace ProjectZx.UI
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             // Above damage floaters (40) and joystick (50) so level-up talents stay on top.
             canvas.sortingOrder = 100;
-            canvasGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            canvasGo.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
+            HubLayout.ApplyPhoneScaler(canvasGo.AddComponent<CanvasScaler>());
             canvasGo.AddComponent<GraphicRaycaster>();
 
             _roundText = CreateText(canvasGo.transform, "Round 1", 30, new Vector2(SafeLeft, -SafeTop), TextAnchor.UpperLeft);

@@ -24,12 +24,10 @@ namespace ProjectZx.UI
 
         static bool IsPanelOpen(GameObject panel) => panel != null && panel.activeSelf;
 
-        const float SafeRight = 140f;
-        const float SafeTop = 36f;
-        /// <summary>Shared almost-full-screen size for shop, settings, loadout, stats, etc.</summary>
-        static readonly Vector2 HubMenuPanelSize = new Vector2(1100f, 980f);
-        /// <summary>Uniform shrink so large Stone-bordered menus fit phone safe areas.</summary>
-        const float HubMenuScale = 0.85f;
+        float _safeRight = HubLayout.FallbackSafeRight;
+        float _safeTop = HubLayout.FallbackSafeTop;
+        /// <summary>Shared camp menu size. Scale stays 1; the stone frame is inset in the layout, not shrunk.</summary>
+        static Vector2 HubMenuPanelSize => HubLayout.MenuPanelSize;
 
         Text _goldText;
         Text _statsBodyText;
@@ -129,14 +127,15 @@ namespace ProjectZx.UI
             var canvasGo = new GameObject("HubCanvas");
             var canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            canvasGo.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
+            HubLayout.ApplyPhoneScaler(canvasGo.AddComponent<CanvasScaler>());
             canvasGo.AddComponent<GraphicRaycaster>();
+
+            HubLayout.ReadCornerInsets(out _safeRight, out _safeTop);
 
             BuildHubGoldDisplay(canvasGo.transform);
 
             // Always available on the campfire map.
-            CreateTopRightButton(canvasGo.transform, "Settings", new Vector2(-SafeRight, -SafeTop - 70f), OpenSettings);
+            CreateTopRightButton(canvasGo.transform, "Settings", new Vector2(-_safeRight, -_safeTop - 70f), OpenSettings);
             BuildCampObjectiveTracker(canvasGo.transform);
 
             _shopPanel = BuildShopPanel(canvasGo.transform);
@@ -167,8 +166,8 @@ namespace ProjectZx.UI
             chipRect.anchorMin = new Vector2(1f, 1f);
             chipRect.anchorMax = new Vector2(1f, 1f);
             chipRect.pivot = new Vector2(1f, 1f);
-            chipRect.anchoredPosition = new Vector2(-SafeRight, -SafeTop - 150f);
-            chipRect.sizeDelta = new Vector2(440f, 100f);
+            chipRect.anchoredPosition = new Vector2(-_safeRight, -_safeTop - 150f);
+            chipRect.sizeDelta = new Vector2(480f, 100f);
 
             _campObjectiveBg = _campObjectiveChip.AddComponent<Image>();
             if (StoneUi.Available && StoneUi.ResourceBarBg != null)
@@ -330,7 +329,7 @@ namespace ProjectZx.UI
             rect.anchorMin = new Vector2(0.5f, 1f);
             rect.anchorMax = new Vector2(0.5f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
-            rect.anchoredPosition = new Vector2(0f, -SafeTop - 8f);
+            rect.anchoredPosition = new Vector2(0f, -_safeTop - 8f);
             rect.sizeDelta = new Vector2(720f, 72f);
 
             var bg = panel.AddComponent<Image>();
@@ -462,9 +461,9 @@ namespace ProjectZx.UI
         GameObject BuildAchievementsPanel(Transform parent)
         {
             var panel = CreateDialogPanel(parent, "AchievementsPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, "Achievements", 44, TextAnchor.MiddleCenter, new Vector2(0, 380), new Vector2(700, 58));
-            _achievementCountText = CreateText(panel.transform, "", 28, TextAnchor.MiddleCenter, new Vector2(0, 338), new Vector2(700, 40));
-            var holdHint = CreateText(panel.transform, "Hold an unfinished achievement to see progress.", 18, TextAnchor.MiddleCenter, new Vector2(0, 302), new Vector2(780, 28));
+            CreateText(panel.transform, "Achievements", HubLayout.TitleFont, TextAnchor.MiddleCenter, new Vector2(0, 316), new Vector2(700, 48));
+            _achievementCountText = CreateText(panel.transform, "", 28, TextAnchor.MiddleCenter, new Vector2(0, 264), new Vector2(700, 40));
+            var holdHint = CreateText(panel.transform, "Hold an unfinished achievement to see progress.", 18, TextAnchor.MiddleCenter, new Vector2(0, 222), new Vector2(760, 28));
             holdHint.color = new Color(0.75f, 0.78f, 0.84f);
 
             var scrollGo = new GameObject("AchievementScroll");
@@ -473,8 +472,8 @@ namespace ProjectZx.UI
             scrollRectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             scrollRectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             scrollRectTransform.pivot = new Vector2(0.5f, 0.5f);
-            scrollRectTransform.anchoredPosition = new Vector2(0f, -28f);
-            scrollRectTransform.sizeDelta = new Vector2(1000f, 560f);
+            scrollRectTransform.anchoredPosition = new Vector2(0f, -20f);
+            scrollRectTransform.sizeDelta = new Vector2(768f, 440f);
 
             var scroll = scrollGo.AddComponent<ScrollRect>();
             scroll.horizontal = false;
@@ -511,9 +510,9 @@ namespace ProjectZx.UI
                 y -= rowHeight;
             }
 
-            contentRect.sizeDelta = new Vector2(980f, Mathf.Abs(y));
+            contentRect.sizeDelta = new Vector2(0f, Mathf.Abs(y));
 
-            CreateButton(panel.transform, "Close", new Vector2(0, -390), () => panel.SetActive(false), large: true);
+            CreateButton(panel.transform, "Close", new Vector2(0, HubLayout.FooterCenterY), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
         }
@@ -527,15 +526,15 @@ namespace ProjectZx.UI
             rect.anchorMax = new Vector2(0.5f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
             rect.anchoredPosition = new Vector2(0f, y);
-            rect.sizeDelta = new Vector2(960f, 94f);
+            rect.sizeDelta = new Vector2(740f, 94f);
 
             var image = go.AddComponent<Image>();
-            UiSprites.ApplyButtonSprite(image, new Vector2(960f, 94f));
+            UiSprites.ApplyButtonSprite(image, new Vector2(740f, 94f));
             go.AddComponent<Button>();
 
-            var title = CreateText(go.transform, def.Title, 30, TextAnchor.UpperLeft, new Vector2(20f, -12f), new Vector2(900f, 40f));
+            var title = CreateText(go.transform, def.Title, 30, TextAnchor.UpperLeft, new Vector2(20f, -12f), new Vector2(680f, 40f));
             title.alignment = TextAnchor.UpperLeft;
-            var desc = CreateText(go.transform, def.Description, 24, TextAnchor.UpperLeft, new Vector2(20f, -50f), new Vector2(900f, 36f));
+            var desc = CreateText(go.transform, def.Description, 24, TextAnchor.UpperLeft, new Vector2(20f, -50f), new Vector2(680f, 36f));
             desc.alignment = TextAnchor.UpperLeft;
             desc.color = new Color(0.88f, 0.9f, 0.95f);
             go.AddComponent<AchievementHoldProgress>().Bind(def.Id, desc);
@@ -553,16 +552,16 @@ namespace ProjectZx.UI
         GameObject BuildStatsPanel(Transform parent)
         {
             var panel = CreateDialogPanel(parent, "StatsPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
-            CreateText(panel.transform, "Character Stats", 36, TextAnchor.MiddleCenter, new Vector2(0, 330), new Vector2(560, 48));
-            _statsBodyText = CreateText(panel.transform, "", 22, TextAnchor.MiddleCenter, new Vector2(0, -10), new Vector2(760, 580));
+            CreateText(panel.transform, "Character Stats", HubLayout.TitleFont, TextAnchor.MiddleCenter, new Vector2(0, 316), new Vector2(700, 48));
+            _statsBodyText = CreateText(panel.transform, "", 22, TextAnchor.MiddleCenter, new Vector2(0, -10), new Vector2(760, 460));
             _statsBodyText.alignment = TextAnchor.UpperLeft;
 
-            CreateButton(panel.transform, "Back to Shop", new Vector2(-150, -330), () =>
+            CreateButton(panel.transform, "Back to Shop", new Vector2(-180, HubLayout.FooterCenterY), () =>
             {
                 panel.SetActive(false);
                 OpenShop();
-            });
-            CreateButton(panel.transform, "Close", new Vector2(150, -330), () => panel.SetActive(false));
+            }, size: new Vector2(300f, 72f));
+            CreateButton(panel.transform, "Close", new Vector2(180, HubLayout.FooterCenterY), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
         }
@@ -588,24 +587,23 @@ namespace ProjectZx.UI
             string subtitle)
         {
             var panel = CreateDialogPanel(parent, panelName, Vector2.zero, HubMenuPanelSize, ArtLibrary.ChallengeBoardUi);
-            CreateText(panel.transform, title, 40, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(700, 56));
-            CreateText(panel.transform, subtitle, 22, TextAnchor.MiddleCenter, new Vector2(0, 175), new Vector2(760, 72));
-            TagMapButton(
-                CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Outside), new Vector2(0, 80), () => EnterSurvival(SurvivalMapKind.Outside), large: true),
-                SurvivalMapKind.Outside);
-            TagMapButton(
-                CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Inside), new Vector2(0, 15), () => EnterSurvival(SurvivalMapKind.Inside), large: true),
-                SurvivalMapKind.Inside);
-            TagMapButton(
-                CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Dungeon), new Vector2(0, -50), () => EnterSurvival(SurvivalMapKind.Dungeon), large: true),
-                SurvivalMapKind.Dungeon);
-            TagMapButton(
-                CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Crypt), new Vector2(0, -115), () => EnterSurvival(SurvivalMapKind.Crypt), large: true),
-                SurvivalMapKind.Crypt);
-            TagMapButton(
-                CreateButton(panel.transform, SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Unlimited), new Vector2(0, -180), () => EnterSurvival(SurvivalMapKind.Unlimited), large: true),
-                SurvivalMapKind.Unlimited);
-            CreateButton(panel.transform, "Close", new Vector2(0, -255), () => panel.SetActive(false), large: true);
+            CreateText(panel.transform, title, HubLayout.TitleFont, TextAnchor.MiddleCenter, new Vector2(0, 316), new Vector2(700, 48));
+            var subtitleText = CreateText(panel.transform, subtitle, 20, TextAnchor.MiddleCenter, new Vector2(0, 248), new Vector2(760, 56));
+            subtitleText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            const float mapRow = 640f;
+            const float mapStep = HubLayout.ButtonHeight + HubLayout.ButtonGap;
+            // Subtitle bottom is y=220. First row top stays 12 px under that.
+            var mapY = 170f;
+            TagMapButton(CreateMapRow(panel.transform, SurvivalMapKind.Outside, mapY, mapRow), SurvivalMapKind.Outside);
+            mapY -= mapStep;
+            TagMapButton(CreateMapRow(panel.transform, SurvivalMapKind.Inside, mapY, mapRow), SurvivalMapKind.Inside);
+            mapY -= mapStep;
+            TagMapButton(CreateMapRow(panel.transform, SurvivalMapKind.Dungeon, mapY, mapRow), SurvivalMapKind.Dungeon);
+            mapY -= mapStep;
+            TagMapButton(CreateMapRow(panel.transform, SurvivalMapKind.Crypt, mapY, mapRow), SurvivalMapKind.Crypt);
+            mapY -= mapStep;
+            TagMapButton(CreateMapRow(panel.transform, SurvivalMapKind.Unlimited, mapY, mapRow), SurvivalMapKind.Unlimited);
+            CreateButton(panel.transform, "Close", new Vector2(0, HubLayout.FooterCenterY), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
         }
@@ -621,13 +619,13 @@ namespace ProjectZx.UI
             CreateText(panel.transform, "Rings", 22, TextAnchor.MiddleCenter, new Vector2(0, 312), new Vector2(400, 28));
             CreateText(panel.transform, "Necklaces", 22, TextAnchor.MiddleCenter, new Vector2(0, 190), new Vector2(400, 28));
             CreateText(panel.transform, "Capes", 22, TextAnchor.MiddleCenter, new Vector2(0, -30), new Vector2(400, 28));
-            CreateText(panel.transform, "Helms", 22, TextAnchor.MiddleCenter, new Vector2(0, -160), new Vector2(400, 28));
+            CreateText(panel.transform, "Helms", 22, TextAnchor.MiddleCenter, new Vector2(0, -64), new Vector2(400, 28));
 
             _equipmentButtons.Clear();
             const float ringY = 262f;
             const float neckY = 140f;
             const float capeY = -80f;
-            const float helmY = -210f;
+            const float helmY = -114f;
             var ringIndex = 0;
             var neckIndex = 0;
             var capeIndex = 0;
@@ -677,7 +675,7 @@ namespace ProjectZx.UI
                 }
             }
 
-            CreateButton(panel.transform, "Close", new Vector2(0, -430), () => panel.SetActive(false), large: true);
+            CreateButton(panel.transform, "Close", new Vector2(0, HubLayout.FooterCenterY), () => panel.SetActive(false), large: true);
             panel.SetActive(false);
             return panel;
         }
@@ -1452,20 +1450,22 @@ namespace ProjectZx.UI
                     case SurvivalMapKind.Outside:
                         button.interactable = true;
                         label.text = FormatMapButtonLabel(
-                            SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Outside),
+                            SurvivalMapNames.DisplayName(SurvivalMapKind.Outside),
                             unlocked: true,
                             lockedHint: null,
                             recommended == SurvivalMapKind.Outside);
+                        TintMapButton(button, recommended == SurvivalMapKind.Outside);
                         break;
                     case SurvivalMapKind.Inside:
                     {
                         var unlocked = GameSave.InsideMapUnlocked;
                         button.interactable = unlocked;
                         label.text = FormatMapButtonLabel(
-                            SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Inside),
+                            SurvivalMapNames.DisplayName(SurvivalMapKind.Inside),
                             unlocked,
                             "Locked — clear Emberwilds R20 door",
                             unlocked && recommended == SurvivalMapKind.Inside);
+                        TintMapButton(button, unlocked && recommended == SurvivalMapKind.Inside);
                         break;
                     }
                     case SurvivalMapKind.Dungeon:
@@ -1473,10 +1473,11 @@ namespace ProjectZx.UI
                         var unlocked = GameSave.DungeonMapUnlocked;
                         button.interactable = unlocked;
                         label.text = FormatMapButtonLabel(
-                            SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Dungeon),
+                            SurvivalMapNames.DisplayName(SurvivalMapKind.Dungeon),
                             unlocked,
                             "Locked — clear Warded Halls R30 gateway",
                             unlocked && recommended == SurvivalMapKind.Dungeon);
+                        TintMapButton(button, unlocked && recommended == SurvivalMapKind.Dungeon);
                         break;
                     }
                     case SurvivalMapKind.Crypt:
@@ -1484,10 +1485,11 @@ namespace ProjectZx.UI
                         var unlocked = GameSave.CryptMapUnlocked;
                         button.interactable = unlocked;
                         label.text = FormatMapButtonLabel(
-                            SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Crypt),
+                            SurvivalMapNames.DisplayName(SurvivalMapKind.Crypt),
                             unlocked,
                             "Locked — clear Ironvault R40 portal",
                             unlocked && recommended == SurvivalMapKind.Crypt);
+                        TintMapButton(button, unlocked && recommended == SurvivalMapKind.Crypt);
                         break;
                     }
                     case SurvivalMapKind.Unlimited:
@@ -1495,10 +1497,11 @@ namespace ProjectZx.UI
                         var unlocked = GameSave.UnlimitedMapUnlocked;
                         button.interactable = unlocked;
                         label.text = FormatMapButtonLabel(
-                            SurvivalMapNames.SurvivalButtonLabel(SurvivalMapKind.Unlimited),
+                            SurvivalMapNames.DisplayName(SurvivalMapKind.Unlimited),
                             unlocked,
                             "Locked — clear Silent Ossuary R50",
                             unlocked && recommended == SurvivalMapKind.Unlimited);
+                        TintMapButton(button, unlocked && recommended == SurvivalMapKind.Unlimited);
                         break;
                     }
                 }
@@ -1517,15 +1520,44 @@ namespace ProjectZx.UI
             return SurvivalMapKind.Unlimited;
         }
 
+        static Button CreateMapRow(Transform parent, SurvivalMapKind kind, float y, float width)
+        {
+            var button = CreateButton(
+                parent,
+                SurvivalMapNames.DisplayName(kind),
+                new Vector2(0f, y),
+                () => EnterSurvival(kind),
+                size: new Vector2(width, HubLayout.ButtonHeight));
+            var label = button.GetComponentInChildren<Text>();
+            if (label != null)
+            {
+                label.fontSize = 24;
+                label.horizontalOverflow = HorizontalWrapMode.Wrap;
+                label.verticalOverflow = VerticalWrapMode.Truncate;
+            }
+
+            return button;
+        }
+
+        static void TintMapButton(Button button, bool recommended)
+        {
+            if (button == null) return;
+            var image = button.GetComponent<Image>();
+            if (image == null) return;
+            image.color = recommended
+                ? new Color(0.28f, 0.5f, 0.32f, 0.98f)
+                : Color.white;
+        }
+
         static string FormatMapButtonLabel(
-            string unlockedLabel,
+            string displayName,
             bool unlocked,
             string lockedHint,
             bool recommended)
         {
             if (!unlocked)
-                return lockedHint ?? unlockedLabel;
-            return recommended ? $"{unlockedLabel}  ★ Recommended" : unlockedLabel;
+                return string.IsNullOrEmpty(lockedHint) ? displayName : $"{displayName}\n{lockedHint}";
+            return recommended ? $"{displayName}\nRecommended" : displayName;
         }
 
         public void RefreshGold()
@@ -1542,7 +1574,7 @@ namespace ProjectZx.UI
             chipRect.anchorMin = new Vector2(1f, 1f);
             chipRect.anchorMax = new Vector2(1f, 1f);
             chipRect.pivot = new Vector2(1f, 1f);
-            chipRect.anchoredPosition = new Vector2(-SafeRight + 40f, -SafeTop);
+            chipRect.anchoredPosition = new Vector2(-_safeRight + 40f, -_safeTop);
             chipRect.sizeDelta = new Vector2(220f, 56f);
 
             var bg = chip.AddComponent<Image>();
@@ -1620,8 +1652,6 @@ namespace ProjectZx.UI
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = pos;
             rect.sizeDelta = size;
-            // Scale whole panel (border + content) so layouts stay proportional and fit the screen.
-            go.transform.localScale = Vector3.one * HubMenuScale;
             var image = go.AddComponent<Image>();
             // Same Stone border as talent pick windows (popup_bg); fall back to legacy art.
             UiSprites.ApplyPanelSprite(image, background, largeMenu: false);
@@ -1654,7 +1684,13 @@ namespace ProjectZx.UI
             image.raycastTarget = false;
         }
 
-        static Button CreateButton(Transform parent, string label, Vector2 pos, Action onClick, bool large = false)
+        static Button CreateButton(
+            Transform parent,
+            string label,
+            Vector2 pos,
+            Action onClick,
+            bool large = false,
+            Vector2 size = default)
         {
             var go = new GameObject(label + "Button");
             go.transform.SetParent(parent, false);
@@ -1663,7 +1699,10 @@ namespace ProjectZx.UI
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = pos;
-            var size = large ? new Vector2(300, 72) : new Vector2(240, 58);
+            if (size.x < 1f || size.y < 1f)
+                size = large ? new Vector2(300f, 72f) : new Vector2(240f, 58f);
+            if (label != "−" && label != "+" && large && size.y < 72f)
+                size.y = 72f;
             // Compact +/- volume buttons
             if (label == "−" || label == "+")
                 size = new Vector2(88, 58);

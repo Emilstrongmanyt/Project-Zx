@@ -80,79 +80,50 @@ namespace ProjectZx.UI
         GameObject BuildShopPanel(Transform parent)
         {
             var panel = CreateDialogPanel(parent, "ShopPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
-            CreateText(panel.transform, "Upgrade Shop", 40, TextAnchor.MiddleCenter, new Vector2(0, 430), new Vector2(620, 52));
-            CreateText(panel.transform, "Tap Info for full effects & current totals.", 18, TextAnchor.MiddleCenter, new Vector2(0, 385), new Vector2(800, 28));
+            CreateText(panel.transform, "Upgrade Shop", HubLayout.TitleFont, TextAnchor.MiddleCenter, new Vector2(0, 316), new Vector2(700, 48));
+            CreateText(panel.transform, "Tap Info for full effects & current totals.", 18, TextAnchor.MiddleCenter, new Vector2(0, 268), new Vector2(760, 28));
 
-            var scrollRoot = new GameObject("ShopScroll");
-            scrollRoot.transform.SetParent(panel.transform, false);
-            var scrollRectTransform = scrollRoot.AddComponent<RectTransform>();
-            scrollRectTransform.anchorMin = new Vector2(0.5f, 0.5f);
-            scrollRectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-            scrollRectTransform.pivot = new Vector2(0.5f, 0.5f);
-            scrollRectTransform.anchoredPosition = new Vector2(0f, 20f);
-            scrollRectTransform.sizeDelta = new Vector2(1000f, 660f);
-
-            var scroll = scrollRoot.AddComponent<ScrollRect>();
-            scroll.horizontal = false;
-            scroll.vertical = true;
-            scroll.movementType = ScrollRect.MovementType.Clamped;
-            scroll.scrollSensitivity = 32f;
-
-            var viewport = new GameObject("Viewport");
-            viewport.transform.SetParent(scrollRoot.transform, false);
-            var viewportRect = viewport.AddComponent<RectTransform>();
-            viewportRect.anchorMin = Vector2.zero;
-            viewportRect.anchorMax = Vector2.one;
-            viewportRect.offsetMin = Vector2.zero;
-            viewportRect.offsetMax = Vector2.zero;
-            viewport.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.01f);
-            viewport.AddComponent<Mask>().showMaskGraphic = false;
-            scroll.viewport = viewportRect;
-
-            var content = new GameObject("Content");
-            content.transform.SetParent(viewport.transform, false);
-            var contentRect = content.AddComponent<RectTransform>();
-            contentRect.anchorMin = new Vector2(0f, 1f);
-            contentRect.anchorMax = new Vector2(1f, 1f);
-            contentRect.pivot = new Vector2(0.5f, 1f);
-            contentRect.anchoredPosition = Vector2.zero;
-            scroll.content = contentRect;
+            // 768×480 at y=0 spans 240 to -240: under the hint, above the footer.
+            var scroll = HubLayout.CreateVerticalScroll(panel.transform, Vector2.zero, new Vector2(768f, 480f), 80f);
+            var contentRect = scroll.content;
 
             var y = -10f;
             const float step = -64f;
-            _hpRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.MaxHp, y, BuyHp);
+            _hpRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.MaxHp, y, BuyHp);
             y += step;
-            _damageRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.Damage, y, BuyDamage);
+            _damageRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.Damage, y, BuyDamage);
             y += step;
-            _speedRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.Speed, y, BuySpeed);
+            _speedRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.Speed, y, BuySpeed);
             y += step;
-            _rangeRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.Range, y, BuyRange);
+            _rangeRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.Range, y, BuyRange);
             y += step;
-            _goldMagnetRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.GoldMagnet, y, BuyGoldMagnet);
+            _goldMagnetRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.GoldMagnet, y, BuyGoldMagnet);
             y += step;
-            _thickHideRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.ThickHide, y, BuyThickHide);
+            _thickHideRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.ThickHide, y, BuyThickHide);
             y += step;
-            _secondWindRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.SecondWind, y, BuySecondWind);
+            _secondWindRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.SecondWind, y, BuySecondWind);
             y += step;
-            _campfireBlessingRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.CampfireBlessing, y, BuyCampfireBlessing);
+            _campfireBlessingRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.CampfireBlessing, y, BuyCampfireBlessing);
             y += step;
-            _whirlwindRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.Whirlwind, y, BuyWhirlwind);
+            _whirlwindRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.Whirlwind, y, BuyWhirlwind);
             y += step;
-            _piercingShotRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.PiercingShot, y, BuyPiercingShot);
+            _piercingShotRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.PiercingShot, y, BuyPiercingShot);
             y += step;
-            _frostTipRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.FrostTip, y, BuyFrostTip);
+            _frostTipRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.FrostTip, y, BuyFrostTip);
             y += step;
-            _shatteringRow = CreateShopUpgradeRow(content.transform, ShopUpgradeKind.Shattering, y, BuyShattering);
+            _shatteringRow = CreateShopUpgradeRow(contentRect, ShopUpgradeKind.Shattering, y, BuyShattering);
 
             contentRect.sizeDelta = new Vector2(0f, Mathf.Abs(y) + 80f);
 
-            CreateButton(panel.transform, "Build Loadout", new Vector2(-220, -400), () => OpenLoadout(), large: true);
-            CreateButton(panel.transform, "Character Stats", new Vector2(220, -400), () => OpenStats(), large: true);
-            CreateButton(panel.transform, "Close", new Vector2(0, -470), () =>
+            var footerY = HubLayout.FooterCenterY;
+            var footerSize = new Vector2(248f, 72f);
+            CreateButton(panel.transform, "Build Loadout", new Vector2(-260f, footerY), () => OpenLoadout(), large: true, size: footerSize);
+            CreateButton(panel.transform, "Character Stats", new Vector2(0f, footerY), () => OpenStats(), large: true, size: footerSize);
+            CreateButton(panel.transform, "Close", new Vector2(260f, footerY), () =>
             {
                 if (_shopInfoPanel != null) _shopInfoPanel.SetActive(false);
                 panel.SetActive(false);
-            }, large: true);
+            }, large: true, size: footerSize);
 
             BuildShopInfoOverlay(panel.transform);
             panel.SetActive(false);
@@ -161,7 +132,7 @@ namespace ProjectZx.UI
 
         void BuildShopInfoOverlay(Transform shopPanel)
         {
-            // Built as a child of the already-scaled shop panel — do not apply HubMenuScale again.
+            // Child of the shop panel. This overlay is not its own canvas.
             _shopInfoPanel = new GameObject("ShopInfoOverlay");
             _shopInfoPanel.transform.SetParent(shopPanel, false);
             var rootRect = _shopInfoPanel.AddComponent<RectTransform>();
@@ -198,34 +169,50 @@ namespace ProjectZx.UI
         GameObject BuildLoadoutPanel(Transform parent)
         {
             var panel = CreateDialogPanel(parent, "LoadoutPanel", Vector2.zero, HubMenuPanelSize, ArtLibrary.ShopUi);
-            CreateText(panel.transform, "Build Loadout", 38, TextAnchor.MiddleCenter, new Vector2(0, 360), new Vector2(620, 52));
-            CreateText(panel.transform, "Your class & technique apply to you and RowZi (she copies this loadout).\nMovement & audio live in Settings.", 18, TextAnchor.MiddleCenter, new Vector2(0, 312), new Vector2(820, 48));
+            CreateText(panel.transform, "Build Loadout", HubLayout.TitleFont, TextAnchor.MiddleCenter, new Vector2(0, 316), new Vector2(700, 48));
+
+            // Viewport 768×520 at y=20 spans 280 to -240. Body keeps its old spacing,
+            // shifted so the subtitle top sits on the content top. Cycle buttons scroll with it.
+            const float contentHeight = 740f;
+            var scroll = HubLayout.CreateVerticalScroll(
+                panel.transform,
+                new Vector2(0f, 20f),
+                new Vector2(768f, 520f),
+                contentHeight);
+            var body = scroll.content;
+            float Y(float oldCenter) => oldCenter + (contentHeight * 0.5f - 336f);
+
+            var subtitle = CreateText(body, "Your class & technique apply to you and RowZi (she copies this loadout).\nMovement & audio live in Settings.", 18, TextAnchor.MiddleCenter, new Vector2(0, Y(312f)), new Vector2(760, 48));
+            subtitle.horizontalOverflow = HorizontalWrapMode.Wrap;
 
             // Class section (3 rows: Batter/Spearman, Bowman/Samurai, Magician/Paladin)
-            _loadoutClassPicker = BuildClassPicker(panel.transform, 255f, 210f, 135f);
+            _loadoutClassPicker = BuildClassPicker(body, Y(255f), Y(210f), Y(135f));
 
             // Technique section under Magician row
-            CreateText(panel.transform, "Attack Technique", 26, TextAnchor.MiddleCenter, new Vector2(0, -55), new Vector2(620, 36));
-            _techniqueStatusText = CreateText(panel.transform, "", 18, TextAnchor.MiddleCenter, new Vector2(0, -95), new Vector2(780, 44));
+            CreateText(body, "Attack Technique", 26, TextAnchor.MiddleCenter, new Vector2(0, Y(-55f)), new Vector2(620, 36));
+            _techniqueStatusText = CreateText(body, "", 18, TextAnchor.MiddleCenter, new Vector2(0, Y(-95f)), new Vector2(760, 44));
             _techniqueStatusText.alignment = TextAnchor.UpperCenter;
-            _techniqueStandardButton = CreateButton(panel.transform, "Standard", new Vector2(-160, -155), () => SelectAttackMode(AttackMode.Standard));
-            _techniqueSpecialButton = CreateButton(panel.transform, "Special", new Vector2(160, -155), SelectSpecialAttackMode);
+            _techniqueStatusText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _techniqueStandardButton = CreateButton(body, "Standard", new Vector2(-160, Y(-155f)), () => SelectAttackMode(AttackMode.Standard));
+            _techniqueSpecialButton = CreateButton(body, "Special", new Vector2(160, Y(-155f)), SelectSpecialAttackMode);
 
             // Weapon material quality (any unlocked tier). The status block is the next-step guide.
-            CreateText(panel.transform, "Weapon Quality", 26, TextAnchor.MiddleCenter, new Vector2(0, -200), new Vector2(620, 36));
-            _weaponTierStatusText = CreateText(panel.transform, "", 17, TextAnchor.MiddleCenter, new Vector2(0, -276), new Vector2(860, 80));
+            CreateText(body, "Weapon Quality", 26, TextAnchor.MiddleCenter, new Vector2(0, Y(-200f)), new Vector2(620, 36));
+            _weaponTierStatusText = CreateText(body, "", 17, TextAnchor.MiddleCenter, new Vector2(0, Y(-276f)), new Vector2(760, 80));
             _weaponTierStatusText.alignment = TextAnchor.UpperCenter;
             _weaponTierStatusText.horizontalOverflow = HorizontalWrapMode.Wrap;
             _weaponTierStatusText.verticalOverflow = VerticalWrapMode.Truncate;
-            _weaponTierPrevButton = CreateButton(panel.transform, "◀ Lower", new Vector2(-160, -358), () => CycleWeaponTier(-1));
-            _weaponTierNextButton = CreateButton(panel.transform, "Higher ▶", new Vector2(160, -358), () => CycleWeaponTier(1));
+            _weaponTierPrevButton = CreateButton(body, "◀ Lower", new Vector2(-160, Y(-358f)), () => CycleWeaponTier(-1));
+            _weaponTierNextButton = CreateButton(body, "Higher ▶", new Vector2(160, Y(-358f)), () => CycleWeaponTier(1));
 
-            CreateButton(panel.transform, "Back to Shop", new Vector2(-160, -428), () =>
+            var footerY = HubLayout.FooterCenterY;
+            var footerSize = new Vector2(280f, 72f);
+            CreateButton(panel.transform, "Back to Shop", new Vector2(-170f, footerY), () =>
             {
                 panel.SetActive(false);
                 OpenShop();
-            });
-            CreateButton(panel.transform, "Close", new Vector2(160, -428), () => panel.SetActive(false));
+            }, large: true, size: footerSize);
+            CreateButton(panel.transform, "Close", new Vector2(170f, footerY), () => panel.SetActive(false), large: true, size: footerSize);
             panel.SetActive(false);
             return panel;
         }
@@ -438,22 +425,23 @@ namespace ProjectZx.UI
 
         UpgradeRowRefs CreateShopUpgradeRow(Transform parent, ShopUpgradeKind kind, float y, Action onBuy)
         {
-            var labelText = CreateText(parent, GetShopRowTitle(kind), 28, TextAnchor.MiddleLeft, new Vector2(-40f, y - 28f), new Vector2(420f, 52f));
+            // Fit the 768 viewport: label left -376, Buy right 376. Buy stays 240 so the coin still clears the price.
+            var labelText = CreateText(parent, GetShopRowTitle(kind), 28, TextAnchor.MiddleLeft, new Vector2(-40f, y - 28f), new Vector2(386f, 52f));
             var labelRect = labelText.GetComponent<RectTransform>();
             labelRect.anchorMin = new Vector2(0.5f, 1f);
             labelRect.anchorMax = new Vector2(0.5f, 1f);
             labelRect.pivot = new Vector2(0.5f, 1f);
-            labelRect.anchoredPosition = new Vector2(-200f, y);
+            labelRect.anchoredPosition = new Vector2(-183f, y);
             labelText.alignment = TextAnchor.MiddleLeft;
             labelText.horizontalOverflow = HorizontalWrapMode.Overflow;
             labelText.verticalOverflow = VerticalWrapMode.Truncate;
 
-            var infoButton = CreateButton(parent, "Info", new Vector2(160f, y - 28f), () => OpenShopInfo(kind));
+            var infoButton = CreateButton(parent, "Info", new Vector2(73f, y - 28f), () => OpenShopInfo(kind));
             var infoRect = infoButton.GetComponent<RectTransform>();
             infoRect.anchorMin = new Vector2(0.5f, 1f);
             infoRect.anchorMax = new Vector2(0.5f, 1f);
             infoRect.pivot = new Vector2(0.5f, 1f);
-            infoRect.anchoredPosition = new Vector2(140f, y);
+            infoRect.anchoredPosition = new Vector2(73f, y);
             infoRect.sizeDelta = new Vector2(110f, 52f);
             var infoImage = infoButton.GetComponent<Image>();
             if (infoImage != null)
@@ -462,12 +450,12 @@ namespace ProjectZx.UI
             if (infoLabel != null)
                 infoLabel.fontSize = 22;
 
-            var buyButton = CreateButton(parent, "Buy", new Vector2(360f, y - 28f), onBuy, large: true);
+            var buyButton = CreateButton(parent, "Buy", new Vector2(256f, y - 28f), onBuy, large: true);
             var buyRect = buyButton.GetComponent<RectTransform>();
             buyRect.anchorMin = new Vector2(0.5f, 1f);
             buyRect.anchorMax = new Vector2(0.5f, 1f);
             buyRect.pivot = new Vector2(0.5f, 1f);
-            buyRect.anchoredPosition = new Vector2(360f, y);
+            buyRect.anchoredPosition = new Vector2(256f, y);
             buyRect.sizeDelta = new Vector2(240f, 56f);
             var buyImage = buyButton.GetComponent<Image>();
             if (buyImage != null)

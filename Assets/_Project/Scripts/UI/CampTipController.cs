@@ -47,9 +47,7 @@ namespace ProjectZx.UI
             var canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 60;
-            var scaler = canvasGo.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            HubLayout.ApplyPhoneScaler(canvasGo.AddComponent<CanvasScaler>());
             canvasGo.AddComponent<GraphicRaycaster>();
 
             var chip = new GameObject("TipChip");
